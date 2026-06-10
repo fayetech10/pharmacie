@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs';
-import { Pharmacie, PharmacieRequest } from '../models/pharmacie.model';
+import { Pharmacie, PharmacieRequest, PharmacieImportResult } from '../models/pharmacie.model';
 
 @Injectable({
   providedIn: 'root'
@@ -27,5 +27,17 @@ export class PharmacieService {
 
   delete(id: string): Observable<void> {
     return this.api.delete<void>(`/pharmacies/${id}`);
+  }
+
+  /** Importe des pharmacies (et leurs comptes) depuis un fichier Excel. */
+  importPharmacies(file: File): Observable<PharmacieImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.api.post<PharmacieImportResult>('/pharmacies/import', formData);
+  }
+
+  /** Télécharge le fichier Excel modèle à remplir pour l'import. */
+  downloadTemplate(): Observable<Blob> {
+    return this.api.getBlob('/pharmacies/import-template');
   }
 }

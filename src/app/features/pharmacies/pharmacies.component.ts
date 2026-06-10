@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PharmacieService } from '../../core/services/pharmacie.service';
-import { Pharmacie } from '../../core/models/pharmacie.model';
+import { Pharmacie, PharmacieImportResult } from '../../core/models/pharmacie.model';
 import { RegionService, Region } from '../../core/services/region.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -31,9 +31,35 @@ import { ConfirmService } from '../../core/services/confirm.service';
           <h1>Gestion des Pharmacies</h1>
           <p>Gérez les pharmacies partenaires de la CSU.</p>
         </div>
-        <button class="btn btn-primary" (click)="openModal()">
-          <mat-icon>add_business</mat-icon> Ajouter une pharmacie
-        </button>
+        <div class="header-actions">
+          <button class="btn btn-ghost" (click)="downloadModele()" type="button" title="Télécharger le modèle Excel">
+            <mat-icon>download</mat-icon> Modèle Excel
+          </button>
+          <button class="btn btn-outline" (click)="importInput.click()" type="button" [disabled]="importing" title="Importer des pharmacies depuis un fichier Excel">
+            <mat-icon>upload_file</mat-icon> {{ importing ? 'Import en cours…' : 'Importer (Excel)' }}
+          </button>
+          <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-primary" (click)="openModal()">
+            <mat-icon>add_business</mat-icon> Ajouter une pharmacie
+          </button>
+        </div>
+      </div>
+
+      <!-- Récapitulatif du dernier import -->
+      <div class="import-result" *ngIf="importResult" [class.has-errors]="importResult.echecs > 0">
+        <div class="import-result-head">
+          <mat-icon>{{ importResult.echecs > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon>
+          <span>
+            <strong>{{ importResult.importes }}</strong> pharmacie(s) importée(s)
+            <ng-container *ngIf="importResult.echecs > 0"> · <strong>{{ importResult.echecs }}</strong> échec(s)</ng-container>
+          </span>
+          <button class="close-inline" (click)="importResult = null" type="button" aria-label="Fermer">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <ul class="import-errors" *ngIf="importResult.erreurs.length > 0">
+          <li *ngFor="let err of importResult.erreurs">{{ err }}</li>
+        </ul>
       </div>
 
       <!-- Table -->
@@ -111,37 +137,70 @@ import { ConfirmService } from '../../core/services/confirm.service';
         </div>
         <form [formGroup]="pharmacieForm" (ngSubmit)="savePharmacie()">
           <div class="modal-body">
+            <!-- Section 1 : informations de la pharmacie -->
+            <div class="form-section-title">
+              <mat-icon>local_pharmacy</mat-icon> Informations de la pharmacie
+            </div>
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Code</mat-label>
+                <mat-icon matPrefix>tag</mat-icon>
                 <input matInput formControlName="code" placeholder="Ex: PH001">
+                <mat-error *ngIf="pharmacieForm.get('code')?.hasError('required')">Code obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Région</mat-label>
+                <mat-icon matPrefix>map</mat-icon>
                 <mat-select formControlName="regionId">
                   <mat-option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</mat-option>
                 </mat-select>
                 <mat-hint *ngIf="isRegional">Limitée à votre région</mat-hint>
+                <mat-error *ngIf="pharmacieForm.get('regionId')?.hasError('required')">Région obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>Nom de la pharmacie</mat-label>
+                <mat-icon matPrefix>storefront</mat-icon>
                 <input matInput formControlName="nom" placeholder="Ex: Pharmacie Guigon">
+                <mat-error *ngIf="pharmacieForm.get('nom')?.hasError('required')">Nom obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>Adresse</mat-label>
+                <mat-icon matPrefix>location_on</mat-icon>
                 <input matInput formControlName="adresse" placeholder="Ex: Plateau, Dakar">
+                <mat-error *ngIf="pharmacieForm.get('adresse')?.hasError('required')">Adresse obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Téléphone</mat-label>
+                <mat-icon matPrefix>call</mat-icon>
                 <input matInput formControlName="telephone" placeholder="33 800 00 00">
+                <mat-error *ngIf="pharmacieForm.get('telephone')?.hasError('required')">Téléphone obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Email</mat-label>
+                <mat-icon matPrefix>mail</mat-icon>
                 <input matInput formControlName="email" placeholder="contact@pharma.sn">
+                <mat-error *ngIf="pharmacieForm.get('email')?.hasError('required')">Email obligatoire.</mat-error>
+                <mat-error *ngIf="pharmacieForm.get('email')?.hasError('email')">Email invalide.</mat-error>
               </mat-form-field>
+            </div>
+
+            <!-- Section 2 : compte de connexion du pharmacien -->
+            <div class="form-section-title">
+              <mat-icon>account_circle</mat-icon> Compte du pharmacien (connexion)
+            </div>
+            <p class="form-note">
+              <mat-icon>info</mat-icon>
+              L'email ci-dessus sert d'identifiant. Un compte Pharmacien est créé automatiquement avec ce mot de passe.
+            </p>
+            <div class="form-grid">
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>{{ editMode ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe du compte' }}</mat-label>
-                <input matInput type="password" formControlName="password" placeholder="Min. 6 caractères">
+                <mat-icon matPrefix>lock</mat-icon>
+                <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Min. 6 caractères">
+                <button type="button" matSuffix class="suffix-btn" (click)="hidePassword = !hidePassword"
+                        [attr.aria-label]="hidePassword ? 'Afficher' : 'Masquer'">
+                  <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
                 <mat-error *ngIf="pharmacieForm.get('password')?.hasError('required')">
                   Le mot de passe est obligatoire.
                 </mat-error>
@@ -149,11 +208,17 @@ import { ConfirmService } from '../../core/services/confirm.service';
                   Au moins 6 caractères.
                 </mat-error>
               </mat-form-field>
+              <button type="button" class="btn btn-ghost span-2 generate-btn" (click)="generatePassword()">
+                <mat-icon>autorenew</mat-icon> Générer un mot de passe
+              </button>
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-outline" type="button" (click)="closeModal()">Annuler</button>
-            <button class="btn btn-primary" type="submit" [disabled]="pharmacieForm.invalid">Enregistrer</button>
+            <button class="btn btn-primary" type="submit" [disabled]="pharmacieForm.invalid">
+              <mat-icon>{{ editMode ? 'save' : 'add_business' }}</mat-icon>
+              {{ editMode ? 'Enregistrer' : 'Créer la pharmacie' }}
+            </button>
           </div>
         </form>
       </div>
@@ -172,6 +237,35 @@ import { ConfirmService } from '../../core/services/confirm.service';
     }
     .page-header-row h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.02em; }
     .page-header-row p { margin: 0; color: var(--text-secondary); font-size: 15px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-ghost {
+      background: transparent; border: 1px solid transparent; color: var(--primary);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ghost:hover { background: var(--primary-light); }
+
+    /* Récapitulatif d'import */
+    .import-result {
+      margin-bottom: 20px; border-radius: var(--radius-md, 10px);
+      border: 1px solid #BBF7D0; background: #F0FDF4; overflow: hidden;
+    }
+    .import-result.has-errors { border-color: #FED7AA; background: #FFFBEB; }
+    .import-result-head {
+      display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+      font-size: 14px; color: #166534; font-weight: 500;
+    }
+    .import-result.has-errors .import-result-head { color: #B45309; }
+    .import-result-head mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .close-inline {
+      margin-left: auto; background: transparent; border: none; cursor: pointer;
+      color: inherit; display: flex; align-items: center; border-radius: 6px; padding: 2px;
+    }
+    .close-inline:hover { background: rgba(0,0,0,0.06); }
+    .import-errors {
+      margin: 0; padding: 4px 16px 14px 40px; list-style: disc;
+      font-size: 13px; color: #92400E; max-height: 180px; overflow-y: auto;
+    }
+    .import-errors li { margin: 2px 0; }
 
     .table-card { padding: 0 !important; overflow: hidden; }
     .w-100 { width: 100%; }
@@ -226,6 +320,29 @@ import { ConfirmService } from '../../core/services/confirm.service';
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
     .form-grid mat-form-field { width: 100%; }
     .span-2 { grid-column: span 2; }
+
+    .form-section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--primary); margin: 4px 0 14px;
+    }
+    .form-section-title:not(:first-child) {
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .form-section-title mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .form-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      margin: 0 0 14px; padding: 10px 12px; border-radius: 8px;
+      background: var(--primary-light); color: var(--text-secondary); font-size: 12.5px; line-height: 1.4;
+    }
+    .form-note mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+    .suffix-btn {
+      background: transparent; border: none; cursor: pointer; color: var(--text-muted);
+      display: inline-flex; align-items: center; padding: 0 4px;
+    }
+    .suffix-btn:hover { color: var(--text-primary); }
+    .generate-btn { justify-content: center; margin-top: -4px; }
+    mat-form-field mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
     .modal-footer {
       padding: 16px 24px; border-top: 1px solid var(--border);
       display: flex; justify-content: flex-end; gap: 12px; background: #F8FAFC;
@@ -250,6 +367,11 @@ export class PharmaciesComponent implements OnInit {
   editMode = false;
   currentId: string | null = null;
   showModal = false;
+  hidePassword = true;
+
+  // Import Excel
+  importing = false;
+  importResult: PharmacieImportResult | null = null;
 
   // Un Service Régional est restreint à sa propre région (l'Admin garde le choix libre)
   isRegional = false;
@@ -302,6 +424,7 @@ export class PharmaciesComponent implements OnInit {
   openModal(pharmacie?: Pharmacie) {
     this.editMode = !!pharmacie;
     this.currentId = pharmacie ? pharmacie.id : null;
+    this.hidePassword = true;
 
     if (pharmacie) {
       this.pharmacieForm.patchValue({
@@ -370,6 +493,64 @@ export class PharmaciesComponent implements OnInit {
         this.snackBar.open('Pharmacie supprimée', 'Fermer', { duration: 3000 });
         this.loadPharmacies();
       });
+    });
+  }
+
+  /** Génère un mot de passe aléatoire et le place dans le formulaire (visible). */
+  generatePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    this.pharmacieForm.get('password')?.setValue(pwd);
+    this.hidePassword = false;
+  }
+
+  /** Télécharge le fichier Excel modèle pour l'import. */
+  downloadModele() {
+    this.pharmacieService.downloadTemplate().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele_import_pharmacies.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.snackBar.open('Impossible de télécharger le modèle.', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  /** Importe les pharmacies depuis le fichier Excel sélectionné. */
+  onImportFileSelected(event: any) {
+    const file: File = event.target.files?.[0];
+    if (!file) return;
+
+    this.importing = true;
+    this.importResult = null;
+    this.pharmacieService.importPharmacies(file).subscribe({
+      next: (result) => {
+        this.importing = false;
+        this.importResult = result;
+        const msg = result.echecs > 0
+          ? `${result.importes} importée(s), ${result.echecs} échec(s)`
+          : `${result.importes} pharmacie(s) importée(s) avec succès`;
+        this.snackBar.open(msg, 'Fermer', { duration: 4000 });
+        this.loadPharmacies();
+        event.target.value = ''; // permet de réimporter le même fichier
+      },
+      error: (err) => {
+        this.importing = false;
+        let errorMsg = 'Erreur lors de l\'import.';
+        if (err.error?.message) errorMsg = err.error.message;
+        else if (err.status === 403) errorMsg = 'Accès refusé. Seul un Service Régional (ou l\'Admin) peut importer des pharmacies.';
+        else if (err.status === 0) errorMsg = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
+        this.snackBar.open(errorMsg, 'Fermer', { duration: 8000, panelClass: 'error-snackbar' });
+        event.target.value = '';
+      }
     });
   }
 }

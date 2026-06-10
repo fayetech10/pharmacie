@@ -19,3 +19,9 @@ export interface PharmacieRequest {
   regionId: string;
   password?: string;
 }
+
+export interface PharmacieImportResult {
+  importes: number;
+  echecs: number;
+  erreurs: string[];
+}
