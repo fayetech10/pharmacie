@@ -1,0 +1,482 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { FactureService } from '../../../core/services/facture.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { Facture, StatutFacture } from '../../../core/models/facture.model';
+import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+
+@Component({
+  selector: 'app-facture-detail',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTableModule,
+    StatusBadgeComponent
+  ],
+  template: `
+    <div class="detail-page" *ngIf="facture">
+      <!-- Header -->
+      <div class="detail-header">
+        <div class="header-left">
+          <button class="back-btn" (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <div>
+            <h1>Facture #{{ facture.id | slice:0:8 }}</h1>
+            <p>{{ getMonthName(facture.mois) }} {{ facture.annee }} · Soumise le {{ facture.createdAt | date:'dd/MM/yyyy' }}</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <app-status-badge [statut]="facture.statut"></app-status-badge>
+
+          <button class="btn btn-outline" (click)="exportExcel()">
+            <mat-icon>table_view</mat-icon> Excel
+          </button>
+
+          <ng-container *ngIf="authService.isPharmacien() && facture.statut === 'BROUILLON'">
+            <a class="btn btn-outline" [routerLink]="['edit']">
+              <mat-icon>edit</mat-icon> Modifier
+            </a>
+            <button class="btn btn-primary" (click)="envoyer()">
+              <mat-icon>send</mat-icon> Envoyer
+            </button>
+          </ng-container>
+
+          <ng-container *ngIf="authService.isServiceRegional()">
+            <button class="btn btn-primary" (click)="verifier()" *ngIf="facture.statut === 'ENVOYEE'">
+              <mat-icon>rule</mat-icon> Vérifier
+            </button>
+            <ng-container *ngIf="facture.statut === 'EN_VERIFICATION'">
+              <button class="btn btn-danger" (click)="rejeter()">
+                <mat-icon>cancel</mat-icon> Rejeter
+              </button>
+              <button class="btn btn-teal" (click)="conformer()">
+                <mat-icon>thumb_up</mat-icon> Conforme
+              </button>
+              <button class="btn btn-primary" (click)="valider()">
+                <mat-icon>check_circle</mat-icon> Valider
+              </button>
+            </ng-container>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Info Summary -->
+      <div class="info-strip">
+        <div class="info-block">
+          <span class="info-label">Pharmacie</span>
+          <span class="info-value">{{ facture.pharmacieNom }}</span>
+        </div>
+        <div class="info-divider"></div>
+        <div class="info-block">
+          <span class="info-label">Période</span>
+          <span class="info-value">{{ getMonthName(facture.mois) }} {{ facture.annee }}</span>
+        </div>
+        <div class="info-divider"></div>
+        <div class="info-block">
+          <span class="info-label">Nombre de lignes</span>
+          <span class="info-value">{{ facture.lignes?.length || 0 }}</span>
+        </div>
+        <div class="info-divider"></div>
+        <div class="info-block">
+          <span class="info-label">Montant Total</span>
+          <span class="info-value montant">{{ facture.montantTotal | number }} CFA</span>
+        </div>
+      </div>
+
+      <!-- Rejection notice -->
+      <div class="reject-card" *ngIf="facture.statut === 'REJETEE' && facture.commentaireRejet">
+        <mat-icon>error</mat-icon>
+        <div>
+          <strong>Motif du rejet</strong>
+          <p>{{ facture.commentaireRejet }}</p>
+        </div>
+      </div>
+
+      <!-- Medications Table -->
+      <mat-card class="table-card">
+        <div class="card-title-row">
+          <h2>Détail des médicaments</h2>
+          <span class="line-count">{{ facture.lignes?.length || 0 }} ligne(s)</span>
+        </div>
+        <table mat-table [dataSource]="facture.lignes" class="w-100">
+          <ng-container matColumnDef="patientMatricule">
+            <th mat-header-cell *matHeaderCellDef> Matricule </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.patientMatricule || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="patientNom">
+            <th mat-header-cell *matHeaderCellDef> Patient </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.patientNomPrenom || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="medicament">
+            <th mat-header-cell *matHeaderCellDef> Médicament </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.medicament }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="code">
+            <th mat-header-cell *matHeaderCellDef> Code </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.codeProduit }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="qte">
+            <th mat-header-cell *matHeaderCellDef> Qté </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.quantite }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="prix">
+            <th mat-header-cell *matHeaderCellDef> Prix Unit. </th>
+            <td mat-cell *matCellDef="let ligne"> {{ ligne.prixUnitaire | number }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="montant">
+            <th mat-header-cell *matHeaderCellDef> Montant </th>
+            <td mat-cell *matCellDef="let ligne"> <strong>{{ ligne.montant | number }}</strong> </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant'];"></tr>
+        </table>
+      </mat-card>
+    </div>
+  `,
+  styles: [`
+    .detail-page {
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-left h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+    .header-left p {
+      margin: 4px 0 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-secondary);
+    }
+    .back-btn:hover {
+      background: var(--border-light);
+      color: var(--text-primary);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: white;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      background: var(--border-light);
+    }
+    .btn-danger {
+      background: var(--warn);
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #DC2626;
+    }
+    .btn-teal {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-teal:hover {
+      background: #0F766E;
+    }
+
+    .info-strip {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 20px 0;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .info-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+    }
+    .info-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+    }
+    .info-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+    .info-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .info-value.montant {
+      color: var(--primary);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .reject-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .reject-card mat-icon {
+      color: #EF4444;
+      margin-top: 2px;
+    }
+    .reject-card strong {
+      color: #B91C1C;
+      font-size: 15px;
+    }
+    .reject-card p {
+      margin: 4px 0 0;
+      color: #7F1D1D;
+      font-size: 14px;
+    }
+
+    .table-card {
+      padding: 0 !important;
+      overflow: hidden;
+    }
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title-row h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .line-count {
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: var(--border-light);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .w-100 { width: 100%; }
+
+    @media (max-width: 768px) {
+      .detail-header {
+        flex-direction: column;
+      }
+      .info-strip {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+      }
+      .info-divider {
+        width: 80%;
+        height: 1px;
+      }
+    }
+  `]
+})
+export class FactureDetailComponent implements OnInit {
+  facture!: Facture;
+  
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private factureService: FactureService,
+    public authService: AuthService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
+  ) {}
+
+  ngOnInit() {
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) this.loadFacture(id);
+    });
+  }
+
+  loadFacture(id: string) {
+    this.factureService.getById(id).subscribe((data: Facture) => {
+      this.facture = data;
+    });
+  }
+
+  goBack() {
+    this.router.navigate(['/dashboard/factures']);
+  }
+
+  exportExcel() {
+    this.factureService.exportFactureExcel(this.facture.id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${this.getMonthName(this.facture.mois)}_${this.facture.annee}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export Excel réussi', 'Fermer', { duration: 3000 });
+      },
+      error: (err: any) => this.showError(err)
+    });
+  }
+
+  envoyer() {
+    this.openConfirm('Envoyer la facture', 'Êtes-vous sûr de vouloir envoyer cette facture au service régional ? Vous ne pourrez plus la modifier.', () => {
+      this.factureService.envoyer(this.facture.id).subscribe({
+        next: (f: Facture) => this.facture = f,
+        error: (e: any) => this.showError(e)
+      });
+    });
+  }
+
+  verifier() {
+    this.factureService.verifier(this.facture.id).subscribe({
+      next: (f: Facture) => this.facture = f,
+      error: (e: any) => this.showError(e)
+    });
+  }
+
+  conformer() {
+    this.factureService.conformer(this.facture.id).subscribe({
+      next: (f: Facture) => this.facture = f,
+      error: (e: any) => this.showError(e)
+    });
+  }
+
+  valider() {
+    const commentaire = prompt("Commentaire de validation (optionnel):") || "";
+    this.factureService.valider(this.facture.id, { commentaire }).subscribe({
+      next: (f: Facture) => this.facture = f,
+      error: (e: any) => this.showError(e)
+    });
+  }
+
+  rejeter() {
+    const commentaire = prompt("Motif du rejet (OBLIGATOIRE):");
+    if (!commentaire) {
+      this.snackBar.open('Le motif est obligatoire pour un rejet', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
+    this.openConfirm('Rejeter la facture', 'Êtes-vous sûr de vouloir rejeter cette facture ?', () => {
+      this.factureService.rejeter(this.facture.id, { commentaire }).subscribe({
+        next: (f: Facture) => this.facture = f,
+        error: (e: any) => this.showError(e)
+      });
+    });
+  }
+
+  private openConfirm(title: string, message: string, onConfirm: () => void) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: { title, message, confirmText: 'Confirmer', cancelText: 'Annuler' }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) onConfirm();
+    });
+  }
+
+  private showError(err: any) {
+    this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000 });
+  }
+
+  getMonthName(mois: number): string {
+    const moisNoms = [
+      '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    return moisNoms[mois] || '';
+  }
+}

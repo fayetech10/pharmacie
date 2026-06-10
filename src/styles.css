@@ -1,0 +1,288 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ============================================================
+   DESIGN SYSTEM — CSU Pharmacie
+   Palette santé sobre · espaces généreux · ombres discrètes
+   ============================================================ */
+:root {
+  /* Couleurs de marque */
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: #EFF4FF;
+  --accent: #0D9488;
+  --accent-light: #CCFBF1;
+  --warn: #EF4444;
+  --warn-light: #FEE2E2;
+  --success: #16A34A;
+  --success-light: #DCFCE7;
+
+  /* Surfaces & texte */
+  --bg: #F7F9FC;
+  --card-bg: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --border: #E7ECF3;
+  --border-light: #F1F5F9;
+
+  /* Élévation */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 16px 32px -8px rgba(15, 23, 42, 0.10), 0 4px 8px -4px rgba(15, 23, 42, 0.05);
+
+  /* Rayons & rythme */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Échelle d'espacement (4px) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 { letter-spacing: -0.02em; }
+
+/* ============================================================
+   EN-TÊTE DE PAGE
+   ============================================================ */
+.page-header { margin-bottom: var(--sp-6); }
+.page-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 var(--sp-1);
+  color: var(--text-primary);
+}
+.page-header p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 15px;
+}
+
+/* ============================================================
+   CARTES / SECTIONS
+   ============================================================ */
+.card,
+.section-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: var(--sp-6);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--border-light);
+}
+.section-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.section-title-group h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+.section-title-group p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.section-icon {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  font-size: 22px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.section-body { padding: var(--sp-6); }
+
+/* ============================================================
+   BOUTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 42px;
+  padding: 0 var(--sp-5);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all var(--transition);
+}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
+.btn-sm { height: 34px; padding: 0 var(--sp-3); font-size: 13px; }
+.btn-block { width: 100%; }
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: var(--shadow-md); }
+
+.btn-outline { background: #fff; color: var(--text-primary); border-color: var(--border); }
+.btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover:not(:disabled) { background: var(--border-light); color: var(--text-primary); }
+
+.btn-danger { background: var(--warn); color: #fff; }
+.btn-danger:hover:not(:disabled) { background: #DC2626; }
+
+/* Boutons d'action (icônes en table) */
+.action-group { display: inline-flex; gap: var(--sp-1); }
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.action-btn:hover { background: var(--primary-light); color: var(--primary); }
+.action-btn.danger:hover { background: var(--warn-light); color: var(--warn); }
+.action-btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
+
+/* ============================================================
+   BADGES DE STATUT
+   ============================================================ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-BROUILLON { background: #F1F5F9; color: #64748B; }
+.status-ENVOYEE { background: #DBEAFE; color: #2563EB; }
+.status-EN_VERIFICATION { background: #FEF3C7; color: #D97706; }
+.status-CONFORME { background: #CCFBF1; color: #0D9488; }
+.status-VALIDEE { background: #DCFCE7; color: #16A34A; }
+.status-REJETEE { background: #FEE2E2; color: #EF4444; }
+
+/* ============================================================
+   ÉTAT VIDE
+   ============================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-10) var(--sp-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.empty-state p { margin: 0; font-size: 14px; }
+
+/* ============================================================
+   UTILITAIRES
+   ============================================================ */
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+.text-warn { color: var(--warn); }
+.w-100 { width: 100%; }
+.flex-grow { flex: 1; }
+
+/* ============================================================
+   OVERRIDES ANGULAR MATERIAL
+   ============================================================ */
+.mat-mdc-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow) !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--card-bg) !important;
+}
+
+.mat-mdc-form-field { font-size: 14px !important; }
+
+.mat-mdc-table { border-radius: var(--radius) !important; overflow: hidden; }
+.mat-mdc-header-cell {
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  font-size: 12.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+}
+.mat-mdc-row { transition: background-color var(--transition); }
+.mat-mdc-row:hover { background-color: #F8FAFC !important; }
+
+/* Snackbars lisibles */
+.mat-mdc-snack-bar-container.success-snackbar .mdc-snackbar__surface { background: var(--success) !important; }
+.mat-mdc-snack-bar-container.error-snackbar .mdc-snackbar__surface { background: var(--warn) !important; }
+
+/* ============================================================
+   ANIMATIONS & DIVERS
+   ============================================================ */
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+button, a { transition: all var(--transition); }
+
+/* Anneau de focus accessible */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
