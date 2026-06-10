@@ -6,9 +6,9 @@
    ============================================================ */
 :root {
   /* Couleurs de marque */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-light: #EFF4FF;
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-light: #ECFDF5;
   --accent: #0D9488;
   --accent-light: #CCFBF1;
   --warn: #EF4444;

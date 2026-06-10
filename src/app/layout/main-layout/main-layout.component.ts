@@ -192,7 +192,7 @@ import { MatMenuModule } from '@angular/material/menu';
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #2563EB, #7C3AED);
+      background: linear-gradient(135deg, #059669, #0D9488);
       color: white;
       display: flex;
       align-items: center;

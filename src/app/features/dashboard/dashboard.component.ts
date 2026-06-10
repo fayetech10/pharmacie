@@ -687,7 +687,7 @@ import { BaseChartDirective } from 'ng2-charts';
       align-items: center;
       gap: 24px;
       flex-wrap: wrap;
-      background: linear-gradient(120deg, #1E40AF 0%, #2563EB 55%, #0D9488 100%);
+      background: linear-gradient(120deg, #047857 0%, #059669 55%, #0D9488 100%);
       color: #fff;
       border-radius: var(--radius-lg);
       padding: 20px 24px;
