@@ -59,7 +59,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row-multi mt-3">
           <mat-form-field appearance="outline" class="flex-2">
             <mat-label>Médicament</mat-label>
-            <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)">
+            <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)" style="text-transform: uppercase;">
             <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
               <mat-option *ngFor="let med of suggestions" [value]="med.nom">
                 {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non Éligible)</span>
@@ -262,7 +262,7 @@ export class FactureFormComponent implements OnInit {
 
     const val = this.medicamentForm.value;
     this.patientLignes.push({
-      medicament: val.medicament,
+      medicament: (val.medicament || '').toString().toUpperCase(),
       codeProduit: val.codeProduit,
       quantite: val.quantite,
       prixUnitaire: val.prixUnitaire

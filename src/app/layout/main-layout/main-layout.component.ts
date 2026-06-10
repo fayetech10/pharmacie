@@ -29,8 +29,8 @@ import { MatMenuModule } from '@angular/material/menu';
 
         <nav class="nav-links">
           <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link" *ngIf="authService.isPharmacien()">
-            <mat-icon>edit_note</mat-icon>
-            <span>Saisie</span>
+            <mat-icon>point_of_sale</mat-icon>
+            <span>Facturation</span>
           </a>
           <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceCentral()">
             <mat-icon>receipt_long</mat-icon>

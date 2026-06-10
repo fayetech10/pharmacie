@@ -126,14 +126,14 @@ import { BaseChartDirective } from 'ng2-charts';
           </button>
         </div>
 
-        <!-- Section: Saisie Rapide -->
+        <!-- Section: Facturation -->
         <div class="section-card">
           <div class="section-header">
             <div class="section-title-group">
-              <mat-icon class="section-icon">edit_note</mat-icon>
+              <mat-icon class="section-icon">point_of_sale</mat-icon>
               <div>
-                <h2>Saisie rapide</h2>
-                <p>Ajoutez un patient et ses médicaments à la facture du mois</p>
+                <h2>Facturation</h2>
+                <p>Ajoutez les médicaments puis renseignez le patient pour la facture du mois</p>
               </div>
             </div>
             <a class="btn btn-outline btn-sm" routerLink="/dashboard/factures">
@@ -142,36 +142,16 @@ import { BaseChartDirective } from 'ng2-charts';
           </div>
 
           <div class="section-body">
-            <!-- Étape 1 : Patient -->
+            <!-- Étape 1 : Médicaments -->
             <div class="step">
               <span class="step-badge">1</span>
               <div class="step-content">
-                <span class="step-label">Identité du patient</span>
-                <form [formGroup]="patientForm" class="form-row">
-              <mat-form-field appearance="outline" class="flex-grow">
-                <mat-label>Nom & Prénom du patient</mat-label>
-                <input matInput formControlName="patientNomPrenom" placeholder="Ex: Diop Ousmane">
-                <mat-icon matPrefix>person</mat-icon>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="flex-grow">
-                <mat-label>N° Matricule</mat-label>
-                <input matInput formControlName="patientMatricule" placeholder="Ex: PAT-2026-987">
-                <mat-icon matPrefix>badge</mat-icon>
-              </mat-form-field>
-                </form>
-              </div>
-            </div>
-
-            <!-- Étape 2 : Médicaments -->
-            <div class="step">
-              <span class="step-badge">2</span>
-              <div class="step-content">
-                <span class="step-label">Médicaments du patient</span>
+                <span class="step-label">Médicaments</span>
                 <!-- Medication entry -->
                 <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row">
               <mat-form-field appearance="outline" class="flex-2">
                 <mat-label>Médicament</mat-label>
-                <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)">
+                <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)" style="text-transform: uppercase;">
                 <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
                   <mat-option *ngFor="let med of suggestions" [value]="med.nom">
                     {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Exclu)</span>
@@ -235,9 +215,6 @@ import { BaseChartDirective } from 'ng2-charts';
               </table>
               <div class="temp-footer">
                 <span class="temp-total">Sous-total : <strong>{{ tempTotal | number:'1.0-0':'fr' }} CFA</strong></span>
-                <button class="btn btn-primary" [disabled]="patientForm.invalid || isSubmitting" (click)="enregistrerPatientFacture()">
-                  <mat-icon>save</mat-icon> Enregistrer pour ce patient
-                </button>
               </div>
             </div>
 
@@ -246,6 +223,33 @@ import { BaseChartDirective } from 'ng2-charts';
               <span>Recherchez un médicament, renseignez quantité et prix, puis cliquez sur « Préparer ».</span>
             </div>
               </div>
+            </div>
+
+            <!-- Étape 2 : Patient -->
+            <div class="step">
+              <span class="step-badge">2</span>
+              <div class="step-content">
+                <span class="step-label">Identité du patient</span>
+                <form [formGroup]="patientForm" class="form-row">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>Nom & Prénom du patient</mat-label>
+                <input matInput formControlName="patientNomPrenom" placeholder="Ex: Diop Ousmane">
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>N° Matricule</mat-label>
+                <input matInput formControlName="patientMatricule" placeholder="Ex: PAT-2026-987">
+                <mat-icon matPrefix>badge</mat-icon>
+              </mat-form-field>
+                </form>
+              </div>
+            </div>
+
+            <!-- Action : enregistrer -->
+            <div class="save-row">
+              <button class="btn btn-primary" [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting" (click)="enregistrerPatientFacture()">
+                <mat-icon>save</mat-icon> Enregistrer pour ce patient
+              </button>
             </div>
           </div>
         </div>
@@ -755,6 +759,14 @@ import { BaseChartDirective } from 'ng2-charts';
     .temp-total strong { color: var(--text-primary); font-size: 15px; }
     .temp-footer { align-items: center; }
 
+    .save-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-light);
+    }
+
     .hint-empty {
       display: flex;
       align-items: center;
@@ -936,7 +948,7 @@ export class DashboardComponent implements OnInit {
     if (this.medicamentForm.invalid) return;
     const val = this.medicamentForm.value;
     this.patientLignes.push({
-      medicament: val.medicament,
+      medicament: (val.medicament || '').toString().toUpperCase(),
       codeProduit: val.codeProduit,
       quantite: val.quantite,
       prixUnitaire: val.prixUnitaire
