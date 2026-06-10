@@ -9,7 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Facture, StatutFacture } from '../../../core/models/facture.model';
+import { Facture, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
@@ -45,12 +45,12 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
             <mat-icon>table_view</mat-icon> Excel
           </button>
 
-          <ng-container *ngIf="authService.isPharmacien() && facture.statut === 'BROUILLON'">
+          <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'A_CORRIGER')">
             <a class="btn btn-outline" [routerLink]="['edit']">
-              <mat-icon>edit</mat-icon> Modifier
+              <mat-icon>edit</mat-icon> {{ facture.statut === 'A_CORRIGER' ? 'Corriger' : 'Modifier' }}
             </a>
             <button class="btn btn-primary" (click)="envoyer()">
-              <mat-icon>send</mat-icon> Envoyer
+              <mat-icon>send</mat-icon> {{ facture.statut === 'A_CORRIGER' ? 'Renvoyer' : 'Envoyer' }}
             </button>
           </ng-container>
 
@@ -59,8 +59,13 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
               <mat-icon>rule</mat-icon> Vérifier
             </button>
             <ng-container *ngIf="facture.statut === 'EN_VERIFICATION'">
+              <button class="btn btn-warning" (click)="renvoyerCorrection()"
+                      [disabled]="countLignes('REJETEE') === 0"
+                      title="Renvoyer au pharmacien pour corriger les lignes rejetées">
+                <mat-icon>undo</mat-icon> Renvoyer pour correction
+              </button>
               <button class="btn btn-danger" (click)="rejeter()">
-                <mat-icon>cancel</mat-icon> Rejeter
+                <mat-icon>cancel</mat-icon> Rejeter tout
               </button>
               <button class="btn btn-teal" (click)="conformer()">
                 <mat-icon>thumb_up</mat-icon> Conforme
@@ -105,6 +110,31 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
         </div>
       </div>
 
+      <!-- Correction notice (pharmacien) -->
+      <div class="correction-card" *ngIf="facture.statut === 'A_CORRIGER'">
+        <mat-icon>build</mat-icon>
+        <div>
+          <strong>Facture à corriger ({{ countLignes('REJETEE') }} ligne(s) rejetée(s))</strong>
+          <p>Les lignes rejetées sont signalées ci-dessous avec leur motif.
+            <ng-container *ngIf="authService.isPharmacien()">Cliquez sur <em>Corriger</em> pour les modifier, puis <em>Renvoyer</em>.</ng-container>
+          </p>
+        </div>
+      </div>
+
+      <!-- Verification hint -->
+      <div class="verif-hint" *ngIf="isLineReviewMode()">
+        <mat-icon>rule</mat-icon>
+        <div>
+          <strong>Vérification ligne par ligne</strong>
+          <p>Acceptez ou rejetez chaque ligne (un motif est requis pour un rejet), puis cliquez sur <em>Valider</em>. Seules les lignes acceptées seront facturées.</p>
+        </div>
+        <span class="verif-recap">
+          <span class="ok">{{ countLignes('ACCEPTEE') }} acceptée(s)</span> ·
+          <span class="ko">{{ countLignes('REJETEE') }} rejetée(s)</span> ·
+          <span class="wait">{{ countLignes('EN_ATTENTE') }} en attente</span>
+        </span>
+      </div>
+
       <!-- Medications Table -->
       <mat-card class="table-card">
         <div class="card-title-row">
@@ -144,11 +174,39 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 
           <ng-container matColumnDef="montant">
             <th mat-header-cell *matHeaderCellDef> Montant </th>
-            <td mat-cell *matCellDef="let ligne"> <strong>{{ ligne.montant | number }}</strong> </td>
+            <td mat-cell *matCellDef="let ligne"
+                [class.line-rejected]="ligne.statutLigne === 'REJETEE'">
+              <strong>{{ ligne.montant | number }}</strong>
+            </td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant']"></tr>
-          <tr mat-row *matRowDef="let row; columns: ['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant'];"></tr>
+          <ng-container matColumnDef="decision">
+            <th mat-header-cell *matHeaderCellDef> Décision </th>
+            <td mat-cell *matCellDef="let ligne; let i = index">
+              <!-- Mode revue : boutons accepter / rejeter -->
+              <div class="line-actions" *ngIf="isLineReviewMode()">
+                <button class="line-btn ok" [class.active]="ligne.statutLigne === 'ACCEPTEE'"
+                        (click)="accepterLigne(i)" title="Accepter la ligne" type="button">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button class="line-btn ko" [class.active]="ligne.statutLigne === 'REJETEE'"
+                        (click)="rejeterLigne(i)" title="Rejeter la ligne" type="button">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+              <!-- Lecture seule : badge de statut -->
+              <span class="line-tag" [ngClass]="lineTagClass(ligne.statutLigne)" *ngIf="!isLineReviewMode()">
+                {{ lineTagLabel(ligne.statutLigne) }}
+              </span>
+              <div class="line-motif" *ngIf="ligne.statutLigne === 'REJETEE' && ligne.motifRejet">
+                <mat-icon>info</mat-icon> {{ ligne.motifRejet }}
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              [class.row-rejected]="row.statutLigne === 'REJETEE'"></tr>
         </table>
       </mat-card>
     </div>
@@ -259,6 +317,17 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     .btn-teal:hover {
       background: #0F766E;
     }
+    .btn-warning {
+      background: #EA580C;
+      color: white;
+    }
+    .btn-warning:hover:not([disabled]) {
+      background: #C2410C;
+    }
+    .btn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
     .info-strip {
       display: flex;
@@ -326,6 +395,20 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
       font-size: 14px;
     }
 
+    .correction-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .correction-card mat-icon { color: #EA580C; margin-top: 2px; }
+    .correction-card strong { color: #C2410C; font-size: 15px; }
+    .correction-card p { margin: 4px 0 0; color: #9A3412; font-size: 14px; }
+
     .table-card {
       padding: 0 !important;
       overflow: hidden;
@@ -351,6 +434,72 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     }
     .w-100 { width: 100%; }
 
+    /* Bandeau d'aide vérification */
+    .verif-hint {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: var(--primary-light);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .verif-hint > mat-icon { color: var(--primary); }
+    .verif-hint strong { color: var(--primary); font-size: 15px; }
+    .verif-hint p { margin: 2px 0 0; font-size: 13px; color: var(--text-secondary); }
+    .verif-recap {
+      margin-left: auto;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .verif-recap .ok { color: var(--accent); }
+    .verif-recap .ko { color: var(--warn); }
+    .verif-recap .wait { color: var(--text-muted); }
+
+    /* Décision par ligne */
+    .line-actions { display: inline-flex; gap: 6px; }
+    .line-btn {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .line-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .line-btn.ok { color: var(--accent); }
+    .line-btn.ok:hover, .line-btn.ok.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .line-btn.ko { color: var(--warn); }
+    .line-btn.ko:hover, .line-btn.ko.active { background: var(--warn); color: white; border-color: var(--warn); }
+
+    .line-tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .line-tag.tag-ok { background: #DCFCE7; color: #15803D; }
+    .line-tag.tag-ko { background: #FEE2E2; color: #B91C1C; }
+    .line-tag.tag-wait { background: var(--border-light); color: var(--text-secondary); }
+
+    .line-motif {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #B91C1C;
+    }
+    .line-motif mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    .row-rejected td { background: #FEF2F2; }
+    .line-rejected strong { text-decoration: line-through; color: var(--text-muted); }
+
     @media (max-width: 768px) {
       .detail-header {
         flex-direction: column;
@@ -369,7 +518,62 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 })
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
-  
+
+  private readonly baseColumns = ['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant'];
+
+  /** Colonne "Décision" affichée pour les services (régional/central) ou si des décisions existent déjà. */
+  get displayedColumns(): string[] {
+    const showDecision =
+      this.authService.isServiceRegional() ||
+      this.authService.isServiceCentral() ||
+      (this.facture?.lignes || []).some(l => l.statutLigne && l.statutLigne !== StatutLigne.EN_ATTENTE);
+    return showDecision ? [...this.baseColumns, 'decision'] : this.baseColumns;
+  }
+
+  /** Vrai quand le service régional peut accepter/rejeter les lignes (facture en vérification). */
+  isLineReviewMode(): boolean {
+    return this.authService.isServiceRegional() && this.facture?.statut === StatutFacture.EN_VERIFICATION;
+  }
+
+  countLignes(statut: string): number {
+    return (this.facture?.lignes || []).filter(l => (l.statutLigne || StatutLigne.EN_ATTENTE) === statut).length;
+  }
+
+  lineTagClass(statut?: StatutLigne): string {
+    switch (statut) {
+      case StatutLigne.ACCEPTEE: return 'tag-ok';
+      case StatutLigne.REJETEE: return 'tag-ko';
+      default: return 'tag-wait';
+    }
+  }
+
+  lineTagLabel(statut?: StatutLigne): string {
+    switch (statut) {
+      case StatutLigne.ACCEPTEE: return 'Acceptée';
+      case StatutLigne.REJETEE: return 'Rejetée';
+      default: return 'En attente';
+    }
+  }
+
+  accepterLigne(index: number) {
+    this.factureService.deciderLigne(this.facture.id, index, { accepter: true }).subscribe({
+      next: (f: Facture) => this.facture = f,
+      error: (e: any) => this.showError(e)
+    });
+  }
+
+  rejeterLigne(index: number) {
+    const motif = prompt('Motif du rejet de cette ligne (OBLIGATOIRE):');
+    if (!motif || !motif.trim()) {
+      this.snackBar.open('Le motif est obligatoire pour rejeter une ligne', 'Fermer', { duration: 3000 });
+      return;
+    }
+    this.factureService.deciderLigne(this.facture.id, index, { accepter: false, motif: motif.trim() }).subscribe({
+      next: (f: Facture) => this.facture = f,
+      error: (e: any) => this.showError(e)
+    });
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -455,6 +659,20 @@ export class FactureDetailComponent implements OnInit {
         error: (e: any) => this.showError(e)
       });
     });
+  }
+
+  renvoyerCorrection() {
+    const rejetees = this.countLignes('REJETEE');
+    this.openConfirm(
+      'Renvoyer pour correction',
+      `Renvoyer cette facture au pharmacien pour corriger ${rejetees} ligne(s) rejetée(s) ?`,
+      () => {
+        this.factureService.renvoyerPourCorrection(this.facture.id).subscribe({
+          next: (f: Facture) => this.facture = f,
+          error: (e: any) => this.showError(e)
+        });
+      }
+    );
   }
 
   private openConfirm(title: string, message: string, onConfirm: () => void) {

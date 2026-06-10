@@ -2,9 +2,16 @@ export enum StatutFacture {
   BROUILLON = 'BROUILLON',
   ENVOYEE = 'ENVOYEE',
   EN_VERIFICATION = 'EN_VERIFICATION',
+  A_CORRIGER = 'A_CORRIGER',
   CONFORME = 'CONFORME',
   REJETEE = 'REJETEE',
   VALIDEE = 'VALIDEE'
+}
+
+export enum StatutLigne {
+  EN_ATTENTE = 'EN_ATTENTE',
+  ACCEPTEE = 'ACCEPTEE',
+  REJETEE = 'REJETEE'
 }
 
 export interface LigneFacture {
@@ -15,6 +22,13 @@ export interface LigneFacture {
   quantite: number;
   prixUnitaire: number;
   montant: number;
+  statutLigne?: StatutLigne;
+  motifRejet?: string;
+}
+
+export interface LigneDecisionRequest {
+  accepter: boolean;
+  motif?: string;
 }
 
 export interface HistoriqueAction {

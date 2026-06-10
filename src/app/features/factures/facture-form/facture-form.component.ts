@@ -146,7 +146,55 @@ import { ConfirmService } from '../../../core/services/confirm.service';
       </mat-card-content>
     </mat-card>
 
-
+    <!-- Lignes déjà enregistrées sur la facture (utile en correction) -->
+    <mat-card class="mb-4" *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0">
+      <mat-card-header>
+        <mat-card-title>
+          Lignes de la facture ({{ facture.lignes.length }})
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="mt-3">
+        <div class="correction-hint" *ngIf="facture.statut === 'A_CORRIGER'">
+          <mat-icon>build</mat-icon>
+          Corrigez les lignes rejetées (supprimez-les puis ressaisissez-les correctement ci-dessus), puis cliquez sur « Envoyer la facture ».
+        </div>
+        <table class="temp-table">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Médicament</th>
+              <th>Code</th>
+              <th>Qté</th>
+              <th>Prix Unit.</th>
+              <th>Total</th>
+              <th>Statut</th>
+              <th style="width: 80px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of facture.lignes; let i = index" [class.row-rejected]="l.statutLigne === 'REJETEE'">
+              <td>{{ l.patientNomPrenom || '-' }}</td>
+              <td>{{ l.medicament }}</td>
+              <td>{{ l.codeProduit }}</td>
+              <td>{{ l.quantite }}</td>
+              <td>{{ l.prixUnitaire | number }}</td>
+              <td><strong>{{ l.montant | number }}</strong></td>
+              <td>
+                <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [matTooltip]="l.motifRejet || ''">
+                  Rejetée
+                </span>
+                <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
+              </td>
+              <td>
+                <button mat-icon-button color="warn" type="button" (click)="supprimerLigne(i)" matTooltip="Supprimer cette ligne">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </mat-card-content>
+    </mat-card>
   `,
   styles: [`
     .mb-2 { margin-bottom: 8px; }
@@ -180,6 +228,12 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     .exclu-line { font-size: 13px; color: var(--text-primary); }
     .exclu-line strong { color: var(--text-secondary); }
     .commit-section { display: flex; justify-content: flex-end; }
+    .row-rejected td { background: #FEF2F2; }
+    .ligne-tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
+    .ligne-tag.tag-ok { background: #DCFCE7; color: #15803D; }
+    .ligne-tag.tag-ko { background: #FEE2E2; color: #B91C1C; }
+    .correction-hint { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px 16px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; color: #9A3412; font-size: 14px; }
+    .correction-hint mat-icon { color: #EA580C; }
   `]
 })
 export class FactureFormComponent implements OnInit {

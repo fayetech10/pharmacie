@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { Facture, FactureRequest, ValidationRequest } from '../models/facture.model';
+import { Facture, FactureRequest, ValidationRequest, LigneDecisionRequest } from '../models/facture.model';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -60,6 +60,14 @@ export class FactureService {
 
   conformer(id: string): Observable<Facture> {
     return this.api.post<Facture>(`/factures/${id}/conformer`, {});
+  }
+
+  deciderLigne(id: string, index: number, req: LigneDecisionRequest): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/lignes/${index}/decision`, req);
+  }
+
+  renvoyerPourCorrection(id: string): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/renvoyer-correction`, {});
   }
 
   exportExcel(): Observable<Blob> {

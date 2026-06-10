@@ -207,6 +207,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 .status-ENVOYEE { background: #DBEAFE; color: #2563EB; }
 .status-EN_VERIFICATION { background: #FEF3C7; color: #D97706; }
 .status-CONFORME { background: #CCFBF1; color: #0D9488; }
+.status-A_CORRIGER { background: #FFEDD5; color: #EA580C; }
 .status-VALIDEE { background: #DCFCE7; color: #16A34A; }
 .status-REJETEE { background: #FEE2E2; color: #EF4444; }
 

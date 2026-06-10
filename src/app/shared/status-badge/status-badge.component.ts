@@ -21,6 +21,7 @@ export class StatusBadgeComponent {
       case StatutFacture.BROUILLON: return 'Brouillon';
       case StatutFacture.ENVOYEE: return 'Envoyée';
       case StatutFacture.EN_VERIFICATION: return 'En vérification';
+      case StatutFacture.A_CORRIGER: return 'À corriger';
       case StatutFacture.CONFORME: return 'Conforme';
       case StatutFacture.REJETEE: return 'Rejetée';
       case StatutFacture.VALIDEE: return 'Validée';
