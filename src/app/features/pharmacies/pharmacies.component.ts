@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { PharmacieService } from '../../core/services/pharmacie.service';
 import { Pharmacie } from '../../core/models/pharmacie.model';
 import { RegionService, Region } from '../../core/services/region.service';
+import { AuthService } from '../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
@@ -120,6 +121,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
                 <mat-select formControlName="regionId">
                   <mat-option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</mat-option>
                 </mat-select>
+                <mat-hint *ngIf="isRegional">Limitée à votre région</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>Nom de la pharmacie</mat-label>
@@ -249,13 +251,20 @@ export class PharmaciesComponent implements OnInit {
   currentId: string | null = null;
   showModal = false;
 
+  // Un Service Régional est restreint à sa propre région (l'Admin garde le choix libre)
+  isRegional = false;
+  private userRegionId: string | null = null;
+
   constructor(
     private pharmacieService: PharmacieService,
     private regionService: RegionService,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
-    private confirm: ConfirmService
+    private confirm: ConfirmService,
+    private authService: AuthService
   ) {
+    this.isRegional = this.authService.isServiceRegional();
+    this.userRegionId = this.authService.getCurrentUser()?.regionId ?? null;
     this.pharmacieForm = this.fb.group({
       code: ['', Validators.required],
       nom: ['', Validators.required],
@@ -310,6 +319,16 @@ export class PharmaciesComponent implements OnInit {
       this.pharmacieForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
     }
     this.pharmacieForm.get('password')?.updateValueAndValidity();
+
+    // Le Service Régional ne peut créer/modifier que dans sa propre région : champ verrouillé
+    const regionCtrl = this.pharmacieForm.get('regionId');
+    if (this.isRegional && this.userRegionId) {
+      regionCtrl?.setValue(this.userRegionId);
+      regionCtrl?.disable();
+    } else {
+      regionCtrl?.enable();
+    }
+
     this.showModal = true;
   }
 
@@ -320,7 +339,8 @@ export class PharmaciesComponent implements OnInit {
   savePharmacie() {
     if (this.pharmacieForm.invalid) return;
 
-    const req = this.pharmacieForm.value;
+    // getRawValue() inclut le champ région même lorsqu'il est verrouillé (disabled)
+    const req = this.pharmacieForm.getRawValue();
     const obs$ = this.editMode && this.currentId
       ? this.pharmacieService.update(this.currentId, req)
       : this.pharmacieService.create(req);

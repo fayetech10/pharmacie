@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { noAuthGuard } from './core/guards/no-auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { Role } from './core/models/user.model';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -40,6 +42,8 @@ export const routes: Routes = [
       },
       {
         path: 'pharmacies',
+        canActivate: [roleGuard],
+        data: { roles: [Role.SERVICE_REGIONAL, Role.ADMIN] },
         loadComponent: () => import('./features/pharmacies/pharmacies.component').then(m => m.PharmaciesComponent)
       },
       {

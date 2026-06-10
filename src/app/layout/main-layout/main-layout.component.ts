@@ -50,7 +50,7 @@ import { MatMenuModule } from '@angular/material/menu';
             <mat-icon>map</mat-icon>
             <span>Régions</span>
           </a>
-          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.canManagePharmacies()">
             <mat-icon>local_pharmacy</mat-icon>
             <span>Pharmacies</span>
           </a>
