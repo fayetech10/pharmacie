@@ -23,9 +23,7 @@ import { MatMenuModule } from '@angular/material/menu';
     <header class="topbar">
       <div class="topbar-inner">
         <a routerLink="/dashboard" class="brand">
-          <div class="brand-icon">
-            <mat-icon>local_pharmacy</mat-icon>
-          </div>
+          <img class="brand-logo-img" [src]="brandLogo" alt="Logo" />
           <span class="brand-name">CSU Sénégal</span>
         </a>
 
@@ -34,7 +32,11 @@ import { MatMenuModule } from '@angular/material/menu';
             <mat-icon>edit_note</mat-icon>
             <span>Saisie</span>
           </a>
-          <a routerLink="/dashboard/factures" routerLinkActive="active" class="nav-link">
+          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceCentral()">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Factures (Par Région)</span>
+          </a>
+          <a routerLink="/dashboard/factures" routerLinkActive="active" class="nav-link" *ngIf="!authService.isServiceCentral()">
             <mat-icon>receipt_long</mat-icon>
             <span>{{ authService.isPharmacien() ? 'Mes Factures' : 'Factures' }}</span>
           </a>
@@ -45,10 +47,6 @@ import { MatMenuModule } from '@angular/material/menu';
           <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral() || authService.isAdmin()">
             <mat-icon>medication</mat-icon>
             <span>Médicaments</span>
-          </a>
-          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceCentral()">
-            <mat-icon>map</mat-icon>
-            <span>Régions</span>
           </a>
           <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.canManagePharmacies()">
             <mat-icon>local_pharmacy</mat-icon>
@@ -122,20 +120,12 @@ import { MatMenuModule } from '@angular/material/menu';
       color: var(--text-primary);
       flex-shrink: 0;
     }
-    .brand-icon {
+    .brand-logo-img {
       width: 38px;
       height: 38px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #2563EB, #0D9488);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-    .brand-icon mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      display: block;
+      flex-shrink: 0;
     }
     .brand-name {
       font-size: 18px;
@@ -303,6 +293,13 @@ import { MatMenuModule } from '@angular/material/menu';
 export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
+
+  /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour Régional/Central/Admin. */
+  get brandLogo(): string {
+    return this.authService.isPharmacien()
+      ? 'assets/logo-pharmacie.png'
+      : 'assets/logo-csu.png';
+  }
 
   constructor(
     public authService: AuthService,

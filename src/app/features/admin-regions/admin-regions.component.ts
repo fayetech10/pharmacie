@@ -24,8 +24,11 @@ interface RegionSummary {
 interface PharmacieSummary {
   pharmacie: Pharmacie;
   factures: Facture[];
+  factureCount: number;
   totalMontant: number;
 }
+
+type DrillLevel = 'regions' | 'pharmacies' | 'factures';
 
 @Component({
   selector: 'app-admin-regions',
@@ -40,328 +43,252 @@ interface PharmacieSummary {
     StatusBadgeComponent
   ],
   template: `
+    <!-- Fil d'Ariane -->
+    <nav class="breadcrumb">
+      <button class="crumb" [class.active]="level === 'regions'" (click)="goToRegions()" type="button">
+        <mat-icon>public</mat-icon> Régions
+      </button>
+      <ng-container *ngIf="selectedRegion">
+        <mat-icon class="sep">chevron_right</mat-icon>
+        <button class="crumb" [class.active]="level === 'pharmacies'" (click)="goToPharmacies()" type="button">
+          {{ selectedRegion.region.nom }}
+        </button>
+      </ng-container>
+      <ng-container *ngIf="selectedPharmacie && level === 'factures'">
+        <mat-icon class="sep">chevron_right</mat-icon>
+        <span class="crumb active">{{ selectedPharmacie.pharmacie.nom }}</span>
+      </ng-container>
+    </nav>
+
     <div class="page-header">
-      <div class="header-content" *ngIf="!selectedRegion">
-        <h1>Vue Régionale</h1>
-        <p>Explorez les statistiques et factures par région.</p>
-      </div>
-      <div class="header-content" *ngIf="selectedRegion">
-        <button mat-icon-button (click)="goBack()" class="back-btn">
+      <div class="header-content">
+        <button *ngIf="level !== 'regions'" class="back-btn" (click)="goBack()" type="button" aria-label="Retour">
           <mat-icon>arrow_back</mat-icon>
         </button>
-        <div>
-          <h1>Région : {{ selectedRegion.region.nom }}</h1>
-          <p>{{ selectedPharmacies.length }} pharmacies, {{ selectedRegion.totalMontant | number }} CFA au total.</p>
+        <div [ngSwitch]="level">
+          <ng-container *ngSwitchCase="'regions'">
+            <h1>Factures par région</h1>
+            <p>Sélectionnez une région pour explorer ses pharmacies et leurs factures.</p>
+          </ng-container>
+          <ng-container *ngSwitchCase="'pharmacies'">
+            <h1>Région : {{ selectedRegion?.region?.nom }}</h1>
+            <p>{{ pharmacieSummaries.length }} pharmacie(s) · {{ selectedRegion?.totalMontant | number:'1.0-0':'fr' }} CFA au total</p>
+          </ng-container>
+          <ng-container *ngSwitchCase="'factures'">
+            <h1>{{ selectedPharmacie?.pharmacie?.nom }}</h1>
+            <p>{{ selectedPharmacie?.factureCount }} facture(s) · {{ selectedPharmacie?.totalMontant | number:'1.0-0':'fr' }} CFA au total</p>
+          </ng-container>
         </div>
       </div>
     </div>
 
-    <!-- VUE GLOBALE : Liste des régions -->
-    <div class="regions-grid" *ngIf="!selectedRegion">
-      <div *ngFor="let summary of regionSummaries" class="region-card" (click)="selectRegion(summary)">
-        <div class="card-header">
-          <div class="region-icon">
-            <mat-icon>map</mat-icon>
-          </div>
-          <h2>{{ summary.region.nom }}</h2>
-        </div>
-        <div class="card-stats">
-          <div class="stat-item">
-            <span class="stat-label">Pharmacies</span>
-            <span class="stat-value">{{ summary.pharmacyCount }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Factures</span>
-            <span class="stat-value">{{ summary.factureCount }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Total CFA</span>
-            <span class="stat-value highlight">{{ summary.totalMontant | number }}</span>
-          </div>
-        </div>
-        <div class="card-footer">
-          <span>Voir les détails</span>
-          <mat-icon>arrow_forward</mat-icon>
-        </div>
-      </div>
-    </div>
+    <!-- ===================== NIVEAU 1 : RÉGIONS ===================== -->
+    <mat-card class="table-card" *ngIf="level === 'regions'">
+      <table mat-table [dataSource]="regionSummaries" class="w-100">
+        <ng-container matColumnDef="region">
+          <th mat-header-cell *matHeaderCellDef> Région </th>
+          <td mat-cell *matCellDef="let s">
+            <div class="entity-cell">
+              <div class="entity-icon region"><mat-icon>map</mat-icon></div>
+              <span class="entity-name">{{ s.region.nom }}</span>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="pharmacies">
+          <th mat-header-cell *matHeaderCellDef> Pharmacies </th>
+          <td mat-cell *matCellDef="let s">{{ s.pharmacyCount }}</td>
+        </ng-container>
+        <ng-container matColumnDef="factures">
+          <th mat-header-cell *matHeaderCellDef> Factures </th>
+          <td mat-cell *matCellDef="let s">{{ s.factureCount }}</td>
+        </ng-container>
+        <ng-container matColumnDef="montant">
+          <th mat-header-cell *matHeaderCellDef> Montant total </th>
+          <td mat-cell *matCellDef="let s"><strong>{{ s.totalMontant | number:'1.0-0':'fr' }} CFA</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let s"><mat-icon class="chevron">chevron_right</mat-icon></td>
+        </ng-container>
 
-    <!-- VUE DETAILLEE : Région sélectionnée -->
-    <div class="region-details" *ngIf="selectedRegion">
-      <div *ngIf="selectedPharmacies.length === 0" class="empty-state">
-        <mat-icon>domain_disabled</mat-icon>
-        <p>Aucune pharmacie dans cette région.</p>
-      </div>
+        <tr mat-header-row *matHeaderRowDef="regionColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: regionColumns;" class="clickable" (click)="selectRegion(row)"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="empty-cell" colspan="5">Aucune région enregistrée.</td>
+        </tr>
+      </table>
+    </mat-card>
 
-      <div *ngFor="let ps of selectedPharmacies" class="pharmacy-section">
-        <div class="pharmacy-header">
-          <div class="pharmacy-title">
-            <mat-icon>local_pharmacy</mat-icon>
-            <h2>{{ ps.pharmacie.nom }}</h2>
-            <span class="code-badge">{{ ps.pharmacie.code }}</span>
-          </div>
-          <div class="pharmacy-total">
-            Total : <strong>{{ ps.totalMontant | number }} CFA</strong>
-          </div>
-        </div>
+    <!-- ===================== NIVEAU 2 : PHARMACIES ===================== -->
+    <mat-card class="table-card" *ngIf="level === 'pharmacies'">
+      <table mat-table [dataSource]="pharmacieSummaries" class="w-100">
+        <ng-container matColumnDef="pharmacie">
+          <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
+          <td mat-cell *matCellDef="let p">
+            <div class="entity-cell">
+              <div class="entity-icon pharma"><mat-icon>local_pharmacy</mat-icon></div>
+              <div>
+                <span class="entity-name">{{ p.pharmacie.nom }}</span>
+                <span class="entity-sub">{{ p.pharmacie.code }}</span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="factures">
+          <th mat-header-cell *matHeaderCellDef> Factures </th>
+          <td mat-cell *matCellDef="let p">{{ p.factureCount }}</td>
+        </ng-container>
+        <ng-container matColumnDef="montant">
+          <th mat-header-cell *matHeaderCellDef> Montant total </th>
+          <td mat-cell *matCellDef="let p"><strong>{{ p.totalMontant | number:'1.0-0':'fr' }} CFA</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p"><mat-icon class="chevron">chevron_right</mat-icon></td>
+        </ng-container>
 
-        <mat-card class="table-card">
-          <table mat-table [dataSource]="ps.factures" class="w-100">
-            <ng-container matColumnDef="mois">
-              <th mat-header-cell *matHeaderCellDef> Mois / Année </th>
-              <td mat-cell *matCellDef="let f"> {{ getMonthName(f.mois) }} {{ f.annee }} </td>
-            </ng-container>
+        <tr mat-header-row *matHeaderRowDef="pharmacieColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: pharmacieColumns;" class="clickable" (click)="selectPharmacie(row)"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="empty-cell" colspan="4">Aucune pharmacie dans cette région.</td>
+        </tr>
+      </table>
+    </mat-card>
 
-            <ng-container matColumnDef="montant">
-              <th mat-header-cell *matHeaderCellDef> Montant </th>
-              <td mat-cell *matCellDef="let f"> <strong>{{ f.montantTotal | number }} CFA</strong> </td>
-            </ng-container>
+    <!-- ===================== NIVEAU 3 : FACTURES PAR MOIS ===================== -->
+    <mat-card class="table-card" *ngIf="level === 'factures'">
+      <table mat-table [dataSource]="selectedPharmacie?.factures || []" class="w-100">
+        <ng-container matColumnDef="mois">
+          <th mat-header-cell *matHeaderCellDef> Mois / Année </th>
+          <td mat-cell *matCellDef="let f">
+            <div class="entity-cell">
+              <div class="entity-icon month"><mat-icon>event</mat-icon></div>
+              <span class="entity-name">{{ getMonthName(f.mois) }} {{ f.annee }}</span>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="montant">
+          <th mat-header-cell *matHeaderCellDef> Montant </th>
+          <td mat-cell *matCellDef="let f"><strong>{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef> Statut </th>
+          <td mat-cell *matCellDef="let f"><app-status-badge [statut]="f.statut"></app-status-badge></td>
+        </ng-container>
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef> Détail </th>
+          <td mat-cell *matCellDef="let f">
+            <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" (click)="$event.stopPropagation()" title="Voir la facture">
+              <mat-icon>visibility</mat-icon>
+            </a>
+          </td>
+        </ng-container>
 
-            <ng-container matColumnDef="statut">
-              <th mat-header-cell *matHeaderCellDef> Statut </th>
-              <td mat-cell *matCellDef="let f"> <app-status-badge [statut]="f.statut"></app-status-badge> </td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef> Actions </th>
-              <td mat-cell *matCellDef="let f">
-                <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]">
-                  <mat-icon>visibility</mat-icon>
-                </a>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="['mois', 'montant', 'statut', 'actions']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['mois', 'montant', 'statut', 'actions'];"></tr>
-            <tr class="mat-row" *matNoDataRow>
-              <td class="mat-cell empty-state-table" colspan="4">
-                Aucune facture enregistrée pour cette pharmacie.
-              </td>
-            </tr>
-          </table>
-        </mat-card>
-      </div>
-    </div>
+        <tr mat-header-row *matHeaderRowDef="factureColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: factureColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="empty-cell" colspan="4">Aucune facture pour cette pharmacie.</td>
+        </tr>
+      </table>
+    </mat-card>
   `,
   styles: [`
-    .page-header {
-      margin-bottom: 32px;
-    }
-    .header-content {
+    /* Fil d'Ariane */
+    .breadcrumb {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 4px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
+    .crumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    button.crumb:hover { background: var(--border-light); color: var(--text-primary); }
+    .crumb.active { color: var(--primary); cursor: default; }
+    .crumb mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .breadcrumb .sep { font-size: 18px; width: 18px; height: 18px; color: var(--text-muted); }
+
+    /* En-tête */
+    .page-header { margin-bottom: 24px; }
+    .header-content { display: flex; align-items: center; gap: 16px; }
     .header-content h1 {
       margin: 0 0 4px 0;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
       color: var(--text-primary);
       letter-spacing: -0.02em;
     }
-    .header-content p {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
+    .header-content p { margin: 0; color: var(--text-secondary); font-size: 15px; }
     .back-btn {
+      flex-shrink: 0;
       background: white;
       border: 1px solid var(--border);
       border-radius: 50%;
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .back-btn:hover {
-      background: var(--bg);
-      transform: scale(1.05);
-    }
-
-    /* Grille des Régions */
-    .regions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 24px;
-    }
-    .region-card {
-      background: white;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      padding: 24px;
       cursor: pointer;
       box-shadow: var(--shadow-sm);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      flex-direction: column;
+      transition: all var(--transition);
     }
-    .region-card:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-4px);
-      border-color: var(--primary-light);
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .region-icon {
-      width: 48px;
-      height: 48px;
-      background: var(--primary-light);
-      color: var(--primary);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .card-header h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-    .card-stats {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 24px;
-      flex: 1;
-    }
-    .stat-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border-light);
-    }
-    .stat-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-    .stat-label {
-      color: var(--text-secondary);
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .stat-value {
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 15px;
-    }
-    .stat-value.highlight {
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 16px;
-    }
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--primary);
-      font-weight: 600;
-      font-size: 14px;
-      padding-top: 16px;
-      border-top: 1px dashed var(--border);
-    }
-    .card-footer mat-icon {
-      transition: transform 0.2s ease;
-    }
-    .region-card:hover .card-footer mat-icon {
-      transform: translateX(4px);
-    }
+    .back-btn:hover { background: var(--bg); transform: scale(1.05); }
 
-    /* Détails de la région */
-    .pharmacy-section {
-      margin-bottom: 40px;
-    }
-    .pharmacy-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding: 0 8px;
-    }
-    .pharmacy-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .pharmacy-title mat-icon {
-      color: var(--accent);
-    }
-    .pharmacy-title h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-    .code-badge {
-      background: var(--bg);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-    .pharmacy-total {
-      font-size: 16px;
-      color: var(--text-secondary);
-    }
-    .pharmacy-total strong {
-      color: var(--primary);
-      font-size: 18px;
-    }
-
-    .table-card {
-      padding: 0;
-      overflow: hidden;
-    }
-    .w-100 {
-      width: 100%;
-    }
+    /* Tableaux */
+    .table-card { padding: 0; overflow: hidden; }
+    .w-100 { width: 100%; }
     th.mat-header-cell {
       background: #F8FAFC;
       font-weight: 600;
       color: var(--text-secondary);
     }
+    tr.clickable { cursor: pointer; }
+    tr.clickable:hover { background: var(--primary-light); }
+
+    .entity-cell { display: flex; align-items: center; gap: 12px; }
+    .entity-icon {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .entity-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .entity-icon.region { background: var(--primary-light); color: var(--primary); }
+    .entity-icon.pharma { background: var(--accent-light); color: var(--accent); }
+    .entity-icon.month { background: #FEF3C7; color: #D97706; }
+    .entity-name { display: block; font-weight: 600; color: var(--text-primary); }
+    .entity-sub { display: block; font-size: 12px; color: var(--text-muted); }
+
+    .chevron { color: var(--text-muted); }
+    tr.clickable:hover .chevron { color: var(--primary); }
+
     .action-btn {
       color: var(--primary);
       background: var(--primary-light);
-      width: 32px;
-      height: 32px;
+      width: 32px; height: 32px;
       border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center;
       text-decoration: none;
-      transition: all 0.2s ease;
+      transition: all var(--transition);
     }
-    .action-btn:hover {
-      background: var(--primary);
-      color: white;
-    }
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 64px 0;
-      color: var(--text-muted);
-    }
-    .empty-state mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-    .empty-state-table {
+    .action-btn:hover { background: var(--primary); color: white; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    .empty-cell {
       text-align: center;
       padding: 32px !important;
       color: var(--text-secondary);
@@ -374,10 +301,21 @@ export class AdminRegionsComponent implements OnInit {
   pharmacies: Pharmacie[] = [];
   factures: Facture[] = [];
 
+  // Niveau de navigation courant
+  level: DrillLevel = 'regions';
+
+  // Niveau 1
   regionSummaries: RegionSummary[] = [];
-  
+  regionColumns = ['region', 'pharmacies', 'factures', 'montant', 'action'];
+
+  // Niveau 2
   selectedRegion: RegionSummary | null = null;
-  selectedPharmacies: PharmacieSummary[] = [];
+  pharmacieSummaries: PharmacieSummary[] = [];
+  pharmacieColumns = ['pharmacie', 'factures', 'montant', 'action'];
+
+  // Niveau 3
+  selectedPharmacie: PharmacieSummary | null = null;
+  factureColumns = ['mois', 'montant', 'statut', 'action'];
 
   constructor(
     private regionService: RegionService,
@@ -394,7 +332,6 @@ export class AdminRegionsComponent implements OnInit {
       this.regions = regions;
       this.pharmacies = pharmacies;
       this.factures = factures;
-
       this.buildRegionSummaries();
     });
   }
@@ -404,52 +341,64 @@ export class AdminRegionsComponent implements OnInit {
       const regionPharmacies = this.pharmacies.filter(p => p.regionId === region.id);
       const pharmacyIds = regionPharmacies.map(p => p.id);
       const regionFactures = this.factures.filter(f => f.pharmacieId && pharmacyIds.includes(f.pharmacieId));
-      
-      const totalMontant = regionFactures.reduce((sum, f) => sum + f.montantTotal, 0);
-
       return {
         region,
         pharmacyCount: regionPharmacies.length,
         factureCount: regionFactures.length,
-        totalMontant
+        totalMontant: regionFactures.reduce((sum, f) => sum + f.montantTotal, 0)
       };
     });
-    
-    // Trier par ordre alphabétique
     this.regionSummaries.sort((a, b) => a.region.nom.localeCompare(b.region.nom));
   }
 
+  // Niveau 1 → 2
   selectRegion(summary: RegionSummary) {
     this.selectedRegion = summary;
-    
-    // Construire les détails par pharmacie pour cette région
-    const regionPharmacies = this.pharmacies.filter(p => p.regionId === summary.region.id);
-    
-    this.selectedPharmacies = regionPharmacies.map(pharmacie => {
-      const phFactures = this.factures.filter(f => f.pharmacieId === pharmacie.id);
-      
-      // Trier les factures par date décroissante (année puis mois)
-      phFactures.sort((a, b) => {
-        if (a.annee !== b.annee) return b.annee - a.annee;
-        return b.mois - a.mois;
-      });
 
-      const totalMontant = phFactures.reduce((sum, f) => sum + f.montantTotal, 0);
-      
+    const regionPharmacies = this.pharmacies.filter(p => p.regionId === summary.region.id);
+    this.pharmacieSummaries = regionPharmacies.map(pharmacie => {
+      const phFactures = this.factures
+        .filter(f => f.pharmacieId === pharmacie.id)
+        .sort((a, b) => (a.annee !== b.annee ? b.annee - a.annee : b.mois - a.mois));
       return {
         pharmacie,
         factures: phFactures,
-        totalMontant
+        factureCount: phFactures.length,
+        totalMontant: phFactures.reduce((sum, f) => sum + f.montantTotal, 0)
       };
     });
+    this.pharmacieSummaries.sort((a, b) => a.pharmacie.nom.localeCompare(b.pharmacie.nom));
 
-    // Trier les pharmacies par nom
-    this.selectedPharmacies.sort((a, b) => a.pharmacie.nom.localeCompare(b.pharmacie.nom));
+    this.level = 'pharmacies';
   }
 
+  // Niveau 2 → 3
+  selectPharmacie(ps: PharmacieSummary) {
+    this.selectedPharmacie = ps;
+    this.level = 'factures';
+  }
+
+  // Navigation arrière / fil d'Ariane
   goBack() {
+    if (this.level === 'factures') {
+      this.level = 'pharmacies';
+      this.selectedPharmacie = null;
+    } else if (this.level === 'pharmacies') {
+      this.goToRegions();
+    }
+  }
+
+  goToRegions() {
+    this.level = 'regions';
     this.selectedRegion = null;
-    this.selectedPharmacies = [];
+    this.selectedPharmacie = null;
+    this.pharmacieSummaries = [];
+  }
+
+  goToPharmacies() {
+    if (!this.selectedRegion) return;
+    this.level = 'pharmacies';
+    this.selectedPharmacie = null;
   }
 
   getMonthName(mois: number): string {

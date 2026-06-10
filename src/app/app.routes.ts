@@ -22,6 +22,9 @@ export const routes: Routes = [
       },
       {
         path: 'factures',
+        canActivate: [roleGuard],
+        // Le Service Central n'a pas la liste plate des factures : il passe par « Factures (Par Région) »
+        data: { roles: [Role.PHARMACIEN, Role.SERVICE_REGIONAL, Role.ADMIN] },
         loadComponent: () => import('./features/factures/factures-list/factures-list.component').then(m => m.FacturesListComponent)
       },
       {

@@ -839,7 +839,7 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     if (!this.authService.isPharmacien()) {
-      this.router.navigate(['/dashboard/factures']);
+      this.router.navigate([this.authService.isServiceCentral() ? '/dashboard/regions' : '/dashboard/factures']);
       return;
     }
     this.loadData();
