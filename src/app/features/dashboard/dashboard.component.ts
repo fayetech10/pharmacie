@@ -182,6 +182,16 @@ import { BaseChartDirective } from 'ng2-charts';
               </button>
             </form>
 
+            <!-- Alerte médicament exclu : motif + description -->
+            <div class="exclu-alert" *ngIf="excludedInfo">
+              <mat-icon>block</mat-icon>
+              <div class="exclu-body">
+                <span class="exclu-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
+                <span class="exclu-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+                <span class="exclu-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+              </div>
+            </div>
+
             <!-- Temp list -->
             <div *ngIf="patientLignes.length > 0" class="temp-list">
               <div class="temp-header">
@@ -799,6 +809,23 @@ import { BaseChartDirective } from 'ng2-charts';
       font-size: 13px;
     }
     .hint-empty mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--text-muted); }
+
+    /* Alerte médicament exclu */
+    .exclu-alert {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--warn-light);
+      border: 1px solid #FCA5A5;
+      border-radius: var(--radius-sm);
+    }
+    .exclu-alert > mat-icon { color: var(--warn); flex-shrink: 0; }
+    .exclu-body { display: flex; flex-direction: column; gap: 3px; }
+    .exclu-title { font-weight: 700; color: #B91C1C; font-size: 14px; }
+    .exclu-line { font-size: 13px; color: var(--text-primary); }
+    .exclu-line strong { color: var(--text-secondary); }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -826,6 +853,8 @@ export class DashboardComponent implements OnInit {
   currentFacture: Facture | null = null;
   isSubmitting = false;
   suggestions: Medicament[] = [];
+  // Info d'exclusion affichée quand un médicament exclu est saisi/sélectionné
+  excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
 
   // Chart
   public barChartOptions: ChartOptions = {
@@ -874,6 +903,9 @@ export class DashboardComponent implements OnInit {
     this.loadCurrentFacture();
     if (!this.authService.isPharmacien()) {
       this.loadChart();
+    } else {
+      // Précharge le cache des médicaments pour une autocomplétion instantanée dès la 1ʳᵉ frappe
+      this.medicamentService.getAllCached().subscribe();
     }
   }
 
@@ -938,15 +970,14 @@ export class DashboardComponent implements OnInit {
         const exactMatch = res.find(m => m.nom.toLowerCase() === query.trim().toLowerCase());
         if (exactMatch) {
           this.medicamentForm.patchValue({ codeProduit: exactMatch.code }, { emitEvent: false });
-          if (exactMatch.statut === StatutMedicament.EXCLU) {
-            this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
-          } else {
-            this.medicamentForm.get('medicament')?.setErrors(null);
-          }
+          this.applyMedicamentStatut(exactMatch);
+        } else {
+          this.excludedInfo = null;
         }
       });
     } else {
       this.suggestions = [];
+      this.excludedInfo = null;
     }
   }
 
@@ -955,11 +986,18 @@ export class DashboardComponent implements OnInit {
     const med = this.suggestions.find(m => m.nom === nom);
     if (med) {
       this.medicamentForm.patchValue({ codeProduit: med.code });
-      if (med.statut === StatutMedicament.EXCLU) {
-        this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
-      } else {
-        this.medicamentForm.get('medicament')?.setErrors(null);
-      }
+      this.applyMedicamentStatut(med);
+    }
+  }
+
+  /** Applique le statut du médicament : bloque + affiche motif/description si EXCLU. */
+  private applyMedicamentStatut(med: Medicament) {
+    if (med.statut === StatutMedicament.EXCLU) {
+      this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
+      this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
+    } else {
+      this.medicamentForm.get('medicament')?.setErrors(null);
+      this.excludedInfo = null;
     }
   }
 
@@ -974,6 +1012,7 @@ export class DashboardComponent implements OnInit {
     });
     this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
     this.suggestions = [];
+    this.excludedInfo = null;
     this.snackBar.open('Médicament préparé', 'OK', { duration: 2000 });
   }
 

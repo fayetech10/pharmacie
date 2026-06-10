@@ -29,6 +29,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
           <mat-icon>upload_file</mat-icon> Importer Liste Éligibles (Excel)
         </button>
         <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+        <button mat-stroked-button color="warn" (click)="exclusionInput.click()">
+          <mat-icon>block</mat-icon> Importer Liste Exclusions (Excel)
+        </button>
+        <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
       </div>
     </div>
 
@@ -73,8 +77,19 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
           <th mat-header-cell *matHeaderCellDef mat-sort-header> Statut </th>
           <td mat-cell *matCellDef="let m">
             <span class="badge" [ngClass]="m.statut === 'EXCLU' ? 'badge-danger' : 'badge-success'">
-              {{ m.statut }}
+              {{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}
             </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="motif">
+          <th mat-header-cell *matHeaderCellDef> Motif / Description </th>
+          <td mat-cell *matCellDef="let m">
+            <ng-container *ngIf="m.statut === 'EXCLU'; else noMotif">
+              <strong>{{ m.motif || '-' }}</strong>
+              <span *ngIf="m.description" class="desc-text"> — {{ m.description }}</span>
+            </ng-container>
+            <ng-template #noMotif><span class="text-muted">—</span></ng-template>
           </td>
         </ng-container>
 
@@ -92,6 +107,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   `,
   styles: [`
     .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .desc-text { color: var(--text-secondary); font-size: 12px; }
+    .text-muted { color: var(--text-secondary); }
     .table-card { padding: 0; overflow: hidden; }
     .w-100 { width: 100%; }
     .mb-4 { margin-bottom: 24px; }
@@ -106,7 +124,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   `]
 })
 export class MedicamentsComponent implements OnInit {
-  displayedColumns: string[] = ['code', 'nom', 'dci', 'classeTherapeutique', 'liste', 'statut'];
+  displayedColumns: string[] = ['code', 'nom', 'dci', 'classeTherapeutique', 'liste', 'statut', 'motif'];
   dataSource!: MatTableDataSource<Medicament>;
   medicaments: Medicament[] = [];
 
@@ -160,6 +178,34 @@ export class MedicamentsComponent implements OnInit {
           }
           this.snackBar.open(errorMsg, 'Fermer', { duration: 8000, panelClass: 'error-snackbar' });
           // Réinitialiser l'input file
+          event.target.value = '';
+        }
+      });
+    }
+  }
+
+  onExclusionFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.snackBar.open('Importation des exclusions en cours...', '', { duration: 0 });
+      this.medicamentService.importExclusions(file).subscribe({
+        next: () => {
+          this.snackBar.open('Import réussi ! La liste des exclusions a été mise à jour.', 'Fermer', { duration: 3000 });
+          this.loadMedicaments();
+          event.target.value = '';
+        },
+        error: (err: any) => {
+          let errorMsg = 'Erreur lors de l\'importation des exclusions.';
+          if (err.error && err.error.message) {
+            errorMsg = err.error.message;
+          } else if (err.error && err.error.cause) {
+            errorMsg = err.error.cause;
+          } else if (err.status === 403) {
+            errorMsg = 'Accès refusé. Vous n\'avez pas les droits pour effectuer cette action.';
+          } else if (err.status === 0) {
+            errorMsg = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
+          }
+          this.snackBar.open(errorMsg, 'Fermer', { duration: 8000, panelClass: 'error-snackbar' });
           event.target.value = '';
         }
       });

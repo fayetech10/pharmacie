@@ -209,6 +209,28 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" aria-label="Select page of factures"></mat-paginator>
       </mat-card>
+
+      <!-- Vue mobile : cartes cliquables (clic → détail, comme la vue admin) -->
+      <div class="mobile-cards">
+        <a class="facture-card" *ngFor="let f of dataSource.filteredData"
+           [routerLink]="['/dashboard/factures', f.id]">
+          <div class="fc-head">
+            <span class="fc-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+            <app-status-badge [statut]="f.statut"></app-status-badge>
+          </div>
+          <div class="fc-row">
+            <span class="fc-period" *ngIf="!authService.isPharmacien()">
+              <mat-icon>event</mat-icon> {{ getMonthName(f.mois) }} {{ f.annee }}
+            </span>
+            <span class="fc-amount">{{ f.montantTotal | number }} CFA</span>
+            <mat-icon class="fc-chevron">chevron_right</mat-icon>
+          </div>
+        </a>
+        <div class="mobile-empty" *ngIf="dataSource.filteredData.length === 0">
+          <mat-icon>search_off</mat-icon>
+          <p>Aucune facture trouvée</p>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -429,6 +451,30 @@ import { ConfirmService } from '../../../core/services/confirm.service';
       margin-top: 2px;
     }
 
+    /* Vue cartes mobile (cachée sur desktop) */
+    .mobile-cards { display: none; }
+    .facture-card {
+      display: block;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 14px 16px;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: background 0.15s ease;
+    }
+    .facture-card:active { background: var(--primary-light); }
+    .fc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .fc-title { font-weight: 700; font-size: 15px; }
+    .fc-row { display: flex; align-items: center; gap: 8px; }
+    .fc-period { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-secondary); }
+    .fc-period mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .fc-amount { margin-left: auto; font-weight: 700; color: var(--primary); }
+    .fc-chevron { color: var(--text-muted); }
+    .mobile-empty { text-align: center; padding: 40px 0; color: var(--text-muted); }
+    .mobile-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.6; }
+
     @media (max-width: 768px) {
       .list-header {
         flex-direction: column;
@@ -439,6 +485,9 @@ import { ConfirmService } from '../../../core/services/confirm.service';
       .filter-field, .search-field {
         min-width: 100%;
       }
+      /* Bascule tableau → cartes cliquables */
+      .table-card { display: none; }
+      .mobile-cards { display: flex; flex-direction: column; gap: 12px; }
     }
   `]
 })

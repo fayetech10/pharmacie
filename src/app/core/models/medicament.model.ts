@@ -12,6 +12,7 @@ export interface Medicament {
   liste?: string;
   statut: StatutMedicament;
   description: string;
+  motif?: string; // Motif d'exclusion (pour les médicaments EXCLU)
   actif: boolean;
   createdAt: string;
   updatedAt: string;

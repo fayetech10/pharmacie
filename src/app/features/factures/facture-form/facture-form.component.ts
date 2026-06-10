@@ -93,6 +93,16 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           </button>
         </form>
 
+        <!-- Alerte médicament exclu : motif + description -->
+        <div class="exclu-alert" *ngIf="excludedInfo">
+          <mat-icon>block</mat-icon>
+          <div class="exclu-body">
+            <span class="exclu-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
+            <span class="exclu-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+            <span class="exclu-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+          </div>
+        </div>
+
         <!-- Liste temporaire des médicaments préparés pour le patient -->
         <div *ngIf="patientLignes.length > 0" class="mt-4 patient-temp-list">
           <h3 class="mb-2">Médicaments préparés pour ce patient</h3>
@@ -163,6 +173,12 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     .temp-table td { padding: 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
     .temp-table td.part-csu { color: var(--primary); font-weight: 600; }
     .temp-table td.part-benef { color: var(--accent); font-weight: 600; }
+    .exclu-alert { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; padding: 14px 16px; background: var(--warn-light); border: 1px solid #FCA5A5; border-radius: 8px; }
+    .exclu-alert > mat-icon { color: var(--warn); flex-shrink: 0; }
+    .exclu-body { display: flex; flex-direction: column; gap: 3px; }
+    .exclu-title { font-weight: 700; color: #B91C1C; font-size: 14px; }
+    .exclu-line { font-size: 13px; color: var(--text-primary); }
+    .exclu-line strong { color: var(--text-secondary); }
     .commit-section { display: flex; justify-content: flex-end; }
   `]
 })
@@ -174,6 +190,7 @@ export class FactureFormComponent implements OnInit {
   isEditMode = false;
   isSubmitting = false;
   suggestions: Medicament[] = [];
+  excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -198,6 +215,8 @@ export class FactureFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Précharge le cache des médicaments pour une autocomplétion instantanée
+    this.medicamentService.getAllCached().subscribe();
     this.route.paramMap.subscribe(params => {
       if (params.has('id')) {
         this.isEditMode = true;
@@ -232,20 +251,24 @@ export class FactureFormComponent implements OnInit {
           this.medicamentForm.patchValue({ codeProduit: exactMatch.code }, { emitEvent: false });
           if (exactMatch.statut === StatutMedicament.EXCLU) {
             this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
+            this.excludedInfo = { nom: exactMatch.nom, motif: exactMatch.motif, description: exactMatch.description };
             this.snackBar.open("Attention: Le médicament saisi n'est pas éligible et ne peut être facturé.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
           } else {
             this.medicamentForm.get('medicament')?.setErrors(null);
+            this.excludedInfo = null;
           }
         } else {
           // Si pas de match exact, on vide le codeProduit et on force une erreur
           this.medicamentForm.patchValue({ codeProduit: '' }, { emitEvent: false });
           this.medicamentForm.get('medicament')?.setErrors({ notFound: true });
+          this.excludedInfo = null;
         }
       });
     } else {
       this.suggestions = [];
       this.medicamentForm.patchValue({ codeProduit: '' }, { emitEvent: false });
       this.medicamentForm.get('medicament')?.setErrors({ notFound: true });
+      this.excludedInfo = null;
     }
   }
 
@@ -256,9 +279,11 @@ export class FactureFormComponent implements OnInit {
       this.medicamentForm.patchValue({ codeProduit: med.code });
       if (med.statut === StatutMedicament.EXCLU) {
         this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
+        this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
         this.snackBar.open("Attention: Ce médicament n'est pas éligible.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
       } else {
         this.medicamentForm.get('medicament')?.setErrors(null);
+        this.excludedInfo = null;
       }
     }
   }
@@ -276,6 +301,7 @@ export class FactureFormComponent implements OnInit {
 
     this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
     this.suggestions = [];
+    this.excludedInfo = null;
     this.snackBar.open('Médicament préparé pour le patient', 'Fermer', { duration: 2000 });
   }
 
