@@ -10,11 +10,13 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 // Enregistre les données de locale française (formats nombres/dates/CFA)
 registerLocaleData(localeFr, 'fr');
 
+import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, loadingInterceptor])),
     { provide: LOCALE_ID, useValue: 'fr' }
   ]
 };

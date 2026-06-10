@@ -1,0 +1,9 @@
+<div class="loading-overlay" *ngIf="loadingService.isLoading$ | async">
+  <div class="spinner-container">
+    <div class="logo-spinner">
+      <img src="assets/logo-pharmacie.png" alt="Pharmacie Logo" class="logo-main" />
+      <img src="assets/logo-csu.png" alt="CSU Logo" class="logo-secondary" />
+    </div>
+    <div class="loading-text">Chargement...</div>
+  </div>
+</div>

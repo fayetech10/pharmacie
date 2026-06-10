@@ -252,8 +252,8 @@ export class LoginComponent {
       next: () => {
         if (this.authService.isPharmacien()) {
           this.router.navigate(['/dashboard']);
-        } else if (this.authService.isServiceCentral()) {
-          // Le Service Central voit « Factures (Par Région) » en première vue
+        } else if (this.authService.isServiceCentral() || this.authService.isAdmin()) {
+          // Central et Admin voient « Factures (Par Région) » en première vue
           this.router.navigate(['/dashboard/regions']);
         } else {
           this.router.navigate(['/dashboard/factures']);

@@ -851,7 +851,8 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     if (!this.authService.isPharmacien()) {
-      this.router.navigate([this.authService.isServiceCentral() ? '/dashboard/regions' : '/dashboard/factures']);
+      const central = this.authService.isServiceCentral() || this.authService.isAdmin();
+      this.router.navigate([central ? '/dashboard/regions' : '/dashboard/factures']);
       return;
     }
     this.loadData();
