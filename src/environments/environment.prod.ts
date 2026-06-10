@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://VOTRE-BACKEND.exemple.com/api'
+  apiUrl: 'https://pharmaback-7ef5.onrender.com/api'
 };

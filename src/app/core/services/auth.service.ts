@@ -51,4 +51,9 @@ export class AuthService {
   isServiceRegional(): boolean { return this.hasRole(Role.SERVICE_REGIONAL); }
   isServiceCentral(): boolean { return this.hasRole(Role.SERVICE_CENTRAL); }
   isAdmin(): boolean { return this.hasRole(Role.ADMIN); }
+
+  /** Gestion des pharmacies : Service Régional + Admin (le Service Central est exclu). */
+  canManagePharmacies(): boolean {
+    return this.isServiceRegional() || this.isAdmin();
+  }
 }
