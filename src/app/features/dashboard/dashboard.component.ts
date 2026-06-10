@@ -195,6 +195,8 @@ import { BaseChartDirective } from 'ng2-charts';
                     <th>Qté</th>
                     <th>Prix</th>
                     <th>Total</th>
+                    <th>Part CSU (50%)</th>
+                    <th>Part bénéf. (50%)</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -205,6 +207,8 @@ import { BaseChartDirective } from 'ng2-charts';
                     <td>{{ pl.quantite }}</td>
                     <td>{{ pl.prixUnitaire | number }}</td>
                     <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
+                    <td class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                    <td class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
                     <td>
                       <button class="action-btn danger" (click)="retirerMedicamentTemp(i)" type="button">
                         <mat-icon>close</mat-icon>
@@ -213,8 +217,10 @@ import { BaseChartDirective } from 'ng2-charts';
                   </tr>
                 </tbody>
               </table>
-              <div class="temp-footer">
-                <span class="temp-total">Sous-total : <strong>{{ tempTotal | number:'1.0-0':'fr' }} CFA</strong></span>
+              <div class="temp-footer split-totals">
+                <span>Sous-total : <strong>{{ tempTotal | number:'1.0-0':'fr' }} CFA</strong></span>
+                <span class="part-csu">Part CSU (50%) : <strong>{{ tempTotal / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+                <span class="part-benef">Part bénéficiaire (50%) : <strong>{{ tempTotal / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
               </div>
             </div>
 
@@ -266,7 +272,7 @@ import { BaseChartDirective } from 'ng2-charts';
                 <mat-icon class="section-icon">receipt_long</mat-icon>
                 <h2>Factures récentes</h2>
               </div>
-              <a class="btn btn-outline btn-sm" routerLink="/dashboard/factures">
+              <a class="btn btn-outline btn-sm" [routerLink]="authService.isServiceRegional() ? '/dashboard/factures-regionales' : '/dashboard/regions'">
                 Voir tout <mat-icon>arrow_forward</mat-icon>
               </a>
             </div>
@@ -759,6 +765,20 @@ import { BaseChartDirective } from 'ng2-charts';
     .temp-total strong { color: var(--text-primary); font-size: 15px; }
     .temp-footer { align-items: center; }
 
+    /* Répartition 50/50 par médicament */
+    .split-totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: flex-end;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .split-totals strong { color: var(--text-primary); font-size: 15px; }
+    .part-csu { color: var(--primary); }
+    .part-benef { color: var(--accent); }
+    td.part-csu, td.part-benef { font-weight: 600; }
+
     .save-row {
       display: flex;
       justify-content: flex-end;
@@ -850,13 +870,11 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit() {
-    if (!this.authService.isPharmacien()) {
-      const central = this.authService.isServiceCentral() || this.authService.isAdmin();
-      this.router.navigate([central ? '/dashboard/regions' : '/dashboard/factures']);
-      return;
-    }
     this.loadData();
     this.loadCurrentFacture();
+    if (!this.authService.isPharmacien()) {
+      this.loadChart();
+    }
   }
 
   loadData() {

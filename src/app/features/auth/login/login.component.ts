@@ -256,7 +256,7 @@ export class LoginComponent {
           // Central et Admin voient « Factures (Par Région) » en première vue
           this.router.navigate(['/dashboard/regions']);
         } else {
-          this.router.navigate(['/dashboard/factures']);
+          this.router.navigate(['/dashboard']);
         }
       },
       error: (err) => {

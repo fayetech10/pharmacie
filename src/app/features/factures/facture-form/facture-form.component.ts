@@ -104,6 +104,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
                 <th>Qté</th>
                 <th>Prix Unit.</th>
                 <th>Total</th>
+                <th>Part CSU (50%)</th>
+                <th>Part bénéf. (50%)</th>
                 <th style="width: 80px;">Action</th>
               </tr>
             </thead>
@@ -114,6 +116,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
                 <td>{{ pl.quantite }}</td>
                 <td>{{ pl.prixUnitaire | number }}</td>
                 <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
+                <td class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                <td class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
                 <td>
                   <button mat-icon-button color="warn" type="button" (click)="retirerMedicamentTemp(i)">
                     <mat-icon>delete</mat-icon>
@@ -157,6 +161,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     .temp-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .temp-table th { text-align: left; padding: 8px; border-bottom: 2px solid var(--border); color: var(--text-secondary); font-size: 13px; }
     .temp-table td { padding: 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .temp-table td.part-csu { color: var(--primary); font-weight: 600; }
+    .temp-table td.part-benef { color: var(--accent); font-weight: 600; }
     .commit-section { display: flex; justify-content: flex-end; }
   `]
 })
