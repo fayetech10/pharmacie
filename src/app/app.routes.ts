@@ -23,9 +23,14 @@ export const routes: Routes = [
       {
         path: 'factures',
         canActivate: [roleGuard],
-        // Central et Admin n'ont pas la liste plate : ils passent par « Factures (Par Région) »
-        data: { roles: [Role.PHARMACIEN, Role.SERVICE_REGIONAL] },
+        data: { roles: [Role.PHARMACIEN] },
         loadComponent: () => import('./features/factures/factures-list/factures-list.component').then(m => m.FacturesListComponent)
+      },
+      {
+        path: 'factures-regionales',
+        canActivate: [roleGuard],
+        data: { roles: [Role.SERVICE_REGIONAL] },
+        loadComponent: () => import('./features/regional-factures/regional-factures.component').then(m => m.RegionalFacturesComponent)
       },
       {
         path: 'factures/create',

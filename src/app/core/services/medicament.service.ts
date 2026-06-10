@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Medicament } from '../models/medicament.model';
 import { environment } from '../../../environments/environment';
+import { SKIP_LOADING } from '../interceptors/loading.interceptor';
 
 @Injectable({
   providedIn: 'root'
@@ -21,7 +22,9 @@ export class MedicamentService {
   }
 
   create(medicament: Partial<Medicament>): Observable<Medicament> {
-    return this.http.post<Medicament>(this.apiUrl, medicament);
+    return this.http.post<Medicament>(this.apiUrl, medicament, {
+      context: new HttpContext().set(SKIP_LOADING, true)
+    });
   }
 
   update(id: string, medicament: Partial<Medicament>): Observable<Medicament> {

@@ -36,9 +36,13 @@ import { MatMenuModule } from '@angular/material/menu';
             <mat-icon>receipt_long</mat-icon>
             <span>Factures (Par Région)</span>
           </a>
-          <a routerLink="/dashboard/factures" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien() || authService.isServiceRegional()">
+          <a routerLink="/dashboard/factures" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
             <mat-icon>receipt_long</mat-icon>
-            <span>{{ authService.isPharmacien() ? 'Mes Factures' : 'Factures' }}</span>
+            <span>Mes Factures</span>
+          </a>
+          <a routerLink="/dashboard/factures-regionales" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Factures</span>
           </a>
           <a routerLink="/dashboard/stats" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional() || authService.isServiceCentral()">
             <mat-icon>bar_chart</mat-icon>
