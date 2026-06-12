@@ -54,6 +54,13 @@ import { FacturesListComponent } from '../factures/factures-list/factures-list.c
   styles: [`
     .espace-page { padding: 0; }
     .tab-content { padding-top: 24px; }
+
+    @media (max-width: 768px) {
+      /* Mobile : navigation via la barre du bas → en-tête + onglets redondants masqués. */
+      :host ::ng-deep .mat-mdc-tab-header { display: none; }
+      .page-head { display: none; }
+      .tab-content { padding-top: 8px; }
+    }
   `]
 })
 export class EspaceCentralComponent implements OnInit {

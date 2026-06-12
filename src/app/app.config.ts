@@ -6,6 +6,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { MatPaginatorIntl } from '@angular/material/paginator';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 // Enregistre les données de locale française (formats nombres/dates/CFA)
@@ -35,6 +36,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor, loadingInterceptor])),
+    // Enregistre tous les contrôleurs Chart.js (barres, doughnut, lignes…) pour ng2-charts.
+    provideCharts(withDefaultRegisterables()),
     { provide: LOCALE_ID, useValue: 'fr' },
     { provide: MatPaginatorIntl, useValue: frenchPaginatorIntl() }
   ]

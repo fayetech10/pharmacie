@@ -104,40 +104,17 @@ interface NavItem {
       <router-outlet></router-outlet>
     </main>
 
-    <!-- Navigation basse (mobile) -->
+    <!-- Navigation basse (mobile) — la déconnexion se fait via l'avatar de la topbar. -->
     <nav class="bottom-nav">
       <a class="bn-item" *ngFor="let item of bottomNav"
          [class.active]="isBottomActive(item)"
          [routerLink]="item.link"
-         [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
-         (click)="accountOpen = false">
+         [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
         <span class="bn-badge" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
         <mat-icon>{{ item.icon }}</mat-icon>
         <span>{{ item.label }}</span>
       </a>
-      <button class="bn-item" type="button" *ngIf="!authService.isServiceRegional()" [class.active]="accountOpen" (click)="accountOpen = !accountOpen">
-        <mat-icon>person_outline</mat-icon>
-        <span>Compte</span>
-      </button>
     </nav>
-
-    <!-- Fiche compte (mobile) -->
-    <div class="account-overlay" *ngIf="accountOpen" (click)="accountOpen = false">
-      <div class="account-sheet" (click)="$event.stopPropagation()">
-        <div class="sheet-handle"></div>
-        <div class="sheet-user">
-          <div class="sheet-avatar">{{ initials }}</div>
-          <div>
-            <div class="sheet-name">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
-            <div class="sheet-role">{{ getRoleLabel(currentUser?.role || '') }}</div>
-            <div class="sheet-mail">{{ currentUser?.email }}</div>
-          </div>
-        </div>
-        <button class="btn btn-danger btn-block" (click)="logout()">
-          <mat-icon>logout</mat-icon> Se déconnecter
-        </button>
-      </div>
-    </div>
   `,
   styles: [`
     /* ===== Topbar navy (style photo) ===== */
@@ -351,61 +328,6 @@ interface NavItem {
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
     }
 
-    /* ===== Fiche compte (mobile) ===== */
-    .account-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 300;
-      background: rgba(15, 23, 42, 0.5);
-      backdrop-filter: blur(3px);
-      display: flex;
-      align-items: flex-end;
-      animation: fadeIn 0.2s ease;
-    }
-    .account-sheet {
-      width: 100%;
-      background: #fff;
-      border-radius: 20px 20px 0 0;
-      padding: 10px 20px calc(20px + var(--bottomnav-h) + env(safe-area-inset-bottom));
-      box-shadow: var(--shadow-lg);
-      animation: slideUp 0.25s ease;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .sheet-handle {
-      width: 44px;
-      height: 4px;
-      border-radius: 4px;
-      background: var(--border);
-      margin: 0 auto 16px;
-    }
-    .sheet-user {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding-bottom: 18px;
-      margin-bottom: 18px;
-      border-bottom: 1px solid var(--border-light);
-    }
-    .sheet-avatar {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: var(--ink);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      font-weight: 800;
-      flex-shrink: 0;
-    }
-    .sheet-name { font-size: 17px; font-weight: 700; }
-    .sheet-role { font-size: 13px; color: var(--primary); font-weight: 600; }
-    .sheet-mail { font-size: 12.5px; color: var(--text-muted); }
-
     /* ===== Responsive ===== */
     @media (max-width: 768px) {
       .topbar-inner { padding: 0 16px; gap: 12px; }
@@ -423,7 +345,6 @@ interface NavItem {
 export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
-  accountOpen = false;
   currentUrl = '';
   /** Nombre de factures par statut, pour les badges de la navigation basse. */
   counts: StatutCounts = {};
@@ -501,7 +422,6 @@ export class MainLayoutComponent implements OnInit {
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
-        this.accountOpen = false;
         // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
         const path = this.currentUrl.split('?')[0];
         if (path !== lastPath) {
@@ -548,7 +468,6 @@ export class MainLayoutComponent implements OnInit {
   }
 
   logout() {
-    this.accountOpen = false;
     this.authService.logout();
   }
 

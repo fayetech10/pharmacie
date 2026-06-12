@@ -15,6 +15,7 @@ import { Pharmacie } from '../../core/models/pharmacie.model';
 import { FactureService } from '../../core/services/facture.service';
 import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
+import { StatsComponent } from '../stats/stats.component';
 
 interface RegionSummary {
   region: Region;
@@ -44,9 +45,13 @@ type DrillLevel = 'regions' | 'pharmacies' | 'factures';
     MatButtonModule,
     MatTableModule,
     MatSnackBarModule,
-    StatusBadgeComponent
+    StatusBadgeComponent,
+    StatsComponent
   ],
   template: `
+    <!-- Statistiques nationales (vue principale uniquement) -->
+    <app-stats [embedded]="true" *ngIf="level === 'regions'"></app-stats>
+
     <!-- Fil d'Ariane -->
     <nav class="breadcrumb">
       <button class="crumb" [class.active]="level === 'regions'" (click)="goToRegions()" type="button">

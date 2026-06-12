@@ -214,9 +214,11 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     .pay-btn { margin-top: 12px; }
 
     /* Mobile : on masque la barre de recherche + filtres (Statut/Mois/Année)
-       sur tous les écrans qui réutilisent cette liste. */
+       et la barre d'outils (titre + Excel/PDF/Import/Nouvelle facture) sur tous
+       les écrans qui réutilisent cette liste. */
     @media (max-width: 768px) {
       .filter-strip { display: none; }
+      .page-head { display: none; }
     }
   `]
 })
