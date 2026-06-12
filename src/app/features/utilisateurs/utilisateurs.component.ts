@@ -30,20 +30,22 @@ import { ConfirmService } from '../../core/services/confirm.service';
     MatSnackBarModule
   ],
   template: `
-    <div class="users-page">
-      <!-- Header -->
-      <div class="page-header-row">
+    <div class="users-page fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
         <div>
           <h1>Gestion des Utilisateurs</h1>
           <p>Créez et gérez les comptes des pharmaciens et des services régionaux/centraux</p>
         </div>
-        <button class="btn btn-primary" (click)="openAddModal()">
-          <mat-icon>person_add</mat-icon> Ajouter un utilisateur
-        </button>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" (click)="openAddModal()">
+            <mat-icon>person_add</mat-icon> Ajouter un utilisateur
+          </button>
+        </div>
       </div>
 
-      <!-- Users Table -->
-      <mat-card class="table-card">
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="users" class="w-100">
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef> Utilisateur </th>
@@ -110,6 +112,38 @@ import { ConfirmService } from '../../core/services/confirm.service';
           <p>Aucun utilisateur enregistré</p>
         </div>
       </mat-card>
+
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let u of users">
+          <div class="m-card-top">
+            <span class="m-title">{{ u.prenom }} {{ u.nom }}</span>
+            <div class="m-actions">
+              <button class="action-btn" (click)="openEditModal(u)" title="Modifier">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="m-sub">{{ u.email }}</div>
+          <div class="m-link">{{ getRoleLabel(u.role) }}</div>
+          <div class="m-row">
+            <span *ngIf="u.regionId"><mat-icon class="inline-ic">map</mat-icon> {{ getRegionNom(u.regionId) }}</span>
+            <span *ngIf="u.pharmacieId"><mat-icon class="inline-ic">local_pharmacy</mat-icon> {{ getPharmacieNom(u.pharmacieId) }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="m-chip" [class.neutral]="!u.actif">
+              {{ u.actif ? 'Actif' : 'Inactif' }}
+            </span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="users.length === 0">
+          <mat-icon>people_outline</mat-icon>
+          <p>Aucun utilisateur enregistré</p>
+        </div>
+      </div>
 
       <!-- Modal Form -->
       <div class="modal-overlay" *ngIf="showModal">
@@ -180,37 +214,6 @@ import { ConfirmService } from '../../core/services/confirm.service';
     </div>
   `,
   styles: [`
-    .users-page {
-      animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .page-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    .page-header-row h1 {
-      font-size: 26px;
-      font-weight: 700;
-      margin: 0 0 4px;
-      letter-spacing: -0.02em;
-    }
-    .page-header-row p {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
-
-    .table-card {
-      padding: 0 !important;
-      overflow: hidden;
-    }
-    .w-100 { width: 100%; }
-
     /* User details cell */
     .user-cell {
       display: flex;
@@ -275,150 +278,15 @@ import { ConfirmService } from '../../core/services/confirm.service';
     .status-indicator.inactive { color: #94A3B8; }
     .status-indicator.inactive::before { background: #94A3B8; }
 
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    .btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: var(--primary-hover);
-    }
-    .btn-outline {
-      background: white;
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover {
-      background: var(--border-light);
-    }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .flex-grow { min-width: 0; }
 
-    .form-row {
-      display: flex;
-      gap: 12px;
+    /* Icônes en ligne dans les cartes mobiles */
+    .inline-ic {
+      font-size: 15px; width: 15px; height: 15px;
+      vertical-align: -2px; color: var(--text-muted); margin-right: 2px;
     }
-    .flex-grow { flex: 1; }
-
-    /* Action buttons */
-    .action-group {
-      display: flex;
-      gap: 4px;
-    }
-    .action-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .action-btn:hover {
-      background: var(--border-light);
-      color: var(--primary);
-    }
-    .action-btn.danger:hover {
-      color: var(--warn);
-      background: var(--warn-light);
-    }
-
-    /* Modal Overlay & Card */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.2s ease;
-    }
-    .modal-card {
-      width: 100%;
-      max-width: 500px;
-      padding: 0 !important;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-    }
-    .modal-header {
-      background: #F8FAFC;
-      padding: 20px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-    }
-    .modal-header h2 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-    .close-btn {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .close-btn:hover {
-      color: var(--text-primary);
-    }
-    .modal-body {
-      padding: 24px;
-    }
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      background: #F8FAFC;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 48px !important;
-    }
-    .empty-state mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .empty-state p {
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
+    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
   `]
 })
 export class UtilisateursComponent implements OnInit {

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
 import { LoginResponse } from '../../core/models/user.model';
@@ -9,11 +10,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 
+interface NavItem {
+  label: string;
+  icon: string;
+  link: string;
+  tab?: number;
+}
+
 @Component({
   selector: 'app-main-layout',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     RouterModule,
     MatIconModule,
     MatButtonModule,
@@ -23,36 +31,32 @@ import { MatMenuModule } from '@angular/material/menu';
     <header class="topbar">
       <div class="topbar-inner">
         <a routerLink="/dashboard" class="brand">
-          <img class="brand-logo-img" [src]="brandLogo" alt="Logo" />
-          <span class="brand-name">CSU Sénégal</span>
+          <span class="brand-logo"><img [src]="brandLogo" alt="Logo" /></span>
+          <span class="brand-name">CSU <strong>Sénégal</strong></span>
         </a>
 
         <nav class="nav-links">
-          <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link" *ngIf="authService.isPharmacien()">
-            <mat-icon>point_of_sale</mat-icon>
-            <span>Facturation</span>
+          <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Mon Espace</span>
           </a>
-          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceCentral()">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Factures (Par Région)</span>
+          <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Espace Régional</span>
           </a>
-          <a routerLink="/dashboard/factures" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Mes Factures</span>
+          <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Espace Central</span>
           </a>
-          <a routerLink="/dashboard/factures-regionales" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Factures</span>
+          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+            <mat-icon>map</mat-icon>
+            <span>Régions</span>
           </a>
-          <a routerLink="/dashboard/stats" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional() || authService.isServiceCentral()">
-            <mat-icon>bar_chart</mat-icon>
-            <span>Statistiques</span>
-          </a>
-          <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral() || authService.isAdmin()">
+          <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
             <mat-icon>medication</mat-icon>
             <span>Médicaments</span>
           </a>
-          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.canManagePharmacies()">
+          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
             <mat-icon>local_pharmacy</mat-icon>
             <span>Pharmacies</span>
           </a>
@@ -64,14 +68,13 @@ import { MatMenuModule } from '@angular/material/menu';
 
         <div class="topbar-right">
           <div class="user-pill" [matMenuTriggerFor]="userMenu">
-            <div class="user-avatar">
-              {{ currentUser?.prenom?.charAt(0) }}{{ currentUser?.nom?.charAt(0) }}
-            </div>
             <div class="user-details">
               <span class="user-name">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
               <span class="user-role">{{ getRoleLabel(currentUser?.role || '') }}</span>
             </div>
-            <mat-icon class="dropdown-arrow">expand_more</mat-icon>
+            <div class="user-avatar">
+              {{ initials }}
+            </div>
           </div>
           <mat-menu #userMenu="matMenu" xPosition="before">
             <button mat-menu-item (click)="logout()">
@@ -97,46 +100,86 @@ import { MatMenuModule } from '@angular/material/menu';
     <main class="main-content">
       <router-outlet></router-outlet>
     </main>
+
+    <!-- Navigation basse (mobile) -->
+    <nav class="bottom-nav">
+      <a class="bn-item" *ngFor="let item of bottomNav"
+         [class.active]="isBottomActive(item)"
+         [routerLink]="item.link"
+         [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
+         (click)="accountOpen = false">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span>{{ item.label }}</span>
+      </a>
+      <button class="bn-item" type="button" [class.active]="accountOpen" (click)="accountOpen = !accountOpen">
+        <mat-icon>person_outline</mat-icon>
+        <span>Compte</span>
+      </button>
+    </nav>
+
+    <!-- Fiche compte (mobile) -->
+    <div class="account-overlay" *ngIf="accountOpen" (click)="accountOpen = false">
+      <div class="account-sheet" (click)="$event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-user">
+          <div class="sheet-avatar">{{ initials }}</div>
+          <div>
+            <div class="sheet-name">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
+            <div class="sheet-role">{{ getRoleLabel(currentUser?.role || '') }}</div>
+            <div class="sheet-mail">{{ currentUser?.email }}</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-block" (click)="logout()">
+          <mat-icon>logout</mat-icon> Se déconnecter
+        </button>
+      </div>
+    </div>
   `,
   styles: [`
+    /* ===== Topbar navy (style photo) ===== */
     .topbar {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: #FFFFFF;
-      border-bottom: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
+      background: var(--ink);
+      box-shadow: 0 2px 10px rgba(13, 30, 48, 0.25);
     }
     .topbar-inner {
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 24px;
-      height: 64px;
+      height: var(--topbar-h);
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 28px;
     }
     .brand {
       display: flex;
       align-items: center;
       gap: 10px;
       text-decoration: none;
-      color: var(--text-primary);
       flex-shrink: 0;
     }
-    .brand-logo-img {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: block;
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
       flex-shrink: 0;
     }
+    .brand-logo img { width: 32px; height: 32px; object-fit: contain; display: block; }
     .brand-name {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: #fff;
+      white-space: nowrap;
     }
+    .brand-name strong { font-weight: 800; }
 
     .nav-links {
       display: flex;
@@ -144,90 +187,69 @@ import { MatMenuModule } from '@angular/material/menu';
       gap: 4px;
       flex: 1;
       overflow-x: auto;
+      scrollbar-width: none;
     }
+    .nav-links::-webkit-scrollbar { display: none; }
     .nav-link {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border-radius: 8px;
+      gap: 7px;
+      padding: 9px 14px;
+      border-radius: 10px;
       text-decoration: none;
-      color: var(--text-secondary);
-      font-size: 14px;
+      color: var(--ink-text);
+      font-size: 13.5px;
       font-weight: 500;
       white-space: nowrap;
       transition: all 0.2s ease;
     }
-    .nav-link mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-    .nav-link:hover {
-      background: var(--border-light);
-      color: var(--text-primary);
-    }
+    .nav-link mat-icon { font-size: 19px; width: 19px; height: 19px; }
+    .nav-link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
     .nav-link.active {
-      background: var(--primary-light);
-      color: var(--primary);
+      background: var(--ink-soft);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
     }
 
-    .topbar-right {
-      flex-shrink: 0;
-    }
+    .topbar-right { flex-shrink: 0; margin-left: auto; }
     .user-pill {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 6px 12px 6px 6px;
+      padding: 5px 5px 5px 14px;
       border-radius: 40px;
       cursor: pointer;
       transition: background 0.2s ease;
-      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
     }
-    .user-pill:hover {
-      background: var(--border-light);
-    }
+    .user-pill:hover { background: rgba(255, 255, 255, 0.12); }
     .user-avatar {
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #059669, #0D9488);
-      color: white;
+      background: #fff;
+      color: var(--ink);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.02em;
+      flex-shrink: 0;
     }
-    .user-details {
-      display: flex;
-      flex-direction: column;
-    }
-    .user-name {
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1.2;
-      color: var(--text-primary);
-    }
-    .user-role {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-    .dropdown-arrow {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: var(--text-muted);
-    }
+    .user-details { display: flex; flex-direction: column; align-items: flex-end; }
+    .user-name { font-size: 13px; font-weight: 600; line-height: 1.2; color: #fff; }
+    .user-role { font-size: 11px; color: var(--ink-text); }
 
     .main-content {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 28px 24px;
+      padding: 28px 24px 40px;
     }
 
+    /* ===== Bandeau d'alerte retards ===== */
     .alert-banner {
       background: linear-gradient(90deg, #FEF2F2, #FFF7ED);
       border-bottom: 1px solid #FECACA;
@@ -242,15 +264,13 @@ import { MatMenuModule } from '@angular/material/menu';
       font-size: 14px;
       font-weight: 500;
       color: #B91C1C;
+      flex-wrap: wrap;
     }
-    .alert-inner mat-icon {
-      color: #EF4444;
-      font-size: 22px;
-    }
+    .alert-inner mat-icon { color: #EF4444; font-size: 22px; }
     .alert-btn {
       margin-left: auto;
       padding: 6px 16px;
-      border-radius: 6px;
+      border-radius: 8px;
       border: 1px solid #EF4444;
       background: white;
       color: #EF4444;
@@ -259,50 +279,172 @@ import { MatMenuModule } from '@angular/material/menu';
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    .alert-btn:hover {
-      background: #EF4444;
-      color: white;
+    .alert-btn:hover { background: #EF4444; color: white; }
+
+    /* ===== Bottom nav (mobile, style photo) ===== */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      background: var(--ink);
+      box-shadow: 0 -4px 16px rgba(13, 30, 48, 0.28);
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      gap: 4px;
+    }
+    .bn-item {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 7px 4px;
+      border: none;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--ink-text);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .bn-item mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .bn-item span {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bn-item.active {
+      background: var(--ink-soft);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
     }
 
+    /* ===== Fiche compte (mobile) ===== */
+    .account-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: flex-end;
+      animation: fadeIn 0.2s ease;
+    }
+    .account-sheet {
+      width: 100%;
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      padding: 10px 20px calc(20px + var(--bottomnav-h) + env(safe-area-inset-bottom));
+      box-shadow: var(--shadow-lg);
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .sheet-handle {
+      width: 44px;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--border);
+      margin: 0 auto 16px;
+    }
+    .sheet-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .sheet-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .sheet-name { font-size: 17px; font-weight: 700; }
+    .sheet-role { font-size: 13px; color: var(--primary); font-weight: 600; }
+    .sheet-mail { font-size: 12.5px; color: var(--text-muted); }
+
+    /* ===== Responsive ===== */
     @media (max-width: 768px) {
-      .topbar-inner {
-        padding: 0 16px;
-        gap: 16px;
-      }
-      .brand-name {
-        display: none;
-      }
-      .user-details {
-        display: none;
-      }
-      .dropdown-arrow {
-        display: none;
-      }
-      .user-pill {
-        padding: 4px;
-        border: none;
-      }
-      .nav-link span {
-        display: none;
-      }
-      .nav-link {
-        padding: 8px;
-      }
+      .topbar-inner { padding: 0 16px; gap: 12px; }
+      .nav-links { display: none; }
+      .user-details { display: none; }
+      .user-pill { padding: 0; background: transparent; border: none; }
       .main-content {
-        padding: 16px;
+        padding: 18px 16px calc(var(--bottomnav-h) + 28px + env(safe-area-inset-bottom));
       }
+      .bottom-nav { display: flex; }
+      .alert-btn { margin-left: 0; width: 100%; }
     }
   `]
 })
 export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
+  accountOpen = false;
+  currentUrl = '';
 
   /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour Régional/Central/Admin. */
   get brandLogo(): string {
     return this.authService.isPharmacien()
       ? 'assets/logo-pharmacie.png'
       : 'assets/logo-csu.png';
+  }
+
+  get initials(): string {
+    const p = this.currentUser?.prenom?.charAt(0) || '';
+    const n = this.currentUser?.nom?.charAt(0) || '';
+    return (p + n).toUpperCase();
+  }
+
+  /** Éléments de la navigation basse selon le rôle (le bouton Compte est ajouté à part). */
+  get bottomNav(): NavItem[] {
+    if (this.authService.isPharmacien()) {
+      return [
+        { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', tab: 0 },
+        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1 },
+        { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
+      ];
+    }
+    if (this.authService.isServiceRegional()) {
+      return [
+        { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
+        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1 },
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2 }
+      ];
+    }
+    if (this.authService.isServiceCentral()) {
+      return [
+        { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
+        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1 },
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 }
+      ];
+    }
+    return [
+      { label: 'Régions', icon: 'map', link: '/dashboard/regions' },
+      { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments' },
+      { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
+      { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs' }
+    ];
   }
 
   constructor(
@@ -313,6 +455,25 @@ export class MainLayoutComponent implements OnInit {
 
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
+    this.currentUrl = this.router.url;
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(e => {
+        this.currentUrl = e.urlAfterRedirects;
+        this.accountOpen = false;
+      });
+
+    // Redirect logic for Espace components
+    if (this.router.url === '/dashboard' || this.router.url === '/dashboard/espace') {
+      if (this.authService.isPharmacien()) {
+        this.router.navigate(['/dashboard/espace-pharmacie']);
+      } else if (this.authService.isServiceRegional()) {
+        this.router.navigate(['/dashboard/espace-region']);
+      } else if (this.authService.isServiceCentral()) {
+        this.router.navigate(['/dashboard/espace-central']);
+      }
+    }
+
     if (this.authService.isPharmacien()) {
       this.factureService.getRetards().subscribe(res => {
         this.retards = res || [];
@@ -320,11 +481,23 @@ export class MainLayoutComponent implements OnInit {
     }
   }
 
+  /** Actif si l'URL correspond au lien et, le cas échéant, à l'onglet demandé. */
+  isBottomActive(item: NavItem): boolean {
+    const [path, query] = this.currentUrl.split('?');
+    if (path !== item.link) return false;
+    if (item.tab === undefined) return true;
+    const tabMatch = /(?:^|&)tab=(\d+)/.exec(query || '');
+    const currentTab = tabMatch ? +tabMatch[1] : 0;
+    return currentTab === item.tab;
+  }
+
   voirRetards() {
-    this.router.navigate(['/dashboard/factures']);
+    // L'onglet « Mes factures » de l'espace pharmacie
+    this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
   }
 
   logout() {
+    this.accountOpen = false;
     this.authService.logout();
   }
 

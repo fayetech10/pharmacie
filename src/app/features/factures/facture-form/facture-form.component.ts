@@ -177,7 +177,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
         </mat-card-title>
       </mat-card-header>
       <mat-card-content class="mt-3">
-        <div class="correction-hint" *ngIf="facture.statut === 'A_CORRIGER'">
+        <div class="correction-hint" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
           <mat-icon>build</mat-icon>
           Corrigez les lignes rejetées (supprimez-les puis ressaisissez-les correctement ci-dessus), puis cliquez sur « Envoyer la facture ».
         </div>

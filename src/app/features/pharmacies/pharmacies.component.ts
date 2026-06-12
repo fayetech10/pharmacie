@@ -24,24 +24,32 @@ import { ConfirmService } from '../../core/services/confirm.service';
     MatInputModule, MatSelectModule, MatSnackBarModule
   ],
   template: `
-    <div class="page-fade">
-      <!-- Header -->
-      <div class="page-header-row">
+    <div class="fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
         <div>
           <h1>Gestion des Pharmacies</h1>
           <p>Gérez les pharmacies partenaires de la CSU.</p>
         </div>
-        <div class="header-actions">
+        <div class="page-head-actions">
           <button class="btn btn-ghost" (click)="downloadModele()" type="button" title="Télécharger le modèle Excel">
-            <mat-icon>download</mat-icon> Modèle Excel
+            <mat-icon>download</mat-icon> Modèle
           </button>
           <button class="btn btn-outline" (click)="importInput.click()" type="button" [disabled]="importing" title="Importer des pharmacies depuis un fichier Excel">
-            <mat-icon>upload_file</mat-icon> {{ importing ? 'Import en cours…' : 'Importer (Excel)' }}
+            <mat-icon>upload_file</mat-icon> {{ importing ? 'Import…' : 'Importer' }}
           </button>
           <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
           <button class="btn btn-primary" (click)="openModal()">
-            <mat-icon>add_business</mat-icon> Ajouter une pharmacie
+            <mat-icon>add_business</mat-icon> Ajouter
           </button>
+        </div>
+      </div>
+
+      <!-- Recherche -->
+      <div class="filter-strip">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par nom, code, adresse…">
         </div>
       </div>
 
@@ -62,8 +70,8 @@ import { ConfirmService } from '../../core/services/confirm.service';
         </ul>
       </div>
 
-      <!-- Table -->
-      <mat-card class="table-card">
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="dataSource" matSort class="w-100">
           <ng-container matColumnDef="nom">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Pharmacie </th>
@@ -122,8 +130,37 @@ import { ConfirmService } from '../../core/services/confirm.service';
           <mat-icon>local_pharmacy</mat-icon>
           <p>Aucune pharmacie enregistrée</p>
         </div>
-        <mat-paginator [pageSizeOptions]="[10, 25, 50]" *ngIf="pharmacies.length > 0"></mat-paginator>
       </mat-card>
+
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let p of pagedPharmacies">
+          <div class="m-card-top">
+            <span class="m-title">{{ p.nom }}</span>
+            <div class="m-actions">
+              <button class="action-btn" (click)="openModal(p)" title="Modifier">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="action-btn danger" (click)="deletePharmacie(p.id)" title="Supprimer">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="m-sub">{{ p.code }}</div>
+          <div class="m-meta"><mat-icon>location_on</mat-icon> {{ p.adresse }}</div>
+          <div class="m-meta"><mat-icon>call</mat-icon> {{ p.telephone }}</div>
+          <div class="m-meta" *ngIf="p.email"><mat-icon>mail</mat-icon> {{ p.email }}</div>
+          <div class="m-foot">
+            <span class="region-chip">{{ getRegionName(p.regionId) }}</span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="dataSource.filteredData.length === 0">
+          <mat-icon>local_pharmacy</mat-icon>
+          <p>Aucune pharmacie enregistrée</p>
+        </div>
+      </div>
+
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des pharmacies"></mat-paginator>
     </div>
 
     <!-- Modal -->
@@ -225,25 +262,6 @@ import { ConfirmService } from '../../core/services/confirm.service';
     </div>
   `,
   styles: [`
-    .page-fade { animation: fadeIn 0.3s ease; }
-
-    .page-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .page-header-row h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.02em; }
-    .page-header-row p { margin: 0; color: var(--text-secondary); font-size: 15px; }
-    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .btn-ghost {
-      background: transparent; border: 1px solid transparent; color: var(--primary);
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .btn-ghost:hover { background: var(--primary-light); }
-
     /* Récapitulatif d'import */
     .import-result {
       margin-bottom: 20px; border-radius: var(--radius-md, 10px);
@@ -267,9 +285,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
     }
     .import-errors li { margin: 2px 0; }
 
-    .table-card { padding: 0 !important; overflow: hidden; }
-    .w-100 { width: 100%; }
-    .text-muted { color: var(--text-muted); font-size: 12px; }
+    .text-muted { font-size: 12px; }
 
     /* Pharmacy cell */
     .pharma-cell { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
@@ -290,36 +306,6 @@ import { ConfirmService } from '../../core/services/confirm.service';
       background: var(--primary-light); color: var(--primary);
       font-size: 12.5px; font-weight: 600;
     }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(4px);
-      z-index: 1000; display: flex; align-items: center; justify-content: center;
-      padding: 16px; animation: fadeIn 0.2s ease;
-    }
-    .modal-card {
-      width: 100%; max-width: 560px; background: #fff;
-      border-radius: var(--radius-lg); border: 1px solid var(--border);
-      box-shadow: var(--shadow-lg); overflow: hidden;
-      max-height: 92vh; display: flex; flex-direction: column;
-    }
-    .modal-header {
-      background: #F8FAFC; padding: 18px 24px;
-      display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid var(--border);
-    }
-    .modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary); }
-    .close-btn {
-      background: transparent; border: none; cursor: pointer; color: var(--text-secondary);
-      display: flex; align-items: center; justify-content: center; border-radius: 8px;
-      width: 34px; height: 34px;
-    }
-    .close-btn:hover { background: var(--border-light); color: var(--text-primary); }
-    .modal-body { padding: 24px; overflow-y: auto; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-    .form-grid mat-form-field { width: 100%; }
-    .span-2 { grid-column: span 2; }
 
     .form-section-title {
       display: flex; align-items: center; gap: 8px;
@@ -343,15 +329,6 @@ import { ConfirmService } from '../../core/services/confirm.service';
     .suffix-btn:hover { color: var(--text-primary); }
     .generate-btn { justify-content: center; margin-top: -4px; }
     mat-form-field mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
-    .modal-footer {
-      padding: 16px 24px; border-top: 1px solid var(--border);
-      display: flex; justify-content: flex-end; gap: 12px; background: #F8FAFC;
-    }
-
-    @media (max-width: 560px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .span-2 { grid-column: span 1; }
-    }
   `]
 })
 export class PharmaciesComponent implements OnInit {
@@ -401,6 +378,22 @@ export class PharmaciesComponent implements OnInit {
   ngOnInit() {
     this.loadRegions();
     this.loadPharmacies();
+  }
+
+  /** Page courante pour la vue cartes mobile (suit le paginator). */
+  get pagedPharmacies(): Pharmacie[] {
+    const data = this.dataSource?.filteredData ?? [];
+    if (!this.paginator) return data;
+    const start = this.paginator.pageIndex * this.paginator.pageSize;
+    return data.slice(start, start + this.paginator.pageSize);
+  }
+
+  applyFilter(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSource.filter = filterValue.trim().toLowerCase();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
   }
 
   loadRegions() {

@@ -43,7 +43,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     BaseChartDirective
   ],
   template: `
-    <div class="dashboard-page">
+    <div class="dashboard-page fade-in">
       <!-- Welcome (autres rôles uniquement) -->
       <div class="welcome-section" *ngIf="!authService.isPharmacien()">
         <div>
@@ -108,7 +108,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
               </div>
             </div>
             <div class="header-actions">
-              <a class="btn btn-outline btn-sm" routerLink="/dashboard/factures">
+              <a class="btn btn-outline btn-sm" routerLink="/dashboard/espace-pharmacie" [queryParams]="{ tab: 1 }">
                 <mat-icon>folder_open</mat-icon> Mes factures
               </a>
               <button class="btn btn-primary btn-sm" *ngIf="canSendFacture" (click)="envoyerFacture()">
@@ -354,21 +354,13 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     </div>
   `,
   styles: [`
-    .dashboard-page {
-      animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     /* Welcome */
     .welcome-section {
       margin-bottom: 24px;
     }
     .welcome-section h1 {
       font-size: 28px;
-      font-weight: 700;
+      font-weight: 800;
       margin: 0 0 4px;
       letter-spacing: -0.02em;
     }
@@ -378,109 +370,6 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       font-size: 15px;
     }
 
-    /* KPI Grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    @media (max-width: 1024px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 600px) {
-      .kpi-grid { grid-template-columns: 1fr; }
-    }
-    .kpi-card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .kpi-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
-    .kpi-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .kpi-icon.blue { background: #DBEAFE; color: #2563EB; }
-    .kpi-icon.green { background: #DCFCE7; color: #16A34A; }
-    .kpi-icon.amber { background: #FEF3C7; color: #D97706; }
-    .kpi-icon.red { background: #FEE2E2; color: #EF4444; }
-    .kpi-body {
-      display: flex;
-      flex-direction: column;
-    }
-    .kpi-value {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-    .kpi-value small {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-secondary);
-    }
-    .kpi-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
-      margin-top: 2px;
-    }
-
-    /* Section Card */
-    .section-card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 24px;
-      overflow: hidden;
-    }
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .section-title-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .section-icon {
-      color: var(--primary);
-      font-size: 24px;
-    }
-    .section-title-group h2 {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 600;
-    }
-    .section-title-group p {
-      margin: 2px 0 0;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-    .section-body {
-      padding: 24px;
-    }
     .table-body {
       overflow-x: auto;
     }
@@ -528,60 +417,6 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       margin-left: 6px;
     }
 
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    .btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-    .btn-primary:disabled {
-      background: #94A3B8;
-      cursor: not-allowed;
-      transform: none;
-    }
-    .btn-outline {
-      background: white;
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover {
-      background: var(--border-light);
-    }
-    .btn-outline:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 13px;
-    }
-    .btn-sm mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
     .add-btn {
       height: 56px;
       margin-top: 4px;
@@ -641,64 +476,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     .mini-table tbody tr { transition: background 0.15s ease; }
     .mini-table tbody tr:hover td { background: var(--border-light); }
 
-    /* Action buttons */
-    .action-group {
-      display: flex;
-      gap: 4px;
-    }
-    .action-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      text-decoration: none;
-    }
-    .action-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-    .action-btn:hover {
-      background: var(--border-light);
-      color: var(--primary);
-    }
-    .action-btn.danger {
-      color: var(--text-muted);
-    }
-    .action-btn.danger:hover {
-      color: var(--warn);
-      background: var(--warn-light);
-    }
-
-    .text-muted {
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-    .w-100 { width: 100%; }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px !important;
-    }
-    .empty-state mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-    .empty-state p {
-      color: var(--text-secondary);
-      font-size: 14px;
-      margin: 0;
-    }
+    .text-muted { font-size: 13px; }
 
     /* En-tête facturation */
     .billing-card { border-color: var(--border); }
@@ -998,8 +776,8 @@ export class DashboardComponent implements OnInit {
     this.factureService.getAll().subscribe((factures: Facture[]) => {
       this.totalFactures = factures.length;
       this.montantTotal = factures.reduce((sum: number, f: Facture) => sum + f.montantTotal, 0);
-      this.facturesAttente = factures.filter((f: Facture) => f.statut === 'ENVOYEE' || f.statut === 'EN_VERIFICATION').length;
-      this.facturesRejetees = factures.filter((f: Facture) => f.statut === 'REJETEE').length;
+      this.facturesAttente = factures.filter((f: Facture) => f.statut === StatutFacture.ENVOYEE).length;
+      this.facturesRejetees = factures.filter((f: Facture) => f.statut === StatutFacture.REJETEE_SR || f.statut === StatutFacture.REJETEE_NC).length;
 
       if (!this.authService.isPharmacien()) {
         this.recentFactures = factures

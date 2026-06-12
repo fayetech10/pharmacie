@@ -18,24 +18,31 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+        redirectTo: 'espace',
+        pathMatch: 'full'
       },
       {
-        path: 'factures',
+        path: 'espace-pharmacie',
         canActivate: [roleGuard],
         data: { roles: [Role.PHARMACIEN] },
-        loadComponent: () => import('./features/factures/factures-list/factures-list.component').then(m => m.FacturesListComponent)
+        loadComponent: () => import('./features/espace-pharmacie/espace-pharmacie.component').then(m => m.EspacePharmacieComponent)
       },
       {
-        path: 'factures-regionales',
+        path: 'espace-region',
         canActivate: [roleGuard],
         data: { roles: [Role.SERVICE_REGIONAL] },
-        loadComponent: () => import('./features/regional-factures/regional-factures.component').then(m => m.RegionalFacturesComponent)
+        loadComponent: () => import('./features/espace-region/espace-region.component').then(m => m.EspaceRegionComponent)
       },
       {
-        // L'ancien formulaire « Saisie Rapide » est remplacé par la page Facturation (dashboard).
-        path: 'factures/create',
-        redirectTo: '',
+        path: 'espace-central',
+        canActivate: [roleGuard],
+        data: { roles: [Role.SERVICE_CENTRAL] },
+        loadComponent: () => import('./features/espace-central/espace-central.component').then(m => m.EspaceCentralComponent)
+      },
+      {
+        path: 'espace',
+        // Generic route that will be handled by a generic redirect or in the layout
+        redirectTo: 'espace-pharmacie', // We will handle dynamic redirection in main-layout or an auth-guard. Let's just keep the routes accessible.
         pathMatch: 'full'
       },
       {
@@ -47,23 +54,22 @@ export const routes: Routes = [
         loadComponent: () => import('./features/factures/facture-detail/facture-detail.component').then(m => m.FactureDetailComponent)
       },
       {
-        path: 'stats',
-        loadComponent: () => import('./features/stats/stats.component').then(m => m.StatsComponent)
+        path: 'utilisateurs',
+        canActivate: [roleGuard],
+        data: { roles: [Role.ADMIN] },
+        loadComponent: () => import('./features/utilisateurs/utilisateurs.component').then(m => m.UtilisateursComponent)
       },
       {
         path: 'pharmacies',
         canActivate: [roleGuard],
-        // Gestion des pharmacies réservée au Service Régional (Central et Admin exclus)
-        data: { roles: [Role.SERVICE_REGIONAL] },
+        data: { roles: [Role.ADMIN, Role.SERVICE_REGIONAL] },
         loadComponent: () => import('./features/pharmacies/pharmacies.component').then(m => m.PharmaciesComponent)
       },
       {
         path: 'regions',
+        canActivate: [roleGuard],
+        data: { roles: [Role.ADMIN] },
         loadComponent: () => import('./features/admin-regions/admin-regions.component').then(m => m.AdminRegionsComponent)
-      },
-      {
-        path: 'utilisateurs',
-        loadComponent: () => import('./features/utilisateurs/utilisateurs.component').then(m => m.UtilisateursComponent)
       },
       {
         path: 'medicaments',

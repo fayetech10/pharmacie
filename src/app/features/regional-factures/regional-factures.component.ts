@@ -66,7 +66,27 @@ type DrillLevel = 'pharmacies' | 'factures';
     </div>
 
     <!-- ===================== NIVEAU 1 : PHARMACIES ===================== -->
-    <mat-card class="table-card" *ngIf="level === 'pharmacies'">
+    <div class="m-cards" *ngIf="level === 'pharmacies'">
+      <div class="m-card clickable" *ngFor="let p of pharmacieSummaries" (click)="selectPharmacie(p)">
+        <div class="m-card-top">
+          <span class="m-title">{{ p.pharmacie.nom }}</span>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
+        </div>
+        <div class="m-sub">{{ p.pharmacie.code }}</div>
+        <div class="m-row">
+          <span><mat-icon class="inline-ic">receipt_long</mat-icon> {{ p.factureCount }} facture(s)</span>
+        </div>
+        <div class="m-foot">
+          <span class="m-amount">{{ p.totalMontant | number:'1.0-0':'fr' }} CFA</span>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="pharmacieSummaries.length === 0">
+        <mat-icon>local_pharmacy</mat-icon>
+        <p>Aucune pharmacie trouvée</p>
+      </div>
+    </div>
+
+    <mat-card class="table-card desktop-only" *ngIf="level === 'pharmacies'">
       <table mat-table [dataSource]="pharmacieSummaries" class="w-100">
         <ng-container matColumnDef="pharmacie">
           <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
@@ -102,7 +122,24 @@ type DrillLevel = 'pharmacies' | 'factures';
     </mat-card>
 
     <!-- ===================== NIVEAU 2 : FACTURES ===================== -->
-    <mat-card class="table-card" *ngIf="level === 'factures'">
+    <div class="m-cards" *ngIf="level === 'factures'">
+      <a class="m-card" *ngFor="let f of selectedPharmacie?.factures || []" [routerLink]="['/dashboard/factures', f.id]">
+        <div class="m-card-top">
+          <span class="m-title">{{ getMonthName(f.mois) }} {{ f.annee }}</span>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
+        </div>
+        <div class="m-foot">
+          <app-status-badge [statut]="f.statut"></app-status-badge>
+          <span class="m-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</span>
+        </div>
+      </a>
+      <div class="empty-state" *ngIf="(selectedPharmacie?.factures || []).length === 0">
+        <mat-icon>receipt_long</mat-icon>
+        <p>Aucune facture pour cette pharmacie</p>
+      </div>
+    </div>
+
+    <mat-card class="table-card desktop-only" *ngIf="level === 'factures'">
       <table mat-table [dataSource]="selectedPharmacie?.factures || []" class="w-100">
         <ng-container matColumnDef="mois">
           <th mat-header-cell *matHeaderCellDef> Mois / Année </th>
@@ -139,41 +176,12 @@ type DrillLevel = 'pharmacies' | 'factures';
     </mat-card>
   `,
   styles: [`
-    /* Fil d'Ariane */
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .crumb {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all var(--transition);
-    }
-    button.crumb:hover { background: var(--border-light); color: var(--text-primary); }
-    .crumb.active { color: var(--primary); cursor: default; }
-    .crumb mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .breadcrumb .sep { font-size: 18px; width: 18px; height: 18px; color: var(--text-muted); }
-
-    /* En-tête */
-    .page-header { margin-bottom: 24px; }
+    /* En-tête avec bouton retour */
     .header-content { display: flex; align-items: center; gap: 16px; }
     .header-content h1 {
       margin: 0 0 4px 0;
       font-size: 26px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-primary);
       letter-spacing: -0.02em;
     }
@@ -194,50 +202,26 @@ type DrillLevel = 'pharmacies' | 'factures';
     }
     .back-btn:hover { background: var(--bg); transform: scale(1.05); }
 
-    /* Tableaux */
-    .table-card { padding: 0; overflow: hidden; }
-    .w-100 { width: 100%; }
-    th.mat-header-cell {
-      background: #F8FAFC;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
     tr.clickable { cursor: pointer; }
     tr.clickable:hover { background: var(--primary-light); }
-
-    .entity-cell { display: flex; align-items: center; gap: 12px; }
-    .entity-icon {
-      width: 36px; height: 36px;
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .entity-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .entity-icon.pharma { background: var(--accent-light); color: var(--accent); }
-    .entity-icon.month { background: #FEF3C7; color: #D97706; }
-    .entity-name { display: block; font-weight: 600; color: var(--text-primary); }
-    .entity-sub { display: block; font-size: 12px; color: var(--text-muted); }
-
     .chevron { color: var(--text-muted); }
     tr.clickable:hover .chevron { color: var(--primary); }
-
-    .action-btn {
-      color: var(--primary);
-      background: var(--primary-light);
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      display: inline-flex; align-items: center; justify-content: center;
-      text-decoration: none;
-      transition: all var(--transition);
-    }
-    .action-btn:hover { background: var(--primary); color: white; }
-    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     .empty-cell {
       text-align: center;
       padding: 32px !important;
       color: var(--text-secondary);
       font-style: italic;
+    }
+
+    .inline-ic {
+      font-size: 15px; width: 15px; height: 15px;
+      vertical-align: -2px; color: var(--text-muted);
+    }
+    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
+
+    @media (max-width: 768px) {
+      .header-content h1 { font-size: 21px; }
     }
   `]
 })

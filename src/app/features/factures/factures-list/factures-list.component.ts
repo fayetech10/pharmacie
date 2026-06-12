@@ -1,13 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, Input, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Router, RouterModule } from '@angular/router';
 import { FactureService } from '../../../core/services/facture.service';
 import { Facture, StatutFacture } from '../../../core/models/facture.model';
 import { AuthService } from '../../../core/services/auth.service';
-import { RegionService, Region } from '../../../core/services/region.service';
-import { PharmacieService } from '../../../core/services/pharmacie.service';
-import { Pharmacie } from '../../../core/models/pharmacie.model';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
@@ -40,14 +36,14 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     MatSnackBarModule
   ],
   template: `
-    <div class="list-page">
-      <!-- Header -->
-      <div class="list-header">
+    <div class="list-page fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
         <div>
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
           <p>Gérez et suivez le statut des factures pharmaceutiques</p>
         </div>
-        <div class="header-actions">
+        <div class="page-head-actions">
           <button class="btn btn-outline" (click)="exportExcel()">
             <mat-icon>table_view</mat-icon> Excel
           </button>
@@ -64,58 +60,14 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         </div>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-icon blue">
-            <mat-icon>receipt_long</mat-icon>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ totalFactures }}</span>
-            <span class="kpi-label">Total Factures</span>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon green">
-            <mat-icon>payments</mat-icon>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ montantTotal | number }} <small>CFA</small></span>
-            <span class="kpi-label">Montant Total</span>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon amber">
-            <mat-icon>pending_actions</mat-icon>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ facturesAttente }}</span>
-            <span class="kpi-label">En attente</span>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon red">
-            <mat-icon>error_outline</mat-icon>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ facturesRejetees }}</span>
-            <span class="kpi-label">Rejetées</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Filters -->
+      <!-- Filtres -->
       <div class="filter-strip">
-        <mat-form-field appearance="outline" class="filter-field search-field">
-          <mat-label>Rechercher...</mat-label>
-          <input matInput (keyup)="applyFilter($event)" placeholder="ID, pharmacie..." #input>
-          <mat-icon matPrefix>search</mat-icon>
-        </mat-form-field>
-        
-        <mat-form-field appearance="outline" class="filter-field">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par ID ou pharmacie…" #input>
+        </div>
+
+        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
           <mat-label>Statut</mat-label>
           <mat-select [(value)]="filterStatut" (selectionChange)="applyAdvancedFilter()">
             <mat-option value="">Tous</mat-option>
@@ -123,7 +75,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="filter-field" *ngIf="!authService.isPharmacien()">
+        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
           <mat-label>Mois</mat-label>
           <mat-select [(value)]="filterMois" (selectionChange)="applyAdvancedFilter()">
             <mat-option [value]="0">Tous</mat-option>
@@ -131,7 +83,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="filter-field" *ngIf="!authService.isPharmacien()">
+        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
           <mat-label>Année</mat-label>
           <mat-select [(value)]="filterAnnee" (selectionChange)="applyAdvancedFilter()">
             <mat-option [value]="0">Toutes</mat-option>
@@ -140,8 +92,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         </mat-form-field>
       </div>
 
-      <!-- Table -->
-      <mat-card class="table-card">
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="dataSource" matSort class="w-100">
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
@@ -193,6 +145,9 @@ import { ConfirmService } from '../../../core/services/confirm.service';
                 <button class="action-btn danger" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'" (click)="deleteFacture(f.id)" title="Supprimer">
                   <mat-icon>delete</mat-icon>
                 </button>
+                <button class="btn btn-primary btn-sm" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'" (click)="payerFacture(f.id)" style="margin-left:8px;">
+                  <mat-icon>payments</mat-icon> Payer
+                </button>
               </div>
             </td>
           </ng-container>
@@ -206,289 +161,54 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             </td>
           </tr>
         </table>
-
-        <mat-paginator [pageSizeOptions]="[10, 25, 50]" aria-label="Select page of factures"></mat-paginator>
       </mat-card>
 
-      <!-- Vue mobile : cartes cliquables (clic → détail, comme la vue admin) -->
-      <div class="mobile-cards">
-        <a class="facture-card" *ngFor="let f of dataSource.filteredData"
-           [routerLink]="['/dashboard/factures', f.id]">
-          <div class="fc-head">
-            <span class="fc-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card clickable" *ngFor="let f of pagedFactures" (click)="openFacture(f.id)">
+          <div class="m-card-top">
+            <span class="m-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+            <div class="m-actions">
+              <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
+                 [routerLink]="['/dashboard/factures', f.id, 'edit']"
+                 (click)="$event.stopPropagation()" title="Modifier">
+                <mat-icon>edit</mat-icon>
+              </a>
+              <button class="action-btn danger" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
+                      (click)="$event.stopPropagation(); deleteFacture(f.id)" title="Supprimer">
+                <mat-icon>delete</mat-icon>
+              </button>
+              <mat-icon class="m-chevron" *ngIf="!(authService.isPharmacien() && f.statut === 'BROUILLON')">chevron_right</mat-icon>
+            </div>
+          </div>
+          <div class="m-sub">#{{ f.id | slice:0:8 }}</div>
+          <div class="m-meta" *ngIf="!authService.isPharmacien()">
+            <mat-icon>event</mat-icon> {{ getMonthName(f.mois) }} {{ f.annee }}
+          </div>
+          <div class="m-meta">
+            <mat-icon>history</mat-icon> Modifiée le {{ f.updatedAt | date:'dd/MM/yyyy' }}
+          </div>
+          <div class="m-foot">
             <app-status-badge [statut]="f.statut"></app-status-badge>
+            <span class="m-amount">{{ f.montantTotal | number }} CFA</span>
           </div>
-          <div class="fc-row">
-            <span class="fc-period" *ngIf="!authService.isPharmacien()">
-              <mat-icon>event</mat-icon> {{ getMonthName(f.mois) }} {{ f.annee }}
-            </span>
-            <span class="fc-amount">{{ f.montantTotal | number }} CFA</span>
-            <mat-icon class="fc-chevron">chevron_right</mat-icon>
-          </div>
-        </a>
-        <div class="mobile-empty" *ngIf="dataSource.filteredData.length === 0">
+          <button class="btn btn-primary btn-block pay-btn" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
+                  (click)="$event.stopPropagation(); payerFacture(f.id)">
+            <mat-icon>payments</mat-icon> Payer cette facture
+          </button>
+        </div>
+        <div class="empty-state" *ngIf="!dataSource || dataSource.filteredData.length === 0">
           <mat-icon>search_off</mat-icon>
           <p>Aucune facture trouvée</p>
         </div>
       </div>
+
+      <!-- Pagination (desktop + mobile) -->
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des factures"></mat-paginator>
     </div>
   `,
   styles: [`
-    .list-page {
-      animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .list-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .list-header h1 {
-      font-size: 26px;
-      font-weight: 700;
-      margin: 0 0 4px;
-      letter-spacing: -0.02em;
-    }
-    .list-header p {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
-    .header-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    .btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-    .btn-outline {
-      background: white;
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover {
-      background: var(--border-light);
-    }
-
-    .filter-strip {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      align-items: flex-start;
-    }
-    .filter-field {
-      min-width: 160px;
-    }
-    .search-field {
-      flex: 1;
-      min-width: 240px;
-    }
-
-    .table-card {
-      padding: 0 !important;
-      overflow: hidden;
-    }
-    .w-100 { width: 100%; }
-
-    .id-chip {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px;
-      background: var(--border-light);
-      padding: 3px 8px;
-      border-radius: 4px;
-      color: var(--text-secondary);
-    }
-
-    .text-muted {
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-
-    .action-group {
-      display: flex;
-      gap: 4px;
-    }
-    .action-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      text-decoration: none;
-    }
-    .action-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-    .action-btn:hover {
-      background: var(--border-light);
-      color: var(--primary);
-    }
-    .action-btn.success:hover {
-      color: #16A34A;
-    }
-    .action-btn.danger:hover {
-      color: var(--warn);
-      background: var(--warn-light);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 48px !important;
-    }
-    .empty-state mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .empty-state p {
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
-
-    /* KPI Grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    @media (max-width: 1024px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 600px) {
-      .kpi-grid { grid-template-columns: 1fr; }
-    }
-    .kpi-card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .kpi-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
-    .kpi-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .kpi-icon.blue { background: #DBEAFE; color: #2563EB; }
-    .kpi-icon.green { background: #DCFCE7; color: #16A34A; }
-    .kpi-icon.amber { background: #FEF3C7; color: #D97706; }
-    .kpi-icon.red { background: #FEE2E2; color: #EF4444; }
-    .kpi-body {
-      display: flex;
-      flex-direction: column;
-    }
-    .kpi-value {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-    .kpi-value small {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-secondary);
-    }
-    .kpi-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
-      margin-top: 2px;
-    }
-
-    /* Vue cartes mobile (cachée sur desktop) */
-    .mobile-cards { display: none; }
-    .facture-card {
-      display: block;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      padding: 14px 16px;
-      text-decoration: none;
-      color: var(--text-primary);
-      transition: background 0.15s ease;
-    }
-    .facture-card:active { background: var(--primary-light); }
-    .fc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-    .fc-title { font-weight: 700; font-size: 15px; }
-    .fc-row { display: flex; align-items: center; gap: 8px; }
-    .fc-period { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-secondary); }
-    .fc-period mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .fc-amount { margin-left: auto; font-weight: 700; color: var(--primary); }
-    .fc-chevron { color: var(--text-muted); }
-    .mobile-empty { text-align: center; padding: 40px 0; color: var(--text-muted); }
-    .mobile-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.6; }
-
-    @media (max-width: 768px) {
-      .list-header {
-        flex-direction: column;
-      }
-      .filter-strip {
-        flex-direction: column;
-      }
-      .filter-field, .search-field {
-        min-width: 100%;
-      }
-      /* Bascule tableau → cartes cliquables */
-      .table-card { display: none; }
-      .mobile-cards { display: flex; flex-direction: column; gap: 12px; }
-    }
+    .pay-btn { margin-top: 12px; }
   `]
 })
 export class FacturesListComponent implements OnInit {
@@ -498,6 +218,7 @@ export class FacturesListComponent implements OnInit {
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('input') input!: ElementRef<HTMLInputElement>;
 
   filterStatut = '';
   filterMois = 0;
@@ -505,16 +226,15 @@ export class FacturesListComponent implements OnInit {
   statuts = Object.values(StatutFacture);
   isImporting = false;
 
-  totalFactures = 0;
-  montantTotal = 0;
-  facturesAttente = 0;
-  facturesRejetees = 0;
+  @Input() allowedStatuses?: string[];
+  @Input() showPaymentButton = false;
 
   constructor(
     public authService: AuthService,
     private factureService: FactureService,
     private snackBar: MatSnackBar,
-    private confirm: ConfirmService
+    private confirm: ConfirmService,
+    private router: Router
   ) {
     if (!this.authService.isPharmacien()) {
       this.displayedColumns = ['id', 'pharmacie', 'periode', 'montant', 'statut', 'date', 'actions'];
@@ -525,15 +245,26 @@ export class FacturesListComponent implements OnInit {
     this.loadFactures();
   }
 
+  /** Page courante pour la vue cartes mobile (suit le paginator). */
+  get pagedFactures(): Facture[] {
+    const data = this.dataSource?.filteredData ?? [];
+    if (!this.paginator) return data;
+    const start = this.paginator.pageIndex * this.paginator.pageSize;
+    return data.slice(start, start + this.paginator.pageSize);
+  }
+
+  openFacture(id: string) {
+    this.router.navigate(['/dashboard/factures', id]);
+  }
+
   loadFactures() {
     this.factureService.getAll().subscribe((data: Facture[]) => {
-      this.factures = data;
-
-      // Calculate KPIs
-      this.totalFactures = this.factures.length;
-      this.montantTotal = this.factures.reduce((sum: number, f: Facture) => sum + f.montantTotal, 0);
-      this.facturesAttente = this.factures.filter((f: Facture) => f.statut === 'ENVOYEE' || f.statut === 'EN_VERIFICATION').length;
-      this.facturesRejetees = this.factures.filter((f: Facture) => f.statut === 'REJETEE').length;
+      // Filtrer par statuts autorisés si spécifié
+      if (this.allowedStatuses && this.allowedStatuses.length > 0) {
+        this.factures = data.filter(f => this.allowedStatuses!.includes(f.statut.toString()));
+      } else {
+        this.factures = data;
+      }
 
       this.dataSource = new MatTableDataSource(this.factures);
       this.dataSource.paginator = this.paginator;
@@ -552,6 +283,9 @@ export class FacturesListComponent implements OnInit {
 
   applyAdvancedFilter() {
     this.dataSource.filter = Math.random().toString();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
   }
 
   customFilterPredicate() {
@@ -582,8 +316,6 @@ export class FacturesListComponent implements OnInit {
       return matchSearch && matchStatut && matchMois && matchAnnee;
     };
   }
-
-  @ViewChild('input') input: any;
 
   exportExcel() {
     this.factureService.exportExcel().subscribe((blob: Blob) => {
@@ -670,6 +402,25 @@ export class FacturesListComponent implements OnInit {
         },
         error: () => {
           this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
+  payerFacture(id: string) {
+    this.confirm.ask({
+      title: 'Payer la facture',
+      message: 'Confirmez-vous le paiement de cette facture ?',
+      confirmText: 'Payer'
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.factureService.payer(id).subscribe({
+        next: () => {
+          this.snackBar.open('Facture payée avec succès', 'Fermer', { duration: 3000 });
+          this.loadFactures();
+        },
+        error: (err: any) => {
+          this.snackBar.open('Erreur lors du paiement: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
         }
       });
     });

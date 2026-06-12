@@ -15,107 +15,133 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   selector: 'app-medicaments',
   standalone: true,
   imports: [
-    CommonModule, MatTableModule, MatPaginatorModule, MatSortModule, 
+    CommonModule, MatTableModule, MatPaginatorModule, MatSortModule,
     MatButtonModule, MatIconModule, MatCardModule, MatInputModule, MatSnackBarModule
   ],
   template: `
-    <div class="page-header flex-header">
-      <div>
-        <h1>Gestion des Médicaments</h1>
-        <p>Consultez la liste des médicaments et importez la liste des médicaments éligibles.</p>
+    <div class="fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
+        <div>
+          <h1>Gestion des Médicaments</h1>
+          <p>Consultez la liste des médicaments et importez les listes éligibles / exclues.</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon> Liste Éligibles
+          </button>
+          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-outline" (click)="exclusionInput.click()">
+            <mat-icon>block</mat-icon> Liste Exclusions
+          </button>
+          <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+        </div>
       </div>
-      <div class="actions">
-        <button mat-flat-button color="primary" (click)="fileInput.click()">
-          <mat-icon>upload_file</mat-icon> Importer Liste Éligibles (Excel)
-        </button>
-        <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
-        <button mat-stroked-button color="warn" (click)="exclusionInput.click()">
-          <mat-icon>block</mat-icon> Importer Liste Exclusions (Excel)
-        </button>
-        <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+
+      <!-- Recherche -->
+      <div class="filter-strip">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par nom, DCI…">
+        </div>
       </div>
-    </div>
 
-    <mat-card class="filter-card mb-4 mt-4">
-      <mat-card-content>
-        <mat-form-field appearance="outline" class="w-100">
-          <mat-label>Recherche globale</mat-label>
-          <input matInput (keyup)="applyFilter($event)" placeholder="Rechercher par nom...">
-          <mat-icon matPrefix>search</mat-icon>
-        </mat-form-field>
-      </mat-card-content>
-    </mat-card>
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
+        <table mat-table [dataSource]="dataSource" matSort class="w-100">
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom Commercial </th>
+            <td mat-cell *matCellDef="let m"> <strong>{{ m.nom }}</strong> </td>
+          </ng-container>
 
-    <mat-card class="table-card">
-      <table mat-table [dataSource]="dataSource" matSort class="w-100">
-        <ng-container matColumnDef="nom">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom Commercial </th>
-          <td mat-cell *matCellDef="let m"> {{ m.nom }} </td>
-        </ng-container>
+          <ng-container matColumnDef="dci">
+            <th mat-header-cell *matHeaderCellDef> DCI / Principe actif </th>
+            <td mat-cell *matCellDef="let m"> {{ m.dci || '-' }} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="dci">
-          <th mat-header-cell *matHeaderCellDef> DCI / Principe actif </th>
-          <td mat-cell *matCellDef="let m"> {{ m.dci || '-' }} </td>
-        </ng-container>
+          <ng-container matColumnDef="classeTherapeutique">
+            <th mat-header-cell *matHeaderCellDef> Classe thérapeutique </th>
+            <td mat-cell *matCellDef="let m"> {{ m.classeTherapeutique || '-' }} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="classeTherapeutique">
-          <th mat-header-cell *matHeaderCellDef> Classe thérapeutique </th>
-          <td mat-cell *matCellDef="let m"> {{ m.classeTherapeutique || '-' }} </td>
-        </ng-container>
+          <ng-container matColumnDef="liste">
+            <th mat-header-cell *matHeaderCellDef> Liste </th>
+            <td mat-cell *matCellDef="let m"> {{ m.liste || '-' }} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="liste">
-          <th mat-header-cell *matHeaderCellDef> Liste </th>
-          <td mat-cell *matCellDef="let m"> {{ m.liste || '-' }} </td>
-        </ng-container>
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Statut </th>
+            <td mat-cell *matCellDef="let m">
+              <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">
+                {{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}
+              </span>
+            </td>
+          </ng-container>
 
-        <ng-container matColumnDef="statut">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Statut </th>
-          <td mat-cell *matCellDef="let m">
-            <span class="badge" [ngClass]="m.statut === 'EXCLU' ? 'badge-danger' : 'badge-success'">
+          <ng-container matColumnDef="motif">
+            <th mat-header-cell *matHeaderCellDef> Motif / Description </th>
+            <td mat-cell *matCellDef="let m">
+              <ng-container *ngIf="m.statut === 'EXCLU'; else noMotif">
+                <strong>{{ m.motif || '-' }}</strong>
+                <span *ngIf="m.description" class="desc-text"> — {{ m.description }}</span>
+              </ng-container>
+              <ng-template #noMotif><span class="text-muted">—</span></ng-template>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-state" [attr.colspan]="displayedColumns.length">
+              <mat-icon>search_off</mat-icon>
+              <p>Aucun médicament trouvé</p>
+            </td>
+          </tr>
+        </table>
+      </mat-card>
+
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let m of pagedMedicaments">
+          <div class="m-card-top">
+            <span class="m-title">{{ m.nom }}</span>
+            <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">
               {{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}
             </span>
-          </td>
-        </ng-container>
+          </div>
+          <div class="m-sub" *ngIf="m.dci">{{ m.dci }}</div>
+          <div class="m-meta" *ngIf="m.classeTherapeutique">
+            <mat-icon>category</mat-icon> {{ m.classeTherapeutique }}
+          </div>
+          <div class="m-meta" *ngIf="m.liste">
+            <mat-icon>list_alt</mat-icon> Liste {{ m.liste }}
+          </div>
+          <div class="m-row motif-row" *ngIf="m.statut === 'EXCLU' && (m.motif || m.description)">
+            <mat-icon>info</mat-icon>
+            <span><strong>{{ m.motif || 'Motif non précisé' }}</strong><ng-container *ngIf="m.description"> — {{ m.description }}</ng-container></span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="!dataSource || dataSource.filteredData.length === 0">
+          <mat-icon>search_off</mat-icon>
+          <p>Aucun médicament trouvé</p>
+        </div>
+      </div>
 
-        <ng-container matColumnDef="motif">
-          <th mat-header-cell *matHeaderCellDef> Motif / Description </th>
-          <td mat-cell *matCellDef="let m">
-            <ng-container *ngIf="m.statut === 'EXCLU'; else noMotif">
-              <strong>{{ m.motif || '-' }}</strong>
-              <span *ngIf="m.description" class="desc-text"> — {{ m.description }}</span>
-            </ng-container>
-            <ng-template #noMotif><span class="text-muted">—</span></ng-template>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center p-4" [attr.colspan]="displayedColumns.length">
-            <mat-icon class="empty-icon">search_off</mat-icon>
-            <p>Aucun médicament trouvé</p>
-          </td>
-        </tr>
-      </table>
-      <mat-paginator [pageSizeOptions]="[10, 25, 50]"></mat-paginator>
-    </mat-card>
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des médicaments"></mat-paginator>
+    </div>
   `,
   styles: [`
-    .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .desc-text { color: var(--text-secondary); font-size: 12px; }
-    .text-muted { color: var(--text-secondary); }
-    .table-card { padding: 0; overflow: hidden; }
-    .w-100 { width: 100%; }
-    .mb-4 { margin-bottom: 24px; }
-    .mt-4 { margin-top: 24px; }
-    th.mat-header-cell { font-weight: 600; color: var(--text-secondary); background: #F8FAFC; }
-    .text-center { text-align: center; }
-    .p-4 { padding: 32px; }
-    .empty-icon { font-size: 48px; width: 48px; height: 48px; color: var(--text-secondary); opacity: 0.5; margin-bottom: 16px; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-    .badge-danger { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
-    .badge-success { background: #dcfce7; color: #22c55e; border: 1px solid #bbf7d0; }
+    .motif-row {
+      align-items: flex-start;
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: #9A3412;
+      font-size: 13px;
+    }
+    .motif-row mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; color: #EA580C; }
   `]
 })
 export class MedicamentsComponent implements OnInit {
@@ -135,6 +161,14 @@ export class MedicamentsComponent implements OnInit {
     this.loadMedicaments();
   }
 
+  /** Page courante pour la vue cartes mobile (suit le paginator). */
+  get pagedMedicaments(): Medicament[] {
+    const data = this.dataSource?.filteredData ?? [];
+    if (!this.paginator) return data.slice(0, 10);
+    const start = this.paginator.pageIndex * this.paginator.pageSize;
+    return data.slice(start, start + this.paginator.pageSize);
+  }
+
   loadMedicaments() {
     this.medicamentService.getAll().subscribe(data => {
       this.medicaments = data;
@@ -147,6 +181,9 @@ export class MedicamentsComponent implements OnInit {
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.dataSource.filter = filterValue.trim().toLowerCase();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
   }
 
   onFileSelected(event: any) {

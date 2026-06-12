@@ -25,8 +25,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     <div class="login-layout">
       <!-- Panneau marque (masqué sur mobile) -->
       <aside class="brand-panel">
-        <img src="assets/logo-csu.png" alt="SEN-CSU" class="brand-csu-logo">
-        <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie" class="brand-logo-img">
+        <span class="brand-csu-chip">
+          <img src="assets/logo-csu.png" alt="SEN-CSU">
+        </span>
+        <div class="brand-center">
+          <span class="brand-logo-card">
+            <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie">
+          </span>
+          <h2>Gestion des Factures Pharmaceutiques</h2>
+          <p>Couverture Sanitaire Universelle · Sénégal</p>
+        </div>
       </aside>
 
       <!-- Panneau formulaire -->
@@ -85,7 +93,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       background: var(--bg);
     }
 
-    /* ---- Panneau marque : logo uniquement ---- */
+    /* ---- Panneau marque navy ---- */
     .brand-panel {
       position: relative;
       display: flex;
@@ -93,22 +101,58 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       justify-content: center;
       min-height: 100vh;
       padding: 48px;
-      background: var(--primary-light);
+      background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
       overflow: hidden;
     }
-    .brand-csu-logo {
+    .brand-panel::before {
+      content: '';
       position: absolute;
-      top: 32px;
-      left: 32px;
-      width: 80px;
-      height: auto;
+      width: 560px;
+      height: 560px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 65%);
+      top: -160px;
+      right: -160px;
+    }
+    .brand-csu-chip {
+      position: absolute;
+      top: 28px;
+      left: 28px;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
       z-index: 1;
     }
-    .brand-logo-img {
-      width: 340px;
-      max-width: 75%;
-      height: auto;
-      object-fit: contain;
+    .brand-csu-chip img { width: 56px; height: 56px; object-fit: contain; }
+    .brand-center { text-align: center; z-index: 1; }
+    .brand-logo-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 200px;
+      height: 200px;
+      border-radius: 36px;
+      background: #fff;
+      box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.35);
+      margin-bottom: 28px;
+    }
+    .brand-logo-card img { width: 150px; height: 150px; object-fit: contain; }
+    .brand-center h2 {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .brand-center p {
+      color: var(--ink-text);
+      margin: 0;
+      font-size: 15px;
     }
 
     /* ---- Panneau formulaire ---- */

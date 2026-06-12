@@ -46,10 +46,6 @@ export class FactureService {
     return this.api.post<Facture>(`/factures/${id}/envoyer`, {});
   }
 
-  verifier(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/verifier`, {});
-  }
-
   valider(id: string, req: ValidationRequest): Observable<Facture> {
     return this.api.post<Facture>(`/factures/${id}/valider`, req);
   }
@@ -58,16 +54,12 @@ export class FactureService {
     return this.api.post<Facture>(`/factures/${id}/rejeter`, req);
   }
 
-  conformer(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/conformer`, {});
+  payer(id: string): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/payer`, {});
   }
 
-  deciderLigne(id: string, index: number, req: LigneDecisionRequest): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/lignes/${index}/decision`, req);
-  }
-
-  renvoyerPourCorrection(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/renvoyer-correction`, {});
+  renvoyerAPharmacie(id: string): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/renvoyer-pharmacie`, {});
   }
 
   exportExcel(): Observable<Blob> {

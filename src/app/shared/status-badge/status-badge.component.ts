@@ -20,12 +20,12 @@ export class StatusBadgeComponent {
     switch(this.statut) {
       case StatutFacture.BROUILLON: return 'Brouillon';
       case StatutFacture.ENVOYEE: return 'Envoyée';
-      case StatutFacture.EN_VERIFICATION: return 'En vérification';
-      case StatutFacture.A_CORRIGER: return 'À corriger';
-      case StatutFacture.CONFORME: return 'Conforme';
-      case StatutFacture.REJETEE: return 'Rejetée';
-      case StatutFacture.VALIDEE: return 'Validée';
-      default: return this.statut;
+      case StatutFacture.VALIDEE_SR: return 'Validée (Région)';
+      case StatutFacture.REJETEE_SR: return 'Rejetée (Région)';
+      case StatutFacture.VALIDEE_NC: return 'Validée (Central)';
+      case StatutFacture.REJETEE_NC: return 'Rejetée (Central)';
+      case StatutFacture.PAYEE: return 'Payée';
+      default: return String(this.statut);
     }
   }
 }

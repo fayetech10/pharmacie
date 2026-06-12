@@ -48,39 +48,49 @@ interface PatientGroup {
           </div>
         </div>
         <div class="header-actions">
-          <app-status-badge class="hide-mobile" [statut]="facture.statut"></app-status-badge>
+          <app-status-badge [statut]="facture.statut"></app-status-badge>
 
           <button class="btn btn-outline" (click)="exportExcel()">
             <mat-icon>table_view</mat-icon> Excel
           </button>
 
-          <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'A_CORRIGER')">
+          <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')">
             <a class="btn btn-outline" [routerLink]="['edit']">
-              <mat-icon>edit</mat-icon> {{ facture.statut === 'A_CORRIGER' ? 'Corriger' : 'Modifier' }}
+              <mat-icon>edit</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Corriger' : 'Modifier' }}
             </a>
             <button class="btn btn-primary" (click)="envoyer()">
-              <mat-icon>send</mat-icon> {{ facture.statut === 'A_CORRIGER' ? 'Renvoyer' : 'Envoyer' }}
+              <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
             </button>
           </ng-container>
 
           <ng-container *ngIf="authService.isServiceRegional()">
-            <button class="btn btn-primary" (click)="verifier()" *ngIf="facture.statut === 'ENVOYEE'">
-              <mat-icon>rule</mat-icon> Vérifier
-            </button>
-            <ng-container *ngIf="facture.statut === 'EN_VERIFICATION'">
-              <button class="btn btn-warning" (click)="renvoyerCorrection()"
-                      [disabled]="countLignes('REJETEE') === 0"
-                      title="Renvoyer au pharmacien pour corriger les lignes rejetées">
-                <mat-icon>undo</mat-icon> Renvoyer pour correction
-              </button>
+            <ng-container *ngIf="facture.statut === 'ENVOYEE'">
               <button class="btn btn-danger" (click)="rejeter()">
-                <mat-icon>cancel</mat-icon> Rejeter tout
+                <mat-icon>cancel</mat-icon> Rejeter
               </button>
-              <button class="btn btn-teal" (click)="conformer()">
-                <mat-icon>thumb_up</mat-icon> Conforme
+              <button class="btn btn-primary" (click)="valider()">
+                <mat-icon>check_circle</mat-icon> Valider et Transmettre
+              </button>
+            </ng-container>
+            <ng-container *ngIf="facture.statut === 'REJETEE_NC'">
+              <button class="btn btn-warning" (click)="renvoyerAPharmacie()">
+                <mat-icon>undo</mat-icon> Renvoyer à la pharmacie
+              </button>
+            </ng-container>
+          </ng-container>
+
+          <ng-container *ngIf="authService.isServiceCentral()">
+            <ng-container *ngIf="facture.statut === 'VALIDEE_SR'">
+              <button class="btn btn-danger" (click)="rejeter()">
+                <mat-icon>cancel</mat-icon> Rejeter
               </button>
               <button class="btn btn-primary" (click)="valider()">
                 <mat-icon>check_circle</mat-icon> Valider
+              </button>
+            </ng-container>
+            <ng-container *ngIf="facture.statut === 'VALIDEE_NC'">
+              <button class="btn btn-teal" (click)="payer()">
+                <mat-icon>payment</mat-icon> Enregistrer Paiement
               </button>
             </ng-container>
           </ng-container>
@@ -98,20 +108,20 @@ interface PatientGroup {
           <span class="info-label">Période</span>
           <span class="info-value">{{ getMonthName(facture.mois) }} {{ facture.annee }}</span>
         </div>
-        <div class="info-divider hide-mobile"></div>
-        <div class="info-block hide-mobile">
-          <span class="info-label">Nombre de lignes</span>
+        <div class="info-divider"></div>
+        <div class="info-block">
+          <span class="info-label">Lignes</span>
           <span class="info-value">{{ facture.lignes?.length || 0 }}</span>
         </div>
-        <div class="info-divider hide-mobile"></div>
-        <div class="info-block hide-mobile">
+        <div class="info-divider"></div>
+        <div class="info-block">
           <span class="info-label">Montant Total</span>
           <span class="info-value montant">{{ facture.montantTotal | number }} CFA</span>
         </div>
       </div>
 
       <!-- Rejection notice -->
-      <div class="reject-card" *ngIf="facture.statut === 'REJETEE' && facture.commentaireRejet">
+      <div class="reject-card" *ngIf="(facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC') && facture.commentaireRejet">
         <mat-icon>error</mat-icon>
         <div>
           <strong>Motif du rejet</strong>
@@ -120,7 +130,7 @@ interface PatientGroup {
       </div>
 
       <!-- Correction notice (pharmacien) -->
-      <div class="correction-card" *ngIf="facture.statut === 'A_CORRIGER'">
+      <div class="correction-card" *ngIf="facture.statut === 'REJETEE_SR'">
         <mat-icon>build</mat-icon>
         <div>
           <strong>Facture à corriger ({{ countLignes('REJETEE') }} ligne(s) rejetée(s))</strong>
@@ -130,22 +140,42 @@ interface PatientGroup {
         </div>
       </div>
 
-      <!-- Verification hint -->
-      <div class="verif-hint" *ngIf="isLineReviewMode()">
-        <mat-icon>rule</mat-icon>
-        <div>
-          <strong>Vérification ligne par ligne</strong>
-          <p>Acceptez ou rejetez chaque ligne (un motif est requis pour un rejet), puis cliquez sur <em>Valider</em>. Seules les lignes acceptées seront facturées.</p>
+
+
+      <!-- Détail mobile : une carte par patient -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let g of patientGroups; trackBy: trackGroup">
+          <div class="m-card-top">
+            <span class="m-title">{{ g.nom || 'Patient sans nom' }}</span>
+            <button class="dossier-btn" type="button" *ngIf="dossierCount(g) > 0" (click)="openDossier(g)">
+              <mat-icon>folder</mat-icon> {{ dossierCount(g) }}
+            </button>
+          </div>
+          <div class="m-sub">{{ g.matricule || '—' }}</div>
+          <div class="med-line" *ngFor="let item of g.lignes" [class.rejected]="item.ligne.statutLigne === 'REJETEE'">
+            <div class="med-head">
+              <span class="med-name">{{ item.ligne.medicament }}</span>
+              <span class="line-tag" *ngIf="showDecision" [ngClass]="lineTagClass(item.ligne.statutLigne)">
+                {{ lineTagLabel(item.ligne.statutLigne) }}
+              </span>
+            </div>
+            <div class="med-calc">
+              {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number }} =
+              <strong>{{ item.ligne.montant | number }} CFA</strong>
+            </div>
+            <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
+              <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
+            </div>
+          </div>
         </div>
-        <span class="verif-recap">
-          <span class="ok">{{ countLignes('ACCEPTEE') }} acceptée(s)</span> ·
-          <span class="ko">{{ countLignes('REJETEE') }} rejetée(s)</span> ·
-          <span class="wait">{{ countLignes('EN_ATTENTE') }} en attente</span>
-        </span>
+        <div class="empty-state" *ngIf="patientGroups.length === 0">
+          <mat-icon>medication</mat-icon>
+          <p>Aucune ligne dans cette facture</p>
+        </div>
       </div>
 
-      <!-- Medications Table -->
-      <mat-card class="table-card">
+      <!-- Medications Table (desktop) -->
+      <mat-card class="table-card desktop-only">
         <div class="card-title-row">
           <h2>Détail des médicaments</h2>
           <span class="line-count">{{ facture.lignes?.length || 0 }} ligne(s)</span>
@@ -189,19 +219,8 @@ interface PatientGroup {
                     <strong>{{ item.ligne.montant | number }}</strong>
                   </td>
                   <td *ngIf="showDecision">
-                    <!-- Mode revue : boutons accepter / rejeter -->
-                    <div class="line-actions" *ngIf="isLineReviewMode()">
-                      <button class="line-btn ok" [class.active]="item.ligne.statutLigne === 'ACCEPTEE'"
-                              (click)="accepterLigne(item.index)" title="Accepter la ligne" type="button">
-                        <mat-icon>check</mat-icon>
-                      </button>
-                      <button class="line-btn ko" [class.active]="item.ligne.statutLigne === 'REJETEE'"
-                              (click)="rejeterLigne(item.index)" title="Rejeter la ligne" type="button">
-                        <mat-icon>close</mat-icon>
-                      </button>
-                    </div>
                     <!-- Lecture seule : badge de statut -->
-                    <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)" *ngIf="!isLineReviewMode()">
+                    <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)">
                       {{ lineTagLabel(item.ligne.statutLigne) }}
                     </span>
                     <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
@@ -299,66 +318,6 @@ interface PatientGroup {
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    .btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-    .btn-outline {
-      background: white;
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover {
-      background: var(--border-light);
-    }
-    .btn-danger {
-      background: var(--warn);
-      color: white;
-    }
-    .btn-danger:hover {
-      background: #DC2626;
-    }
-    .btn-teal {
-      background: var(--accent);
-      color: white;
-    }
-    .btn-teal:hover {
-      background: #0F766E;
-    }
-    .btn-warning {
-      background: #EA580C;
-      color: white;
-    }
-    .btn-warning:hover:not([disabled]) {
-      background: #C2410C;
-    }
-    .btn[disabled] {
-      opacity: 0.5;
-      cursor: not-allowed;
     }
 
     .info-strip {
@@ -619,21 +578,40 @@ interface PatientGroup {
       display: flex; align-items: center; justify-content: center;
     }
 
+    /* Lignes médicaments dans les cartes mobiles */
+    .med-line {
+      padding: 10px 0;
+      border-top: 1px solid var(--border-light);
+      margin-top: 10px;
+    }
+    .med-line.rejected { background: #FEF2F2; margin: 10px -16px 0; padding: 10px 16px; }
+    .med-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .med-name { font-weight: 600; font-size: 14px; }
+    .med-calc { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .med-calc strong { color: var(--text-primary); }
+
     @media (max-width: 768px) {
       .hide-mobile { display: none !important; }
-      .detail-header {
-        flex-direction: column;
-      }
+      .detail-header { flex-direction: column; }
+      .header-actions { width: 100%; }
+      .header-actions .btn { flex: 1; justify-content: center; }
+      .header-actions app-status-badge { order: -1; }
+
       .info-strip {
-        flex-direction: row;
-        justify-content: space-around;
-        gap: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 10px;
         padding: 16px;
       }
-      .info-divider {
-        height: 40px;
-        width: 1px;
-      }
+      .info-divider { display: none; }
+      .info-block { align-items: flex-start; text-align: left; gap: 3px; }
+      .info-value { font-size: 15px; }
+      .info-value.montant { font-size: 18px; }
     }
   `]
 })
@@ -692,10 +670,7 @@ export class FactureDetailComponent implements OnInit {
     this.dossierPatient = g;
   }
 
-  /** Vrai quand le service régional peut accepter/rejeter les lignes (facture en vérification). */
-  isLineReviewMode(): boolean {
-    return this.authService.isServiceRegional() && this.facture?.statut === StatutFacture.EN_VERIFICATION;
-  }
+
 
   countLignes(statut: string): number {
     return (this.facture?.lignes || []).filter(l => (l.statutLigne || StatutLigne.EN_ATTENTE) === statut).length;
@@ -715,25 +690,6 @@ export class FactureDetailComponent implements OnInit {
       case StatutLigne.REJETEE: return 'Rejetée';
       default: return 'En attente';
     }
-  }
-
-  accepterLigne(index: number) {
-    this.factureService.deciderLigne(this.facture.id, index, { accepter: true }).subscribe({
-      next: (f: Facture) => this.facture = f,
-      error: (e: any) => this.showError(e)
-    });
-  }
-
-  rejeterLigne(index: number) {
-    const motif = prompt('Motif du rejet de cette ligne (OBLIGATOIRE):');
-    if (!motif || !motif.trim()) {
-      this.snackBar.open('Le motif est obligatoire pour rejeter une ligne', 'Fermer', { duration: 3000 });
-      return;
-    }
-    this.factureService.deciderLigne(this.facture.id, index, { accepter: false, motif: motif.trim() }).subscribe({
-      next: (f: Facture) => this.facture = f,
-      error: (e: any) => this.showError(e)
-    });
   }
 
   constructor(
@@ -759,7 +715,16 @@ export class FactureDetailComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/dashboard/factures']);
+    // Retour vers la liste « factures » du rôle courant (la route /dashboard/factures n'existe pas)
+    if (this.authService.isPharmacien()) {
+      this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
+    } else if (this.authService.isServiceRegional()) {
+      this.router.navigate(['/dashboard/espace-region'], { queryParams: { tab: 1 } });
+    } else if (this.authService.isServiceCentral()) {
+      this.router.navigate(['/dashboard/espace-central'], { queryParams: { tab: 1 } });
+    } else {
+      this.router.navigate(['/dashboard/regions']);
+    }
   }
 
   exportExcel() {
@@ -786,51 +751,61 @@ export class FactureDetailComponent implements OnInit {
     });
   }
 
-  verifier() {
-    this.factureService.verifier(this.facture.id).subscribe({
-      next: (f: Facture) => this.facture = f,
-      error: (e: any) => this.showError(e)
-    });
-  }
-
-  conformer() {
-    this.factureService.conformer(this.facture.id).subscribe({
-      next: (f: Facture) => this.facture = f,
-      error: (e: any) => this.showError(e)
-    });
-  }
-
   valider() {
-    const commentaire = prompt("Commentaire de validation (optionnel):") || "";
+    const commentaire = prompt("Commentaire de validation (optionnel) :") || "";
     this.factureService.valider(this.facture.id, { commentaire }).subscribe({
-      next: (f: Facture) => this.facture = f,
+      next: (f: Facture) => {
+        this.facture = f;
+        this.snackBar.open('Facture validée avec succès', 'Fermer', { duration: 3000 });
+      },
       error: (e: any) => this.showError(e)
     });
   }
 
   rejeter() {
-    const commentaire = prompt("Motif du rejet (OBLIGATOIRE):");
-    if (!commentaire) {
+    const commentaire = prompt("Motif du rejet (OBLIGATOIRE) :");
+    if (!commentaire || !commentaire.trim()) {
       this.snackBar.open('Le motif est obligatoire pour un rejet', 'Fermer', { duration: 3000 });
       return;
     }
     
     this.openConfirm('Rejeter la facture', 'Êtes-vous sûr de vouloir rejeter cette facture ?', () => {
       this.factureService.rejeter(this.facture.id, { commentaire }).subscribe({
-        next: (f: Facture) => this.facture = f,
+        next: (f: Facture) => {
+          this.facture = f;
+          this.snackBar.open('Facture rejetée avec succès', 'Fermer', { duration: 3000 });
+        },
         error: (e: any) => this.showError(e)
       });
     });
   }
 
-  renvoyerCorrection() {
-    const rejetees = this.countLignes('REJETEE');
+  renvoyerAPharmacie() {
     this.openConfirm(
-      'Renvoyer pour correction',
-      `Renvoyer cette facture au pharmacien pour corriger ${rejetees} ligne(s) rejetée(s) ?`,
+      'Renvoyer à la pharmacie',
+      'Êtes-vous sûr de vouloir renvoyer cette facture rejetée par le central à la pharmacie pour correction ?',
       () => {
-        this.factureService.renvoyerPourCorrection(this.facture.id).subscribe({
-          next: (f: Facture) => this.facture = f,
+        this.factureService.renvoyerAPharmacie(this.facture.id).subscribe({
+          next: (f: Facture) => {
+            this.facture = f;
+            this.snackBar.open('Facture renvoyée à la pharmacie avec succès', 'Fermer', { duration: 3000 });
+          },
+          error: (e: any) => this.showError(e)
+        });
+      }
+    );
+  }
+
+  payer() {
+    this.openConfirm(
+      'Payer la facture',
+      'Confirmer le paiement de cette facture ?',
+      () => {
+        this.factureService.payer(this.facture.id).subscribe({
+          next: (f: Facture) => {
+            this.facture = f;
+            this.snackBar.open('Paiement enregistré avec succès', 'Fermer', { duration: 3000 });
+          },
           error: (e: any) => this.showError(e)
         });
       }

@@ -13,7 +13,7 @@ import { BaseChartDirective } from 'ng2-charts';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatSelectModule, MatIconModule, BaseChartDirective],
   template: `
-    <div class="page-header flex-header">
+    <div class="page-head">
       <div>
         <h1>Statistiques et Analytiques</h1>
         <p>Aperçu global des performances de la CSU</p>
@@ -22,56 +22,40 @@ import { BaseChartDirective } from 'ng2-charts';
 
     <!-- KPI Cards -->
     <div class="kpi-grid" *ngIf="stats">
-      <mat-card class="kpi-card">
-        <div class="kpi-content">
-          <div class="kpi-info">
-            <span class="kpi-label">Total Factures</span>
-            <span class="kpi-value">{{ stats.nombreFactures }}</span>
-          </div>
-          <div class="kpi-icon-wrapper bg-blue">
-            <mat-icon>receipt_long</mat-icon>
-          </div>
+      <div class="kpi-card">
+        <div class="kpi-icon blue"><mat-icon>receipt_long</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats.nombreFactures }}</span>
+          <span class="kpi-label">Total Factures</span>
         </div>
-      </mat-card>
+      </div>
 
-      <mat-card class="kpi-card">
-        <div class="kpi-content">
-          <div class="kpi-info">
-            <span class="kpi-label">Montant Global</span>
-            <span class="kpi-value">{{ stats.montantTotal | number:'1.0-0':'fr' }} CFA</span>
-          </div>
-          <div class="kpi-icon-wrapper bg-green">
-            <mat-icon>payments</mat-icon>
-          </div>
+      <div class="kpi-card">
+        <div class="kpi-icon green"><mat-icon>payments</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats.montantTotal | number:'1.0-0':'fr' }} <small>CFA</small></span>
+          <span class="kpi-label">Montant Global</span>
         </div>
-      </mat-card>
+      </div>
 
-      <mat-card class="kpi-card">
-        <div class="kpi-content">
-          <div class="kpi-info">
-            <span class="kpi-label">Factures Validées</span>
-            <span class="kpi-value">{{ (stats.facturesParStatut['VALIDEE'] || 0) }}</span>
-          </div>
-          <div class="kpi-icon-wrapper bg-teal">
-            <mat-icon>check_circle</mat-icon>
-          </div>
+      <div class="kpi-card">
+        <div class="kpi-icon teal"><mat-icon>check_circle</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ (stats.facturesParStatut['VALIDEE'] || 0) }}</span>
+          <span class="kpi-label">Factures Validées</span>
         </div>
-      </mat-card>
+      </div>
 
-      <mat-card class="kpi-card">
-        <div class="kpi-content">
-          <div class="kpi-info">
-            <span class="kpi-label">Taux d'acceptation</span>
-            <span class="kpi-value">{{ tauxAcceptation | number:'1.0-1':'fr' }}%</span>
-          </div>
-          <div class="kpi-icon-wrapper bg-purple">
-            <mat-icon>pie_chart</mat-icon>
-          </div>
+      <div class="kpi-card">
+        <div class="kpi-icon purple"><mat-icon>pie_chart</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ tauxAcceptation | number:'1.0-1':'fr' }}%</span>
+          <span class="kpi-label">Taux d'acceptation</span>
         </div>
-      </mat-card>
+      </div>
     </div>
 
-    <div class="dashboard-grid mt-4">
+    <div class="dashboard-grid">
       <mat-card class="chart-card">
         <mat-card-header>
           <mat-card-title>Répartition par Statut</mat-card-title>
@@ -104,22 +88,11 @@ import { BaseChartDirective } from 'ng2-charts';
     </div>
   `,
   styles: [`
-    .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 24px; }
-    .kpi-card { padding: 20px; }
-    .kpi-content { display: flex; justify-content: space-between; align-items: center; }
-    .kpi-info { display: flex; flex-direction: column; }
-    .kpi-label { color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-    .kpi-value { font-size: 24px; font-weight: 700; color: var(--text-primary); }
-    .kpi-icon-wrapper { width: 48px; height: 48px; border-radius: 12px; display: flex; justify-content: center; align-items: center; }
-    .bg-blue { background: #E0F2FE; color: #0284C7; }
-    .bg-green { background: #DCFCE7; color: #16A34A; }
-    .bg-teal { background: #CCFBF1; color: #0F766E; }
-    .bg-purple { background: #F3E8FF; color: #7E22CE; }
-    
+    .kpi-icon.teal { background: #CCFBF1; color: #0F766E; }
+    .kpi-icon.purple { background: #F3E8FF; color: #7E22CE; }
+
     .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
     @media (max-width: 960px) { .dashboard-grid { grid-template-columns: 1fr; } }
-    .mt-4 { margin-top: 24px; }
   `]
 })
 export class StatsComponent implements OnInit {
@@ -130,18 +103,20 @@ export class StatsComponent implements OnInit {
   private readonly statutLabels: Record<string, string> = {
     BROUILLON: 'Brouillon',
     ENVOYEE: 'Envoyée',
-    EN_VERIFICATION: 'En vérification',
-    CONFORME: 'Conforme',
-    VALIDEE: 'Validée',
-    REJETEE: 'Rejetée'
+    VALIDEE_SR: 'Validée SR',
+    REJETEE_SR: 'Rejetée SR',
+    VALIDEE_NC: 'Validée Central',
+    REJETEE_NC: 'Rejetée Central',
+    PAYEE: 'Payée'
   };
   private readonly statutColors: Record<string, string> = {
     BROUILLON: '#64748B',
     ENVOYEE: '#2563EB',
-    EN_VERIFICATION: '#D97706',
-    CONFORME: '#0D9488',
-    VALIDEE: '#16A34A',
-    REJETEE: '#DC2626'
+    VALIDEE_SR: '#0D9488',
+    REJETEE_SR: '#DC2626',
+    VALIDEE_NC: '#16A34A',
+    REJETEE_NC: '#991B1B',
+    PAYEE: '#15803D'
   };
 
   // Pie Chart
