@@ -265,12 +265,12 @@ import { ConfirmService } from '../../core/services/confirm.service';
     /* Récapitulatif d'import */
     .import-result {
       margin-bottom: 20px; border-radius: var(--radius-md, 10px);
-      border: 1px solid #BBF7D0; background: #F0FDF4; overflow: hidden;
+      border: 1px solid var(--primary-200); background: var(--primary-light); overflow: hidden;
     }
     .import-result.has-errors { border-color: #FED7AA; background: #FFFBEB; }
     .import-result-head {
       display: flex; align-items: center; gap: 10px; padding: 12px 16px;
-      font-size: 14px; color: #166534; font-weight: 500;
+      font-size: 14px; color: var(--primary-dark); font-weight: 500;
     }
     .import-result.has-errors .import-result-head { color: #B45309; }
     .import-result-head mat-icon { font-size: 22px; width: 22px; height: 22px; }

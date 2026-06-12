@@ -257,7 +257,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     .commit-section { display: flex; justify-content: flex-end; }
     .row-rejected td { background: #FEF2F2; }
     .ligne-tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
-    .ligne-tag.tag-ok { background: #DCFCE7; color: #15803D; }
+    .ligne-tag.tag-ok { background: var(--primary-100); color: var(--primary-hover); }
     .ligne-tag.tag-ko { background: #FEE2E2; color: #B91C1C; }
     .correction-hint { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px 16px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; color: #9A3412; font-size: 14px; }
     .correction-hint mat-icon { color: #EA580C; }

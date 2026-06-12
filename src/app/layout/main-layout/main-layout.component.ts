@@ -56,7 +56,7 @@ interface NavItem {
             <mat-icon>medication</mat-icon>
             <span>Médicaments</span>
           </a>
-          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceRegional()">
             <mat-icon>local_pharmacy</mat-icon>
             <span>Pharmacies</span>
           </a>
@@ -102,7 +102,7 @@ interface NavItem {
     </main>
 
     <!-- Navigation basse (mobile) -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" [class.bottom-nav--green]="authService.isServiceRegional()">
       <a class="bn-item" *ngFor="let item of bottomNav"
          [class.active]="isBottomActive(item)"
          [routerLink]="item.link"
@@ -111,7 +111,7 @@ interface NavItem {
         <mat-icon>{{ item.icon }}</mat-icon>
         <span>{{ item.label }}</span>
       </a>
-      <button class="bn-item" type="button" [class.active]="accountOpen" (click)="accountOpen = !accountOpen">
+      <button class="bn-item" type="button" *ngIf="!authService.isServiceRegional()" [class.active]="accountOpen" (click)="accountOpen = !accountOpen">
         <mat-icon>person_outline</mat-icon>
         <span>Compte</span>
       </button>
@@ -328,6 +328,18 @@ interface NavItem {
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
     }
 
+    /* ===== Variante verte (navigation stack du service régional) ===== */
+    .bottom-nav--green {
+      background: var(--primary);
+      box-shadow: 0 -4px 16px rgba(4, 120, 87, 0.30);
+    }
+    .bottom-nav--green .bn-item { color: rgba(255, 255, 255, 0.82); }
+    .bottom-nav--green .bn-item.active {
+      background: rgba(255, 255, 255, 0.20);
+      color: #fff;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+    }
+
     /* ===== Fiche compte (mobile) ===== */
     .account-overlay {
       position: fixed;
@@ -430,7 +442,8 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1 },
         { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2 },
-        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3 }
+        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3 },
+        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
     }
     if (this.authService.isServiceCentral()) {

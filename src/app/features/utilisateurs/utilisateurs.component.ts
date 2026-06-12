@@ -258,7 +258,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
     .role-badge.ADMIN { background: #FEE2E2; color: #EF4444; }
     .role-badge.SERVICE_CENTRAL { background: #DBEAFE; color: #2563EB; }
     .role-badge.SERVICE_REGIONAL { background: #FEF3C7; color: #D97706; }
-    .role-badge.PHARMACIEN { background: #CCFBF1; color: #0D9488; }
+    .role-badge.PHARMACIEN { background: var(--primary-100); color: var(--primary-hover); }
 
     .status-indicator {
       display: inline-flex;
@@ -273,8 +273,8 @@ import { ConfirmService } from '../../core/services/confirm.service';
       height: 8px;
       border-radius: 50%;
     }
-    .status-indicator.active { color: #16A34A; }
-    .status-indicator.active::before { background: #16A34A; }
+    .status-indicator.active { color: var(--primary); }
+    .status-indicator.active::before { background: var(--primary); }
     .status-indicator.inactive { color: #94A3B8; }
     .status-indicator.inactive::before { background: #94A3B8; }
 

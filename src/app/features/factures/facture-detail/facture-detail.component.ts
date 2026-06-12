@@ -474,7 +474,7 @@ interface PatientGroup {
       padding: 3px 10px;
       border-radius: 999px;
     }
-    .line-tag.tag-ok { background: #DCFCE7; color: #15803D; }
+    .line-tag.tag-ok { background: var(--primary-100); color: var(--primary-hover); }
     .line-tag.tag-ko { background: #FEE2E2; color: #B91C1C; }
     .line-tag.tag-wait { background: var(--border-light); color: var(--text-secondary); }
 

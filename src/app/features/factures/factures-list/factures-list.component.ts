@@ -38,7 +38,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
   template: `
     <div class="list-page fade-in">
       <!-- En-tête -->
-      <div class="page-head">
+      <div class="page-head" *ngIf="showToolbar">
         <div>
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
           <p>Gérez et suivez le statut des factures pharmaceutiques</p>
@@ -241,6 +241,8 @@ export class FacturesListComponent implements OnInit {
 
   @Input() allowedStatuses?: string[];
   @Input() showPaymentButton = false;
+  /** Affiche l'en-tête (titre + boutons Excel/PDF/Import). Masqué quand la liste est intégrée dans un espace. */
+  @Input() showToolbar = true;
 
   constructor(
     public authService: AuthService,

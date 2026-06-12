@@ -88,7 +88,7 @@ import { BaseChartDirective } from 'ng2-charts';
     </div>
   `,
   styles: [`
-    .kpi-icon.teal { background: #CCFBF1; color: #0F766E; }
+    .kpi-icon.teal { background: var(--primary-light); color: var(--primary-hover); }
     .kpi-icon.purple { background: #F3E8FF; color: #7E22CE; }
 
     .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
@@ -112,11 +112,11 @@ export class StatsComponent implements OnInit {
   private readonly statutColors: Record<string, string> = {
     BROUILLON: '#64748B',
     ENVOYEE: '#2563EB',
-    VALIDEE_SR: '#0D9488',
+    VALIDEE_SR: '#059669',
     REJETEE_SR: '#DC2626',
-    VALIDEE_NC: '#16A34A',
+    VALIDEE_NC: '#047857',
     REJETEE_NC: '#991B1B',
-    PAYEE: '#15803D'
+    PAYEE: '#065F46'
   };
 
   // Pie Chart

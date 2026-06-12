@@ -6,16 +6,20 @@
    Vert CSU pour les actions · or pour la pagination
    ============================================================ */
 :root {
-  /* Couleurs de marque */
-  --primary: #059669;
-  --primary-hover: #047857;
-  --primary-light: #ECFDF5;
-  --accent: #0D9488;
-  --accent-light: #CCFBF1;
+  /* Couleurs de marque — échelle émeraude unique (source de vérité du vert) */
+  --primary: #059669;       /* emerald 600 */
+  --primary-hover: #047857; /* emerald 700 */
+  --primary-light: #ECFDF5; /* emerald 50  */
+  --primary-100: #D1FAE5;   /* emerald 100 */
+  --primary-200: #A7F3D0;   /* emerald 200 */
+  --primary-dark: #065F46;  /* emerald 800 */
+  /* accent & success harmonisés sur l'émeraude (plus de teal ni de vert divergent) */
+  --accent: #047857;
+  --accent-light: #D1FAE5;
   --warn: #EF4444;
   --warn-light: #FEE2E2;
-  --success: #16A34A;
-  --success-light: #DCFCE7;
+  --success: #059669;
+  --success-light: #D1FAE5;
 
   /* Navy structurel (topbar, bottom nav) */
   --ink: #1B3A57;
@@ -194,7 +198,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 .btn-warning:hover:not(:disabled) { background: #C2410C; }
 
 .btn-teal { background: var(--accent); color: #fff; }
-.btn-teal:hover:not(:disabled) { background: #0F766E; }
+.btn-teal:hover:not(:disabled) { background: var(--primary-dark); }
 
 /* Boutons d'action (icônes en table / cartes) */
 .action-group { display: inline-flex; gap: var(--sp-1); }
@@ -240,9 +244,9 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 }
 .status-BROUILLON  { background: #F1F5F9; color: #64748B; border-color: #DBE3EC; }
 .status-ENVOYEE    { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
-.status-VALIDEE_SR { background: #F0FDFA; color: #0D9488; border-color: #99F6E4; }
+.status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); border-color: var(--primary-200); }
 .status-REJETEE_SR { background: #FFF7ED; color: #EA580C; border-color: #FED7AA; }
-.status-VALIDEE_NC { background: #F0FDF4; color: #16A34A; border-color: #BBF7D0; }
+.status-VALIDEE_NC { background: var(--primary-100); color: var(--primary-hover); border-color: var(--primary-200); }
 .status-REJETEE_NC { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .status-PAYEE      { background: #FEFCE8; color: #A16207; border-color: #FDE68A; }
 
@@ -277,7 +281,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   flex-shrink: 0;
 }
 .kpi-icon.blue  { background: #DBEAFE; color: #2563EB; }
-.kpi-icon.green { background: #DCFCE7; color: #16A34A; }
+.kpi-icon.green { background: var(--primary-100); color: var(--primary); }
 .kpi-icon.amber { background: #FEF3C7; color: #D97706; }
 .kpi-icon.red   { background: #FEE2E2; color: #EF4444; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
@@ -569,9 +573,9 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   border-radius: var(--radius-sm);
   font-size: 12.5px;
   font-weight: 600;
-  background: #F0FDF4;
-  color: #16A34A;
-  border: 1px solid #BBF7D0;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary-200);
 }
 .m-chip.danger { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .m-chip.neutral { background: var(--border-light); color: var(--text-secondary); border-color: var(--border); }
