@@ -1,13 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -20,8 +18,11 @@ import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { Medicament, StatutMedicament } from '../../core/models/medicament.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { compressImageToDataUrl } from '../../core/utils/image-compression';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+
+type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
 @Component({
   selector: 'app-dashboard',
@@ -34,8 +35,6 @@ import { BaseChartDirective } from 'ng2-charts';
     MatIconModule,
     MatButtonModule,
     MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
     MatInputModule,
     MatAutocompleteModule,
     MatSnackBarModule,
@@ -45,11 +44,11 @@ import { BaseChartDirective } from 'ng2-charts';
   ],
   template: `
     <div class="dashboard-page">
-      <!-- Welcome -->
-      <div class="welcome-section">
+      <!-- Welcome (autres rôles uniquement) -->
+      <div class="welcome-section" *ngIf="!authService.isPharmacien()">
         <div>
           <h1>Bonjour, {{ currentUser?.prenom }} 👋</h1>
-          <p>{{ authService.isPharmacien() ? 'Gérez vos factures pharmaceutiques depuis cette page' : 'Vue d\\'ensemble de l\\'activité CSU' }}</p>
+          <p>Vue d'ensemble de l'activité CSU</p>
         </div>
       </div>
 
@@ -99,46 +98,23 @@ import { BaseChartDirective } from 'ng2-charts';
       <!-- ==================== PHARMACIEN: ALL-IN-ONE ==================== -->
       <ng-container *ngIf="authService.isPharmacien()">
 
-        <!-- Résumé de la facture du mois -->
-        <div class="invoice-summary">
-          <div class="summary-period">
-            <mat-icon>event_available</mat-icon>
-            <div>
-              <span class="summary-label">Facture du mois</span>
-              <span class="summary-month">{{ currentMonthLabel }}</span>
-            </div>
-          </div>
-          <div class="summary-amount">
-            <span class="amount-value">{{ (currentFacture?.montantTotal || 0) | number:'1.0-0':'fr' }}</span>
-            <span class="amount-unit">CFA</span>
-          </div>
-          <div class="summary-meta">
-            <div class="meta-item">
-              <span class="meta-value">{{ currentFacture?.lignes?.length || 0 }}</span>
-              <span class="meta-label">ligne(s)</span>
-            </div>
-            <app-status-badge [statut]="currentStatut"></app-status-badge>
-          </div>
-          <button class="btn btn-primary"
-                  *ngIf="canSendFacture"
-                  (click)="envoyerFacture()">
-            <mat-icon>send</mat-icon> Envoyer
-          </button>
-        </div>
-
         <!-- Section: Facturation -->
-        <div class="section-card">
-          <div class="section-header">
+        <div class="section-card billing-card">
+          <div class="section-header billing-header">
             <div class="section-title-group">
-              <mat-icon class="section-icon">point_of_sale</mat-icon>
+              <span class="section-icon-box"><mat-icon>receipt_long</mat-icon></span>
               <div>
-                <h2>Facturation</h2>
-                <p>Ajoutez les médicaments puis renseignez le patient pour la facture du mois</p>
+                <h2>Facture du mois de {{ currentMonthLabel }}</h2>
               </div>
             </div>
-            <a class="btn btn-outline btn-sm" routerLink="/dashboard/factures">
-              <mat-icon>folder_open</mat-icon> Mes factures
-            </a>
+            <div class="header-actions">
+              <a class="btn btn-outline btn-sm" routerLink="/dashboard/factures">
+                <mat-icon>folder_open</mat-icon> Mes factures
+              </a>
+              <button class="btn btn-primary btn-sm" *ngIf="canSendFacture" (click)="envoyerFacture()">
+                <mat-icon>send</mat-icon> Envoyer
+              </button>
+            </div>
           </div>
 
           <div class="section-body">
@@ -160,11 +136,6 @@ import { BaseChartDirective } from 'ng2-charts';
                 <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
                   Ce médicament est exclu.
                 </mat-error>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Code</mat-label>
-                <input matInput formControlName="codeProduit" readonly>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -197,36 +168,38 @@ import { BaseChartDirective } from 'ng2-charts';
               <div class="temp-header">
                 <span>{{ patientLignes.length }} médicament(s) préparé(s)</span>
               </div>
-              <table class="mini-table">
-                <thead>
-                  <tr>
-                    <th>Médicament</th>
-                    <th>Code</th>
-                    <th>Qté</th>
-                    <th>Prix</th>
-                    <th>Total</th>
-                    <th>Part CSU (50%)</th>
-                    <th>Part bénéf. (50%)</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let pl of patientLignes; let i = index">
-                    <td>{{ pl.medicament }}</td>
-                    <td class="text-muted">{{ pl.codeProduit }}</td>
-                    <td>{{ pl.quantite }}</td>
-                    <td>{{ pl.prixUnitaire | number }}</td>
-                    <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
-                    <td class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
-                    <td class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
-                    <td>
-                      <button class="action-btn danger" (click)="retirerMedicamentTemp(i)" type="button">
-                        <mat-icon>close</mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="mini-table-wrap">
+                <table class="mini-table">
+                  <thead>
+                    <tr>
+                      <th>Médicament</th>
+                      <th>Code</th>
+                      <th>Qté</th>
+                      <th>Prix</th>
+                      <th>Total</th>
+                      <th>Part CSU (50%)</th>
+                      <th>Part bénéf. (50%)</th>
+                      <th class="th-action"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let pl of patientLignes; let i = index">
+                      <td data-label="Médicament" class="cell-med">{{ pl.medicament }}</td>
+                      <td data-label="Code" class="text-muted">{{ pl.codeProduit }}</td>
+                      <td data-label="Qté">{{ pl.quantite }}</td>
+                      <td data-label="Prix">{{ pl.prixUnitaire | number }}</td>
+                      <td data-label="Total"><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
+                      <td data-label="Part CSU (50%)" class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                      <td data-label="Part bénéf. (50%)" class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                      <td class="cell-action">
+                        <button class="action-btn danger" (click)="retirerMedicamentTemp(i)" type="button" matTooltip="Retirer">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
               <div class="temp-footer split-totals">
                 <span>Sous-total : <strong>{{ tempTotal | number:'1.0-0':'fr' }} CFA</strong></span>
                 <span class="part-csu">Part CSU (50%) : <strong>{{ tempTotal / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
@@ -258,6 +231,36 @@ import { BaseChartDirective } from 'ng2-charts';
                 <mat-icon matPrefix>badge</mat-icon>
               </mat-form-field>
                 </form>
+              </div>
+            </div>
+
+            <!-- Étape 3 : Dossier du patient (pièces justificatives) -->
+            <div class="step">
+              <span class="step-badge">3</span>
+              <div class="step-content">
+                <span class="step-label">Dossier du patient</span>
+                <p class="dossier-hint">Prenez en photo les pièces justificatives (appareil photo ou fichier).</p>
+                <div class="photo-grid">
+                  <div class="photo-slot" *ngFor="let p of photoFields">
+                    <span class="photo-label">{{ p.label }}</span>
+                    <div class="photo-drop" *ngIf="!photos[p.key]; else preview">
+                      <input type="file" accept="image/*" capture="environment" hidden
+                             #photoInput (change)="onPhotoSelected(p.key, $event)">
+                      <button type="button" class="photo-btn" (click)="photoInput.click()">
+                        <mat-icon>photo_camera</mat-icon>
+                        <span>Prendre une photo</span>
+                      </button>
+                    </div>
+                    <ng-template #preview>
+                      <div class="photo-preview">
+                        <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
+                        <button type="button" class="photo-remove" (click)="removePhoto(p.key)" matTooltip="Supprimer">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                    </ng-template>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -342,6 +345,12 @@ import { BaseChartDirective } from 'ng2-charts';
           </div>
         </div>
       </ng-container>
+
+      <!-- Visionneuse plein écran d'une pièce justificative -->
+      <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+        <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+        <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+      </div>
     </div>
   `,
   styles: [`
@@ -581,46 +590,56 @@ import { BaseChartDirective } from 'ng2-charts';
     /* Temp list */
     .temp-list {
       margin-top: 20px;
-      background: var(--border-light);
-      border-radius: 10px;
+      background: #fff;
+      border-radius: 12px;
       border: 1px solid var(--border);
       overflow: hidden;
     }
     .temp-header {
       padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 700;
       color: var(--text-secondary);
       border-bottom: 1px solid var(--border);
+      background: var(--border-light);
     }
     .temp-footer {
-      padding: 12px 16px;
+      padding: 14px 16px;
       display: flex;
       justify-content: flex-end;
       border-top: 1px solid var(--border);
+      background: var(--border-light);
     }
+    .mini-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .mini-table {
       width: 100%;
       border-collapse: collapse;
+      min-width: 660px;
     }
     .mini-table th {
       text-align: left;
-      padding: 10px 16px;
-      font-size: 12px;
-      font-weight: 600;
+      padding: 11px 16px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--text-secondary);
       border-bottom: 1px solid var(--border);
+      background: #F8FAFC;
+      white-space: nowrap;
     }
     .mini-table td {
-      padding: 10px 16px;
+      padding: 11px 16px;
       font-size: 14px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-light);
+      white-space: nowrap;
     }
+    .mini-table td.cell-med { font-weight: 600; }
     .mini-table tbody tr:last-child td {
       border-bottom: none;
     }
+    .mini-table tbody tr { transition: background 0.15s ease; }
+    .mini-table tbody tr:hover td { background: var(--border-light); }
 
     /* Action buttons */
     .action-group {
@@ -681,84 +700,43 @@ import { BaseChartDirective } from 'ng2-charts';
       margin: 0;
     }
 
-    /* ===== Résumé facture du mois (pharmacien) ===== */
-    .invoice-summary {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      background: linear-gradient(120deg, #047857 0%, #059669 55%, #0D9488 100%);
-      color: #fff;
-      border-radius: var(--radius-lg);
-      padding: 20px 24px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-md);
+    /* En-tête facturation */
+    .billing-card { border-color: var(--border); }
+    .billing-header { background: rgba(5, 150, 105, 0.05); }
+    .billing-header h2 { font-size: 19px; font-weight: 700; }
+    .section-icon-box {
+      width: 42px; height: 42px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
     }
-    .summary-period {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .summary-period mat-icon {
-      background: rgba(255, 255, 255, 0.18);
-      border-radius: 10px;
-      padding: 6px;
-      width: 34px;
-      height: 34px;
-      font-size: 22px;
-    }
-    .summary-period > div { display: flex; flex-direction: column; }
-    .summary-label { font-size: 12px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 0.04em; }
-    .summary-month { font-size: 16px; font-weight: 700; }
-
-    .summary-amount {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      margin-left: auto;
-    }
-    .amount-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
-    .amount-unit { font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.85); }
-
-    .summary-meta {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding-left: 24px;
-      border-left: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .meta-item { display: flex; flex-direction: column; align-items: center; }
-    .meta-value { font-size: 20px; font-weight: 700; line-height: 1; }
-    .meta-label { font-size: 12px; color: rgba(255, 255, 255, 0.8); }
-    .summary-meta .status-badge { background: rgba(255, 255, 255, 0.9); }
-    .invoice-summary .btn-primary { background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255,255,255,0.35); }
-    .invoice-summary .btn-primary:hover { background: rgba(255, 255, 255, 0.28); transform: translateY(-1px); }
-
-    @media (max-width: 700px) {
-      .summary-amount { margin-left: 0; }
-      .summary-meta { padding-left: 0; border-left: none; }
-    }
+    .section-icon-box mat-icon { font-size: 24px; width: 24px; height: 24px; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
     /* ===== Étapes de saisie ===== */
     .step {
       display: flex;
       gap: 16px;
       align-items: flex-start;
+      position: relative;
     }
     .step + .step { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-light); }
     .step-badge {
       flex-shrink: 0;
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: var(--primary-light);
-      color: var(--primary);
+      background: var(--primary);
+      color: #fff;
       font-size: 14px;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 4px;
+      margin-top: 2px;
+      box-shadow: 0 0 0 4px var(--primary-light);
     }
     .step-content { flex: 1; min-width: 0; }
     .step-label {
@@ -779,12 +757,19 @@ import { BaseChartDirective } from 'ng2-charts';
     .split-totals {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 10px;
       justify-content: flex-end;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-secondary);
     }
-    .split-totals strong { color: var(--text-primary); font-size: 15px; }
+    .split-totals span {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      white-space: nowrap;
+    }
+    .split-totals strong { color: var(--text-primary); font-size: 14px; }
     .part-csu { color: var(--primary); }
     .part-benef { color: var(--accent); }
     td.part-csu, td.part-benef { font-weight: 600; }
@@ -826,6 +811,104 @@ import { BaseChartDirective } from 'ng2-charts';
     .exclu-title { font-weight: 700; color: #B91C1C; font-size: 14px; }
     .exclu-line { font-size: 13px; color: var(--text-primary); }
     .exclu-line strong { color: var(--text-secondary); }
+
+    /* Dossier patient : pièces justificatives */
+    .dossier-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); }
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .photo-slot { display: flex; flex-direction: column; gap: 6px; }
+    .photo-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    .photo-drop { border: 1.5px dashed var(--border); border-radius: 10px; background: var(--border-light); transition: border-color 0.2s ease, background 0.2s ease; }
+    .photo-drop:hover { border-color: var(--primary); background: var(--primary-light); }
+    .photo-btn { width: 100%; height: 96px; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+    .photo-btn mat-icon { font-size: 26px; width: 26px; height: 26px; color: var(--primary); }
+    .photo-preview { position: relative; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+    .photo-remove { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(17,24,39,0.65); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    @media (max-width: 600px) { .photo-grid { grid-template-columns: 1fr; } }
+
+    /* Visionneuse plein écran */
+    .img-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .img-viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .viewer-close { position: absolute; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    /* ===================== RESPONSIVE / MOBILE ===================== */
+    @media (max-width: 768px) {
+      .welcome-section h1 { font-size: 22px; }
+      .section-body { padding: 18px 16px; }
+      .section-header { padding: 16px; flex-direction: column; align-items: stretch; }
+      .section-header .btn { justify-content: center; }
+      .header-actions { width: 100%; }
+      .header-actions .btn { flex: 1; }
+      .chart-body { padding: 16px; }
+      .step { gap: 12px; }
+    }
+
+    @media (max-width: 640px) {
+      /* Champs de saisie en pleine largeur */
+      .form-row { gap: 10px; }
+      .form-row mat-form-field,
+      .form-row .flex-2,
+      .form-row .flex-grow { flex: 1 1 100%; width: 100%; min-width: 0; }
+      .add-btn { width: 100%; height: 50px; margin-top: 0; }
+
+      /* Tableau des médicaments -> cartes empilées */
+      .mini-table-wrap { overflow: visible; }
+      .mini-table { min-width: 0; }
+      .mini-table thead { display: none; }
+      .mini-table, .mini-table tbody, .mini-table tr, .mini-table td { display: block; width: 100%; }
+      .mini-table tr {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin: 12px;
+        padding: 2px 12px;
+        background: #fff;
+      }
+      .mini-table tbody tr:hover td { background: transparent; }
+      .mini-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border-light);
+        white-space: normal;
+        text-align: right;
+      }
+      .mini-table td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-secondary);
+        text-align: left;
+      }
+      .mini-table td.cell-action {
+        border-bottom: none;
+        justify-content: flex-end;
+        padding: 6px 0;
+      }
+      .mini-table td.cell-action::before { content: none; }
+
+      /* Totaux empilés en pleine largeur */
+      .temp-footer { padding: 12px; }
+      .split-totals { width: 100%; flex-direction: column; gap: 8px; justify-content: flex-start; }
+      .split-totals span { width: 100%; text-align: center; }
+
+      /* Boutons d'action en pleine largeur */
+      .save-row { justify-content: stretch; }
+      .save-row .btn { width: 100%; justify-content: center; }
+
+      /* Pièces justificatives : une colonne */
+      .photo-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 380px) {
+      .section-body { padding: 16px 12px; }
+      .step-label { font-size: 12px; }
+      .btn { padding: 9px 12px; }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -839,13 +922,6 @@ export class DashboardComponent implements OnInit {
   recentFactures: Facture[] = [];
   displayedColumns: string[] = ['pharmacie', 'montant', 'statut', 'actions'];
 
-  // For pharmacien – all-in-one
-  allFactures: Facture[] = [];
-  factureDataSource!: MatTableDataSource<Facture>;
-  pharmacienColumns: string[] = ['periode', 'montant', 'statut', 'date', 'actions'];
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-
   // Saisie rapide
   patientForm!: FormGroup;
   medicamentForm!: FormGroup;
@@ -855,6 +931,15 @@ export class DashboardComponent implements OnInit {
   suggestions: Medicament[] = [];
   // Info d'exclusion affichée quand un médicament exclu est saisi/sélectionné
   excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
+
+  // Dossier patient : pièces justificatives (data URL base64)
+  readonly photoFields: { key: PhotoKey; label: string }[] = [
+    { key: 'ticketCaisse', label: 'Ticket de caisse' },
+    { key: 'bonCommande', label: 'Bon de commande' },
+    { key: 'ordonnance', label: 'Ordonnance' }
+  ];
+  photos: Record<PhotoKey, string | null> = { ticketCaisse: null, bonCommande: null, ordonnance: null };
+  viewerImage: string | null = null;
 
   // Chart
   public barChartOptions: ChartOptions = {
@@ -916,14 +1001,7 @@ export class DashboardComponent implements OnInit {
       this.facturesAttente = factures.filter((f: Facture) => f.statut === 'ENVOYEE' || f.statut === 'EN_VERIFICATION').length;
       this.facturesRejetees = factures.filter((f: Facture) => f.statut === 'REJETEE').length;
 
-      if (this.authService.isPharmacien()) {
-        this.allFactures = factures.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        this.factureDataSource = new MatTableDataSource(this.allFactures);
-        setTimeout(() => {
-          if (this.paginator) this.factureDataSource.paginator = this.paginator;
-          if (this.sort) this.factureDataSource.sort = this.sort;
-        });
-      } else {
+      if (!this.authService.isPharmacien()) {
         this.recentFactures = factures
           .sort((a: Facture, b: Facture) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 5);
@@ -1020,6 +1098,34 @@ export class DashboardComponent implements OnInit {
     this.patientLignes.splice(index, 1);
   }
 
+  onPhotoSelected(key: PhotoKey, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Veuillez sélectionner une image', 'Fermer', { duration: 3000 });
+      input.value = '';
+      return;
+    }
+    // Compression côté client (≤ 50 Ko) avant envoi au serveur.
+    compressImageToDataUrl(file, 50 * 1024)
+      .then(dataUrl => { this.photos[key] = dataUrl; })
+      .catch(() => this.snackBar.open("Impossible de traiter l'image", 'Fermer', { duration: 3000 }));
+    input.value = '';
+  }
+
+  removePhoto(key: PhotoKey) {
+    this.photos[key] = null;
+  }
+
+  openViewer(src: string) {
+    this.viewerImage = src;
+  }
+
+  private resetPhotos() {
+    this.photos = { ticketCaisse: null, bonCommande: null, ordonnance: null };
+  }
+
   enregistrerPatientFacture() {
     if (this.patientForm.invalid || this.patientLignes.length === 0) return;
 
@@ -1028,7 +1134,10 @@ export class DashboardComponent implements OnInit {
     const nouvellesLignes = this.patientLignes.map(pl => ({
       ...pl,
       patientNomPrenom: patientVal.patientNomPrenom,
-      patientMatricule: patientVal.patientMatricule
+      patientMatricule: patientVal.patientMatricule,
+      ticketCaisse: this.photos.ticketCaisse || undefined,
+      bonCommande: this.photos.bonCommande || undefined,
+      ordonnance: this.photos.ordonnance || undefined
     }));
 
     this.factureService.addLignesToCurrent(nouvellesLignes).subscribe({
@@ -1036,6 +1145,7 @@ export class DashboardComponent implements OnInit {
         this.currentFacture = res;
         this.patientForm.reset();
         this.patientLignes = [];
+        this.resetPhotos();
         this.isSubmitting = false;
         this.snackBar.open('Patient et médicaments ajoutés à la facture', 'OK', { duration: 3000 });
         this.loadData(); // refresh KPIs and list

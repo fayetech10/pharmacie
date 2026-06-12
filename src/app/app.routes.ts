@@ -33,8 +33,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/regional-factures/regional-factures.component').then(m => m.RegionalFacturesComponent)
       },
       {
+        // L'ancien formulaire « Saisie Rapide » est remplacé par la page Facturation (dashboard).
         path: 'factures/create',
-        loadComponent: () => import('./features/factures/facture-form/facture-form.component').then(m => m.FactureFormComponent)
+        redirectTo: '',
+        pathMatch: 'full'
       },
       {
         path: 'factures/:id/edit',

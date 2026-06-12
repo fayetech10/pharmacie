@@ -15,6 +15,7 @@ import { MedicamentService } from '../../../core/services/medicament.service';
 import { Medicament, StatutMedicament } from '../../../core/models/medicament.model';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
+import { compressImageToDataUrl } from '../../../core/utils/image-compression';
 
 type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
@@ -430,9 +431,10 @@ export class FactureFormComponent implements OnInit {
       input.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => { this.photos[key] = reader.result as string; };
-    reader.readAsDataURL(file);
+    // Compression côté client (≤ 50 Ko) avant envoi au serveur.
+    compressImageToDataUrl(file, 50 * 1024)
+      .then(dataUrl => { this.photos[key] = dataUrl; })
+      .catch(() => this.snackBar.open("Impossible de traiter l'image", 'Fermer', { duration: 3000 }));
     input.value = '';
   }
 

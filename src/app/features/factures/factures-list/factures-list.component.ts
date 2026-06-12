@@ -58,7 +58,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <mat-icon>upload_file</mat-icon> Import
           </button>
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
-          <a class="btn btn-primary" routerLink="create" *ngIf="authService.isPharmacien()">
+          <a class="btn btn-primary" routerLink="/dashboard" *ngIf="authService.isPharmacien()">
             <mat-icon>add</mat-icon> Nouvelle Facture
           </a>
         </div>
