@@ -70,8 +70,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
           <mat-label>Statut</mat-label>
           <mat-select [(value)]="filterStatut" (selectionChange)="applyAdvancedFilter()">
-            <mat-option value="">Tous</mat-option>
-            <mat-option *ngFor="let s of statuts" [value]="s">{{ s }}</mat-option>
+            <mat-option value="">Tous les statuts</mat-option>
+            <mat-option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -83,11 +83,11 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
+        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
           <mat-label>Année</mat-label>
           <mat-select [(value)]="filterAnnee" (selectionChange)="applyAdvancedFilter()">
             <mat-option [value]="0">Toutes</mat-option>
-            <mat-option *ngFor="let a of [2023, 2024, 2025, 2026]" [value]="a">{{ a }}</mat-option>
+            <mat-option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -169,6 +169,9 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           <div class="m-card-top">
             <span class="m-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
             <div class="m-actions">
+              <button class="action-btn success" (click)="$event.stopPropagation(); exportSingleExcel(f.id, f.mois, f.annee)" title="Télécharger">
+                <mat-icon>download</mat-icon>
+              </button>
               <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
                  [routerLink]="['/dashboard/factures', f.id, 'edit']"
                  (click)="$event.stopPropagation()" title="Modifier">
@@ -178,7 +181,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
                       (click)="$event.stopPropagation(); deleteFacture(f.id)" title="Supprimer">
                 <mat-icon>delete</mat-icon>
               </button>
-              <mat-icon class="m-chevron" *ngIf="!(authService.isPharmacien() && f.statut === 'BROUILLON')">chevron_right</mat-icon>
             </div>
           </div>
           <div class="m-sub">#{{ f.id | slice:0:8 }}</div>
@@ -224,7 +226,18 @@ export class FacturesListComponent implements OnInit {
   filterMois = 0;
   filterAnnee = 0;
   statuts = Object.values(StatutFacture);
+  anneesDispo: number[] = [];
   isImporting = false;
+
+  private readonly statutLabels: Record<string, string> = {
+    BROUILLON: 'Non envoyée',
+    ENVOYEE: 'Envoyée',
+    VALIDEE_SR: 'Validée SR',
+    REJETEE_SR: 'Rejetée SR',
+    VALIDEE_NC: 'Validée NC',
+    REJETEE_NC: 'Rejetée NC',
+    PAYEE: 'Payée'
+  };
 
   @Input() allowedStatuses?: string[];
   @Input() showPaymentButton = false;
@@ -257,6 +270,10 @@ export class FacturesListComponent implements OnInit {
     this.router.navigate(['/dashboard/factures', id]);
   }
 
+  statutLabel(s: string): string {
+    return this.statutLabels[s] ?? s;
+  }
+
   loadFactures() {
     this.factureService.getAll().subscribe((data: Facture[]) => {
       // Filtrer par statuts autorisés si spécifié
@@ -265,6 +282,9 @@ export class FacturesListComponent implements OnInit {
       } else {
         this.factures = data;
       }
+
+      // Années présentes dans les données (tri décroissant) pour le filtre
+      this.anneesDispo = Array.from(new Set(this.factures.map(f => f.annee))).sort((a, b) => b - a);
 
       this.dataSource = new MatTableDataSource(this.factures);
       this.dataSource.paginator = this.paginator;

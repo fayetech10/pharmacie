@@ -27,17 +27,24 @@ import { FacturesListComponent } from '../factures/factures-list/factures-list.c
         </mat-tab>
         <mat-tab label="Factures reçues">
           <div class="tab-content">
+            <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
             <app-factures-list [allowedStatuses]="['VALIDEE_SR']"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab label="Factures validées">
           <div class="tab-content">
+            <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
             <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true"></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab label="Factures payées">
+          <div class="tab-content">
+            <app-factures-list [allowedStatuses]="['PAYEE']"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab label="Factures rejetées">
           <div class="tab-content">
-            <!-- Les factures rejetées par le central sont au statut REJETEE_NC -->
+            <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
             <app-factures-list [allowedStatuses]="['REJETEE_NC']"></app-factures-list>
           </div>
         </mat-tab>

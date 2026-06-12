@@ -18,12 +18,12 @@ export class StatusBadgeComponent {
 
   getLabel(): string {
     switch(this.statut) {
-      case StatutFacture.BROUILLON: return 'Brouillon';
+      case StatutFacture.BROUILLON: return 'Non envoyée';
       case StatutFacture.ENVOYEE: return 'Envoyée';
-      case StatutFacture.VALIDEE_SR: return 'Validée (Région)';
-      case StatutFacture.REJETEE_SR: return 'Rejetée (Région)';
-      case StatutFacture.VALIDEE_NC: return 'Validée (Central)';
-      case StatutFacture.REJETEE_NC: return 'Rejetée (Central)';
+      case StatutFacture.VALIDEE_SR: return 'Validée SR';
+      case StatutFacture.REJETEE_SR: return 'Rejetée SR';
+      case StatutFacture.VALIDEE_NC: return 'Validée NC';
+      case StatutFacture.REJETEE_NC: return 'Rejetée NC';
       case StatutFacture.PAYEE: return 'Payée';
       default: return String(this.statut);
     }

@@ -111,7 +111,7 @@ interface PatientGroup {
         <div class="info-divider"></div>
         <div class="info-block">
           <span class="info-label">Lignes</span>
-          <span class="info-value">{{ facture.lignes?.length || 0 }}</span>
+          <span class="info-value">{{ facture.lignes.length || 0 }}</span>
         </div>
         <div class="info-divider"></div>
         <div class="info-block">
@@ -178,7 +178,7 @@ interface PatientGroup {
       <mat-card class="table-card desktop-only">
         <div class="card-title-row">
           <h2>Détail des médicaments</h2>
-          <span class="line-count">{{ facture.lignes?.length || 0 }} ligne(s)</span>
+          <span class="line-count">{{ facture.lignes.length || 0 }} ligne(s)</span>
         </div>
         <div class="table-scroll">
           <table class="detail-table">

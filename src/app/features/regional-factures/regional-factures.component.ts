@@ -1,17 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AuthService } from '../../core/services/auth.service';
 import { PharmacieService } from '../../core/services/pharmacie.service';
 import { Pharmacie } from '../../core/models/pharmacie.model';
 import { FactureService } from '../../core/services/facture.service';
-import { Facture } from '../../core/models/facture.model';
+import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 
 interface PharmacieSummary {
@@ -29,10 +31,12 @@ type DrillLevel = 'pharmacies' | 'factures';
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatTableModule,
+    MatSnackBarModule,
     StatusBadgeComponent
   ],
   template: `
@@ -122,25 +126,50 @@ type DrillLevel = 'pharmacies' | 'factures';
     </mat-card>
 
     <!-- ===================== NIVEAU 2 : FACTURES ===================== -->
+    <!-- Filtres Année + Statut -->
+    <div class="dash-filters" *ngIf="level === 'factures'">
+      <label class="dash-select">
+        <span>Année</span>
+        <select [(ngModel)]="filterYear">
+          <option [ngValue]="0">Toutes</option>
+          <option *ngFor="let y of anneesDispo" [ngValue]="y">{{ y }}</option>
+        </select>
+      </label>
+      <label class="dash-select">
+        <span>Statut</span>
+        <select [(ngModel)]="filterStatut">
+          <option value="">Tous les statuts</option>
+          <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
+        </select>
+      </label>
+    </div>
+
     <div class="m-cards" *ngIf="level === 'factures'">
-      <a class="m-card" *ngFor="let f of selectedPharmacie?.factures || []" [routerLink]="['/dashboard/factures', f.id]">
+      <div class="m-card" *ngFor="let f of displayedFactures">
         <div class="m-card-top">
           <span class="m-title">{{ getMonthName(f.mois) }} {{ f.annee }}</span>
-          <mat-icon class="m-chevron">chevron_right</mat-icon>
+          <div class="m-actions">
+            <button class="action-btn success" (click)="exportFacture(f)" title="Télécharger">
+              <mat-icon>download</mat-icon>
+            </button>
+            <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir">
+              <mat-icon>visibility</mat-icon>
+            </a>
+          </div>
         </div>
         <div class="m-foot">
           <app-status-badge [statut]="f.statut"></app-status-badge>
           <span class="m-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</span>
         </div>
-      </a>
-      <div class="empty-state" *ngIf="(selectedPharmacie?.factures || []).length === 0">
+      </div>
+      <div class="empty-state" *ngIf="displayedFactures.length === 0">
         <mat-icon>receipt_long</mat-icon>
-        <p>Aucune facture pour cette pharmacie</p>
+        <p>Aucune facture pour ce filtre</p>
       </div>
     </div>
 
     <mat-card class="table-card desktop-only" *ngIf="level === 'factures'">
-      <table mat-table [dataSource]="selectedPharmacie?.factures || []" class="w-100">
+      <table mat-table [dataSource]="displayedFactures" class="w-100">
         <ng-container matColumnDef="mois">
           <th mat-header-cell *matHeaderCellDef> Mois / Année </th>
           <td mat-cell *matCellDef="let f">
@@ -159,18 +188,23 @@ type DrillLevel = 'pharmacies' | 'factures';
           <td mat-cell *matCellDef="let f"><app-status-badge [statut]="f.statut"></app-status-badge></td>
         </ng-container>
         <ng-container matColumnDef="action">
-          <th mat-header-cell *matHeaderCellDef> Détail </th>
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
           <td mat-cell *matCellDef="let f">
-            <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" (click)="$event.stopPropagation()" title="Voir la facture">
-              <mat-icon>visibility</mat-icon>
-            </a>
+            <div class="action-group">
+              <button class="action-btn success" (click)="exportFacture(f)" title="Télécharger">
+                <mat-icon>download</mat-icon>
+              </button>
+              <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir la facture">
+                <mat-icon>visibility</mat-icon>
+              </a>
+            </div>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="factureColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: factureColumns;"></tr>
         <tr class="mat-row" *matNoDataRow>
-          <td class="empty-cell" colspan="4">Aucune facture pour cette pharmacie.</td>
+          <td class="empty-cell" colspan="4">Aucune facture pour ce filtre.</td>
         </tr>
       </table>
     </mat-card>
@@ -220,8 +254,26 @@ type DrillLevel = 'pharmacies' | 'factures';
     }
     .m-row span { display: inline-flex; align-items: center; gap: 4px; }
 
+    /* Filtres de tableau de bord (Année / Statut) */
+    .dash-filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .dash-select { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 1; max-width: 220px; }
+    .dash-select span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .dash-select select {
+      height: 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--field-bg);
+      padding: 0 12px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .dash-select select:focus { outline: none; border-color: var(--primary); background: #fff; }
+
     @media (max-width: 768px) {
       .header-content h1 { font-size: 21px; }
+      .dash-select { max-width: none; }
     }
   `]
 })
@@ -241,10 +293,21 @@ export class RegionalFacturesComponent implements OnInit {
   selectedPharmacie: PharmacieSummary | null = null;
   factureColumns = ['mois', 'montant', 'statut', 'action'];
 
+  // Filtres niveau 2 (factures d'une pharmacie)
+  filterYear = 0;
+  filterStatut = '';
+  statuts = Object.values(StatutFacture);
+  private readonly statutLabels: Record<string, string> = {
+    BROUILLON: 'Non envoyée', ENVOYEE: 'Envoyée',
+    VALIDEE_SR: 'Validée SR', REJETEE_SR: 'Rejetée SR',
+    VALIDEE_NC: 'Validée NC', REJETEE_NC: 'Rejetée NC', PAYEE: 'Payée'
+  };
+
   constructor(
     private authService: AuthService,
     private pharmacieService: PharmacieService,
-    private factureService: FactureService
+    private factureService: FactureService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit() {
@@ -275,9 +338,44 @@ export class RegionalFacturesComponent implements OnInit {
     this.totalRegionMontant = this.pharmacieSummaries.reduce((sum, p) => sum + p.totalMontant, 0);
   }
 
+  /** Années présentes dans les factures de la pharmacie sélectionnée (tri décroissant). */
+  get anneesDispo(): number[] {
+    const fs = this.selectedPharmacie?.factures ?? [];
+    return Array.from(new Set(fs.map(f => f.annee))).sort((a, b) => b - a);
+  }
+
+  /** Factures de la pharmacie sélectionnée filtrées par année + statut. */
+  get displayedFactures(): Facture[] {
+    let fs = this.selectedPharmacie?.factures ?? [];
+    if (this.filterYear) fs = fs.filter(f => f.annee === this.filterYear);
+    if (this.filterStatut) fs = fs.filter(f => f.statut === this.filterStatut);
+    return fs;
+  }
+
+  statutLabel(s: string): string {
+    return this.statutLabels[s] ?? s;
+  }
+
+  exportFacture(f: Facture) {
+    this.factureService.exportFactureExcel(f.id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Téléchargement lancé', 'Fermer', { duration: 2500 });
+      },
+      error: (err: any) => this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+    });
+  }
+
   // Niveau 1 → 2
   selectPharmacie(ps: PharmacieSummary) {
     this.selectedPharmacie = ps;
+    this.filterYear = 0;
+    this.filterStatut = '';
     this.level = 'factures';
   }
 

@@ -429,14 +429,16 @@ export class MainLayoutComponent implements OnInit {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1 },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2 }
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2 },
+        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3 }
       ];
     }
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1 },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 }
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
+        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 }
       ];
     }
     return [

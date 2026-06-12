@@ -26,18 +26,26 @@ import { FacturesListComponent } from '../factures/factures-list/factures-list.c
         </mat-tab>
         <mat-tab label="Factures reçues">
           <div class="tab-content">
-            <!-- Le service régional reçoit les ENVOYEE (depuis la pharmacie) et les REJETEE_NC (retournées par le central) -->
-            <app-factures-list [allowedStatuses]="['ENVOYEE', 'REJETEE_NC']"></app-factures-list>
+            <!-- Factures envoyées par les pharmacies (et corrections renvoyées) à contrôler -->
+            <app-factures-list [allowedStatuses]="['ENVOYEE']"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab label="Factures validées">
           <div class="tab-content">
+            <!-- Validées par le SR et transmises au niveau central -->
             <app-factures-list [allowedStatuses]="['VALIDEE_SR']"></app-factures-list>
           </div>
         </mat-tab>
-        <mat-tab label="Factures rejetées">
+        <mat-tab label="Rejetées SR">
           <div class="tab-content">
+            <!-- Rejetées par le SR : renvoyées à la pharmacie pour correction -->
             <app-factures-list [allowedStatuses]="['REJETEE_SR']"></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab label="Rejetées NC">
+          <div class="tab-content">
+            <!-- Rejetées par le central : le SR les renvoie à la pharmacie -->
+            <app-factures-list [allowedStatuses]="['REJETEE_NC']"></app-factures-list>
           </div>
         </mat-tab>
       </mat-tab-group>
