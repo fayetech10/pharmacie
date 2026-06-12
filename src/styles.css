@@ -592,6 +592,8 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   .m-cards { display: flex; flex-direction: column; gap: var(--sp-3); }
+  /* Liste des factures : pas de pagination sur mobile (toutes les cartes sont affichées). */
+  .list-page mat-paginator { display: none !important; }
   .page-head h1 { font-size: 22px; }
   .page-head-actions { width: 100%; }
   .page-head-actions .btn { flex: 1; min-width: 0; }

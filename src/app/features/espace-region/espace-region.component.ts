@@ -154,6 +154,8 @@ import { FactureCountService, StatutCounts } from '../../core/services/facture-c
       /* La navigation se fait via la barre du bas (navigation stack) :
          on masque la barre d'onglets redondante. */
       :host ::ng-deep .mat-mdc-tab-header { display: none; }
+      /* En-tête (titre + sous-titre) masqué sur mobile : redondant avec la barre du bas. */
+      .page-head { display: none; }
       .tab-content { padding-top: 8px; }
       .seg-toggle { display: flex; width: 100%; }
       .seg-toggle button { flex: 1; padding: 9px 8px; }

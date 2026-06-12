@@ -15,6 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { ConfirmService } from '../../../core/services/confirm.service';
 
 @Component({
@@ -211,6 +212,12 @@ import { ConfirmService } from '../../../core/services/confirm.service';
   `,
   styles: [`
     .pay-btn { margin-top: 12px; }
+
+    /* Mobile : on masque la barre de recherche + filtres (Statut/Mois/Année)
+       sur tous les écrans qui réutilisent cette liste. */
+    @media (max-width: 768px) {
+      .filter-strip { display: none; }
+    }
   `]
 })
 export class FacturesListComponent implements OnInit {
@@ -228,6 +235,8 @@ export class FacturesListComponent implements OnInit {
   statuts = Object.values(StatutFacture);
   anneesDispo: number[] = [];
   isImporting = false;
+  /** Mobile (≤768px) : vue cartes sans pagination → on affiche toutes les factures. */
+  isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   private readonly statutLabels: Record<string, string> = {
     BROUILLON: 'Non envoyée',
@@ -249,7 +258,8 @@ export class FacturesListComponent implements OnInit {
     private factureService: FactureService,
     private snackBar: MatSnackBar,
     private confirm: ConfirmService,
-    private router: Router
+    private router: Router,
+    private breakpoints: BreakpointObserver
   ) {
     if (!this.authService.isPharmacien()) {
       this.displayedColumns = ['id', 'pharmacie', 'periode', 'montant', 'statut', 'date', 'actions'];
@@ -257,12 +267,15 @@ export class FacturesListComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.breakpoints.observe('(max-width: 768px)').subscribe(state => this.isMobile = state.matches);
     this.loadFactures();
   }
 
-  /** Page courante pour la vue cartes mobile (suit le paginator). */
+  /** Cartes affichées sur mobile : toute la liste (pas de pagination).
+   *  Sur desktop la pagination ne concerne que le tableau, pas cette vue. */
   get pagedFactures(): Facture[] {
     const data = this.dataSource?.filteredData ?? [];
+    if (this.isMobile) return data;
     if (!this.paginator) return data;
     const start = this.paginator.pageIndex * this.paginator.pageSize;
     return data.slice(start, start + this.paginator.pageSize);
