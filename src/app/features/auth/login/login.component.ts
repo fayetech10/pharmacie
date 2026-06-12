@@ -76,11 +76,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
               <span *ngIf="!isLoading">Se connecter</span>
             </button>
           </form>
-
-          <div class="demo-hint">
-            <mat-icon>info_outline</mat-icon>
-            <span>Compte démo : <strong>pharmacien&#64;csu.sn</strong> · password123</span>
-          </div>
         </div>
       </section>
     </div>
@@ -189,20 +184,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     }
     .error-message mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
-    .demo-hint {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 28px;
-      padding: 12px 14px;
-      background: var(--primary-light);
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-    .demo-hint mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--primary); }
-    .demo-hint strong { color: var(--text-primary); }
-
     @media (max-width: 900px) {
       .login-layout { grid-template-columns: 1fr; }
       .brand-panel { display: none; }
@@ -223,8 +204,8 @@ export class LoginComponent {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      email: ['pharmacien@csu.sn', [Validators.required, Validators.email]],
-      password: ['password123', Validators.required]
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required]
     });
   }
 

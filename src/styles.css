@@ -21,16 +21,16 @@
   --success: #059669;
   --success-light: #D1FAE5;
 
-  /* Navy structurel (topbar, bottom nav) */
-  --ink: #1B3A57;
-  --ink-deep: #142C44;
-  --ink-soft: #2A4D70;
-  --ink-text: #C8D6E5;
+  /* Structure (topbar, bottom nav) — vert pharmacie (remplace l'ancien navy) */
+  --ink: #047857;       /* emerald 700 — surfaces structurelles */
+  --ink-deep: #065F46;  /* emerald 800 — dégradés (login) */
+  --ink-soft: #059669;  /* emerald 600 — états actifs (plus clair que --ink) */
+  --ink-text: #D1FAE5;  /* emerald 100 — texte clair sur fond vert */
 
-  /* Accent or (pagination, touches secondaires) */
-  --gold: #B7912F;
-  --gold-hover: #9C7A24;
-  --gold-light: #F5EDD8;
+  /* Accent secondaire (pagination) — aligné sur le vert */
+  --gold: var(--primary);
+  --gold-hover: var(--primary-hover);
+  --gold-light: var(--primary-light);
 
   /* Surfaces & texte */
   --bg: #F2F5F9;
@@ -706,6 +706,24 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   .mat-mdc-tab { padding: 0 14px !important; height: 38px !important; }
   .mat-mdc-tab .mdc-tab__text-label { font-size: 13px; }
 }
+
+/* Recolore les accents Material (focus, sélection, spinner) en vert pharmacie */
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-focus-outline-color: var(--primary);
+  --mdc-outlined-text-field-focus-label-text-color: var(--primary);
+  --mdc-outlined-text-field-caret-color: var(--primary);
+  --mdc-filled-text-field-focus-active-indicator-color: var(--primary);
+  --mdc-filled-text-field-focus-label-text-color: var(--primary);
+  --mdc-filled-text-field-caret-color: var(--primary);
+}
+.mat-mdc-select { --mat-select-focused-arrow-color: var(--primary); }
+.mat-mdc-option {
+  --mat-option-selected-state-label-text-color: var(--primary);
+  --mdc-list-item__primary-text-color: var(--primary);
+}
+.mat-mdc-progress-spinner { --mdc-circular-progress-active-indicator-color: var(--primary); }
+.mat-mdc-tab-group, .mat-mdc-tab-nav-bar { --mdc-tab-indicator-active-indicator-color: var(--primary); }
+.mat-mdc-icon-button { --mat-mdc-button-ripple-color: var(--primary); }
 
 /* Snackbars lisibles */
 .mat-mdc-snack-bar-container.success-snackbar .mdc-snackbar__surface { background: var(--success) !important; }
