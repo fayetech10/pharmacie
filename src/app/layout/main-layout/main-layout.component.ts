@@ -4,6 +4,7 @@ import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
+import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
 import { LoginResponse } from '../../core/models/user.model';
 import { Facture } from '../../core/models/facture.model';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +16,8 @@ interface NavItem {
   icon: string;
   link: string;
   tab?: number;
+  /** Statuts dont la somme alimente le badge de notification. */
+  statuts?: string[];
 }
 
 @Component({
@@ -108,6 +111,7 @@ interface NavItem {
          [routerLink]="item.link"
          [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
          (click)="accountOpen = false">
+        <span class="bn-badge" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
         <mat-icon>{{ item.icon }}</mat-icon>
         <span>{{ item.label }}</span>
       </a>
@@ -295,6 +299,7 @@ interface NavItem {
       gap: 4px;
     }
     .bn-item {
+      position: relative;
       flex: 1;
       min-width: 0;
       display: flex;
@@ -320,6 +325,24 @@ interface NavItem {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    /* Badge de notification (compteur par catégorie) */
+    .bn-item .bn-badge {
+      position: absolute;
+      top: 2px;
+      left: calc(50% + 5px);
+      box-sizing: border-box;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #EF4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+      box-shadow: 0 0 0 2px var(--ink);
     }
     .bn-item.active {
       background: var(--ink-soft);
@@ -402,6 +425,19 @@ export class MainLayoutComponent implements OnInit {
   retards: Facture[] = [];
   accountOpen = false;
   currentUrl = '';
+  /** Nombre de factures par statut, pour les badges de la navigation basse. */
+  counts: StatutCounts = {};
+
+  /** Le rôle courant affiche-t-il des badges de comptage ? */
+  private get countsEnabled(): boolean {
+    return this.authService.isServiceRegional() || this.authService.isServiceCentral();
+  }
+
+  /** Somme des compteurs des statuts associés à un item de navigation. */
+  navBadge(item: NavItem): number {
+    if (!item.statuts) return 0;
+    return item.statuts.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
+  }
 
   /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour Régional/Central/Admin. */
   get brandLogo(): string {
@@ -428,18 +464,18 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isServiceRegional()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
-        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1 },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2 },
-        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3 },
+        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2, statuts: ['VALIDEE_SR', 'VALIDEE_NC'] },
+        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_SR', 'REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
     }
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
-        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1 },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
-        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 }
+        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'] },
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2, statuts: ['VALIDEE_NC'] },
+        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3, statuts: ['PAYEE'] }
       ];
     }
     return [
@@ -453,18 +489,30 @@ export class MainLayoutComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private factureService: FactureService,
+    private factureCount: FactureCountService,
     private router: Router
   ) {}
 
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
     this.currentUrl = this.router.url;
+    let lastPath = this.currentUrl.split('?')[0];
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
         this.accountOpen = false;
+        // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
+        const path = this.currentUrl.split('?')[0];
+        if (path !== lastPath) {
+          lastPath = path;
+          if (this.countsEnabled) this.factureCount.refresh();
+        }
       });
+
+    // Badges de notification (Service Régional / Central)
+    this.factureCount.counts$.subscribe(c => this.counts = c);
+    if (this.countsEnabled) this.factureCount.refresh();
 
     // Redirect logic for Espace components
     if (this.router.url === '/dashboard' || this.router.url === '/dashboard/espace') {
