@@ -22,6 +22,8 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.USER_KEY);
+    // Sécurité : on purge le cache des données pour ne pas exposer celles de la session précédente.
+    this.api.invalidateCache();
     this.router.navigate(['/auth/login']);
   }
 

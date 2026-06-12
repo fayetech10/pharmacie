@@ -1,9 +1,3 @@
-<div class="loading-overlay" *ngIf="loadingService.isLoading$ | async">
-  <div class="spinner-container">
-    <div class="logo-spinner">
-      <img src="assets/logo-csu.png" alt="CSU Logo" class="logo-main" />
-      <div class="spinner-ring"></div>
-    </div>
-    <div class="loading-text">Chargement...</div>
-  </div>
+<div class="top-progress" *ngIf="showLoader$ | async">
+  <div class="top-progress-bar"></div>
 </div>
