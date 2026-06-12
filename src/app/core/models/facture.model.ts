@@ -24,6 +24,10 @@ export interface LigneFacture {
   montant: number;
   statutLigne?: StatutLigne;
   motifRejet?: string;
+  // Pièces justificatives du dossier patient (images base64 / data URL)
+  ticketCaisse?: string;
+  bonCommande?: string;
+  ordonnance?: string;
 }
 
 export interface LigneDecisionRequest {
@@ -68,6 +72,9 @@ export interface LigneFactureDto {
   codeProduit: string;
   quantite: number;
   prixUnitaire: number;
+  ticketCaisse?: string;
+  bonCommande?: string;
+  ordonnance?: string;
 }
 
 export interface ValidationRequest {

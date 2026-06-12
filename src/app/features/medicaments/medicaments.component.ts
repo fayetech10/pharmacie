@@ -40,7 +40,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
       <mat-card-content>
         <mat-form-field appearance="outline" class="w-100">
           <mat-label>Recherche globale</mat-label>
-          <input matInput (keyup)="applyFilter($event)" placeholder="Rechercher par code ou nom...">
+          <input matInput (keyup)="applyFilter($event)" placeholder="Rechercher par nom...">
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
       </mat-card-content>
@@ -48,11 +48,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
     <mat-card class="table-card">
       <table mat-table [dataSource]="dataSource" matSort class="w-100">
-        <ng-container matColumnDef="code">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Code </th>
-          <td mat-cell *matCellDef="let m"> {{ m.code }} </td>
-        </ng-container>
-
         <ng-container matColumnDef="nom">
           <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom Commercial </th>
           <td mat-cell *matCellDef="let m"> {{ m.nom }} </td>
@@ -124,7 +119,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   `]
 })
 export class MedicamentsComponent implements OnInit {
-  displayedColumns: string[] = ['code', 'nom', 'dci', 'classeTherapeutique', 'liste', 'statut', 'motif'];
+  displayedColumns: string[] = ['nom', 'dci', 'classeTherapeutique', 'liste', 'statut', 'motif'];
   dataSource!: MatTableDataSource<Medicament>;
   medicaments: Medicament[] = [];
 

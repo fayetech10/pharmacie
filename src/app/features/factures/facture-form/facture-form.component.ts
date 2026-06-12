@@ -16,6 +16,8 @@ import { Medicament, StatutMedicament } from '../../../core/models/medicament.mo
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
 
+type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
+
 @Component({
   selector: 'app-facture-form',
   standalone: true,
@@ -53,6 +55,33 @@ import { ConfirmService } from '../../../core/services/confirm.service';
           </mat-form-field>
         </form>
 
+        <!-- Dossier du patient : prise de photo des pièces justificatives -->
+        <div class="dossier-section">
+          <h3 class="dossier-title"><mat-icon>folder_open</mat-icon> Dossier du patient</h3>
+          <p class="dossier-hint">Prenez en photo les pièces justificatives (appareil photo ou fichier).</p>
+          <div class="photo-grid">
+            <div class="photo-slot" *ngFor="let p of photoFields">
+              <span class="photo-label">{{ p.label }}</span>
+              <div class="photo-drop" *ngIf="!photos[p.key]; else preview">
+                <input type="file" accept="image/*" capture="environment" hidden
+                       #photoInput (change)="onPhotoSelected(p.key, $event)">
+                <button type="button" class="photo-btn" (click)="photoInput.click()">
+                  <mat-icon>photo_camera</mat-icon>
+                  <span>Prendre une photo</span>
+                </button>
+              </div>
+              <ng-template #preview>
+                <div class="photo-preview">
+                  <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
+                  <button type="button" class="photo-remove" (click)="removePhoto(p.key)" matTooltip="Supprimer">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
         <hr class="divider">
 
         <!-- Saisie des Médicaments -->
@@ -71,11 +100,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('notFound')">
               Sélectionnez un médicament de la liste.
             </mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Code Produit</mat-label>
-            <input matInput formControlName="codeProduit" readonly>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -110,7 +134,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <thead>
               <tr>
                 <th>Médicament</th>
-                <th>Code</th>
                 <th>Qté</th>
                 <th>Prix Unit.</th>
                 <th>Total</th>
@@ -122,7 +145,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <tbody>
               <tr *ngFor="let pl of patientLignes; let i = index">
                 <td>{{ pl.medicament }}</td>
-                <td>{{ pl.codeProduit }}</td>
                 <td>{{ pl.quantite }}</td>
                 <td>{{ pl.prixUnitaire | number }}</td>
                 <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
@@ -163,7 +185,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <tr>
               <th>Patient</th>
               <th>Médicament</th>
-              <th>Code</th>
               <th>Qté</th>
               <th>Prix Unit.</th>
               <th>Total</th>
@@ -175,7 +196,6 @@ import { ConfirmService } from '../../../core/services/confirm.service';
             <tr *ngFor="let l of facture.lignes; let i = index" [class.row-rejected]="l.statutLigne === 'REJETEE'">
               <td>{{ l.patientNomPrenom || '-' }}</td>
               <td>{{ l.medicament }}</td>
-              <td>{{ l.codeProduit }}</td>
               <td>{{ l.quantite }}</td>
               <td>{{ l.prixUnitaire | number }}</td>
               <td><strong>{{ l.montant | number }}</strong></td>
@@ -195,6 +215,12 @@ import { ConfirmService } from '../../../core/services/confirm.service';
         </table>
       </mat-card-content>
     </mat-card>
+
+    <!-- Visionneuse plein écran d'une pièce justificative -->
+    <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+      <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+      <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+    </div>
   `,
   styles: [`
     .mb-2 { margin-bottom: 8px; }
@@ -234,6 +260,29 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     .ligne-tag.tag-ko { background: #FEE2E2; color: #B91C1C; }
     .correction-hint { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px 16px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; color: #9A3412; font-size: 14px; }
     .correction-hint mat-icon { color: #EA580C; }
+
+    /* Dossier patient : pièces justificatives */
+    .dossier-section { margin-top: 8px; }
+    .dossier-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+    .dossier-title mat-icon { color: var(--primary); }
+    .dossier-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); }
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .photo-slot { display: flex; flex-direction: column; gap: 6px; }
+    .photo-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    .photo-drop { border: 1.5px dashed var(--border); border-radius: 10px; background: #F8FAFC; transition: border-color 0.2s ease, background 0.2s ease; }
+    .photo-drop:hover { border-color: var(--primary); background: var(--primary-light); }
+    .photo-btn { width: 100%; height: 96px; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+    .photo-btn mat-icon { font-size: 26px; width: 26px; height: 26px; color: var(--primary); }
+    .photo-preview { position: relative; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+    .photo-remove { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(17,24,39,0.65); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    @media (max-width: 600px) { .photo-grid { grid-template-columns: 1fr; } }
+
+    /* Visionneuse plein écran */
+    .img-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .img-viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .viewer-close { position: absolute; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   `]
 })
 export class FactureFormComponent implements OnInit {
@@ -245,6 +294,15 @@ export class FactureFormComponent implements OnInit {
   isSubmitting = false;
   suggestions: Medicament[] = [];
   excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
+
+  // Dossier patient : pièces justificatives (data URL base64)
+  readonly photoFields: { key: PhotoKey; label: string }[] = [
+    { key: 'ticketCaisse', label: 'Ticket de caisse' },
+    { key: 'bonCommande', label: 'Bon de commande' },
+    { key: 'ordonnance', label: 'Ordonnance' }
+  ];
+  photos: Record<PhotoKey, string | null> = { ticketCaisse: null, bonCommande: null, ordonnance: null };
+  viewerImage: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -363,6 +421,33 @@ export class FactureFormComponent implements OnInit {
     this.patientLignes.splice(index, 1);
   }
 
+  onPhotoSelected(key: PhotoKey, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Veuillez sélectionner une image', 'Fermer', { duration: 3000 });
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => { this.photos[key] = reader.result as string; };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  removePhoto(key: PhotoKey) {
+    this.photos[key] = null;
+  }
+
+  openViewer(src: string) {
+    this.viewerImage = src;
+  }
+
+  private resetPhotos() {
+    this.photos = { ticketCaisse: null, bonCommande: null, ordonnance: null };
+  }
+
   enregistrerPatientFacture() {
     if (this.patientForm.invalid || this.patientLignes.length === 0) return;
 
@@ -372,7 +457,10 @@ export class FactureFormComponent implements OnInit {
     const nouvellesLignes = this.patientLignes.map(pl => ({
       ...pl,
       patientNomPrenom: patientVal.patientNomPrenom,
-      patientMatricule: patientVal.patientMatricule
+      patientMatricule: patientVal.patientMatricule,
+      ticketCaisse: this.photos.ticketCaisse || undefined,
+      bonCommande: this.photos.bonCommande || undefined,
+      ordonnance: this.photos.ordonnance || undefined
     }));
 
     if (!this.isEditMode) {
@@ -382,6 +470,7 @@ export class FactureFormComponent implements OnInit {
           this.facture = res;
           this.patientForm.reset();
           this.patientLignes = [];
+          this.resetPhotos();
           this.isSubmitting = false;
           this.snackBar.open('Patient et médicaments ajoutés à la facture', 'Fermer', { duration: 3000 });
         },
@@ -420,6 +509,7 @@ export class FactureFormComponent implements OnInit {
         if (clearForm) {
           this.patientForm.reset();
           this.patientLignes = [];
+          this.resetPhotos();
         }
         this.isSubmitting = false;
         this.snackBar.open('Facture mise à jour', 'Fermer', { duration: 2000 });

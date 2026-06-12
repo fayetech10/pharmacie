@@ -9,9 +9,18 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Facture, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
+import { Facture, LigneFacture, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+
+interface PatientGroup {
+  nom?: string;
+  matricule?: string;
+  ticketCaisse?: string;
+  bonCommande?: string;
+  ordonnance?: string;
+  lignes: { ligne: LigneFacture; index: number }[];
+}
 
 @Component({
   selector: 'app-facture-detail',
@@ -39,7 +48,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           </div>
         </div>
         <div class="header-actions">
-          <app-status-badge [statut]="facture.statut"></app-status-badge>
+          <app-status-badge class="hide-mobile" [statut]="facture.statut"></app-status-badge>
 
           <button class="btn btn-outline" (click)="exportExcel()">
             <mat-icon>table_view</mat-icon> Excel
@@ -89,13 +98,13 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <span class="info-label">Période</span>
           <span class="info-value">{{ getMonthName(facture.mois) }} {{ facture.annee }}</span>
         </div>
-        <div class="info-divider"></div>
-        <div class="info-block">
+        <div class="info-divider hide-mobile"></div>
+        <div class="info-block hide-mobile">
           <span class="info-label">Nombre de lignes</span>
           <span class="info-value">{{ facture.lignes?.length || 0 }}</span>
         </div>
-        <div class="info-divider"></div>
-        <div class="info-block">
+        <div class="info-divider hide-mobile"></div>
+        <div class="info-block hide-mobile">
           <span class="info-label">Montant Total</span>
           <span class="info-value montant">{{ facture.montantTotal | number }} CFA</span>
         </div>
@@ -141,74 +150,97 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <h2>Détail des médicaments</h2>
           <span class="line-count">{{ facture.lignes?.length || 0 }} ligne(s)</span>
         </div>
-        <table mat-table [dataSource]="facture.lignes" class="w-100">
-          <ng-container matColumnDef="patientMatricule">
-            <th mat-header-cell *matHeaderCellDef> Matricule </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.patientMatricule || '-' }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="patientNom">
-            <th mat-header-cell *matHeaderCellDef> Patient </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.patientNomPrenom || '-' }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="medicament">
-            <th mat-header-cell *matHeaderCellDef> Médicament </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.medicament }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="code">
-            <th mat-header-cell *matHeaderCellDef> Code </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.codeProduit }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="qte">
-            <th mat-header-cell *matHeaderCellDef> Qté </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.quantite }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="prix">
-            <th mat-header-cell *matHeaderCellDef> Prix Unit. </th>
-            <td mat-cell *matCellDef="let ligne"> {{ ligne.prixUnitaire | number }} </td>
-          </ng-container>
-
-          <ng-container matColumnDef="montant">
-            <th mat-header-cell *matHeaderCellDef> Montant </th>
-            <td mat-cell *matCellDef="let ligne"
-                [class.line-rejected]="ligne.statutLigne === 'REJETEE'">
-              <strong>{{ ligne.montant | number }}</strong>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="decision">
-            <th mat-header-cell *matHeaderCellDef> Décision </th>
-            <td mat-cell *matCellDef="let ligne; let i = index">
-              <!-- Mode revue : boutons accepter / rejeter -->
-              <div class="line-actions" *ngIf="isLineReviewMode()">
-                <button class="line-btn ok" [class.active]="ligne.statutLigne === 'ACCEPTEE'"
-                        (click)="accepterLigne(i)" title="Accepter la ligne" type="button">
-                  <mat-icon>check</mat-icon>
-                </button>
-                <button class="line-btn ko" [class.active]="ligne.statutLigne === 'REJETEE'"
-                        (click)="rejeterLigne(i)" title="Rejeter la ligne" type="button">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-              <!-- Lecture seule : badge de statut -->
-              <span class="line-tag" [ngClass]="lineTagClass(ligne.statutLigne)" *ngIf="!isLineReviewMode()">
-                {{ lineTagLabel(ligne.statutLigne) }}
-              </span>
-              <div class="line-motif" *ngIf="ligne.statutLigne === 'REJETEE' && ligne.motifRejet">
-                <mat-icon>info</mat-icon> {{ ligne.motifRejet }}
-              </div>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-              [class.row-rejected]="row.statutLigne === 'REJETEE'"></tr>
-        </table>
+        <div class="table-scroll">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Dossier</th>
+                <th>Médicament</th>
+                <th>Qté</th>
+                <th>Prix Unit.</th>
+                <th>Montant</th>
+                <th *ngIf="showDecision">Décision</th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let g of patientGroups; trackBy: trackGroup">
+                <tr *ngFor="let item of g.lignes; let first = first"
+                    [class.row-rejected]="item.ligne.statutLigne === 'REJETEE'"
+                    [class.group-start]="first">
+                  <!-- Patient : affiché une seule fois par dossier -->
+                  <td *ngIf="first" [attr.rowspan]="g.lignes.length" class="patient-cell">
+                    <div class="patient-name">{{ g.nom || '-' }}</div>
+                    <div class="patient-mat">{{ g.matricule || '-' }}</div>
+                  </td>
+                  <!-- Dossier : pièces justificatives, une seule fois par patient -->
+                  <td *ngIf="first" [attr.rowspan]="g.lignes.length" class="dossier-cell">
+                    <button class="dossier-btn" *ngIf="dossierCount(g) > 0; else noDossier" (click)="openDossier(g)">
+                      <mat-icon>folder</mat-icon>
+                      <span>Dossier</span>
+                      <span class="dossier-count">{{ dossierCount(g) }}</span>
+                    </button>
+                    <ng-template #noDossier><span class="no-dossier">—</span></ng-template>
+                  </td>
+                  <td>{{ item.ligne.medicament }}</td>
+                  <td>{{ item.ligne.quantite }}</td>
+                  <td>{{ item.ligne.prixUnitaire | number }}</td>
+                  <td [class.line-rejected]="item.ligne.statutLigne === 'REJETEE'">
+                    <strong>{{ item.ligne.montant | number }}</strong>
+                  </td>
+                  <td *ngIf="showDecision">
+                    <!-- Mode revue : boutons accepter / rejeter -->
+                    <div class="line-actions" *ngIf="isLineReviewMode()">
+                      <button class="line-btn ok" [class.active]="item.ligne.statutLigne === 'ACCEPTEE'"
+                              (click)="accepterLigne(item.index)" title="Accepter la ligne" type="button">
+                        <mat-icon>check</mat-icon>
+                      </button>
+                      <button class="line-btn ko" [class.active]="item.ligne.statutLigne === 'REJETEE'"
+                              (click)="rejeterLigne(item.index)" title="Rejeter la ligne" type="button">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                    <!-- Lecture seule : badge de statut -->
+                    <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)" *ngIf="!isLineReviewMode()">
+                      {{ lineTagLabel(item.ligne.statutLigne) }}
+                    </span>
+                    <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
+                      <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
       </mat-card>
+
+      <!-- Modal Dossier : pièces justificatives du patient -->
+      <div class="dossier-overlay" *ngIf="dossierPatient" (click)="dossierPatient = null">
+        <div class="dossier-modal" (click)="$event.stopPropagation()">
+          <div class="dossier-modal-head">
+            <div>
+              <h3>Dossier — {{ dossierPatient.nom || '-' }}</h3>
+              <span class="dossier-modal-mat">{{ dossierPatient.matricule || '-' }}</span>
+            </div>
+            <button class="dossier-modal-close" (click)="dossierPatient = null"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="dossier-modal-body">
+            <ng-container *ngFor="let p of photoFields">
+              <div class="dossier-piece" *ngIf="dossierPatient[p.key]">
+                <span class="dossier-piece-label">{{ p.label }}</span>
+                <img [src]="dossierPatient[p.key]" [alt]="p.label" (click)="viewerImage = dossierPatient[p.key]!">
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visionneuse plein écran -->
+      <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+        <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+        <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+      </div>
     </div>
   `,
   styles: [`
@@ -500,18 +532,107 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     .row-rejected td { background: #FEF2F2; }
     .line-rejected strong { text-decoration: line-through; color: var(--text-muted); }
 
+    /* Tableau détaillé groupé par patient */
+    .table-scroll { overflow-x: auto; }
+    .detail-table { width: 100%; border-collapse: collapse; }
+    .detail-table thead th {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .detail-table td {
+      padding: 12px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .detail-table tr.group-start td { border-top: 2px solid var(--border); }
+    .detail-table tbody tr:first-child td { border-top: none; }
+    .patient-cell { background: #FCFDFE; min-width: 150px; }
+    .patient-name { font-weight: 600; color: var(--text-primary); }
+    .patient-mat { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .dossier-cell { background: #FCFDFE; }
+    .dossier-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--primary); background: var(--primary-light);
+      color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .dossier-btn:hover { background: var(--primary); color: #fff; }
+    .dossier-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .dossier-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+      background: rgba(0,0,0,0.08); font-size: 11px; font-weight: 700;
+    }
+    .no-dossier { color: var(--text-muted); }
+
+    /* Modal dossier */
+    .dossier-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(17,24,39,0.55);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .dossier-modal {
+      background: #fff; border-radius: 16px; width: 100%; max-width: 640px;
+      max-height: 88vh; overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .dossier-modal-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 18px 22px; border-bottom: 1px solid var(--border);
+    }
+    .dossier-modal-head h3 { margin: 0; font-size: 17px; font-weight: 700; }
+    .dossier-modal-mat { font-size: 13px; color: var(--text-secondary); }
+    .dossier-modal-close {
+      width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+      background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+    }
+    .dossier-modal-body {
+      padding: 20px 22px; overflow-y: auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px;
+    }
+    .dossier-piece { display: flex; flex-direction: column; gap: 6px; }
+    .dossier-piece-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .dossier-piece img {
+      width: 100%; height: 150px; object-fit: cover; border-radius: 10px;
+      border: 1px solid var(--border); cursor: zoom-in;
+    }
+
+    /* Visionneuse plein écran */
+    .img-viewer {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .img-viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .viewer-close {
+      position: absolute; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,0.15); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
     @media (max-width: 768px) {
+      .hide-mobile { display: none !important; }
       .detail-header {
         flex-direction: column;
       }
       .info-strip {
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: space-around;
         gap: 16px;
         padding: 16px;
       }
       .info-divider {
-        width: 80%;
-        height: 1px;
+        height: 40px;
+        width: 1px;
       }
     }
   `]
@@ -519,15 +640,56 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
 
-  private readonly baseColumns = ['patientMatricule', 'patientNom', 'medicament', 'code', 'qte', 'prix', 'montant'];
+  // Pièces justificatives affichées dans le dossier patient
+  readonly photoFields: { key: 'ticketCaisse' | 'bonCommande' | 'ordonnance'; label: string }[] = [
+    { key: 'ticketCaisse', label: 'Ticket de caisse' },
+    { key: 'bonCommande', label: 'Bon de commande' },
+    { key: 'ordonnance', label: 'Ordonnance' }
+  ];
+  dossierPatient: PatientGroup | null = null;
+  viewerImage: string | null = null;
 
   /** Colonne "Décision" affichée pour les services (régional/central) ou si des décisions existent déjà. */
-  get displayedColumns(): string[] {
-    const showDecision =
-      this.authService.isServiceRegional() ||
+  get showDecision(): boolean {
+    return this.authService.isServiceRegional() ||
       this.authService.isServiceCentral() ||
       (this.facture?.lignes || []).some(l => l.statutLigne && l.statutLigne !== StatutLigne.EN_ATTENTE);
-    return showDecision ? [...this.baseColumns, 'decision'] : this.baseColumns;
+  }
+
+  /** Regroupe les lignes par patient : le nom n'apparaît qu'une fois (rowspan). */
+  get patientGroups(): PatientGroup[] {
+    const groups: PatientGroup[] = [];
+    const byKey = new Map<string, PatientGroup>();
+    (this.facture?.lignes || []).forEach((ligne, index) => {
+      const key = (ligne.patientMatricule || '') + '|' + (ligne.patientNomPrenom || '');
+      let g = byKey.get(key);
+      if (!g) {
+        g = {
+          nom: ligne.patientNomPrenom,
+          matricule: ligne.patientMatricule,
+          ticketCaisse: ligne.ticketCaisse,
+          bonCommande: ligne.bonCommande,
+          ordonnance: ligne.ordonnance,
+          lignes: []
+        };
+        byKey.set(key, g);
+        groups.push(g);
+      }
+      g.lignes.push({ ligne, index });
+    });
+    return groups;
+  }
+
+  trackGroup(_i: number, g: PatientGroup): string {
+    return (g.matricule || '') + '|' + (g.nom || '');
+  }
+
+  dossierCount(g: PatientGroup): number {
+    return [g.ticketCaisse, g.bonCommande, g.ordonnance].filter(p => !!p).length;
+  }
+
+  openDossier(g: PatientGroup) {
+    this.dossierPatient = g;
   }
 
   /** Vrai quand le service régional peut accepter/rejeter les lignes (facture en vérification). */
