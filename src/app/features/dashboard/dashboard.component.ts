@@ -24,6 +24,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { compressImageToDataUrl } from '../../core/utils/image-compression';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
@@ -161,8 +162,15 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
           </div>
 
           <div class="section-body">
+            <!-- Indicateur d'étapes (mobile : enregistrement en 2 temps) -->
+            <div class="wizard-progress" *ngIf="isMobile">
+              <span class="wp-step" [class.active]="wizardStep === 0" [class.done]="wizardStep > 0">1. Médicaments</span>
+              <span class="wp-line" [class.done]="wizardStep > 0"></span>
+              <span class="wp-step" [class.active]="wizardStep === 1">2. Patient &amp; dossier</span>
+            </div>
+
             <!-- Étape 1 : Médicaments -->
-            <div class="step" [class.done]="patientLignes.length > 0">
+            <div class="step" *ngIf="!isMobile || wizardStep === 0" [class.done]="patientLignes.length > 0">
               <span class="step-badge"><span class="step-num">1</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Médicaments</span>
@@ -259,7 +267,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
             </div>
 
             <!-- Étape 2 : Patient -->
-            <div class="step" [class.done]="patientForm.valid">
+            <div class="step" *ngIf="!isMobile || wizardStep === 1" [class.done]="patientForm.valid">
               <span class="step-badge"><span class="step-num">2</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Identité du patient</span>
@@ -280,7 +288,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
             </div>
 
             <!-- Étape 3 : Dossier du patient (pièces justificatives) -->
-            <div class="step" [class.done]="!!(photos.ticketCaisse || photos.bonCommande || photos.ordonnance)">
+            <div class="step" *ngIf="!isMobile || wizardStep === 1" [class.done]="!!(photos.ticketCaisse || photos.bonCommande || photos.ordonnance)">
               <span class="step-badge"><span class="step-num">3</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Dossier du patient</span>
@@ -309,8 +317,25 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
               </div>
             </div>
 
-            <!-- Action : enregistrer -->
-            <div class="save-row">
+            <!-- Actions mobile : wizard 2 étapes (Suivant / Précédent + Enregistrer) -->
+            <div class="step-actions" *ngIf="isMobile">
+              <button type="button" class="btn btn-outline" *ngIf="wizardStep === 1" (click)="goToMedicamentStep()">
+                <mat-icon>arrow_back</mat-icon> Précédent
+              </button>
+              <button type="button" class="btn btn-primary" *ngIf="wizardStep === 0"
+                      [disabled]="patientLignes.length === 0"
+                      (click)="goToPatientStep()">
+                Suivant <mat-icon>arrow_forward</mat-icon>
+              </button>
+              <button type="button" class="btn btn-primary" *ngIf="wizardStep === 1"
+                      [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting"
+                      (click)="enregistrerPatientFacture()">
+                <mat-icon>save</mat-icon> Enregistrer
+              </button>
+            </div>
+
+            <!-- Action desktop : enregistrement classique (tout est visible) -->
+            <div class="save-row" *ngIf="!isMobile">
               <button class="btn btn-primary" [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting" (click)="enregistrerPatientFacture()">
                 <mat-icon>save</mat-icon> Enregistrer pour ce patient
               </button>
@@ -779,6 +804,52 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       margin-bottom: 14px;
     }
 
+    /* ===== Wizard mobile (enregistrement en 2 étapes) ===== */
+    .wizard-progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+    .wp-step {
+      flex: 1;
+      text-align: center;
+      padding: 9px 8px;
+      border-radius: 10px;
+      background: var(--border-light);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      transition: all 0.2s ease;
+    }
+    .wp-step.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      box-shadow: inset 0 0 0 1px var(--primary-200);
+    }
+    .wp-step.done { background: var(--primary-100); color: var(--primary-hover); }
+    .wp-line { width: 16px; height: 2px; border-radius: 2px; background: var(--border); flex-shrink: 0; transition: background 0.2s ease; }
+    .wp-line.done { background: var(--primary-200); }
+
+    /* Barre d'actions du wizard mobile */
+    .step-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-light);
+    }
+    .step-actions .btn { height: 50px; }
+    .step-actions .btn-outline { flex: 0 0 auto; }
+    .step-actions .btn-primary {
+      flex: 1;
+      justify-content: center;
+      background: var(--ink-gradient);
+      box-shadow: 0 10px 22px -8px rgba(5, 150, 105, 0.6);
+    }
+    .step-actions .btn-primary:not(:disabled):hover { filter: brightness(1.05); }
+
     .temp-total { font-size: 14px; color: var(--text-secondary); margin-right: auto; }
     .temp-total strong { color: var(--text-primary); font-size: 15px; }
     .temp-footer { align-items: center; }
@@ -999,6 +1070,10 @@ export class DashboardComponent implements OnInit {
   patientLignes: any[] = [];
   currentFacture: Facture | null = null;
   isSubmitting = false;
+  /** Affichage mobile : enregistrement en 2 étapes (wizard). */
+  isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  /** Étape du wizard mobile : 0 = médicaments, 1 = patient + dossier. */
+  wizardStep: 0 | 1 = 0;
   suggestions: Medicament[] = [];
   // Info d'exclusion affichée quand un médicament exclu est saisi/sélectionné
   excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
@@ -1096,7 +1171,8 @@ export class DashboardComponent implements OnInit {
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private router: Router,
-    private confirm: ConfirmService
+    private confirm: ConfirmService,
+    private breakpoints: BreakpointObserver
   ) {
     this.currentUser = this.authService.getCurrentUser();
 
@@ -1117,6 +1193,11 @@ export class DashboardComponent implements OnInit {
   private factureEvents = inject(FactureEventsService);
 
   ngOnInit() {
+    // Wizard mobile : suit le point de rupture (≤768px). Sur desktop, tout est visible.
+    this.breakpoints.observe('(max-width: 768px)').subscribe(state => {
+      this.isMobile = state.matches;
+      if (!this.isMobile) this.wizardStep = 0;
+    });
     this.loadData();
     this.loadCurrentFacture();
     if (!this.authService.isPharmacien()) {
@@ -1330,6 +1411,23 @@ export class DashboardComponent implements OnInit {
     this.patientLignes.splice(index, 1);
   }
 
+  /** Wizard mobile : passe à l'étape « patient + dossier » (au moins un médicament requis). */
+  goToPatientStep() {
+    if (this.patientLignes.length === 0) return;
+    this.wizardStep = 1;
+    this.scrollToFormTop();
+  }
+
+  /** Wizard mobile : revient à l'étape « médicaments ». */
+  goToMedicamentStep() {
+    this.wizardStep = 0;
+    this.scrollToFormTop();
+  }
+
+  private scrollToFormTop() {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   onPhotoSelected(key: PhotoKey, event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -1378,6 +1476,7 @@ export class DashboardComponent implements OnInit {
         this.patientForm.reset();
         this.patientLignes = [];
         this.resetPhotos();
+        this.wizardStep = 0; // retour à l'étape « médicaments » pour le patient suivant
         this.isSubmitting = false;
         this.snackBar.open('Patient et médicaments ajoutés à la facture', 'OK', { duration: 3000 });
         this.loadData(); // refresh KPIs and list
