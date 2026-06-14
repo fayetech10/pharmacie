@@ -1,9 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { StatsService } from '../../core/services/stats.service';
+import { FactureEventsService } from '../../core/services/facture-events.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MonthData } from '../../core/models/stats.model';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
@@ -268,11 +270,18 @@ export class StatsComponent implements OnInit {
   public lineChartData: ChartConfiguration<'line'>['data'] = { labels: [], datasets: [] };
   public isLineReady = false;
 
+  private destroyRef = inject(DestroyRef);
+  private factureEvents = inject(FactureEventsService);
+
   constructor(private statsService: StatsService, private authService: AuthService) {}
 
   ngOnInit() {
     this.loadStats();
     this.loadEvolution();
+    // Recalcule les stats sans recharger la page après toute modification de facture.
+    this.factureEvents.changed$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => { this.loadStats(); this.loadEvolution(); });
   }
 
   loadStats() {

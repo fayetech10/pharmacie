@@ -1,7 +1,9 @@
-import { Component, OnInit, ViewChild, Input, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, Input, ElementRef, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FactureService } from '../../../core/services/facture.service';
+import { FactureEventsService } from '../../../core/services/facture-events.service';
 import { Facture, StatutFacture } from '../../../core/models/facture.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -268,9 +270,17 @@ export class FacturesListComponent implements OnInit {
     }
   }
 
+  private destroyRef = inject(DestroyRef);
+  private factureEvents = inject(FactureEventsService);
+
   ngOnInit() {
     this.breakpoints.observe('(max-width: 768px)').subscribe(state => this.isMobile = state.matches);
     this.loadFactures();
+    // Rafraîchit la liste sans recharger la page après toute modification de facture
+    // (ex. enregistrement dans l'onglet « Facturation » de l'espace pharmacie).
+    this.factureEvents.changed$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadFactures());
   }
 
   /** Cartes affichées sur mobile : toute la liste (pas de pagination).

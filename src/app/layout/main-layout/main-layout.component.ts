@@ -5,6 +5,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
 import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
+import { FactureEventsService } from '../../core/services/facture-events.service';
 import { LoginResponse } from '../../core/models/user.model';
 import { Facture } from '../../core/models/facture.model';
 import { MatIconModule } from '@angular/material/icon';
@@ -444,6 +445,7 @@ export class MainLayoutComponent implements OnInit {
     public authService: AuthService,
     private factureService: FactureService,
     private factureCount: FactureCountService,
+    private factureEvents: FactureEventsService,
     private router: Router
   ) {}
 
@@ -466,6 +468,10 @@ export class MainLayoutComponent implements OnInit {
     // Badges de notification (Service Régional / Central)
     this.factureCount.counts$.subscribe(c => this.counts = c);
     if (this.countsEnabled) this.factureCount.refresh();
+    // Recalcule les badges après toute modification de facture (sans recharger la page).
+    this.factureEvents.changed$.subscribe(() => {
+      if (this.countsEnabled) this.factureCount.refresh();
+    });
 
     // Redirect logic for Espace components
     if (this.router.url === '/dashboard' || this.router.url === '/dashboard/espace') {

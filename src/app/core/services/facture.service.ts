@@ -1,14 +1,20 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
+import { FactureEventsService } from './facture-events.service';
 import { Facture, FactureRequest, ValidationRequest, LigneDecisionRequest } from '../models/facture.model';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FactureService {
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private events: FactureEventsService) {}
+
+  /** Notifie les vues abonnées qu'une facture a été modifiée (rafraîchissement live). */
+  private notify<T>() {
+    return tap<T>(() => this.events.notifyChanged());
+  }
 
   getAll(): Observable<Facture[]> {
     return this.api.get<Facture[]>('/factures');
@@ -19,7 +25,7 @@ export class FactureService {
   }
 
   create(req: FactureRequest): Observable<Facture> {
-    return this.api.post<Facture>('/factures', req);
+    return this.api.post<Facture>('/factures', req).pipe(this.notify());
   }
 
   getCurrent(): Observable<Facture> {
@@ -31,35 +37,35 @@ export class FactureService {
   }
 
   addLignesToCurrent(lignes: any[]): Observable<Facture> {
-    return this.api.post<Facture>('/factures/current/lignes', lignes);
+    return this.api.post<Facture>('/factures/current/lignes', lignes).pipe(this.notify());
   }
 
   update(id: string, req: FactureRequest): Observable<Facture> {
-    return this.api.put<Facture>(`/factures/${id}`, req);
+    return this.api.put<Facture>(`/factures/${id}`, req).pipe(this.notify());
   }
 
   delete(id: string): Observable<void> {
-    return this.api.delete<void>(`/factures/${id}`);
+    return this.api.delete<void>(`/factures/${id}`).pipe(this.notify());
   }
 
   envoyer(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/envoyer`, {});
+    return this.api.post<Facture>(`/factures/${id}/envoyer`, {}).pipe(this.notify());
   }
 
   valider(id: string, req: ValidationRequest): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/valider`, req);
+    return this.api.post<Facture>(`/factures/${id}/valider`, req).pipe(this.notify());
   }
 
   rejeter(id: string, req: ValidationRequest): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/rejeter`, req);
+    return this.api.post<Facture>(`/factures/${id}/rejeter`, req).pipe(this.notify());
   }
 
   payer(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/payer`, {});
+    return this.api.post<Facture>(`/factures/${id}/payer`, {}).pipe(this.notify());
   }
 
   renvoyerAPharmacie(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/renvoyer-pharmacie`, {});
+    return this.api.post<Facture>(`/factures/${id}/renvoyer-pharmacie`, {}).pipe(this.notify());
   }
 
   exportExcel(): Observable<Blob> {
@@ -77,6 +83,6 @@ export class FactureService {
   importExcel(file: File): Observable<void> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.api.post<void>('/factures/import', formData);
+    return this.api.post<void>('/factures/import', formData).pipe(this.notify());
   }
 }

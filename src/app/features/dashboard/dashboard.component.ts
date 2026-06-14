@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -11,6 +12,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FactureService } from '../../core/services/facture.service';
+import { FactureEventsService } from '../../core/services/facture-events.service';
 import { StatsService } from '../../core/services/stats.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MedicamentService } from '../../core/services/medicament.service';
@@ -947,10 +949,22 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       }
       .mini-table td.cell-action::before { content: none; }
 
-      /* Totaux empilés en pleine largeur */
+      /* Totaux empilés en pleine largeur : libellé à gauche, montant aligné à droite.
+         Le bloc passe en wrap quand c'est étroit → le montant descend sur sa propre
+         ligne (toujours à droite) plutôt que de déborder. */
       .temp-footer { padding: 12px; }
-      .split-totals { width: 100%; flex-direction: column; gap: 8px; justify-content: flex-start; }
-      .split-totals span { width: 100%; text-align: center; }
+      .split-totals { width: 100%; flex-direction: column; gap: 8px; align-items: stretch; }
+      .split-totals span {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 10px;
+        padding: 10px 14px;
+        white-space: normal;
+        text-align: left;
+      }
+      .split-totals span strong { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 
       /* Boutons d'action en pleine largeur */
       .save-row { justify-content: stretch; }
@@ -1099,6 +1113,9 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  private destroyRef = inject(DestroyRef);
+  private factureEvents = inject(FactureEventsService);
+
   ngOnInit() {
     this.loadData();
     this.loadCurrentFacture();
@@ -1108,6 +1125,14 @@ export class DashboardComponent implements OnInit {
       // Précharge le cache des médicaments pour une autocomplétion instantanée dès la 1ʳᵉ frappe
       this.medicamentService.getAllCached().subscribe();
     }
+    // Rafraîchit le tableau de bord sans recharger la page après toute modification de facture.
+    this.factureEvents.changed$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadData();
+        this.loadCurrentFacture();
+        if (!this.authService.isPharmacien()) this.loadChart();
+      });
   }
 
   loadData() {
