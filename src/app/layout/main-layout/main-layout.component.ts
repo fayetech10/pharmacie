@@ -104,6 +104,11 @@ interface NavItem {
       <router-outlet></router-outlet>
     </main>
 
+    <!-- Bouton de déconnexion flottant (mobile uniquement, pour tests) -->
+    <button type="button" class="mobile-logout" (click)="logout()" aria-label="Se déconnecter">
+      <mat-icon>logout</mat-icon>
+    </button>
+
     <!-- Navigation basse (mobile) — le header est masqué sur mobile.
          La session expire automatiquement après 1 jour (redirection vers la connexion). -->
     <nav class="bottom-nav">
@@ -333,10 +338,33 @@ interface NavItem {
     }
     .bn-item:active { transform: scale(0.94); }
 
+    /* Bouton de déconnexion flottant (caché en desktop) */
+    .mobile-logout { display: none; }
+
     /* ===== Responsive ===== */
     @media (max-width: 768px) {
       /* Header masqué sur mobile — navigation via la pilule flottante. */
       .topbar { display: none; }
+      /* Bouton de déconnexion flottant en haut à droite (pour tests) */
+      .mobile-logout {
+        display: flex;
+        position: fixed;
+        top: calc(10px + env(safe-area-inset-top));
+        right: 12px;
+        z-index: 250;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 50%;
+        background: var(--ink-gradient);
+        color: #fff;
+        box-shadow: 0 6px 16px -4px rgba(6, 78, 59, 0.45);
+        cursor: pointer;
+      }
+      .mobile-logout mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      .mobile-logout:active { transform: scale(0.92); }
       .main-content {
         padding: calc(16px + env(safe-area-inset-top)) 16px
                  calc(76px + env(safe-area-inset-bottom));

@@ -160,10 +160,11 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
           <div class="section-body">
             <!-- Étape 1 : Médicaments -->
-            <div class="step">
-              <span class="step-badge">1</span>
+            <div class="step" [class.done]="patientLignes.length > 0">
+              <span class="step-badge"><span class="step-num">1</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Médicaments</span>
+                <span class="step-sub">Ajoutez les médicaments délivrés au patient.</span>
                 <!-- Medication entry -->
                 <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row">
               <mat-form-field appearance="outline" class="flex-2">
@@ -256,10 +257,11 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
             </div>
 
             <!-- Étape 2 : Patient -->
-            <div class="step">
-              <span class="step-badge">2</span>
+            <div class="step" [class.done]="patientForm.valid">
+              <span class="step-badge"><span class="step-num">2</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Identité du patient</span>
+                <span class="step-sub">Renseignez le nom et le matricule du bénéficiaire.</span>
                 <form [formGroup]="patientForm" class="form-row">
               <mat-form-field appearance="outline" class="flex-grow">
                 <mat-label>Nom & Prénom du patient</mat-label>
@@ -276,11 +278,11 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
             </div>
 
             <!-- Étape 3 : Dossier du patient (pièces justificatives) -->
-            <div class="step">
-              <span class="step-badge">3</span>
+            <div class="step" [class.done]="!!(photos.ticketCaisse || photos.bonCommande || photos.ordonnance)">
+              <span class="step-badge"><span class="step-num">3</span><mat-icon class="step-check">check</mat-icon></span>
               <div class="step-content">
                 <span class="step-label">Dossier du patient</span>
-                <p class="dossier-hint">Prenez en photo les pièces justificatives (appareil photo ou fichier).</p>
+                <span class="step-sub">Photographiez les pièces justificatives (appareil photo ou fichier).</span>
                 <div class="photo-grid">
                   <div class="photo-slot" *ngFor="let p of photoFields">
                     <span class="photo-label">{{ p.label }}</span>
@@ -655,11 +657,11 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       background: var(--border-light);
     }
     .temp-footer {
-      padding: 14px 16px;
+      padding: 16px;
       display: flex;
       justify-content: flex-end;
-      border-top: 1px solid var(--border);
-      background: var(--border-light);
+      border-top: 1px solid var(--primary-100);
+      background: linear-gradient(180deg, var(--primary-light), #fff);
     }
     .mini-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .mini-table {
@@ -694,17 +696,32 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
     .text-muted { font-size: 13px; }
 
-    /* En-tête facturation */
-    .billing-card { border-color: var(--border); }
-    .billing-header { background: rgba(5, 150, 105, 0.05); }
-    .billing-header h2 { font-size: 19px; font-weight: 700; }
+    /* En-tête facturation — carte moderne avec liseré dégradé */
+    .billing-card {
+      position: relative;
+      border-color: var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .billing-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--ink-gradient);
+      z-index: 1;
+    }
+    .billing-header {
+      background: linear-gradient(180deg, rgba(5, 150, 105, 0.08), rgba(5, 150, 105, 0));
+      border-bottom: 1px solid var(--border-light);
+    }
+    .billing-header h2 { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
     .section-icon-box {
-      width: 42px; height: 42px;
+      width: 46px; height: 46px;
       flex-shrink: 0;
-      border-radius: 12px;
-      background: var(--primary-light);
-      color: var(--primary);
+      border-radius: 14px;
+      background: var(--ink-gradient);
+      color: #fff;
       display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 18px -6px rgba(5, 150, 105, 0.55);
     }
     .section-icon-box mat-icon { font-size: 24px; width: 24px; height: 24px; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -718,29 +735,46 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     }
     .step + .step { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-light); }
     .step-badge {
+      position: relative;
       flex-shrink: 0;
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background: var(--primary);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
+      background: #fff;
+      color: var(--primary);
+      border: 2px solid var(--primary-200);
+      font-size: 15px;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 2px;
-      box-shadow: 0 0 0 4px var(--primary-light);
+      margin-top: 0;
+      transition: all 0.25s ease;
     }
+    .step-badge .step-check { display: none; font-size: 20px; width: 20px; height: 20px; }
+    /* État « complété » : pastille pleine en dégradé + coche */
+    .step.done .step-badge {
+      background: var(--ink-gradient);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 8px 16px -6px rgba(5, 150, 105, 0.55);
+    }
+    .step.done .step-badge .step-num { display: none; }
+    .step.done .step-badge .step-check { display: block; }
     .step-content { flex: 1; min-width: 0; }
     .step-label {
       display: block;
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+      margin-bottom: 2px;
+    }
+    .step-sub {
+      display: block;
       font-size: 13px;
-      font-weight: 600;
       color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .temp-total { font-size: 14px; color: var(--text-secondary); margin-right: auto; }
@@ -753,17 +787,30 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       flex-wrap: wrap;
       gap: 10px;
       justify-content: flex-end;
+      align-items: center;
       font-size: 13px;
       color: var(--text-secondary);
     }
     .split-totals span {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
       background: #fff;
       border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 6px 14px;
+      border-radius: 12px;
+      padding: 9px 16px;
       white-space: nowrap;
+      box-shadow: var(--shadow-sm);
     }
     .split-totals strong { color: var(--text-primary); font-size: 14px; }
+    /* Sous-total mis en avant : pastille pleine en dégradé */
+    .split-totals span:first-child {
+      background: var(--ink-gradient);
+      border-color: transparent;
+      color: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 8px 18px -6px rgba(5, 150, 105, 0.55);
+    }
+    .split-totals span:first-child strong { color: #fff; font-size: 16px; }
     .part-csu { color: var(--primary); }
     .part-benef { color: var(--accent); }
     td.part-csu, td.part-benef { font-weight: 600; }
@@ -775,19 +822,35 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       padding-top: 24px;
       border-top: 1px solid var(--border-light);
     }
+    /* Bouton d'enregistrement : action principale en dégradé */
+    .save-row .btn-primary {
+      height: 50px;
+      padding: 0 28px;
+      font-size: 15px;
+      border-radius: var(--radius);
+      background: var(--ink-gradient);
+      box-shadow: 0 10px 22px -8px rgba(5, 150, 105, 0.6);
+    }
+    .save-row .btn-primary:not(:disabled):hover {
+      background: var(--ink-gradient);
+      filter: brightness(1.05);
+      box-shadow: 0 12px 26px -8px rgba(5, 150, 105, 0.7);
+      transform: translateY(-1px);
+    }
 
     .hint-empty {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       margin-top: 16px;
       padding: 12px 14px;
-      background: var(--border-light);
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
+      background: var(--primary-light);
+      border: 1px dashed var(--primary-200);
+      border-radius: var(--radius);
+      color: var(--primary-dark);
       font-size: 13px;
     }
-    .hint-empty mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--text-muted); }
+    .hint-empty mat-icon { font-size: 19px; width: 19px; height: 19px; color: var(--primary); }
 
     /* Alerte médicament exclu */
     .exclu-alert {
@@ -807,7 +870,6 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
     .exclu-line strong { color: var(--text-secondary); }
 
     /* Dossier patient : pièces justificatives */
-    .dossier-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); }
     .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
     .photo-slot { display: flex; flex-direction: column; gap: 6px; }
     .photo-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
@@ -900,7 +962,8 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
     @media (max-width: 380px) {
       .section-body { padding: 16px 12px; }
-      .step-label { font-size: 12px; }
+      .step-label { font-size: 14px; }
+      .step-sub { font-size: 12.5px; }
       .btn { padding: 9px 12px; }
     }
   `]
