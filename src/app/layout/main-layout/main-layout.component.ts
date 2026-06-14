@@ -104,7 +104,8 @@ interface NavItem {
       <router-outlet></router-outlet>
     </main>
 
-    <!-- Navigation basse (mobile) — la déconnexion se fait via l'avatar de la topbar. -->
+    <!-- Navigation basse (mobile) — le header est masqué sur mobile.
+         La session expire automatiquement après 1 jour (redirection vers la connexion). -->
     <nav class="bottom-nav">
       <a class="bn-item" *ngFor="let item of bottomNav"
          [class.active]="isBottomActive(item)"
@@ -122,8 +123,8 @@ interface NavItem {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: var(--ink);
-      box-shadow: 0 2px 10px rgba(13, 30, 48, 0.25);
+      background: var(--ink-gradient);
+      box-shadow: 0 2px 12px rgba(6, 78, 59, 0.22);
     }
     .topbar-inner {
       max-width: 1400px;
@@ -262,18 +263,20 @@ interface NavItem {
     }
     .alert-btn:hover { background: #EF4444; color: white; }
 
-    /* ===== Bottom nav (mobile, style photo) ===== */
+    /* ===== Bottom nav (mobile, pilule flottante — style photo) ===== */
     .bottom-nav {
       display: none;
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      left: 12px;
+      right: 12px;
+      bottom: calc(10px + env(safe-area-inset-bottom));
       z-index: 200;
-      background: var(--ink);
-      box-shadow: 0 -4px 16px rgba(13, 30, 48, 0.28);
-      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-      gap: 4px;
+      background: var(--ink-gradient);
+      border-radius: 22px;
+      box-shadow: 0 10px 28px -6px rgba(6, 78, 59, 0.45),
+                  0 2px 8px rgba(6, 78, 59, 0.25);
+      padding: 6px 6px;
+      gap: 2px;
     }
     .bn-item {
       position: relative;
@@ -283,20 +286,21 @@ interface NavItem {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
-      padding: 7px 4px;
+      gap: 2px;
+      padding: 6px 2px;
       border: none;
-      border-radius: 14px;
+      border-radius: 15px;
       background: transparent;
       color: var(--ink-text);
       font-family: inherit;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 500;
+      letter-spacing: -0.01em;
       text-decoration: none;
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    .bn-item mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .bn-item mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .bn-item span {
       max-width: 100%;
       overflow: hidden;
@@ -306,37 +310,38 @@ interface NavItem {
     /* Badge de notification (compteur par catégorie) */
     .bn-item .bn-badge {
       position: absolute;
-      top: 2px;
-      left: calc(50% + 5px);
+      top: 1px;
+      left: calc(50% + 4px);
       box-sizing: border-box;
-      min-width: 16px;
-      height: 16px;
+      min-width: 15px;
+      height: 15px;
       padding: 0 4px;
       border-radius: 999px;
       background: #EF4444;
       color: #fff;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
-      line-height: 16px;
+      line-height: 15px;
       text-align: center;
-      box-shadow: 0 0 0 2px var(--ink);
+      box-shadow: 0 0 0 2px #066F52;
     }
     .bn-item.active {
-      background: var(--ink-soft);
+      background: rgba(255, 255, 255, 0.18);
       color: #fff;
       font-weight: 600;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
     }
+    .bn-item:active { transform: scale(0.94); }
 
     /* ===== Responsive ===== */
     @media (max-width: 768px) {
-      .topbar-inner { padding: 0 16px; gap: 12px; }
-      .nav-links { display: none; }
-      .user-details { display: none; }
-      .user-pill { padding: 0; background: transparent; border: none; }
+      /* Header masqué sur mobile — navigation via la pilule flottante. */
+      .topbar { display: none; }
       .main-content {
-        padding: 18px 16px calc(var(--bottomnav-h) + 28px + env(safe-area-inset-bottom));
+        padding: calc(16px + env(safe-area-inset-top)) 16px
+                 calc(76px + env(safe-area-inset-bottom));
       }
+      .alert-inner { padding-top: calc(12px + env(safe-area-inset-top)); }
       .bottom-nav { display: flex; }
       .alert-btn { margin-left: 0; width: 100%; }
     }

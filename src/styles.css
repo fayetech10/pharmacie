@@ -26,6 +26,9 @@
   --ink-deep: #065F46;  /* emerald 800 — dégradés (login) */
   --ink-soft: #059669;  /* emerald 600 — états actifs (plus clair que --ink) */
   --ink-text: #D1FAE5;  /* emerald 100 — texte clair sur fond vert */
+  /* Dégradé nuancé pour les surfaces structurelles (topbar / bottom nav) :
+     teinte teal-émeraude → vert profond, moins « flat » que l'aplat vif */
+  --ink-gradient: linear-gradient(135deg, #0C7C63 0%, #047857 52%, #054E37 100%);
 
   /* Accent secondaire (pagination) — aligné sur le vert */
   --gold: var(--primary);
