@@ -1,0 +1,58 @@
+    <div class="login-layout">
+      <!-- Panneau marque (masqué sur mobile) -->
+      <aside class="brand-panel">
+        <span class="brand-csu-chip">
+          <img src="assets/logo-csu.png" alt="SEN-CSU">
+        </span>
+        <div class="brand-center">
+          <span class="brand-logo-card">
+            <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie">
+          </span>
+          <h2>Gestion des Factures Pharmaceutiques</h2>
+          <p>Couverture Sanitaire Universelle · Sénégal</p>
+        </div>
+      </aside>
+
+      <!-- Panneau formulaire -->
+      <section class="form-panel">
+        <div class="form-wrap fade-in">
+          <div class="form-logo-mobile">
+            <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie" class="logo-img-mobile">
+          </div>
+
+          <h1>Connexion</h1>
+          <p class="subtitle">Accédez à votre espace de gestion</p>
+
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Adresse e-mail</mat-label>
+              <input matInput formControlName="email" type="email" placeholder="vous@csu.sn" autocomplete="email">
+              <mat-icon matPrefix>mail_outline</mat-icon>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('required')">L'email est requis</mat-error>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('email')">Format d'email invalide</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Mot de passe</mat-label>
+              <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" autocomplete="current-password">
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button" [attr.aria-label]="hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe'">
+                <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+              <mat-error *ngIf="loginForm.get('password')?.hasError('required')">Le mot de passe est requis</mat-error>
+            </mat-form-field>
+
+            <div class="error-message" *ngIf="errorMessage">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorMessage }}</span>
+            </div>
+
+            <button class="btn btn-primary btn-block submit-btn" type="submit" [disabled]="loginForm.invalid || isLoading">
+              <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
+              <span *ngIf="!isLoading">Se connecter</span>
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+  

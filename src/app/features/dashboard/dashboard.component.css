@@ -1,0 +1,544 @@
+/* Welcome */
+.welcome-section {
+  margin-bottom: 24px;
+}
+.welcome-section h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+.welcome-section p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.table-body {
+  overflow-x: auto;
+}
+
+/* En-tête de bienvenue avec pastille de périmètre */
+.welcome-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.welcome-section p::first-letter { text-transform: capitalize; }
+.scope-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary-light); color: var(--primary);
+  border: 1px solid var(--primary-200);
+  padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.scope-pill mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+/* Accent coloré à gauche des cartes KPI */
+.kpi-card { position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--border); }
+.kpi-card.accent-blue::before  { background: #2563EB; }
+.kpi-card.accent-green::before { background: var(--primary); }
+.kpi-card.accent-amber::before { background: #D97706; }
+.kpi-card.accent-red::before   { background: #EF4444; }
+
+/* Chip de tendance (+/- %) */
+.trend {
+  display: inline-flex; align-items: center; gap: 1px;
+  font-size: 11.5px; font-weight: 700; padding: 1px 7px 1px 4px;
+  border-radius: 999px; margin-left: 6px; vertical-align: 1px;
+}
+.trend mat-icon { font-size: 14px; width: 14px; height: 14px; }
+.trend.up { background: var(--primary-100); color: var(--primary-hover); }
+.trend.down { background: #FEE2E2; color: #DC2626; }
+
+/* Bandeau de stats secondaires */
+.stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-pill {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 18px; box-shadow: var(--shadow-sm);
+}
+.stat-pill-ic { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.stat-pill-ic mat-icon { font-size: 22px; width: 22px; height: 22px; }
+.stat-pill-ic.csu  { background: #EDE9FE; color: #7C3AED; }
+.stat-pill-ic.moy  { background: #E0F2FE; color: #0284C7; }
+.stat-pill-ic.rate { background: var(--primary-100); color: var(--primary); }
+.stat-pill-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.stat-pill-val { font-size: 19px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+.stat-pill-val small { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.stat-pill-cap { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+.rate-bar { height: 6px; border-radius: 999px; background: var(--border-light); margin-top: 8px; overflow: hidden; }
+.rate-bar span { display: block; height: 100%; border-radius: 999px; background: var(--primary); transition: width 0.5s ease; }
+
+/* Grille graphiques : évolution (large) + doughnut */
+.analytics-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-bottom: 24px; }
+.chart-card { margin-bottom: 0; display: flex; flex-direction: column; }
+.chart-body { padding: 16px 20px 20px; }
+.bar-body { height: 300px; }
+.bar-body canvas { max-height: 100%; }
+
+/* Bascule segmentée Montant / Nombre */
+.seg-toggle { display: inline-flex; gap: 3px; padding: 3px; background: var(--border-light); border-radius: 10px; }
+.seg-toggle button {
+  border: none; background: transparent; padding: 6px 14px; border-radius: 8px;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.2s ease;
+}
+.seg-toggle button.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+
+/* Doughnut + légende */
+.donut-body { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.donut-wrap { position: relative; width: 200px; height: 200px; margin: 4px auto 8px; }
+.donut-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+.donut-total { font-size: 30px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.donut-cap { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+.legend { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 2px; }
+.legend li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid var(--border-light); }
+.legend li:last-child { border-bottom: none; }
+.legend .dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.legend-label { color: var(--text-secondary); flex: 1; }
+.legend b { color: var(--text-primary); font-weight: 700; }
+
+/* Two column grid for non-pharmacien */
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+/* Service Régional : la grille ne contient plus que Top pharmacies → pleine largeur */
+.two-col-grid.single-col { grid-template-columns: 1fr; }
+
+/* Classement Top pharmacies */
+.ranking { padding: 12px 20px 20px; }
+.rank-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+.rank-row:last-child { border-bottom: none; }
+.rank-pos {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--border-light); color: var(--text-secondary);
+  font-size: 13px; font-weight: 700;
+}
+.rank-pos.gold { background: #FEF3C7; color: #B45309; }
+.rank-info { flex: 1; min-width: 0; }
+.rank-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.rank-name { font-weight: 600; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-amount { font-weight: 700; font-size: 13.5px; color: var(--primary); white-space: nowrap; }
+.rank-bar { height: 6px; border-radius: 999px; background: var(--border-light); margin: 7px 0 4px; overflow: hidden; }
+.rank-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary-200), var(--primary)); transition: width 0.5s ease; }
+.rank-sub { font-size: 12px; color: var(--text-muted); }
+
+@media (max-width: 1100px) {
+  .analytics-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 960px) {
+  .two-col-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .stat-strip { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* Forms */
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.flex-grow {
+  flex: 1;
+  min-width: 200px;
+}
+.flex-2 {
+  flex: 2;
+  min-width: 240px;
+}
+mat-form-field {
+  flex: 1;
+  min-width: 120px;
+}
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+.text-warn {
+  color: #EF4444;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.add-btn {
+  height: 56px;
+  margin-top: 4px;
+}
+
+/* Temp list */
+.temp-list {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.temp-header {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  background: var(--border-light);
+}
+.temp-footer {
+  padding: 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--primary-100);
+  background: linear-gradient(180deg, var(--primary-light), #fff);
+}
+.mini-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 660px;
+}
+.mini-table th {
+  text-align: left;
+  padding: 11px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  background: #F8FAFC;
+  white-space: nowrap;
+}
+.mini-table td {
+  padding: 11px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+.mini-table td.cell-med { font-weight: 600; }
+.mini-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.mini-table tbody tr { transition: background 0.15s ease; }
+.mini-table tbody tr:hover td { background: var(--border-light); }
+
+.text-muted { font-size: 13px; }
+
+/* En-tête facturation — carte moderne avec liseré dégradé */
+.billing-card {
+  position: relative;
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.billing-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--ink-gradient);
+  z-index: 1;
+}
+.billing-header {
+  background: linear-gradient(180deg, rgba(5, 150, 105, 0.08), rgba(5, 150, 105, 0));
+  border-bottom: 1px solid var(--border-light);
+}
+.billing-header h2 { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.section-icon-box {
+  width: 46px; height: 46px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--ink-gradient);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 18px -6px rgba(5, 150, 105, 0.55);
+}
+.section-icon-box mat-icon { font-size: 24px; width: 24px; height: 24px; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ===== Étapes de saisie ===== */
+.step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  position: relative;
+}
+.step + .step { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-light); }
+.step-badge {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--primary);
+  border: 2px solid var(--primary-200);
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  transition: all 0.25s ease;
+}
+.step-badge .step-check { display: none; font-size: 20px; width: 20px; height: 20px; }
+/* État « complété » : pastille pleine en dégradé + coche */
+.step.done .step-badge {
+  background: var(--ink-gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 16px -6px rgba(5, 150, 105, 0.55);
+}
+.step.done .step-badge .step-num { display: none; }
+.step.done .step-badge .step-check { display: block; }
+.step-content { flex: 1; min-width: 0; }
+.step-label {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+.step-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+/* ===== Wizard mobile (enregistrement en 2 étapes) ===== */
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.wp-step {
+  flex: 1;
+  text-align: center;
+  padding: 9px 8px;
+  border-radius: 10px;
+  background: var(--border-light);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  transition: all 0.2s ease;
+}
+.wp-step.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary-200);
+}
+.wp-step.done { background: var(--primary-100); color: var(--primary-hover); }
+.wp-line { width: 16px; height: 2px; border-radius: 2px; background: var(--border); flex-shrink: 0; transition: background 0.2s ease; }
+.wp-line.done { background: var(--primary-200); }
+
+/* Barre d'actions du wizard mobile */
+.step-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.step-actions .btn { height: 50px; }
+.step-actions .btn-outline { flex: 0 0 auto; }
+.step-actions .btn-primary {
+  flex: 1;
+  justify-content: center;
+  background: var(--ink-gradient);
+  box-shadow: 0 10px 22px -8px rgba(5, 150, 105, 0.6);
+}
+.step-actions .btn-primary:not(:disabled):hover { filter: brightness(1.05); }
+
+.temp-total { font-size: 14px; color: var(--text-secondary); margin-right: auto; }
+.temp-total strong { color: var(--text-primary); font-size: 15px; }
+.temp-footer { align-items: center; }
+
+/* Répartition 50/50 par médicament */
+.split-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.split-totals span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 16px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.split-totals strong { color: var(--text-primary); font-size: 14px; }
+/* Sous-total mis en avant : pastille pleine en dégradé */
+.split-totals span:first-child {
+  background: var(--ink-gradient);
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 18px -6px rgba(5, 150, 105, 0.55);
+}
+.split-totals span:first-child strong { color: #fff; font-size: 16px; }
+.part-csu { color: var(--primary); }
+.part-benef { color: var(--accent); }
+td.part-csu, td.part-benef { font-weight: 600; }
+
+.save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-light);
+}
+/* Bouton d'enregistrement : action principale en dégradé */
+.save-row .btn-primary {
+  height: 50px;
+  padding: 0 28px;
+  font-size: 15px;
+  border-radius: var(--radius);
+  background: var(--ink-gradient);
+  box-shadow: 0 10px 22px -8px rgba(5, 150, 105, 0.6);
+}
+.save-row .btn-primary:not(:disabled):hover {
+  background: var(--ink-gradient);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 26px -8px rgba(5, 150, 105, 0.7);
+  transform: translateY(-1px);
+}
+
+/* Alerte médicament exclu */
+.exclu-alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--warn-light);
+  border: 1px solid #FCA5A5;
+  border-radius: var(--radius-sm);
+}
+.exclu-alert > mat-icon { color: var(--warn); flex-shrink: 0; }
+.exclu-body { display: flex; flex-direction: column; gap: 3px; }
+.exclu-title { font-weight: 700; color: #B91C1C; font-size: 14px; }
+.exclu-line { font-size: 13px; color: var(--text-primary); }
+.exclu-line strong { color: var(--text-secondary); }
+
+/* Dossier patient : pièces justificatives */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.photo-slot { display: flex; flex-direction: column; gap: 6px; }
+.photo-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.photo-drop { border: 1.5px dashed var(--border); border-radius: 10px; background: var(--border-light); transition: border-color 0.2s ease, background 0.2s ease; }
+.photo-drop:hover { border-color: var(--primary); background: var(--primary-light); }
+.photo-btn { width: 100%; height: 96px; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+.photo-btn mat-icon { font-size: 26px; width: 26px; height: 26px; color: var(--primary); }
+.photo-preview { position: relative; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+.photo-remove { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(17,24,39,0.65); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+@media (max-width: 600px) { .photo-grid { grid-template-columns: 1fr; } }
+
+/* Visionneuse plein écran */
+.img-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.img-viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.viewer-close { position: absolute; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* ===================== RESPONSIVE / MOBILE ===================== */
+@media (max-width: 768px) {
+  .welcome-section h1 { font-size: 22px; }
+  .section-body { padding: 18px 16px; }
+  .section-header { padding: 16px; flex-direction: column; align-items: stretch; }
+  .section-header .btn { justify-content: center; }
+  .header-actions { width: 100%; }
+  .header-actions .btn { flex: 1; }
+  .chart-body { padding: 16px; }
+  .step { gap: 12px; }
+}
+
+@media (max-width: 640px) {
+  /* Champs de saisie en pleine largeur */
+  .form-row { gap: 10px; }
+  .form-row mat-form-field,
+  .form-row .flex-2,
+  .form-row .flex-grow { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .add-btn { width: 100%; height: 50px; margin-top: 0; }
+
+  /* Tableau des médicaments -> cartes empilées */
+  .mini-table-wrap { overflow: visible; }
+  .mini-table { min-width: 0; }
+  .mini-table thead { display: none; }
+  .mini-table, .mini-table tbody, .mini-table tr, .mini-table td { display: block; width: 100%; }
+  .mini-table tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 12px;
+    padding: 2px 12px;
+    background: #fff;
+  }
+  .mini-table tbody tr:hover td { background: transparent; }
+  .mini-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-light);
+    white-space: normal;
+    text-align: right;
+  }
+  .mini-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+  .mini-table td.cell-action {
+    border-bottom: none;
+    justify-content: flex-end;
+    padding: 6px 0;
+  }
+  .mini-table td.cell-action::before { content: none; }
+
+  /* Totaux empilés en pleine largeur : libellé à gauche, montant aligné à droite.
+     Le bloc passe en wrap quand c'est étroit → le montant descend sur sa propre
+     ligne (toujours à droite) plutôt que de déborder. */
+  .temp-footer { padding: 12px; }
+  .split-totals { width: 100%; flex-direction: column; gap: 8px; align-items: stretch; }
+  .split-totals span {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 10px;
+    padding: 10px 14px;
+    white-space: normal;
+    text-align: left;
+  }
+  .split-totals span strong { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+
+  /* Boutons d'action en pleine largeur */
+  .save-row { justify-content: stretch; }
+  .save-row .btn { width: 100%; justify-content: center; }
+
+  /* Pièces justificatives : une colonne */
+  .photo-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 380px) {
+  .section-body { padding: 16px 12px; }
+  .step-label { font-size: 14px; }
+  .step-sub { font-size: 12.5px; }
+  .btn { padding: 9px 12px; }
+}

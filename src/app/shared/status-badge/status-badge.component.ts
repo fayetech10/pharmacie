@@ -6,12 +6,8 @@ import { StatutFacture } from '../../core/models/facture.model';
   selector: 'app-status-badge',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <span class="status-badge" [ngClass]="'status-' + statut">
-      {{ getLabel() }}
-    </span>
-  `,
-  styles: []
+  templateUrl: './status-badge.component.html',
+  styleUrls: ['./status-badge.component.css']
 })
 export class StatusBadgeComponent {
   @Input() statut!: StatutFacture;

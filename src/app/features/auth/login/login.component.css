@@ -1,0 +1,109 @@
+    .login-layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      background: var(--bg);
+    }
+
+    /* ---- Panneau marque navy ---- */
+    .brand-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 48px;
+      background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
+      overflow: hidden;
+    }
+    .brand-panel::before {
+      content: '';
+      position: absolute;
+      width: 560px;
+      height: 560px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 65%);
+      top: -160px;
+      right: -160px;
+    }
+    .brand-csu-chip {
+      position: absolute;
+      top: 28px;
+      left: 28px;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      z-index: 1;
+    }
+    .brand-csu-chip img { width: 56px; height: 56px; object-fit: contain; }
+    .brand-center { text-align: center; z-index: 1; }
+    .brand-logo-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 200px;
+      height: 200px;
+      border-radius: 36px;
+      background: #fff;
+      box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.35);
+      margin-bottom: 28px;
+    }
+    .brand-logo-card img { width: 150px; height: 150px; object-fit: contain; }
+    .brand-center h2 {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .brand-center p {
+      color: var(--ink-text);
+      margin: 0;
+      font-size: 15px;
+    }
+
+    /* ---- Panneau formulaire ---- */
+    .form-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+    .form-wrap { width: 100%; max-width: 380px; }
+    .form-logo-mobile { display: none; align-items: center; justify-content: center; margin-bottom: 24px; }
+    .logo-img-mobile { width: 120px; height: auto; object-fit: contain; }
+
+    .form-wrap h1 { font-size: 28px; font-weight: 700; margin: 0 0 6px; color: var(--text-primary); }
+    .subtitle { color: var(--text-secondary); margin: 0 0 32px; font-size: 15px; }
+
+    .full-width { width: 100%; }
+    .full-width mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
+
+    .submit-btn { height: 48px; font-size: 15px; margin-top: 8px; }
+
+    .error-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--warn-light);
+      color: #B91C1C;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+    .error-message mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    @media (max-width: 900px) {
+      .login-layout { grid-template-columns: 1fr; }
+      .brand-panel { display: none; }
+      .form-logo-mobile { display: flex; }
+    }
+  

@@ -1,0 +1,68 @@
+    /* Récapitulatif d'import */
+    .import-result {
+      margin-bottom: 20px; border-radius: var(--radius-md, 10px);
+      border: 1px solid var(--primary-200); background: var(--primary-light); overflow: hidden;
+    }
+    .import-result.has-errors { border-color: #FED7AA; background: #FFFBEB; }
+    .import-result-head {
+      display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+      font-size: 14px; color: var(--primary-dark); font-weight: 500;
+    }
+    .import-result.has-errors .import-result-head { color: #B45309; }
+    .import-result-head mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .close-inline {
+      margin-left: auto; background: transparent; border: none; cursor: pointer;
+      color: inherit; display: flex; align-items: center; border-radius: 6px; padding: 2px;
+    }
+    .close-inline:hover { background: rgba(0,0,0,0.06); }
+    .import-errors {
+      margin: 0; padding: 4px 16px 14px 40px; list-style: disc;
+      font-size: 13px; color: #92400E; max-height: 180px; overflow-y: auto;
+    }
+    .import-errors li { margin: 2px 0; }
+
+    .text-muted { font-size: 12px; }
+
+    /* Pharmacy cell */
+    .pharma-cell { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+    .pharma-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--accent-light); color: var(--accent);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pharma-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .pharma-name { font-weight: 600; color: var(--text-primary); display: block; }
+    .pharma-code { font-size: 12px; color: var(--text-secondary); display: block; }
+
+    .contact-cell { display: flex; flex-direction: column; }
+    .contact-cell span:first-child { color: var(--text-primary); }
+
+    .region-chip {
+      display: inline-flex; padding: 4px 12px; border-radius: var(--radius-full);
+      background: var(--primary-light); color: var(--primary);
+      font-size: 12.5px; font-weight: 600;
+    }
+
+    .form-section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--primary); margin: 4px 0 14px;
+    }
+    .form-section-title:not(:first-child) {
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .form-section-title mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .form-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      margin: 0 0 14px; padding: 10px 12px; border-radius: 8px;
+      background: var(--primary-light); color: var(--text-secondary); font-size: 12.5px; line-height: 1.4;
+    }
+    .form-note mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+    .suffix-btn {
+      background: transparent; border: none; cursor: pointer; color: var(--text-muted);
+      display: inline-flex; align-items: center; padding: 0 4px;
+    }
+    .suffix-btn:hover { color: var(--text-primary); }
+    .generate-btn { justify-content: center; margin-top: -4px; }
+    mat-form-field mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
+  

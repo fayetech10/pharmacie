@@ -1,0 +1,31 @@
+    <div class="espace-page fade-in">
+      <div class="page-head">
+        <div>
+          <h1>Espace Pharmacie</h1>
+          <p>Gérez vos facturations et suivez vos statistiques</p>
+        </div>
+      </div>
+
+      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+        <mat-tab label="Facturation">
+          <div class="tab-content">
+            <app-dashboard></app-dashboard>
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Mes factures
+            <span class="tab-count" [class.danger]="rejeteeCount > 0" *ngIf="totalCount">{{ totalCount }}</span>
+          </ng-template>
+          <div class="tab-content">
+            <app-factures-list></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab label="Tableau de bord">
+          <div class="tab-content">
+            <app-stats></app-stats>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  

@@ -1,0 +1,183 @@
+    <div class="users-page fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
+        <div>
+          <h1>Gestion des Utilisateurs</h1>
+          <p>Créez et gérez les comptes des pharmaciens et des services régionaux/centraux</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" (click)="openAddModal()">
+            <mat-icon>person_add</mat-icon> Ajouter un utilisateur
+          </button>
+        </div>
+      </div>
+
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
+        <table mat-table [dataSource]="users" class="w-100">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef> Utilisateur </th>
+            <td mat-cell *matCellDef="let u">
+              <div class="user-cell">
+                <div class="user-avatar">
+                  {{ u.prenom?.charAt(0) }}{{ u.nom?.charAt(0) }}
+                </div>
+                <div>
+                  <span class="user-name">{{ u.prenom }} {{ u.nom }}</span>
+                  <span class="user-email">{{ u.email }}</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="role">
+            <th mat-header-cell *matHeaderCellDef> Rôle </th>
+            <td mat-cell *matCellDef="let u">
+              <span class="role-badge" [ngClass]="u.role">
+                {{ getRoleLabel(u.role) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="region">
+            <th mat-header-cell *matHeaderCellDef> Région </th>
+            <td mat-cell *matCellDef="let u"> {{ getRegionNom(u.regionId) }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="pharmacie">
+            <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
+            <td mat-cell *matCellDef="let u"> {{ getPharmacieNom(u.pharmacieId) }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef> Statut </th>
+            <td mat-cell *matCellDef="let u">
+              <span class="status-indicator" [ngClass]="{ 'active': u.actif, 'inactive': !u.actif }">
+                {{ u.actif ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef> </th>
+            <td mat-cell *matCellDef="let u">
+              <div class="action-group">
+                <button class="action-btn" (click)="openEditModal(u)" title="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['name', 'role', 'region', 'pharmacie', 'statut', 'actions']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['name', 'role', 'region', 'pharmacie', 'statut', 'actions'];"></tr>
+        </table>
+        <div class="empty-state" *ngIf="users.length === 0">
+          <mat-icon>people_outline</mat-icon>
+          <p>Aucun utilisateur enregistré</p>
+        </div>
+      </mat-card>
+
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let u of users">
+          <div class="m-card-top">
+            <span class="m-title">{{ u.prenom }} {{ u.nom }}</span>
+            <div class="m-actions">
+              <button class="action-btn" (click)="openEditModal(u)" title="Modifier">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="m-sub">{{ u.email }}</div>
+          <div class="m-link">{{ getRoleLabel(u.role) }}</div>
+          <div class="m-row">
+            <span *ngIf="u.regionId"><mat-icon class="inline-ic">map</mat-icon> {{ getRegionNom(u.regionId) }}</span>
+            <span *ngIf="u.pharmacieId"><mat-icon class="inline-ic">local_pharmacy</mat-icon> {{ getPharmacieNom(u.pharmacieId) }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="m-chip" [class.neutral]="!u.actif">
+              {{ u.actif ? 'Actif' : 'Inactif' }}
+            </span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="users.length === 0">
+          <mat-icon>people_outline</mat-icon>
+          <p>Aucun utilisateur enregistré</p>
+        </div>
+      </div>
+
+      <!-- Modal Form -->
+      <div class="modal-overlay" *ngIf="showModal">
+        <mat-card class="modal-card">
+          <div class="modal-header">
+            <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un utilisateur</h2>
+            <button class="close-btn" (click)="closeModal()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+            <div class="modal-body">
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="flex-grow">
+                  <mat-label>Prénom</mat-label>
+                  <input matInput formControlName="prenom" placeholder="Ex: Ousmane">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="flex-grow">
+                  <mat-label>Nom</mat-label>
+                  <input matInput formControlName="nom" placeholder="Ex: Diop">
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" formControlName="email" placeholder="Ex: user@csu.sn">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-100" *ngIf="!isEditMode">
+                <mat-label>Mot de passe</mat-label>
+                <input matInput type="password" formControlName="password">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Rôle</mat-label>
+                <mat-select formControlName="role" (selectionChange)="onRoleChange($event.value)">
+                  <mat-option *ngFor="let r of rolesList" [value]="r">
+                    {{ getRoleLabel(r) }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-100" *ngIf="userForm.get('role')?.value === 'SERVICE_REGIONAL' || userForm.get('role')?.value === 'PHARMACIEN'">
+                <mat-label>Région</mat-label>
+                <mat-select formControlName="regionId">
+                  <mat-option *ngFor="let r of regions" [value]="r.id">
+                    {{ r.nom }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-100" *ngIf="userForm.get('role')?.value === 'PHARMACIEN'">
+                <mat-label>Pharmacie</mat-label>
+                <mat-select formControlName="pharmacieId">
+                  <mat-option *ngFor="let p of pharmacies" [value]="p.id">
+                    {{ p.nom }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-outline" type="button" (click)="closeModal()">Annuler</button>
+              <button class="btn btn-primary" type="submit" [disabled]="userForm.invalid">Enregistrer</button>
+            </div>
+          </form>
+        </mat-card>
+      </div>
+    </div>
+  

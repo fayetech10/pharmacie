@@ -6,11 +6,8 @@ import { LoadingSpinnerComponent } from './shared/loading-spinner/loading-spinne
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, LoadingSpinnerComponent],
-  template: `
-    <app-loading-spinner></app-loading-spinner>
-    <router-outlet></router-outlet>
-  `,
-  styles: []
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
 })
 export class AppComponent {
   title = 'pharmacie-csu-frontend';

@@ -1,0 +1,57 @@
+    <div class="espace-page fade-in">
+      <div class="page-head">
+        <div>
+          <h1>Espace Central</h1>
+          <p>Supervisez au niveau national et effectuez les paiements</p>
+        </div>
+      </div>
+
+      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+        <mat-tab label="Tableau de bord">
+          <div class="tab-content">
+            <!-- admin-regions agit comme vue drill-down Région -> Pharmacies -->
+            <app-admin-regions></app-admin-regions>
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Factures reçues
+            <span class="tab-count" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
+          </ng-template>
+          <div class="tab-content">
+            <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
+            <app-factures-list [allowedStatuses]="['VALIDEE_SR']"></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Factures validées
+            <span class="tab-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
+          </ng-template>
+          <div class="tab-content">
+            <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
+            <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true"></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Factures payées
+            <span class="tab-count" *ngIf="counts['PAYEE']">{{ counts['PAYEE'] }}</span>
+          </ng-template>
+          <div class="tab-content">
+            <app-factures-list [allowedStatuses]="['PAYEE']"></app-factures-list>
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Factures rejetées
+            <span class="tab-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
+          </ng-template>
+          <div class="tab-content">
+            <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
+            <app-factures-list [allowedStatuses]="['REJETEE_NC']"></app-factures-list>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  

@@ -1,0 +1,66 @@
+    /* En-tête avec bouton retour */
+    .header-content { display: flex; align-items: center; gap: 16px; }
+    .header-content h1 {
+      margin: 0 0 4px 0;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .header-content p { margin: 0; color: var(--text-secondary); font-size: 15px; }
+    .back-btn {
+      flex-shrink: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+    .back-btn:hover { background: var(--bg); transform: scale(1.05); }
+
+    tr.clickable { cursor: pointer; }
+    tr.clickable:hover { background: var(--primary-light); }
+    .chevron { color: var(--text-muted); }
+    tr.clickable:hover .chevron { color: var(--primary); }
+
+    .empty-cell {
+      text-align: center;
+      padding: 32px !important;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .inline-ic {
+      font-size: 15px; width: 15px; height: 15px;
+      vertical-align: -2px; color: var(--text-muted);
+    }
+    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* Filtres de tableau de bord (Année / Statut) */
+    .dash-filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .dash-select { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 1; max-width: 220px; }
+    .dash-select span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .dash-select select {
+      height: 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--field-bg);
+      padding: 0 12px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .dash-select select:focus { outline: none; border-color: var(--primary); background: #fff; }
+
+    @media (max-width: 768px) {
+      .header-content h1 { font-size: 21px; }
+      .dash-select { max-width: none; }
+    }
+  

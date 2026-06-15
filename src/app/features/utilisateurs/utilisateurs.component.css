@@ -1,0 +1,74 @@
+    /* User details cell */
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .user-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      display: block;
+    }
+    .user-email {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: block;
+    }
+
+    /* Badges */
+    .role-badge {
+      display: inline-flex;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .role-badge.ADMIN { background: #FEE2E2; color: #EF4444; }
+    .role-badge.SERVICE_CENTRAL { background: #DBEAFE; color: #2563EB; }
+    .role-badge.SERVICE_REGIONAL { background: #FEF3C7; color: #D97706; }
+    .role-badge.PHARMACIEN { background: var(--primary-100); color: var(--primary-hover); }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .status-indicator::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-indicator.active { color: var(--primary); }
+    .status-indicator.active::before { background: var(--primary); }
+    .status-indicator.inactive { color: #94A3B8; }
+    .status-indicator.inactive::before { background: #94A3B8; }
+
+    .form-row { display: flex; gap: 12px; }
+    .form-row .flex-grow { min-width: 0; }
+
+    /* Icônes en ligne dans les cartes mobiles */
+    .inline-ic {
+      font-size: 15px; width: 15px; height: 15px;
+      vertical-align: -2px; color: var(--text-muted); margin-right: 2px;
+    }
+    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
+  

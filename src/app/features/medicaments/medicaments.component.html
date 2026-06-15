@@ -1,0 +1,111 @@
+    <div class="fade-in">
+      <!-- En-tête -->
+      <div class="page-head">
+        <div>
+          <h1>Gestion des Médicaments</h1>
+          <p>Consultez la liste des médicaments et importez les listes éligibles / exclues.</p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon> Liste Éligibles
+          </button>
+          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-outline" (click)="exclusionInput.click()">
+            <mat-icon>block</mat-icon> Liste Exclusions
+          </button>
+          <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+        </div>
+      </div>
+
+      <!-- Recherche -->
+      <div class="filter-strip">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par nom, DCI…">
+        </div>
+      </div>
+
+      <!-- Tableau (desktop) -->
+      <mat-card class="table-card desktop-only">
+        <table mat-table [dataSource]="dataSource" matSort class="w-100">
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom Commercial </th>
+            <td mat-cell *matCellDef="let m"> <strong>{{ m.nom }}</strong> </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dci">
+            <th mat-header-cell *matHeaderCellDef> DCI / Principe actif </th>
+            <td mat-cell *matCellDef="let m"> {{ m.dci || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="classeTherapeutique">
+            <th mat-header-cell *matHeaderCellDef> Classe thérapeutique </th>
+            <td mat-cell *matCellDef="let m"> {{ m.classeTherapeutique || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="liste">
+            <th mat-header-cell *matHeaderCellDef> Liste </th>
+            <td mat-cell *matCellDef="let m"> {{ m.liste || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Statut </th>
+            <td mat-cell *matCellDef="let m">
+              <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">
+                {{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="motif">
+            <th mat-header-cell *matHeaderCellDef> Motif / Description </th>
+            <td mat-cell *matCellDef="let m">
+              <ng-container *ngIf="m.statut === 'EXCLU'; else noMotif">
+                <strong>{{ m.motif || '-' }}</strong>
+                <span *ngIf="m.description" class="desc-text"> — {{ m.description }}</span>
+              </ng-container>
+              <ng-template #noMotif><span class="text-muted">—</span></ng-template>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-state" [attr.colspan]="displayedColumns.length">
+              <mat-icon>search_off</mat-icon>
+              <p>Aucun médicament trouvé</p>
+            </td>
+          </tr>
+        </table>
+      </mat-card>
+
+      <!-- Cartes (mobile) -->
+      <div class="m-cards">
+        <div class="m-card" *ngFor="let m of pagedMedicaments">
+          <div class="m-card-top">
+            <span class="m-title">{{ m.nom }}</span>
+            <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">
+              {{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}
+            </span>
+          </div>
+          <div class="m-sub" *ngIf="m.dci">{{ m.dci }}</div>
+          <div class="m-meta" *ngIf="m.classeTherapeutique">
+            <mat-icon>category</mat-icon> {{ m.classeTherapeutique }}
+          </div>
+          <div class="m-meta" *ngIf="m.liste">
+            <mat-icon>list_alt</mat-icon> Liste {{ m.liste }}
+          </div>
+          <div class="m-row motif-row" *ngIf="m.statut === 'EXCLU' && (m.motif || m.description)">
+            <mat-icon>info</mat-icon>
+            <span><strong>{{ m.motif || 'Motif non précisé' }}</strong><ng-container *ngIf="m.description"> — {{ m.description }}</ng-container></span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="!dataSource || dataSource.filteredData.length === 0">
+          <mat-icon>search_off</mat-icon>
+          <p>Aucun médicament trouvé</p>
+        </div>
+      </div>
+
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des médicaments"></mat-paginator>
+    </div>
+  

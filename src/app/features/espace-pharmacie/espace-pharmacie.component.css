@@ -1,0 +1,19 @@
+    .espace-page { padding: 0; }
+    .tab-content { padding-top: 24px; }
+
+    /* Badge de notification (factures rejetées) sur l'onglet — label projeté par Material */
+    :host ::ng-deep .tab-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px;
+      border-radius: 999px; background: var(--primary); color: #fff;
+      font-size: 11px; font-weight: 700; line-height: 1;
+    }
+    :host ::ng-deep .tab-count.danger { background: var(--warn); }
+
+    @media (max-width: 768px) {
+      /* Mobile : navigation via la barre du bas → en-tête + onglets redondants masqués. */
+      :host ::ng-deep .mat-mdc-tab-header { display: none; }
+      .page-head { display: none; }
+      .tab-content { padding-top: 8px; }
+    }
+  

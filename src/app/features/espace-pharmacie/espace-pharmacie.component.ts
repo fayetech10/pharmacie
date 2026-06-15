@@ -12,65 +12,20 @@ import { FactureCountService, StatutCounts } from '../../core/services/facture-c
   selector: 'app-espace-pharmacie',
   standalone: true,
   imports: [CommonModule, MatTabsModule, DashboardComponent, FacturesListComponent, StatsComponent],
-  template: `
-    <div class="espace-page fade-in">
-      <div class="page-head">
-        <div>
-          <h1>Espace Pharmacie</h1>
-          <p>Gérez vos facturations et suivez vos statistiques</p>
-        </div>
-      </div>
-
-      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
-        <mat-tab label="Facturation">
-          <div class="tab-content">
-            <app-dashboard></app-dashboard>
-          </div>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            Mes factures
-            <span class="tab-count danger" *ngIf="rejeteeCount">{{ rejeteeCount }}</span>
-          </ng-template>
-          <div class="tab-content">
-            <app-factures-list></app-factures-list>
-          </div>
-        </mat-tab>
-        <mat-tab label="Tableau de bord">
-          <div class="tab-content">
-            <app-stats></app-stats>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
-    </div>
-  `,
-  styles: [`
-    .espace-page { padding: 0; }
-    .tab-content { padding-top: 24px; }
-
-    /* Badge de notification (factures rejetées) sur l'onglet — label projeté par Material */
-    :host ::ng-deep .tab-count {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px;
-      border-radius: 999px; background: var(--primary); color: #fff;
-      font-size: 11px; font-weight: 700; line-height: 1;
-    }
-    :host ::ng-deep .tab-count.danger { background: var(--warn); }
-
-    @media (max-width: 768px) {
-      /* Mobile : navigation via la barre du bas → en-tête + onglets redondants masqués. */
-      :host ::ng-deep .mat-mdc-tab-header { display: none; }
-      .page-head { display: none; }
-      .tab-content { padding-top: 8px; }
-    }
-  `]
+  templateUrl: './espace-pharmacie.component.html',
+  styleUrls: ['./espace-pharmacie.component.css']
 })
 export class EspacePharmacieComponent implements OnInit {
   selectedTab = 0;
   /** Factures non vues par statut (pour le badge « Mes factures »). */
   counts: StatutCounts = {};
 
-  /** Nombre de factures rejetées non encore consultées (SR + central). */
+  /** Nombre total de factures non lues. */
+  get totalCount(): number {
+    return Object.values(this.counts).reduce((sum, count) => sum + count, 0);
+  }
+
+  /** Nombre de factures rejetées non encore consultées (SR + central) pour l'affichage en rouge. */
   get rejeteeCount(): number {
     return (this.counts['REJETEE_SR'] || 0) + (this.counts['REJETEE_NC'] || 0);
   }
@@ -104,10 +59,10 @@ export class EspacePharmacieComponent implements OnInit {
     });
   }
 
-  /** « Mes factures » (onglet 1) couvre les factures rejetées renvoyées au pharmacien. */
+  /** « Mes factures » (onglet 1) couvre toutes les factures. */
   private markActiveTabSeen(): void {
     if (this.selectedTab === 1) {
-      this.factureCount.markSeen(['REJETEE_SR', 'REJETEE_NC']);
+      this.factureCount.markSeen(['BROUILLON', 'ENVOYEE', 'VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE']);
     }
   }
 }

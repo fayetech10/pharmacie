@@ -1,0 +1,91 @@
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a routerLink="/dashboard" class="brand">
+          <span class="brand-logo"><img [src]="brandLogo" alt="Logo" /></span>
+          <span class="brand-name">CSU <strong>Sénégal</strong></span>
+        </a>
+
+        <nav class="nav-links">
+          <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Mon Espace</span>
+          </a>
+          <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Espace Régional</span>
+          </a>
+          <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral()">
+            <mat-icon>dashboard</mat-icon>
+            <span>Espace Central</span>
+          </a>
+          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+            <mat-icon>map</mat-icon>
+            <span>Régions</span>
+          </a>
+          <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+            <mat-icon>medication</mat-icon>
+            <span>Médicaments</span>
+          </a>
+          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceRegional()">
+            <mat-icon>local_pharmacy</mat-icon>
+            <span>Pharmacies</span>
+          </a>
+          <a routerLink="/dashboard/utilisateurs" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+            <mat-icon>manage_accounts</mat-icon>
+            <span>Utilisateurs</span>
+          </a>
+        </nav>
+
+        <div class="topbar-right">
+          <div class="user-pill" [matMenuTriggerFor]="userMenu">
+            <div class="user-details">
+              <span class="user-name">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
+              <span class="user-role">{{ getRoleLabel(currentUser?.role || '') }}</span>
+            </div>
+            <div class="user-avatar">
+              {{ initials }}
+            </div>
+          </div>
+          <mat-menu #userMenu="matMenu" xPosition="before">
+            <button mat-menu-item (click)="logout()">
+              <mat-icon>logout</mat-icon>
+              <span>Se déconnecter</span>
+            </button>
+          </mat-menu>
+        </div>
+      </div>
+    </header>
+
+    <div class="alert-banner" *ngIf="retards.length > 0">
+      <div class="alert-inner">
+        <mat-icon>warning_amber</mat-icon>
+        <span>
+          Vous avez <strong>{{ retards.length }}</strong> facture(s) en retard à l'état BROUILLON.
+          Veuillez les envoyer au service régional.
+        </span>
+        <button class="alert-btn" (click)="voirRetards()">Voir les retards</button>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Bouton de déconnexion flottant (mobile uniquement, pour tests) -->
+    <button type="button" class="mobile-logout" (click)="logout()" aria-label="Se déconnecter">
+      <mat-icon>logout</mat-icon>
+    </button>
+
+    <!-- Navigation basse (mobile) — le header est masqué sur mobile.
+         La session expire automatiquement après 1 jour (redirection vers la connexion). -->
+    <nav class="bottom-nav">
+      <a class="bn-item" *ngFor="let item of bottomNav"
+         [class.active]="isBottomActive(item)"
+         [routerLink]="item.link"
+         [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
+        <span class="bn-badge" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    </nav>
+  

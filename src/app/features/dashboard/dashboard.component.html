@@ -1,0 +1,454 @@
+    <div class="dashboard-page fade-in">
+      <!-- Welcome (autres rôles uniquement) -->
+      <div class="welcome-section welcome-flex" *ngIf="!authService.isPharmacien()">
+        <div>
+          <h1>Bonjour, {{ currentUser?.prenom }} 👋</h1>
+          <p>Vue d'ensemble de l'activité CSU · {{ todayLabel }}</p>
+        </div>
+        <span class="scope-pill">
+          <mat-icon>{{ authService.isServiceRegional() ? 'place' : 'public' }}</mat-icon>
+          {{ scopeLabel }}
+        </span>
+      </div>
+
+      <!-- Service Régional : factures de la région en tête (avant KPI et graphiques) -->
+      <ng-container *ngIf="authService.isServiceRegional()">
+        <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
+      </ng-container>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" *ngIf="!authService.isPharmacien()">
+        <div class="kpi-card accent-blue">
+          <div class="kpi-icon blue">
+            <mat-icon>receipt_long</mat-icon>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value">{{ totalFactures }}</span>
+            <span class="kpi-label">
+              Total factures
+              <span class="trend" *ngIf="countTrend !== null" [class.up]="countTrend! >= 0" [class.down]="countTrend! < 0">
+                <mat-icon>{{ countTrend! >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>{{ countTrend! >= 0 ? '+' : '' }}{{ countTrend }}%
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div class="kpi-card accent-green">
+          <div class="kpi-icon green">
+            <mat-icon>payments</mat-icon>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value">{{ montantTotal | number:'1.0-0':'fr' }} <small>CFA</small></span>
+            <span class="kpi-label">
+              Montant total
+              <span class="trend" *ngIf="montantTrend !== null" [class.up]="montantTrend! >= 0" [class.down]="montantTrend! < 0">
+                <mat-icon>{{ montantTrend! >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>{{ montantTrend! >= 0 ? '+' : '' }}{{ montantTrend }}%
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div class="kpi-card accent-amber">
+          <div class="kpi-icon amber">
+            <mat-icon>pending_actions</mat-icon>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value">{{ facturesAttente }}</span>
+            <span class="kpi-label">En attente de traitement</span>
+          </div>
+        </div>
+
+        <div class="kpi-card accent-red">
+          <div class="kpi-icon red">
+            <mat-icon>error_outline</mat-icon>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value">{{ facturesRejetees }}</span>
+            <span class="kpi-label">Rejetées</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bandeau de stats secondaires -->
+      <div class="stat-strip" *ngIf="!authService.isPharmacien()">
+        <div class="stat-pill">
+          <div class="stat-pill-ic csu"><mat-icon>volunteer_activism</mat-icon></div>
+          <div class="stat-pill-body">
+            <span class="stat-pill-val">{{ montantCsu | number:'1.0-0':'fr' }} <small>CFA</small></span>
+            <span class="stat-pill-cap">Part CSU prise en charge (50%)</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-ic moy"><mat-icon>functions</mat-icon></div>
+          <div class="stat-pill-body">
+            <span class="stat-pill-val">{{ montantMoyen | number:'1.0-0':'fr' }} <small>CFA</small></span>
+            <span class="stat-pill-cap">Montant moyen par facture</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-ic rate"><mat-icon>verified</mat-icon></div>
+          <div class="stat-pill-body">
+            <span class="stat-pill-val">{{ tauxValidation }}%</span>
+            <span class="stat-pill-cap">Taux de validation</span>
+            <div class="rate-bar"><span [style.width.%]="tauxValidation"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== PHARMACIEN: ALL-IN-ONE ==================== -->
+      <ng-container *ngIf="authService.isPharmacien()">
+
+        <!-- Section: Facturation -->
+        <div class="section-card billing-card">
+          <div class="section-header billing-header">
+            <div class="section-title-group">
+              <span class="section-icon-box"><mat-icon>receipt_long</mat-icon></span>
+              <div>
+                <h2>Facture du mois de {{ currentMonthLabel }}</h2>
+              </div>
+            </div>
+            <div class="header-actions">
+              <a class="btn btn-outline btn-sm" routerLink="/dashboard/espace-pharmacie" [queryParams]="{ tab: 1 }">
+                <mat-icon>folder_open</mat-icon> Mes factures
+              </a>
+              <button class="btn btn-primary btn-sm" *ngIf="canSendFacture" (click)="envoyerFacture()">
+                <mat-icon>send</mat-icon> Envoyer
+              </button>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <!-- Indicateur d'étapes (mobile : enregistrement en 2 temps) -->
+            <div class="wizard-progress" *ngIf="isMobile">
+              <span class="wp-step" [class.active]="wizardStep === 0" [class.done]="wizardStep > 0">1. Médicaments</span>
+              <span class="wp-line" [class.done]="wizardStep > 0"></span>
+              <span class="wp-step" [class.active]="wizardStep === 1">2. Patient &amp; dossier</span>
+            </div>
+
+            <!-- Étape 1 : Médicaments -->
+            <div class="step" *ngIf="!isMobile || wizardStep === 0" [class.done]="patientLignes.length > 0">
+              <span class="step-badge"><span class="step-num">1</span><mat-icon class="step-check">check</mat-icon></span>
+              <div class="step-content">
+                <span class="step-label">Médicaments</span>
+                <span class="step-sub">Ajoutez les médicaments délivrés au patient.</span>
+                <!-- Medication entry -->
+                <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row">
+              <mat-form-field appearance="outline" class="flex-2">
+                <mat-label>Médicament</mat-label>
+                <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)" style="text-transform: uppercase;">
+                <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
+                  <mat-option *ngFor="let med of suggestions" [value]="med.nom">
+                    {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Exclu)</span>
+                  </mat-option>
+                </mat-autocomplete>
+                <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
+                  Ce médicament est exclu.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Qté</mat-label>
+                <input matInput type="number" formControlName="quantite">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Prix</mat-label>
+                <input matInput type="number" formControlName="prixUnitaire">
+              </mat-form-field>
+
+              <button class="btn btn-outline add-btn" type="submit" [disabled]="medicamentForm.invalid">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </form>
+
+            <!-- Alerte médicament exclu : motif + description -->
+            <div class="exclu-alert" *ngIf="excludedInfo">
+              <mat-icon>block</mat-icon>
+              <div class="exclu-body">
+                <span class="exclu-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
+                <span class="exclu-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+                <span class="exclu-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+              </div>
+            </div>
+
+            <!-- Temp list -->
+            <div *ngIf="patientLignes.length > 0" class="temp-list">
+              <div class="temp-header">
+                <span>{{ patientLignes.length }} médicament(s) préparé(s)</span>
+              </div>
+              <div class="mini-table-wrap">
+                <table class="mini-table">
+                  <thead>
+                    <tr>
+                      <th>Médicament</th>
+                      <th>Code</th>
+                      <th>Qté</th>
+                      <th>Prix</th>
+                      <th>Total</th>
+                      <th>Part CSU (50%)</th>
+                      <th>Part bénéf. (50%)</th>
+                      <th class="th-action"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let pl of patientLignes; let i = index">
+                      <td data-label="Médicament" class="cell-med">{{ pl.medicament }}</td>
+                      <td data-label="Code" class="text-muted">{{ pl.codeProduit }}</td>
+                      <td data-label="Qté">{{ pl.quantite }}</td>
+                      <td data-label="Prix">{{ pl.prixUnitaire | number }}</td>
+                      <td data-label="Total"><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
+                      <td data-label="Part CSU (50%)" class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                      <td data-label="Part bénéf. (50%)" class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                      <td class="cell-action">
+                        <button class="action-btn danger" (click)="retirerMedicamentTemp(i)" type="button" matTooltip="Retirer">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="temp-footer split-totals">
+                <span>Sous-total : <strong>{{ tempTotal | number:'1.0-0':'fr' }} CFA</strong></span>
+                <span class="part-csu">Part CSU (50%) : <strong>{{ tempTotal / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+                <span class="part-benef">Part bénéficiaire (50%) : <strong>{{ tempTotal / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+              </div>
+            </div>
+
+              </div>
+            </div>
+
+            <!-- Étape 2 : Patient -->
+            <div class="step" *ngIf="!isMobile || wizardStep === 1" [class.done]="patientForm.valid">
+              <span class="step-badge"><span class="step-num">2</span><mat-icon class="step-check">check</mat-icon></span>
+              <div class="step-content">
+                <span class="step-label">Identité du patient</span>
+                <span class="step-sub">Renseignez le nom et le matricule du bénéficiaire.</span>
+                <form [formGroup]="patientForm" class="form-row">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>Nom & Prénom du patient</mat-label>
+                <input matInput formControlName="patientNomPrenom" placeholder="Ex: Diop Ousmane">
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>N° Matricule</mat-label>
+                <input matInput formControlName="patientMatricule" placeholder="Ex: PAT-2026-987">
+                <mat-icon matPrefix>badge</mat-icon>
+              </mat-form-field>
+                </form>
+              </div>
+            </div>
+
+            <!-- Étape 3 : Dossier du patient (pièces justificatives) -->
+            <div class="step" *ngIf="!isMobile || wizardStep === 1" [class.done]="!!(photos.ticketCaisse || photos.bonCommande || photos.ordonnance)">
+              <span class="step-badge"><span class="step-num">3</span><mat-icon class="step-check">check</mat-icon></span>
+              <div class="step-content">
+                <span class="step-label">Dossier du patient</span>
+                <span class="step-sub">Photographiez les pièces justificatives (appareil photo ou fichier).</span>
+                <div class="photo-grid">
+                  <div class="photo-slot" *ngFor="let p of photoFields">
+                    <span class="photo-label">{{ p.label }}</span>
+                    <div class="photo-drop" *ngIf="!photos[p.key]; else preview">
+                      <input type="file" accept="image/*" capture="environment" hidden
+                             #photoInput (change)="onPhotoSelected(p.key, $event)">
+                      <button type="button" class="photo-btn" (click)="photoInput.click()">
+                        <mat-icon>photo_camera</mat-icon>
+                        <span>Prendre une photo</span>
+                      </button>
+                    </div>
+                    <ng-template #preview>
+                      <div class="photo-preview">
+                        <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
+                        <button type="button" class="photo-remove" (click)="removePhoto(p.key)" matTooltip="Supprimer">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                    </ng-template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions mobile : wizard 2 étapes (Suivant / Précédent + Enregistrer) -->
+            <div class="step-actions" *ngIf="isMobile">
+              <button type="button" class="btn btn-outline" *ngIf="wizardStep === 1" (click)="goToMedicamentStep()">
+                <mat-icon>arrow_back</mat-icon> Précédent
+              </button>
+              <button type="button" class="btn btn-primary" *ngIf="wizardStep === 0"
+                      [disabled]="patientLignes.length === 0"
+                      (click)="goToPatientStep()">
+                Suivant <mat-icon>arrow_forward</mat-icon>
+              </button>
+              <button type="button" class="btn btn-primary" *ngIf="wizardStep === 1"
+                      [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting"
+                      (click)="enregistrerPatientFacture()">
+                <mat-icon>save</mat-icon> Enregistrer
+              </button>
+            </div>
+
+            <!-- Action desktop : enregistrement classique (tout est visible) -->
+            <div class="save-row" *ngIf="!isMobile">
+              <button class="btn btn-primary" [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting" (click)="enregistrerPatientFacture()">
+                <mat-icon>save</mat-icon> Enregistrer pour ce patient
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </ng-container>
+
+      <!-- ==================== OTHER ROLES: STANDARD DASHBOARD ==================== -->
+      <ng-container *ngIf="!authService.isPharmacien()">
+
+        <!-- Graphiques : évolution + répartition -->
+        <div class="analytics-grid">
+          <!-- Évolution mensuelle -->
+          <div class="section-card chart-card">
+            <div class="section-header">
+              <div class="section-title-group">
+                <mat-icon class="section-icon">bar_chart</mat-icon>
+                <h2>Évolution mensuelle {{ chartYear }}</h2>
+              </div>
+              <div class="seg-toggle">
+                <button type="button" [class.active]="chartMode === 'montant'" (click)="setChartMode('montant')">Montant</button>
+                <button type="button" [class.active]="chartMode === 'nombre'" (click)="setChartMode('nombre')">Nombre</button>
+              </div>
+            </div>
+            <div class="chart-body bar-body">
+              <canvas baseChart *ngIf="isChartReady"
+                [data]="barChartData"
+                [options]="barChartOptions"
+                [type]="'bar'">
+              </canvas>
+              <div class="empty-state" *ngIf="!isChartReady">
+                <mat-icon>bar_chart</mat-icon>
+                <p>Chargement du graphique…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Répartition par statut -->
+          <div class="section-card chart-card">
+            <div class="section-header">
+              <div class="section-title-group">
+                <mat-icon class="section-icon">donut_large</mat-icon>
+                <h2>Répartition par statut</h2>
+              </div>
+            </div>
+            <div class="chart-body donut-body">
+              <div class="donut-wrap" *ngIf="hasStatusData; else noStatus">
+                <canvas baseChart
+                  [data]="doughnutData"
+                  [options]="doughnutOptions"
+                  [type]="'doughnut'">
+                </canvas>
+                <div class="donut-center">
+                  <span class="donut-total">{{ totalFactures }}</span>
+                  <span class="donut-cap">factures</span>
+                </div>
+              </div>
+              <ng-template #noStatus>
+                <div class="empty-state"><mat-icon>donut_large</mat-icon><p>Aucune donnée</p></div>
+              </ng-template>
+              <ul class="legend" *ngIf="hasStatusData">
+                <li *ngFor="let s of statusBreakdown">
+                  <span class="dot" [style.background]="s.color"></span>
+                  <span class="legend-label">{{ s.label }}</span>
+                  <b>{{ s.count }}</b>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listes : factures + top pharmacies -->
+        <div class="two-col-grid" [class.single-col]="authService.isServiceRegional()">
+          <!-- Factures : ici pour les autres rôles ; le Service Régional les voit en tête de page -->
+          <ng-container *ngIf="!authService.isServiceRegional()">
+            <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
+          </ng-container>
+
+          <!-- Top pharmacies -->
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-title-group">
+                <mat-icon class="section-icon">leaderboard</mat-icon>
+                <h2>Top pharmacies</h2>
+              </div>
+            </div>
+            <div class="ranking">
+              <div class="rank-row" *ngFor="let p of topPharmacies; let i = index">
+                <span class="rank-pos" [class.gold]="i === 0">{{ i + 1 }}</span>
+                <div class="rank-info">
+                  <div class="rank-top">
+                    <span class="rank-name">{{ p.nom }}</span>
+                    <span class="rank-amount">{{ p.montant | number:'1.0-0':'fr' }} CFA</span>
+                  </div>
+                  <div class="rank-bar"><span [style.width.%]="p.pct"></span></div>
+                  <span class="rank-sub">{{ p.count }} facture(s)</span>
+                </div>
+              </div>
+              <div class="empty-state" *ngIf="topPharmacies.length === 0">
+                <mat-icon>leaderboard</mat-icon>
+                <p>Aucune donnée</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Carte « Factures » réutilisée : en tête pour le Service Régional, sinon dans la grille du bas -->
+      <ng-template #facturesCard>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <mat-icon class="section-icon">receipt_long</mat-icon>
+              <h2>{{ authService.isServiceRegional() ? 'Factures de la région' : 'Factures récentes' }}</h2>
+            </div>
+            <a class="btn btn-outline btn-sm" [routerLink]="authService.isServiceRegional() ? '/dashboard/factures-regionales' : '/dashboard/regions'">
+              Voir tout <mat-icon>arrow_forward</mat-icon>
+            </a>
+          </div>
+          <div class="table-body">
+            <table mat-table [dataSource]="recentFactures" class="w-100">
+              <ng-container matColumnDef="pharmacie">
+                <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
+                <td mat-cell *matCellDef="let f"> {{ f.pharmacieNom }} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="montant">
+                <th mat-header-cell *matHeaderCellDef> Montant </th>
+                <td mat-cell *matCellDef="let f"> <strong>{{ f.montantTotal | number }} CFA</strong> </td>
+              </ng-container>
+
+              <ng-container matColumnDef="statut">
+                <th mat-header-cell *matHeaderCellDef> Statut </th>
+                <td mat-cell *matCellDef="let f"> <app-status-badge [statut]="f.statut"></app-status-badge> </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let f">
+                  <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]">
+                    <mat-icon>visibility</mat-icon>
+                  </a>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+            <div class="empty-state" *ngIf="recentFactures.length === 0">
+              <mat-icon>receipt_long</mat-icon>
+              <p>Aucune facture récente</p>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Visionneuse plein écran d'une pièce justificative -->
+      <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+        <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+        <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+      </div>
+    </div>

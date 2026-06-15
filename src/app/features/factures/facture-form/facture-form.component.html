@@ -1,0 +1,194 @@
+    <div class="page-header flex-header">
+      <div>
+        <h1>{{ facture ? ('Facture de ' + getMonthName(facture.mois) + ' ' + facture.annee) : 'Saisie Rapide de Facture' }}</h1>
+        <p>Saisissez les informations du patient et ses médicaments, puis ajoutez-les à la facture du mois.</p>
+      </div>
+      <button mat-flat-button color="primary" *ngIf="facture && facture.lignes && facture.lignes.length > 0" (click)="envoyerFacture()">
+        <mat-icon>send</mat-icon> Envoyer la facture
+      </button>
+    </div>
+
+    <!-- Étape 1 : Saisie par Patient -->
+    <mat-card class="mb-4">
+      <mat-card-header>
+        <mat-card-title>Saisie par Patient</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="mt-3">
+        <!-- Informations du Patient -->
+        <form [formGroup]="patientForm" class="form-row-multi mb-3">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Nom & Prénom du Patient</mat-label>
+            <input matInput formControlName="patientNomPrenom" placeholder="Ex: Diop Ousmane">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Numéro Matricule</mat-label>
+            <input matInput formControlName="patientMatricule" placeholder="Ex: PAT-2026-987">
+          </mat-form-field>
+        </form>
+
+        <!-- Dossier du patient : prise de photo des pièces justificatives -->
+        <div class="dossier-section">
+          <h3 class="dossier-title"><mat-icon>folder_open</mat-icon> Dossier du patient</h3>
+          <p class="dossier-hint">Prenez en photo les pièces justificatives (appareil photo ou fichier).</p>
+          <div class="photo-grid">
+            <div class="photo-slot" *ngFor="let p of photoFields">
+              <span class="photo-label">{{ p.label }}</span>
+              <div class="photo-drop" *ngIf="!photos[p.key]; else preview">
+                <input type="file" accept="image/*" capture="environment" hidden
+                       #photoInput (change)="onPhotoSelected(p.key, $event)">
+                <button type="button" class="photo-btn" (click)="photoInput.click()">
+                  <mat-icon>photo_camera</mat-icon>
+                  <span>Prendre une photo</span>
+                </button>
+              </div>
+              <ng-template #preview>
+                <div class="photo-preview">
+                  <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
+                  <button type="button" class="photo-remove" (click)="removePhoto(p.key)" matTooltip="Supprimer">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Saisie des Médicaments -->
+        <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row-multi mt-3">
+          <mat-form-field appearance="outline" class="flex-2">
+            <mat-label>Médicament</mat-label>
+            <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)" style="text-transform: uppercase;">
+            <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
+              <mat-option *ngFor="let med of suggestions" [value]="med.nom">
+                {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non Éligible)</span>
+              </mat-option>
+            </mat-autocomplete>
+            <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
+              Ce médicament n'est pas éligible.
+            </mat-error>
+            <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('notFound')">
+              Sélectionnez un médicament de la liste.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Quantité</mat-label>
+            <input matInput type="number" formControlName="quantite">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Prix Unit.</mat-label>
+            <input matInput type="number" formControlName="prixUnitaire">
+          </mat-form-field>
+
+          <button mat-stroked-button color="primary" type="submit" [disabled]="medicamentForm.invalid" class="add-btn">
+            <mat-icon>add</mat-icon> Ajouter
+          </button>
+        </form>
+
+        <!-- Alerte médicament exclu : motif + description -->
+        <div class="exclu-alert" *ngIf="excludedInfo">
+          <mat-icon>block</mat-icon>
+          <div class="exclu-body">
+            <span class="exclu-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
+            <span class="exclu-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+            <span class="exclu-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+          </div>
+        </div>
+
+        <!-- Liste temporaire des médicaments préparés pour le patient -->
+        <div *ngIf="patientLignes.length > 0" class="mt-4 patient-temp-list">
+          <h3 class="mb-2">Médicaments préparés pour ce patient</h3>
+          <table class="temp-table">
+            <thead>
+              <tr>
+                <th>Médicament</th>
+                <th>Qté</th>
+                <th>Prix Unit.</th>
+                <th>Total</th>
+                <th>Part CSU (50%)</th>
+                <th>Part bénéf. (50%)</th>
+                <th style="width: 80px;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pl of patientLignes; let i = index">
+                <td>{{ pl.medicament }}</td>
+                <td>{{ pl.quantite }}</td>
+                <td>{{ pl.prixUnitaire | number }}</td>
+                <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
+                <td class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                <td class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+                <td>
+                  <button mat-icon-button color="warn" type="button" (click)="retirerMedicamentTemp(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="commit-section mt-3">
+            <button mat-flat-button color="accent" [disabled]="patientForm.invalid || isSubmitting" (click)="enregistrerPatientFacture()">
+              <mat-icon>save_alt</mat-icon> Enregistrer les médicaments pour ce patient
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Lignes déjà enregistrées sur la facture (utile en correction) -->
+    <mat-card class="mb-4" *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0">
+      <mat-card-header>
+        <mat-card-title>
+          Lignes de la facture ({{ facture.lignes.length }})
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="mt-3">
+        <div class="correction-hint" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
+          <mat-icon>build</mat-icon>
+          Corrigez les lignes rejetées (supprimez-les puis ressaisissez-les correctement ci-dessus), puis cliquez sur « Envoyer la facture ».
+        </div>
+        <table class="temp-table">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Médicament</th>
+              <th>Qté</th>
+              <th>Prix Unit.</th>
+              <th>Total</th>
+              <th>Statut</th>
+              <th style="width: 80px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of facture.lignes; let i = index" [class.row-rejected]="l.statutLigne === 'REJETEE'">
+              <td>{{ l.patientNomPrenom || '-' }}</td>
+              <td>{{ l.medicament }}</td>
+              <td>{{ l.quantite }}</td>
+              <td>{{ l.prixUnitaire | number }}</td>
+              <td><strong>{{ l.montant | number }}</strong></td>
+              <td>
+                <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [matTooltip]="l.motifRejet || ''">
+                  Rejetée
+                </span>
+                <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
+              </td>
+              <td>
+                <button mat-icon-button color="warn" type="button" (click)="supprimerLigne(i)" matTooltip="Supprimer cette ligne">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Visionneuse plein écran d'une pièce justificative -->
+    <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+      <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+      <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+    </div>
