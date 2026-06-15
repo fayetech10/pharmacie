@@ -114,7 +114,7 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
           </mat-form-field>
 
           <button mat-stroked-button color="primary" type="submit" [disabled]="medicamentForm.invalid" class="add-btn">
-            <mat-icon>add</mat-icon> Préparer
+            <mat-icon>add</mat-icon> Ajouter
           </button>
         </form>
 

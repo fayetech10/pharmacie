@@ -15,7 +15,7 @@ import { Pharmacie } from '../../core/models/pharmacie.model';
 import { FactureService } from '../../core/services/facture.service';
 import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
-import { StatsComponent } from '../stats/stats.component';
+import { StatsComponent, StatsScope } from '../stats/stats.component';
 
 interface RegionSummary {
   region: Region;
@@ -90,6 +90,11 @@ type DrillLevel = 'regions' | 'pharmacies' | 'factures';
         </div>
       </div>
     </div>
+
+    <!-- Tableau de bord de la région sélectionnée -->
+    <app-stats [embedded]="true" *ngIf="level === 'pharmacies' && regionScope" [scope]="regionScope"></app-stats>
+    <!-- Tableau de bord de la pharmacie sélectionnée -->
+    <app-stats [embedded]="true" *ngIf="level === 'factures' && pharmacieScope" [scope]="pharmacieScope"></app-stats>
 
     <!-- ===================== NIVEAU 1 : RÉGIONS ===================== -->
     <div class="m-cards" *ngIf="level === 'regions'">
@@ -377,6 +382,10 @@ export class AdminRegionsComponent implements OnInit {
   selectedPharmacie: PharmacieSummary | null = null;
   factureColumns = ['mois', 'montant', 'statut', 'action'];
 
+  // Périmètres pour les tableaux de bord scopés (drill-down)
+  regionScope: StatsScope | null = null;
+  pharmacieScope: StatsScope | null = null;
+
   // Filtres niveau 3 (factures d'une pharmacie)
   filterYear = 0;
   filterStatut = '';
@@ -425,6 +434,7 @@ export class AdminRegionsComponent implements OnInit {
   // Niveau 1 → 2
   selectRegion(summary: RegionSummary) {
     this.selectedRegion = summary;
+    this.regionScope = { type: 'region', id: summary.region.id, label: summary.region.nom };
 
     const regionPharmacies = this.pharmacies.filter(p => p.regionId === summary.region.id);
     this.pharmacieSummaries = regionPharmacies.map(pharmacie => {
@@ -479,6 +489,7 @@ export class AdminRegionsComponent implements OnInit {
   // Niveau 2 → 3
   selectPharmacie(ps: PharmacieSummary) {
     this.selectedPharmacie = ps;
+    this.pharmacieScope = { type: 'pharmacie', id: ps.pharmacie.id, label: ps.pharmacie.nom };
     this.filterYear = 0;
     this.filterStatut = '';
     this.level = 'factures';
@@ -489,6 +500,7 @@ export class AdminRegionsComponent implements OnInit {
     if (this.level === 'factures') {
       this.level = 'pharmacies';
       this.selectedPharmacie = null;
+      this.pharmacieScope = null;
     } else if (this.level === 'pharmacies') {
       this.goToRegions();
     }
@@ -498,6 +510,8 @@ export class AdminRegionsComponent implements OnInit {
     this.level = 'regions';
     this.selectedRegion = null;
     this.selectedPharmacie = null;
+    this.regionScope = null;
+    this.pharmacieScope = null;
     this.pharmacieSummaries = [];
   }
 
@@ -505,6 +519,7 @@ export class AdminRegionsComponent implements OnInit {
     if (!this.selectedRegion) return;
     this.level = 'pharmacies';
     this.selectedPharmacie = null;
+    this.pharmacieScope = null;
   }
 
   getMonthName(mois: number): string {

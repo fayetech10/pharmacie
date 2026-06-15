@@ -18,9 +18,14 @@ export class StatsService {
     return this.api.get<StatsData>('/stats/national');
   }
 
-  getEvolutionMensuelle(annee: number, regionId?: string): Observable<MonthData[]> {
+  getStatsPharmacie(pharmacieId: string): Observable<StatsData> {
+    return this.api.get<StatsData>(`/stats/pharmacie?pharmacieId=${pharmacieId}`);
+  }
+
+  getEvolutionMensuelle(annee: number, regionId?: string, pharmacieId?: string): Observable<MonthData[]> {
     let url = `/stats/evolution?annee=${annee}`;
     if (regionId) url += `&regionId=${regionId}`;
+    if (pharmacieId) url += `&pharmacieId=${pharmacieId}`;
     return this.api.get<MonthData[]>(url);
   }
 }

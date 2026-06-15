@@ -15,7 +15,7 @@ import { Pharmacie } from '../../core/models/pharmacie.model';
 import { FactureService } from '../../core/services/facture.service';
 import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
-import { StatsComponent } from '../stats/stats.component';
+import { StatsComponent, StatsScope } from '../stats/stats.component';
 
 interface PharmacieSummary {
   pharmacie: Pharmacie;
@@ -42,8 +42,10 @@ type DrillLevel = 'pharmacies' | 'factures';
     StatsComponent
   ],
   template: `
-    <!-- Statistiques de la région (vue principale uniquement) -->
+    <!-- Statistiques de la région (vue principale) -->
     <app-stats [embedded]="true" *ngIf="level === 'pharmacies'"></app-stats>
+    <!-- Tableau de bord de la pharmacie sélectionnée (drill-down) -->
+    <app-stats [embedded]="true" *ngIf="level === 'factures' && pharmacieScope" [scope]="pharmacieScope"></app-stats>
 
     <!-- Fil d'Ariane -->
     <nav class="breadcrumb">
@@ -297,6 +299,8 @@ export class RegionalFacturesComponent implements OnInit {
   // Niveau 2
   selectedPharmacie: PharmacieSummary | null = null;
   factureColumns = ['mois', 'montant', 'statut', 'action'];
+  /** Périmètre pour le tableau de bord de la pharmacie en drill-down. */
+  pharmacieScope: StatsScope | null = null;
 
   // Filtres niveau 2 (factures d'une pharmacie)
   filterYear = 0;
@@ -379,6 +383,7 @@ export class RegionalFacturesComponent implements OnInit {
   // Niveau 1 → 2
   selectPharmacie(ps: PharmacieSummary) {
     this.selectedPharmacie = ps;
+    this.pharmacieScope = { type: 'pharmacie', id: ps.pharmacie.id, label: ps.pharmacie.nom };
     this.filterYear = 0;
     this.filterStatut = '';
     this.level = 'factures';
@@ -394,6 +399,7 @@ export class RegionalFacturesComponent implements OnInit {
   goToPharmacies() {
     this.level = 'pharmacies';
     this.selectedPharmacie = null;
+    this.pharmacieScope = null;
   }
 
   getMonthName(mois: number): string {
