@@ -385,7 +385,9 @@ export class MainLayoutComponent implements OnInit {
 
   /** Le rôle courant affiche-t-il des badges de comptage ? */
   private get countsEnabled(): boolean {
-    return this.authService.isServiceRegional() || this.authService.isServiceCentral();
+    return this.authService.isServiceRegional()
+      || this.authService.isServiceCentral()
+      || this.authService.isPharmacien();
   }
 
   /** Somme des compteurs des statuts associés à un item de navigation. */
@@ -412,7 +414,7 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isPharmacien()) {
       return [
         { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', tab: 0 },
-        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1 },
+        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1, statuts: ['REJETEE_SR', 'REJETEE_NC'] },
         { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
       ];
     }

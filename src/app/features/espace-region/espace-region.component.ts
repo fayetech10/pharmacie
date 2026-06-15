@@ -188,8 +188,13 @@ export class EspaceRegionComponent implements OnInit {
     });
     this.route.queryParamMap.subscribe(params => {
       this.selectedTab = +(params.get('tab') ?? 0);
+      this.markActiveTabSeen();
     });
-    this.factureCount.counts$.subscribe(c => this.counts = c);
+    this.factureCount.counts$.subscribe(c => {
+      this.counts = c;
+      // Une fois les compteurs chargés, on efface d'emblée le badge de l'onglet ouvert.
+      this.markActiveTabSeen();
+    });
     this.factureCount.refresh();
   }
 
@@ -199,5 +204,31 @@ export class EspaceRegionComponent implements OnInit {
       queryParams: { tab: index },
       replaceUrl: true
     });
+  }
+
+  /** Statuts couverts par l'onglet actif (l'index change selon mobile/desktop). */
+  private statusesForActiveTab(): string[] {
+    if (this.isMobile) {
+      switch (this.selectedTab) {
+        case 1: return ['ENVOYEE'];
+        case 2: return ['VALIDEE_SR', 'VALIDEE_NC'];
+        case 3: return ['REJETEE_SR', 'REJETEE_NC'];
+        default: return [];
+      }
+    }
+    switch (this.selectedTab) {
+      case 1: return ['ENVOYEE'];
+      case 2: return ['VALIDEE_SR'];
+      case 3: return ['VALIDEE_NC'];
+      case 4: return ['REJETEE_SR'];
+      case 5: return ['REJETEE_NC'];
+      default: return [];
+    }
+  }
+
+  /** Marque les factures de l'onglet actif comme vues → son badge disparaît. */
+  private markActiveTabSeen(): void {
+    const statuses = this.statusesForActiveTab();
+    if (statuses.length) this.factureCount.markSeen(statuses);
   }
 }

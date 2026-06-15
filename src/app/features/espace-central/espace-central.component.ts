@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { AdminRegionsComponent } from '../admin-regions/admin-regions.component';
 import { FacturesListComponent } from '../factures/factures-list/factures-list.component';
+import { FactureCountService } from '../../core/services/facture-count.service';
 
 @Component({
   selector: 'app-espace-central',
@@ -66,12 +67,19 @@ import { FacturesListComponent } from '../factures/factures-list/factures-list.c
 export class EspaceCentralComponent implements OnInit {
   selectedTab = 0;
 
-  constructor(private route: ActivatedRoute, private router: Router) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private factureCount: FactureCountService
+  ) {}
 
   ngOnInit() {
     this.route.queryParamMap.subscribe(params => {
       this.selectedTab = +(params.get('tab') ?? 0);
+      this.markActiveTabSeen();
     });
+    // Les compteurs sont rafraîchis par le layout ; on efface le badge de l'onglet ouvert.
+    this.factureCount.counts$.subscribe(() => this.markActiveTabSeen());
   }
 
   onTabChange(index: number) {
@@ -80,5 +88,22 @@ export class EspaceCentralComponent implements OnInit {
       queryParams: { tab: index },
       replaceUrl: true
     });
+  }
+
+  /** Statuts couverts par chaque onglet (pour le marquage « vu » des badges). */
+  private statusesForTab(index: number): string[] {
+    switch (index) {
+      case 1: return ['VALIDEE_SR'];
+      case 2: return ['VALIDEE_NC'];
+      case 3: return ['PAYEE'];
+      case 4: return ['REJETEE_NC'];
+      default: return [];
+    }
+  }
+
+  /** Marque les factures de l'onglet actif comme vues → son badge disparaît. */
+  private markActiveTabSeen(): void {
+    const statuses = this.statusesForTab(this.selectedTab);
+    if (statuses.length) this.factureCount.markSeen(statuses);
   }
 }

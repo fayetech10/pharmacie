@@ -9,19 +9,17 @@ import { Router } from '@angular/router';
 })
 export class AuthService {
   private readonly USER_KEY = 'csu_user';
-  private readonly EXPIRY_KEY = 'csu_session_expiry';
-  /** Durée de validité d'une session : 1 jour. */
-  private readonly SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+  /** Ancienne clé d'horodatage (sessions historiques) : purgée au nettoyage. */
+  private readonly LEGACY_EXPIRY_KEY = 'csu_session_expiry';
+  /** Délai maximal d'un setTimeout (entier 32 bits signé, ~24,8 jours). */
+  private readonly MAX_TIMEOUT_MS = 2_147_483_647;
   /** Minuteur de déconnexion automatique à l'expiration du token. */
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private api: ApiService, private router: Router) {
-    // Au démarrage de l'application, on vérifie l'état de la session existante.
-    if (localStorage.getItem(this.USER_KEY)) {
-      if (!localStorage.getItem(this.EXPIRY_KEY)) {
-        // Session héritée (sans horodatage) : on lui accorde une fenêtre d'1 jour.
-        this.setExpiry();
-      }
+    // Au démarrage de l'application, on vérifie l'état de la session existante
+    // à partir de l'expiration réelle du token JWT.
+    if (this.getRawToken()) {
       if (this.isSessionExpired()) {
         // Déjà expirée : on purge. Le guard redirigera vers la connexion.
         this.clearSession();
@@ -35,7 +33,7 @@ export class AuthService {
     return this.api.post<LoginResponse>('/auth/login', request).pipe(
       tap(res => {
         localStorage.setItem(this.USER_KEY, JSON.stringify(res));
-        this.setExpiry();
+        // L'expiration est désormais déduite du token : aucun horodatage séparé à poser.
         this.scheduleAutoLogout();
       })
     );
@@ -65,10 +63,12 @@ export class AuthService {
     return !!this.getCurrentUser();
   }
 
-  /** Vrai si la session possède un horodatage d'expiration dépassé. */
+  /** Vrai si le token est absent/illisible ou si son expiration est dépassée. */
   isSessionExpired(): boolean {
     const expiry = this.getExpiry();
-    return expiry > 0 && Date.now() >= expiry;
+    // Token présent mais expiration illisible → considéré expiré (token corrompu).
+    if (expiry <= 0) return true;
+    return Date.now() >= expiry;
   }
 
   getToken(): string | null {
@@ -91,16 +91,46 @@ export class AuthService {
     return this.isServiceRegional();
   }
 
-  // ----- Gestion de l'expiration -----
+  // ----- Gestion de l'expiration (basée sur le token JWT) -----
 
-  /** Enregistre l'instant d'expiration : maintenant + 1 jour. */
-  private setExpiry(): void {
-    localStorage.setItem(this.EXPIRY_KEY, String(Date.now() + this.SESSION_DURATION_MS));
+  /** Lit le token brut depuis le stockage, sans contrôle d'expiration (évite la récursion). */
+  private getRawToken(): string | null {
+    const userStr = localStorage.getItem(this.USER_KEY);
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr).token ?? null;
+    } catch {
+      return null;
+    }
   }
 
+  /** Instant d'expiration (ms epoch) de la session, déduit du claim `exp` du token. */
   private getExpiry(): number {
-    const v = localStorage.getItem(this.EXPIRY_KEY);
-    return v ? +v : 0;
+    const token = this.getRawToken();
+    return token ? this.decodeTokenExpiry(token) : 0;
+  }
+
+  /**
+   * Décode le claim `exp` (en secondes) du JWT et le convertit en ms epoch.
+   * Renvoie 0 si le token est malformé ou dépourvu d'expiration.
+   */
+  private decodeTokenExpiry(token: string): number {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return 0;
+      // base64url -> base64, puis décodage UTF-8 robuste.
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const claims = JSON.parse(json);
+      return typeof claims.exp === 'number' ? claims.exp * 1000 : 0;
+    } catch {
+      return 0;
+    }
   }
 
   /**
@@ -117,13 +147,18 @@ export class AuthService {
       this.logout();
       return;
     }
-    this.expiryTimer = setTimeout(() => this.logout(), remaining);
+    // setTimeout est borné à ~24,8 jours : au-delà, on reprogramme par paliers.
+    const delay = Math.min(remaining, this.MAX_TIMEOUT_MS);
+    this.expiryTimer = setTimeout(
+      () => (delay < remaining ? this.scheduleAutoLogout() : this.logout()),
+      delay
+    );
   }
 
   /** Vide la session locale et annule le minuteur (sans redirection). */
   private clearSession(): void {
     localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem(this.EXPIRY_KEY);
+    localStorage.removeItem(this.LEGACY_EXPIRY_KEY);
     if (this.expiryTimer) {
       clearTimeout(this.expiryTimer);
       this.expiryTimer = null;

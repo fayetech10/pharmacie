@@ -60,6 +60,11 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
         </span>
       </div>
 
+      <!-- Service Régional : factures de la région en tête (avant KPI et graphiques) -->
+      <ng-container *ngIf="authService.isServiceRegional()">
+        <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
+      </ng-container>
+
       <!-- KPI Cards -->
       <div class="kpi-grid" *ngIf="!authService.isPharmacien()">
         <div class="kpi-card accent-blue">
@@ -259,10 +264,6 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
               </div>
             </div>
 
-            <div class="hint-empty" *ngIf="patientLignes.length === 0">
-              <mat-icon>info_outline</mat-icon>
-              <span>Recherchez un médicament, renseignez quantité et prix, puis cliquez sur « Préparer ».</span>
-            </div>
               </div>
             </div>
 
@@ -409,54 +410,12 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
           </div>
         </div>
 
-        <!-- Listes : factures récentes + top pharmacies -->
-        <div class="two-col-grid">
-          <!-- Recent Factures -->
-          <div class="section-card">
-            <div class="section-header">
-              <div class="section-title-group">
-                <mat-icon class="section-icon">receipt_long</mat-icon>
-                <h2>Factures récentes</h2>
-              </div>
-              <a class="btn btn-outline btn-sm" [routerLink]="authService.isServiceRegional() ? '/dashboard/factures-regionales' : '/dashboard/regions'">
-                Voir tout <mat-icon>arrow_forward</mat-icon>
-              </a>
-            </div>
-            <div class="table-body">
-              <table mat-table [dataSource]="recentFactures" class="w-100">
-                <ng-container matColumnDef="pharmacie">
-                  <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
-                  <td mat-cell *matCellDef="let f"> {{ f.pharmacieNom }} </td>
-                </ng-container>
-
-                <ng-container matColumnDef="montant">
-                  <th mat-header-cell *matHeaderCellDef> Montant </th>
-                  <td mat-cell *matCellDef="let f"> <strong>{{ f.montantTotal | number }} CFA</strong> </td>
-                </ng-container>
-
-                <ng-container matColumnDef="statut">
-                  <th mat-header-cell *matHeaderCellDef> Statut </th>
-                  <td mat-cell *matCellDef="let f"> <app-status-badge [statut]="f.statut"></app-status-badge> </td>
-                </ng-container>
-
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let f">
-                    <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]">
-                      <mat-icon>visibility</mat-icon>
-                    </a>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-              </table>
-              <div class="empty-state" *ngIf="recentFactures.length === 0">
-                <mat-icon>receipt_long</mat-icon>
-                <p>Aucune facture récente</p>
-              </div>
-            </div>
-          </div>
+        <!-- Listes : factures + top pharmacies -->
+        <div class="two-col-grid" [class.single-col]="authService.isServiceRegional()">
+          <!-- Factures : ici pour les autres rôles ; le Service Régional les voit en tête de page -->
+          <ng-container *ngIf="!authService.isServiceRegional()">
+            <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
+          </ng-container>
 
           <!-- Top pharmacies -->
           <div class="section-card">
@@ -486,6 +445,55 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
           </div>
         </div>
       </ng-container>
+
+      <!-- Carte « Factures » réutilisée : en tête pour le Service Régional, sinon dans la grille du bas -->
+      <ng-template #facturesCard>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <mat-icon class="section-icon">receipt_long</mat-icon>
+              <h2>{{ authService.isServiceRegional() ? 'Factures de la région' : 'Factures récentes' }}</h2>
+            </div>
+            <a class="btn btn-outline btn-sm" [routerLink]="authService.isServiceRegional() ? '/dashboard/factures-regionales' : '/dashboard/regions'">
+              Voir tout <mat-icon>arrow_forward</mat-icon>
+            </a>
+          </div>
+          <div class="table-body">
+            <table mat-table [dataSource]="recentFactures" class="w-100">
+              <ng-container matColumnDef="pharmacie">
+                <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
+                <td mat-cell *matCellDef="let f"> {{ f.pharmacieNom }} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="montant">
+                <th mat-header-cell *matHeaderCellDef> Montant </th>
+                <td mat-cell *matCellDef="let f"> <strong>{{ f.montantTotal | number }} CFA</strong> </td>
+              </ng-container>
+
+              <ng-container matColumnDef="statut">
+                <th mat-header-cell *matHeaderCellDef> Statut </th>
+                <td mat-cell *matCellDef="let f"> <app-status-badge [statut]="f.statut"></app-status-badge> </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let f">
+                  <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]">
+                    <mat-icon>visibility</mat-icon>
+                  </a>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+            <div class="empty-state" *ngIf="recentFactures.length === 0">
+              <mat-icon>receipt_long</mat-icon>
+              <p>Aucune facture récente</p>
+            </div>
+          </div>
+        </div>
+      </ng-template>
 
       <!-- Visionneuse plein écran d'une pièce justificative -->
       <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
@@ -602,6 +610,8 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       grid-template-columns: 1fr 1fr;
       gap: 24px;
     }
+    /* Service Régional : la grille ne contient plus que Top pharmacies → pleine largeur */
+    .two-col-grid.single-col { grid-template-columns: 1fr; }
 
     /* Classement Top pharmacies */
     .ranking { padding: 12px 20px 20px; }
@@ -910,20 +920,6 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
       box-shadow: 0 12px 26px -8px rgba(5, 150, 105, 0.7);
       transform: translateY(-1px);
     }
-
-    .hint-empty {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 16px;
-      padding: 12px 14px;
-      background: var(--primary-light);
-      border: 1px dashed var(--primary-200);
-      border-radius: var(--radius);
-      color: var(--primary-dark);
-      font-size: 13px;
-    }
-    .hint-empty mat-icon { font-size: 19px; width: 19px; height: 19px; color: var(--primary); }
 
     /* Alerte médicament exclu */
     .exclu-alert {
