@@ -12,6 +12,22 @@
         </div>
       </div>
 
+      <!-- Bandeau de synthèse -->
+      <div class="summary-strip" *ngIf="users.length">
+        <div class="sum-pill">
+          <div class="sum-ic blue"><mat-icon>group</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumUsers | number:'1.0-0':'fr' }}</span><span class="sum-cap">Utilisateurs</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic green"><mat-icon>local_pharmacy</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumPharmaciens | number:'1.0-0':'fr' }}</span><span class="sum-cap">Pharmaciens</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic violet"><mat-icon>verified_user</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumActifs | number:'1.0-0':'fr' }}</span><span class="sum-cap">Comptes actifs</span></div>
+        </div>
+      </div>
+
       <!-- Tableau (desktop) -->
       <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="users" class="w-100">
@@ -118,7 +134,7 @@
         <mat-card class="modal-card">
           <div class="modal-header">
             <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un utilisateur</h2>
-            <button class="close-btn" (click)="closeModal()">
+            <button class="close-btn" (click)="closeModal()" type="button" aria-label="Fermer">
               <mat-icon>close</mat-icon>
             </button>
           </div>

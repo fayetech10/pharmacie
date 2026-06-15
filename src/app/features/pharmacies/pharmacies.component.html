@@ -27,6 +27,22 @@
         </div>
       </div>
 
+      <!-- Bandeau de synthèse -->
+      <div class="summary-strip" *ngIf="dataSource && dataSource.filteredData.length">
+        <div class="sum-pill">
+          <div class="sum-ic blue"><mat-icon>local_pharmacy</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumPharmacies | number:'1.0-0':'fr' }}</span><span class="sum-cap">Pharmacies</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic green"><mat-icon>check_circle</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumActives | number:'1.0-0':'fr' }}</span><span class="sum-cap">Actives</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic violet"><mat-icon>map</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumRegions | number:'1.0-0':'fr' }}</span><span class="sum-cap">Régions couvertes</span></div>
+        </div>
+      </div>
+
       <!-- Récapitulatif du dernier import -->
       <div class="import-result" *ngIf="importResult" [class.has-errors]="importResult.echecs > 0">
         <div class="import-result-head">
@@ -142,7 +158,7 @@
       <div class="modal-card">
         <div class="modal-header">
           <h2>{{ editMode ? 'Modifier la' : 'Nouvelle' }} pharmacie</h2>
-          <button class="close-btn" (click)="closeModal()" type="button">
+          <button class="close-btn" (click)="closeModal()" type="button" aria-label="Fermer">
             <mat-icon>close</mat-icon>
           </button>
         </div>

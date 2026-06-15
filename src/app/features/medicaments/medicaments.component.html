@@ -25,6 +25,22 @@
         </div>
       </div>
 
+      <!-- Bandeau de synthèse -->
+      <div class="summary-strip" *ngIf="dataSource && dataSource.filteredData.length">
+        <div class="sum-pill">
+          <div class="sum-ic blue"><mat-icon>medication</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumMeds | number:'1.0-0':'fr' }}</span><span class="sum-cap">Médicaments</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic green"><mat-icon>check_circle</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumEligibles | number:'1.0-0':'fr' }}</span><span class="sum-cap">Éligibles</span></div>
+        </div>
+        <div class="sum-pill">
+          <div class="sum-ic red"><mat-icon>block</mat-icon></div>
+          <div class="sum-body"><span class="sum-val">{{ sumExclus | number:'1.0-0':'fr' }}</span><span class="sum-cap">Exclus</span></div>
+        </div>
+      </div>
+
       <!-- Tableau (desktop) -->
       <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="dataSource" matSort class="w-100">

@@ -752,3 +752,43 @@ button, a { transition: all var(--transition); }
 
 /* Anneau de focus accessible */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Bandeau de synthèse réutilisable (listes : factures, pharmacies, utilisateurs, médicaments) */
+.summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.summary-strip.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.sum-pill {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: var(--shadow-sm);
+}
+.sum-ic { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sum-ic mat-icon { font-size: 20px; width: 20px; height: 20px; }
+.sum-ic.blue   { background: #DBEAFE; color: #2563EB; }
+.sum-ic.green  { background: var(--primary-100); color: var(--primary); }
+.sum-ic.violet { background: #EDE9FE; color: #7C3AED; }
+.sum-ic.amber  { background: #FEF3C7; color: #D97706; }
+.sum-ic.red    { background: var(--warn-light); color: var(--warn); }
+.sum-body { display: flex; flex-direction: column; min-width: 0; }
+.sum-val { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-val small { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.sum-cap { font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 900px) { .summary-strip.cols-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .summary-strip, .summary-strip.cols-4 { grid-template-columns: 1fr; gap: 10px; } }
+
+/* Chiffres tabulaires : alignement et stabilité des données (montants, compteurs, tables) */
+.mat-mdc-table, .mat-mdc-cell, .mat-mdc-header-cell,
+.kpi-value, .stat-pill-val, .m-amount, .rank-amount, .rank-sub,
+.entity-sub, .donut-total, .funnel-count, .trend, .badge-count {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Accessibilité : respect des préférences de mouvement réduit (tout le projet) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

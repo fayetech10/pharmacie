@@ -189,6 +189,6 @@
 
     <!-- Visionneuse plein écran d'une pièce justificative -->
     <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
-      <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+      <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
       <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
     </div>

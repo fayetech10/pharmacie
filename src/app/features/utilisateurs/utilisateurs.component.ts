@@ -78,6 +78,11 @@ export class UtilisateursComponent implements OnInit {
     });
   }
 
+  // ----- Synthèse -----
+  get sumUsers(): number { return this.users.length; }
+  get sumPharmaciens(): number { return this.users.filter(u => u.role === Role.PHARMACIEN).length; }
+  get sumActifs(): number { return this.users.filter(u => u.actif).length; }
+
   loadMetadata() {
     this.regionService.getAll().subscribe(data => this.regions = data);
     this.pharmacieService.getAll().subscribe(data => this.pharmacies = data);

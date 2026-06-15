@@ -20,6 +20,12 @@
     .kpi-icon.violet { background: #EDE9FE; color: #7C3AED; }
     .kpi-icon.amber  { background: #FEF3C7; color: #D97706; }
     .kpi-foot { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    /* Sparkline : tendance mensuelle de l'année en cours, au sein de la carte KPI */
+    .spark { width: 100%; height: 26px; margin-top: 8px; display: block; }
+    .spark-line { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .spark-area { fill: var(--primary); opacity: 0.10; stroke: none; }
+    .spark.blue .spark-line { stroke: #2563EB; }
+    .spark.blue .spark-area { fill: #2563EB; }
     .trend { display: inline-flex; align-items: center; gap: 1px; font-size: 11.5px; font-weight: 700; margin-left: 6px; padding: 1px 6px; border-radius: 999px; }
     .trend mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .trend.up { color: var(--primary); background: var(--primary-100); }
@@ -43,6 +49,11 @@
     .perf-card.bad  .perf-bar span { background: var(--warn); }
     .perf-card.ok   .perf-value { color: var(--primary-hover); }
     .perf-card.bad  .perf-value { color: var(--warn); }
+    /* Pastille de statut (texte) : l'information n'est pas portée par la couleur seule */
+    .perf-status { margin-left: auto; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .perf-card.ok   .perf-status { background: var(--primary-100); color: var(--primary-hover); }
+    .perf-card.warn .perf-status { background: #FEF3C7; color: #B45309; }
+    .perf-card.bad  .perf-status { background: var(--warn-light); color: var(--warn); }
 
     /* Grilles graphiques */
     .analytics-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-bottom: 24px; }
@@ -82,6 +93,10 @@
     .funnel-conv { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
     .funnel-bar { height: 22px; border-radius: 7px; background: var(--border-light); overflow: hidden; }
     .funnel-bar span { display: block; height: 100%; border-radius: 7px; transition: width 0.6s ease; }
+    /* Goulot d'étranglement : étape avec la plus forte déperdition */
+    .funnel-row.bottleneck .funnel-bar { box-shadow: 0 0 0 2px var(--warn-light); }
+    .bottleneck-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; font-size: 10px; font-weight: 700; color: var(--warn); background: var(--warn-light); padding: 1px 7px 1px 4px; border-radius: 999px; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.02em; }
+    .bottleneck-tag mat-icon { font-size: 12px; width: 12px; height: 12px; }
 
     /* Classements */
     .ranking { padding: 12px 20px 20px; }
@@ -127,7 +142,23 @@
       border-color: var(--text-muted);
     }
 
+    /* Chiffres tabulaires : alignement et stabilité des données (style data-dense) */
+    .kpi-value, .perf-value, .donut-total, .funnel-count, .rank-amount, .rank-sub, .legend b, .trend {
+      font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1;
+    }
+
+    /* Focus clavier visible (accessibilité) */
+    .chart-toggle button:focus-visible, .btn-retry:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
     @media (max-width: 1100px) { .analytics-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px)  { .perf-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px)  { .perf-grid { grid-template-columns: 1fr; } }
+
+    /* Respect des préférences de mouvement réduit */
+    @media (prefers-reduced-motion: reduce) {
+      .perf-bar span, .funnel-bar span, .rank-bar span,
+      .chart-toggle button, .btn-retry, .spin-animation {
+        transition: none !important; animation: none !important;
+      }
+    }
   

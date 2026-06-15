@@ -110,6 +110,17 @@ export class FacturesListComponent implements OnInit {
     return data.slice(start, start + this.paginator.pageSize);
   }
 
+  // ----- Synthèse (basée sur les factures filtrées affichées) -----
+  get summaryCount(): number {
+    return this.dataSource?.filteredData?.length ?? 0;
+  }
+  get summaryMontant(): number {
+    return (this.dataSource?.filteredData ?? []).reduce((sum, f) => sum + f.montantTotal, 0);
+  }
+  get summaryCsu(): number {
+    return Math.round(this.summaryMontant / 2);
+  }
+
   openFacture(id: string) {
     this.router.navigate(['/dashboard/factures', id]);
   }

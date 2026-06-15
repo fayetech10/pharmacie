@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnChanges, DestroyRef, inject } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 import { StatsService } from '../../core/services/stats.service';
 import { FactureEventsService } from '../../core/services/facture-events.service';
@@ -39,7 +40,7 @@ interface FunnelStage {
 @Component({
   selector: 'app-stats',
   standalone: true,
-  imports: [CommonModule, MatIconModule, BaseChartDirective],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, BaseChartDirective],
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.css']
 })
@@ -63,6 +64,10 @@ export class StatsComponent implements OnInit, OnChanges {
   // Tendances (à date, N vs N-1)
   montantTrend: number | null = null;
   countTrend: number | null = null;
+
+  // Mini-courbes (sparklines) de l'année en cours pour les cartes KPI
+  montantSpark: { line: string; area: string } = { line: '', area: '' };
+  countSpark: { line: string; area: string } = { line: '', area: '' };
 
   // Indicateurs de performance
   perfs: PerfIndicator[] = [];
@@ -368,6 +373,8 @@ export class StatsComponent implements OnInit, OnChanges {
         this.evoCur = cur || [];
         this.evoPrev = prev || [];
         this.computeTrends();
+        this.montantSpark = this.sparkPath(this.evoCur.map(d => d.montantTotal));
+        this.countSpark = this.sparkPath(this.evoCur.map(d => d.nombreFactures));
         this.buildEvolutionChart();
         this.isLineReady = true;
       },
@@ -376,6 +383,22 @@ export class StatsComponent implements OnInit, OnChanges {
         this.error = true;
       }
     });
+  }
+
+  /** Construit un tracé SVG (ligne + aire) de sparkline à partir de valeurs mensuelles. */
+  private sparkPath(values: number[]): { line: string; area: string } {
+    const w = 120, h = 32, pad = 2;
+    if (!values.length) return { line: '', area: '' };
+    const max = Math.max(...values), min = Math.min(...values);
+    const range = max - min || 1;
+    const stepX = (w - pad * 2) / Math.max(values.length - 1, 1);
+    const pts = values.map((v, i) => [
+      pad + i * stepX,
+      pad + (h - pad * 2) * (1 - (v - min) / range)
+    ]);
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+    const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${h} L${pts[0][0].toFixed(1)} ${h} Z`;
+    return { line, area };
   }
 
   /** Tendances à date : cumul jan→mois courant, N vs N-1. */

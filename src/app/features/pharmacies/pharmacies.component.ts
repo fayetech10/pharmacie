@@ -83,6 +83,11 @@ export class PharmaciesComponent implements OnInit {
     return data.slice(start, start + this.paginator.pageSize);
   }
 
+  // ----- Synthèse -----
+  get sumPharmacies(): number { return this.dataSource?.filteredData?.length ?? 0; }
+  get sumActives(): number { return (this.dataSource?.filteredData ?? []).filter(p => p.actif).length; }
+  get sumRegions(): number { return new Set((this.dataSource?.filteredData ?? []).map(p => p.regionId)).size; }
+
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.dataSource.filter = filterValue.trim().toLowerCase();

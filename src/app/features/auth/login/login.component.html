@@ -10,7 +10,13 @@
           </span>
           <h2>Gestion des Factures Pharmaceutiques</h2>
           <p>Couverture Sanitaire Universelle · Sénégal</p>
+          <ul class="brand-features">
+            <li><mat-icon>insights</mat-icon> Suivi des factures en temps réel</li>
+            <li><mat-icon>verified_user</mat-icon> Validation régionale &amp; centrale</li>
+            <li><mat-icon>lock</mat-icon> Données sécurisées et traçables</li>
+          </ul>
         </div>
+        <span class="brand-foot">© {{ year }} SEN-CSU · Tous droits réservés</span>
       </aside>
 
       <!-- Panneau formulaire -->
@@ -52,6 +58,8 @@
               <span *ngIf="!isLoading">Se connecter</span>
             </button>
           </form>
+
+          <p class="form-foot"><mat-icon>shield</mat-icon> Connexion sécurisée et chiffrée</p>
         </div>
       </section>
     </div>

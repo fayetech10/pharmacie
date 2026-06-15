@@ -2,7 +2,7 @@
       <!-- Header -->
       <div class="detail-header">
         <div class="header-left">
-          <button class="back-btn" (click)="goBack()">
+          <button class="back-btn" (click)="goBack()" type="button" aria-label="Retour">
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div>
@@ -205,7 +205,7 @@
               <h3>Dossier — {{ dossierPatient.nom || '-' }}</h3>
               <span class="dossier-modal-mat">{{ dossierPatient.matricule || '-' }}</span>
             </div>
-            <button class="dossier-modal-close" (click)="dossierPatient = null"><mat-icon>close</mat-icon></button>
+            <button class="dossier-modal-close" (click)="dossierPatient = null" type="button" aria-label="Fermer le dossier"><mat-icon>close</mat-icon></button>
           </div>
           <div class="dossier-modal-body">
             <ng-container *ngFor="let p of photoFields">
@@ -220,7 +220,7 @@
 
       <!-- Visionneuse plein écran -->
       <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
-        <button type="button" class="viewer-close"><mat-icon>close</mat-icon></button>
+        <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
         <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
       </div>
     </div>

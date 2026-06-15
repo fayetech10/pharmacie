@@ -46,6 +46,11 @@ export class MedicamentsComponent implements OnInit {
     return data.slice(start, start + this.paginator.pageSize);
   }
 
+  // ----- Synthèse -----
+  get sumMeds(): number { return this.dataSource?.filteredData?.length ?? 0; }
+  get sumEligibles(): number { return (this.dataSource?.filteredData ?? []).filter(m => String(m.statut) === 'ELIGIBLE').length; }
+  get sumExclus(): number { return (this.dataSource?.filteredData ?? []).filter(m => String(m.statut) === 'EXCLU').length; }
+
   loadMedicaments() {
     this.medicamentService.getAll().subscribe(data => {
       this.medicaments = data;

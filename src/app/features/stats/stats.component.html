@@ -20,6 +20,10 @@
               </span>
             </span>
             <span class="kpi-foot" *ngIf="montantTrend !== null">vs {{ prevYear }} (à date)</span>
+            <svg class="spark" *ngIf="montantSpark.line" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <path class="spark-area" [attr.d]="montantSpark.area"></path>
+              <path class="spark-line" [attr.d]="montantSpark.line"></path>
+            </svg>
           </div>
         </div>
 
@@ -42,6 +46,10 @@
               </span>
             </span>
             <span class="kpi-foot" *ngIf="countTrend !== null">vs {{ prevYear }} (à date)</span>
+            <svg class="spark blue" *ngIf="countSpark.line" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <path class="spark-area" [attr.d]="countSpark.area"></path>
+              <path class="spark-line" [attr.d]="countSpark.line"></path>
+            </svg>
           </div>
         </div>
 
@@ -77,12 +85,13 @@
               <h2>Évolution {{ chartYear }} vs {{ prevYear }}</h2>
             </div>
             <div class="chart-toggle">
-              <button type="button" [class.active]="chartMode === 'montant'" (click)="setChartMode('montant')">Montant</button>
-              <button type="button" [class.active]="chartMode === 'nombre'" (click)="setChartMode('nombre')">Nombre</button>
+              <button type="button" [class.active]="chartMode === 'montant'" [attr.aria-pressed]="chartMode === 'montant'" aria-label="Afficher le montant" (click)="setChartMode('montant')">Montant</button>
+              <button type="button" [class.active]="chartMode === 'nombre'" [attr.aria-pressed]="chartMode === 'nombre'" aria-label="Afficher le nombre de factures" (click)="setChartMode('nombre')">Nombre</button>
             </div>
           </div>
           <div class="chart-pad line-body">
             <canvas baseChart *ngIf="isLineReady"
+              role="img" [attr.aria-label]="lineAria"
               [data]="lineChartData"
               [options]="lineChartOptions"
               [type]="'line'">
@@ -100,7 +109,7 @@
           </div>
           <div class="chart-pad donut-body">
             <div class="donut-wrap" *ngIf="hasStatusData; else noStatus">
-              <canvas baseChart [data]="pieChartData" [options]="pieChartOptions" [type]="'doughnut'"></canvas>
+              <canvas baseChart role="img" [attr.aria-label]="donutAria" [data]="pieChartData" [options]="pieChartOptions" [type]="'doughnut'"></canvas>
               <div class="donut-center">
                 <span class="donut-total">{{ s.nombreFactures }}</span>
                 <span class="donut-cap">factures</span>
@@ -130,9 +139,11 @@
             </div>
           </div>
           <div class="funnel" *ngIf="funnel.length && funnel[0].count > 0; else noFunnel">
-            <div class="funnel-row" *ngFor="let f of funnel">
+            <div class="funnel-row" *ngFor="let f of funnel" [class.bottleneck]="f.bottleneck">
               <div class="funnel-top">
-                <span class="funnel-label">{{ f.label }}</span>
+                <span class="funnel-label">{{ f.label }}
+                  <span class="bottleneck-tag" *ngIf="f.bottleneck" matTooltip="Plus forte déperdition du parcours"><mat-icon>priority_high</mat-icon> goulot</span>
+                </span>
                 <span class="funnel-count">{{ f.count | number:'1.0-0':'fr' }}
                   <small *ngIf="f.conv !== null" class="funnel-conv">({{ f.conv }}%)</small>
                 </span>
@@ -153,7 +164,7 @@
             </div>
           </div>
           <div class="chart-pad bar-body" *ngIf="hasMedData; else noMed">
-            <canvas baseChart [data]="medChartData" [options]="medChartOptions" [type]="'bar'"></canvas>
+            <canvas baseChart role="img" [attr.aria-label]="medAria" [data]="medChartData" [options]="medChartOptions" [type]="'bar'"></canvas>
           </div>
           <ng-template #noMed>
             <div class="empty-state"><mat-icon>medication</mat-icon><p>Aucune ligne de médicament</p></div>
