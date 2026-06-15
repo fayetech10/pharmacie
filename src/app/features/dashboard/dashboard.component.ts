@@ -475,7 +475,7 @@ export class DashboardComponent implements OnInit {
         this.wizardStep = 0; // retour à l'étape « médicaments » pour le patient suivant
         this.isSubmitting = false;
         this.snackBar.open('Patient et médicaments ajoutés à la facture', 'OK', { duration: 3000 });
-        this.loadData(); // refresh KPIs and list
+        this.loadData(); 
       },
       error: (err) => {
         this.isSubmitting = false;

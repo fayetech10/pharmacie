@@ -50,6 +50,9 @@ export class StatsComponent implements OnInit, OnChanges {
   @Input() scope?: StatsScope;
 
   s: StatsData | null = null;
+  loading = false;
+  error = false;
+  noPharmacie = false;
   chartYear = new Date().getFullYear();
   prevYear = new Date().getFullYear() - 1;
 
@@ -209,7 +212,17 @@ export class StatsComponent implements OnInit, OnChanges {
     return { type: 'national', label: 'National' };
   }
 
-  private load() {
+  load() {
+    this.noPharmacie = false;
+    if (this.activeScope.type === 'pharmacie' && !this.activeScope.id) {
+      this.noPharmacie = true;
+      this.loading = false;
+      this.s = null;
+      return;
+    }
+
+    this.loading = true;
+    this.error = false;
     this.loadStats();
     this.loadEvolution();
   }
@@ -222,30 +235,38 @@ export class StatsComponent implements OnInit, OnChanges {
   }
 
   private loadStats() {
-    this.statsObs().subscribe((data: StatsData) => {
-      this.s = data;
-      const parStatut = data.facturesParStatut || {};
+    this.statsObs().subscribe({
+      next: (data: StatsData) => {
+        this.s = data;
+        const parStatut = data.facturesParStatut || {};
 
-      // Répartition par statut (doughnut + légende)
-      this.statusBreakdown = this.statusOrder
-        .filter(s => parStatut[s])
-        .map(s => ({ statut: s, label: this.statusMeta[s].label, count: parStatut[s], color: this.statusMeta[s].color }));
-      this.hasStatusData = this.statusBreakdown.length > 0;
-      this.pieChartData = {
-        labels: this.statusBreakdown.map(s => s.label),
-        datasets: [{
-          data: this.statusBreakdown.map(s => s.count),
-          backgroundColor: this.statusBreakdown.map(s => s.color),
-          borderColor: '#fff', borderWidth: 2, hoverOffset: 6
-        }]
-      };
+        // Répartition par statut (doughnut + légende)
+        this.statusBreakdown = this.statusOrder
+          .filter(s => parStatut[s])
+          .map(s => ({ statut: s, label: this.statusMeta[s].label, count: parStatut[s], color: this.statusMeta[s].color }));
+        this.hasStatusData = this.statusBreakdown.length > 0;
+        this.pieChartData = {
+          labels: this.statusBreakdown.map(s => s.label),
+          datasets: [{
+            data: this.statusBreakdown.map(s => s.count),
+            backgroundColor: this.statusBreakdown.map(s => s.color),
+            borderColor: '#fff', borderWidth: 2, hoverOffset: 6
+          }]
+        };
 
-      this.buildPerformance(data);
-      this.buildFunnel(parStatut);
-      this.buildTopMedicaments(data.topMedicaments || []);
+        this.buildPerformance(data);
+        this.buildFunnel(parStatut);
+        this.buildTopMedicaments(data.topMedicaments || []);
 
-      this.topPharmacies = (data.topPharmacies || []).filter(p => p.montant > 0);
-      this.parRegion = data.parRegion || [];
+        this.topPharmacies = (data.topPharmacies || []).filter(p => p.montant > 0);
+        this.parRegion = data.parRegion || [];
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement statistiques:', err);
+        this.error = true;
+        this.loading = false;
+      }
     });
   }
 
@@ -342,12 +363,18 @@ export class StatsComponent implements OnInit, OnChanges {
     forkJoin({
       cur: this.statsService.getEvolutionMensuelle(this.chartYear, regionId, pharmacieId),
       prev: this.statsService.getEvolutionMensuelle(this.prevYear, regionId, pharmacieId)
-    }).subscribe(({ cur, prev }) => {
-      this.evoCur = cur || [];
-      this.evoPrev = prev || [];
-      this.computeTrends();
-      this.buildEvolutionChart();
-      this.isLineReady = true;
+    }).subscribe({
+      next: ({ cur, prev }) => {
+        this.evoCur = cur || [];
+        this.evoPrev = prev || [];
+        this.computeTrends();
+        this.buildEvolutionChart();
+        this.isLineReady = true;
+      },
+      error: (err) => {
+        console.error('Erreur chargement évolution:', err);
+        this.error = true;
+      }
     });
   }
 

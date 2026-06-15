@@ -208,7 +208,19 @@
       </div>
     </ng-container>
 
-    <div class="empty-state big" *ngIf="!s">
-      <mat-icon>analytics</mat-icon><p>Chargement des statistiques…</p>
+    <div class="empty-state big" *ngIf="loading && !error && !noPharmacie">
+      <mat-icon class="spin-animation">analytics</mat-icon>
+      <p>Chargement des statistiques…</p>
+    </div>
+
+    <div class="empty-state big error-state" *ngIf="error && !loading">
+      <mat-icon>error_outline</mat-icon>
+      <p>Impossible de charger les statistiques.</p>
+      <button class="btn-retry" (click)="load()">Réessayer</button>
+    </div>
+
+    <div class="empty-state big" *ngIf="noPharmacie">
+      <mat-icon>local_pharmacy</mat-icon>
+      <p>Aucune pharmacie n'est associée à votre compte pour afficher les statistiques.</p>
     </div>
   
