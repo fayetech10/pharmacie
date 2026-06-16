@@ -33,7 +33,7 @@
       width: 460px;
       height: 460px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(5,150,105,0.20), transparent 65%);
+      background: radial-gradient(circle, rgba(47,110,84,0.22), transparent 65%);
       bottom: -160px;
       left: -150px;
     }
@@ -99,7 +99,7 @@
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #6EE7B7;
+      color: #9FCBB4;
       flex-shrink: 0;
     }
     .brand-foot {

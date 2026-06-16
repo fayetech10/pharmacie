@@ -89,8 +89,8 @@ export class StatsComponent implements OnInit, OnChanges {
   private readonly statusMeta: Record<string, { label: string; color: string }> = {
     BROUILLON:  { label: 'Non envoyée', color: '#64748B' },
     ENVOYEE:    { label: 'Envoyée',     color: '#2563EB' },
-    VALIDEE_SR: { label: 'Validée SR',  color: '#059669' },
-    VALIDEE_NC: { label: 'Validée NC',  color: '#047857' },
+    VALIDEE_SR: { label: 'Validée SR',  color: '#2F6E54' },
+    VALIDEE_NC: { label: 'Validée NC',  color: '#1F5038' },
     PAYEE:      { label: 'Payée',       color: '#A16207' },
     REJETEE_SR: { label: 'Rejetée SR',  color: '#EA580C' },
     REJETEE_NC: { label: 'Rejetée NC',  color: '#DC2626' }
@@ -326,8 +326,8 @@ export class StatsComponent implements OnInit, OnChanges {
 
     const stages = [
       { label: 'Soumises', count: soumises, color: '#2563EB' },
-      { label: 'Validées (SR)', count: valSR, color: '#059669' },
-      { label: 'Validées (Central)', count: valNC, color: '#047857' },
+      { label: 'Validées (SR)', count: valSR, color: '#2F6E54' },
+      { label: 'Validées (Central)', count: valNC, color: '#1F5038' },
       { label: 'Payées', count: payees, color: '#A16207' }
     ];
     const base = soumises || 1;
@@ -355,7 +355,7 @@ export class StatsComponent implements OnInit, OnChanges {
       labels: top.map(m => this.truncate(m.nom, 22)),
       datasets: [{
         data: top.map(m => Math.round(m.montant)),
-        backgroundColor: '#059669', hoverBackgroundColor: '#047857',
+        backgroundColor: '#2F6E54', hoverBackgroundColor: '#1F5038',
         borderRadius: 5, barThickness: 'flex', maxBarThickness: 26
       }]
     };
@@ -425,8 +425,8 @@ export class StatsComponent implements OnInit, OnChanges {
         {
           data: this.evoCur.map(pick), label: `${this.chartYear}`,
           fill: true, tension: 0.4,
-          borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.12)',
-          pointBackgroundColor: '#059669', pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5
+          borderColor: '#2F6E54', backgroundColor: 'rgba(47,110,84,0.12)',
+          pointBackgroundColor: '#2F6E54', pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5
         },
         {
           data: this.evoPrev.map(pick), label: `${this.prevYear}`,

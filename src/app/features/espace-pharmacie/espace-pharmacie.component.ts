@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -19,6 +20,7 @@ export class EspacePharmacieComponent implements OnInit {
   selectedTab = 0;
   /** Factures non vues par statut (pour le badge « Mes factures »). */
   counts: StatutCounts = {};
+  private destroyRef = inject(DestroyRef);
 
   /** Nombre total de factures non lues. */
   get totalCount(): number {
@@ -39,15 +41,19 @@ export class EspacePharmacieComponent implements OnInit {
 
   ngOnInit() {
     // La navigation basse mobile pointe directement vers un onglet via ?tab=
-    this.route.queryParamMap.subscribe(params => {
-      this.selectedTab = +(params.get('tab') ?? 0);
-      this.markActiveTabSeen();
-    });
-    this.factureCount.counts$.subscribe(c => {
-      this.counts = c;
-      // Une fois les compteurs chargés, on efface le badge si « Mes factures » est ouvert.
-      this.markActiveTabSeen();
-    });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.selectedTab = +(params.get('tab') ?? 0);
+        this.markActiveTabSeen();
+      });
+    this.factureCount.counts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(c => {
+        this.counts = c;
+        // Une fois les compteurs chargés, on efface le badge si « Mes factures » est ouvert.
+        this.markActiveTabSeen();
+      });
     this.factureCount.refresh();
   }
 

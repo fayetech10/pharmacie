@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -71,18 +72,22 @@ export class FactureFormComponent implements OnInit {
     });
   }
 
+  private destroyRef = inject(DestroyRef);
+
   ngOnInit() {
     // Précharge le cache des médicaments pour une autocomplétion instantanée
     this.medicamentService.getAllCached().subscribe();
-    this.route.paramMap.subscribe(params => {
-      if (params.has('id')) {
-        this.isEditMode = true;
-        this.loadSpecificFacture(params.get('id')!);
-      } else {
-        this.isEditMode = false;
-        this.loadCurrentFacture();
-      }
-    });
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        if (params.has('id')) {
+          this.isEditMode = true;
+          this.loadSpecificFacture(params.get('id')!);
+        } else {
+          this.isEditMode = false;
+          this.loadCurrentFacture();
+        }
+      });
   }
 
   loadCurrentFacture() {

@@ -1,102 +1,59 @@
     <div class="dashboard-page fade-in">
-      <!-- Welcome (autres rôles uniquement) -->
-      <div class="welcome-section welcome-flex" *ngIf="!authService.isPharmacien()">
-        <div>
-          <h1>Bonjour, {{ currentUser?.prenom }} 👋</h1>
-          <p>Vue d'ensemble de l'activité CSU · {{ todayLabel }}</p>
-        </div>
-        <span class="scope-pill">
-          <mat-icon>{{ authService.isServiceRegional() ? 'place' : 'public' }}</mat-icon>
-          {{ scopeLabel }}
-        </span>
-      </div>
 
-      <!-- Service Régional : factures de la région en tête (avant KPI et graphiques) -->
-      <ng-container *ngIf="authService.isServiceRegional()">
-        <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
-      </ng-container>
+      <!-- ==================== PHARMACIEN : SAISIE & RÉSUMÉ DU MOIS ==================== -->
+      <ng-container>
 
-      <!-- KPI Cards -->
-      <div class="kpi-grid" *ngIf="!authService.isPharmacien()">
-        <div class="kpi-card accent-blue">
-          <div class="kpi-icon blue">
-            <mat-icon>receipt_long</mat-icon>
+        <!-- Accueil pharmacien + périmètre -->
+        <div class="welcome-section welcome-flex">
+          <div>
+            <h1>Bonjour, {{ currentUser?.prenom }} 👋</h1>
+            <p>Facturation du mois · {{ todayLabel }}</p>
           </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ totalFactures }}</span>
-            <span class="kpi-label">
-              Total factures
-              <span class="trend" *ngIf="countTrend !== null" [class.up]="countTrend! >= 0" [class.down]="countTrend! < 0">
-                <mat-icon>{{ countTrend! >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>{{ countTrend! >= 0 ? '+' : '' }}{{ countTrend }}%
-              </span>
-            </span>
-          </div>
+          <span class="scope-pill">
+            <mat-icon>local_pharmacy</mat-icon>
+            {{ pharmacieNom }}
+          </span>
         </div>
 
-        <div class="kpi-card accent-green">
-          <div class="kpi-icon green">
-            <mat-icon>payments</mat-icon>
+        <!-- Résumé de la facture du mois en cours -->
+        <div class="summary-strip cols-4">
+          <div class="sum-pill">
+            <div class="sum-ic violet"><mat-icon>groups</mat-icon></div>
+            <div class="sum-body">
+              <span class="sum-val">{{ nbPatientsMois }}</span>
+              <span class="sum-cap">Patients ce mois</span>
+            </div>
           </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ montantTotal | number:'1.0-0':'fr' }} <small>CFA</small></span>
-            <span class="kpi-label">
-              Montant total
-              <span class="trend" *ngIf="montantTrend !== null" [class.up]="montantTrend! >= 0" [class.down]="montantTrend! < 0">
-                <mat-icon>{{ montantTrend! >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>{{ montantTrend! >= 0 ? '+' : '' }}{{ montantTrend }}%
-              </span>
-            </span>
+          <div class="sum-pill">
+            <div class="sum-ic blue"><mat-icon>medication</mat-icon></div>
+            <div class="sum-body">
+              <span class="sum-val">{{ nbLignesMois }}</span>
+              <span class="sum-cap">Lignes facturées</span>
+            </div>
           </div>
-        </div>
-
-        <div class="kpi-card accent-amber">
-          <div class="kpi-icon amber">
-            <mat-icon>pending_actions</mat-icon>
+          <div class="sum-pill">
+            <div class="sum-ic green"><mat-icon>payments</mat-icon></div>
+            <div class="sum-body">
+              <span class="sum-val">{{ montantMois | number:'1.0-0':'fr' }} <small>CFA</small></span>
+              <span class="sum-cap">Montant du mois</span>
+            </div>
           </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ facturesAttente }}</span>
-            <span class="kpi-label">En attente de traitement</span>
+          <div class="sum-pill">
+            <div class="sum-ic amber"><mat-icon>volunteer_activism</mat-icon></div>
+            <div class="sum-body">
+              <span class="sum-val">{{ partCsuMois | number:'1.0-0':'fr' }} <small>CFA</small></span>
+              <span class="sum-cap">Part CSU (50%)</span>
+            </div>
           </div>
         </div>
 
-        <div class="kpi-card accent-red">
-          <div class="kpi-icon red">
-            <mat-icon>error_outline</mat-icon>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value">{{ facturesRejetees }}</span>
-            <span class="kpi-label">Rejetées</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bandeau de stats secondaires -->
-      <div class="stat-strip" *ngIf="!authService.isPharmacien()">
-        <div class="stat-pill">
-          <div class="stat-pill-ic csu"><mat-icon>volunteer_activism</mat-icon></div>
-          <div class="stat-pill-body">
-            <span class="stat-pill-val">{{ montantCsu | number:'1.0-0':'fr' }} <small>CFA</small></span>
-            <span class="stat-pill-cap">Part CSU prise en charge (50%)</span>
-          </div>
-        </div>
-        <div class="stat-pill">
-          <div class="stat-pill-ic moy"><mat-icon>functions</mat-icon></div>
-          <div class="stat-pill-body">
-            <span class="stat-pill-val">{{ montantMoyen | number:'1.0-0':'fr' }} <small>CFA</small></span>
-            <span class="stat-pill-cap">Montant moyen par facture</span>
-          </div>
-        </div>
-        <div class="stat-pill">
-          <div class="stat-pill-ic rate"><mat-icon>verified</mat-icon></div>
-          <div class="stat-pill-body">
-            <span class="stat-pill-val">{{ tauxValidation }}%</span>
-            <span class="stat-pill-cap">Taux de validation</span>
-            <div class="rate-bar"><span [style.width.%]="tauxValidation"></span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== PHARMACIEN: ALL-IN-ONE ==================== -->
-      <ng-container *ngIf="authService.isPharmacien()">
+        <!-- Alerte : factures rejetées à corriger -->
+        <a class="reject-alert" *ngIf="facturesRejetees > 0"
+           routerLink="/dashboard/espace-pharmacie" [queryParams]="{ tab: 1 }">
+          <mat-icon>error_outline</mat-icon>
+          <span><strong>{{ facturesRejetees }}</strong> facture(s) rejetée(s) à corriger et renvoyer</span>
+          <mat-icon class="chev">chevron_right</mat-icon>
+        </a>
 
         <!-- Section: Facturation -->
         <div class="section-card billing-card">
@@ -296,155 +253,6 @@
         </div>
 
       </ng-container>
-
-      <!-- ==================== OTHER ROLES: STANDARD DASHBOARD ==================== -->
-      <ng-container *ngIf="!authService.isPharmacien()">
-
-        <!-- Graphiques : évolution + répartition -->
-        <div class="analytics-grid">
-          <!-- Évolution mensuelle -->
-          <div class="section-card chart-card">
-            <div class="section-header">
-              <div class="section-title-group">
-                <mat-icon class="section-icon">bar_chart</mat-icon>
-                <h2>Évolution mensuelle {{ chartYear }}</h2>
-              </div>
-              <div class="seg-toggle">
-                <button type="button" [class.active]="chartMode === 'montant'" (click)="setChartMode('montant')">Montant</button>
-                <button type="button" [class.active]="chartMode === 'nombre'" (click)="setChartMode('nombre')">Nombre</button>
-              </div>
-            </div>
-            <div class="chart-body bar-body">
-              <canvas baseChart *ngIf="isChartReady"
-                [data]="barChartData"
-                [options]="barChartOptions"
-                [type]="'bar'">
-              </canvas>
-              <div class="empty-state" *ngIf="!isChartReady">
-                <mat-icon>bar_chart</mat-icon>
-                <p>Chargement du graphique…</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Répartition par statut -->
-          <div class="section-card chart-card">
-            <div class="section-header">
-              <div class="section-title-group">
-                <mat-icon class="section-icon">donut_large</mat-icon>
-                <h2>Répartition par statut</h2>
-              </div>
-            </div>
-            <div class="chart-body donut-body">
-              <div class="donut-wrap" *ngIf="hasStatusData; else noStatus">
-                <canvas baseChart
-                  [data]="doughnutData"
-                  [options]="doughnutOptions"
-                  [type]="'doughnut'">
-                </canvas>
-                <div class="donut-center">
-                  <span class="donut-total">{{ totalFactures }}</span>
-                  <span class="donut-cap">factures</span>
-                </div>
-              </div>
-              <ng-template #noStatus>
-                <div class="empty-state"><mat-icon>donut_large</mat-icon><p>Aucune donnée</p></div>
-              </ng-template>
-              <ul class="legend" *ngIf="hasStatusData">
-                <li *ngFor="let s of statusBreakdown">
-                  <span class="dot" [style.background]="s.color"></span>
-                  <span class="legend-label">{{ s.label }}</span>
-                  <b>{{ s.count }}</b>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Listes : factures + top pharmacies -->
-        <div class="two-col-grid" [class.single-col]="authService.isServiceRegional()">
-          <!-- Factures : ici pour les autres rôles ; le Service Régional les voit en tête de page -->
-          <ng-container *ngIf="!authService.isServiceRegional()">
-            <ng-container [ngTemplateOutlet]="facturesCard"></ng-container>
-          </ng-container>
-
-          <!-- Top pharmacies -->
-          <div class="section-card">
-            <div class="section-header">
-              <div class="section-title-group">
-                <mat-icon class="section-icon">leaderboard</mat-icon>
-                <h2>Top pharmacies</h2>
-              </div>
-            </div>
-            <div class="ranking">
-              <div class="rank-row" *ngFor="let p of topPharmacies; let i = index">
-                <span class="rank-pos" [class.gold]="i === 0">{{ i + 1 }}</span>
-                <div class="rank-info">
-                  <div class="rank-top">
-                    <span class="rank-name">{{ p.nom }}</span>
-                    <span class="rank-amount">{{ p.montant | number:'1.0-0':'fr' }} CFA</span>
-                  </div>
-                  <div class="rank-bar"><span [style.width.%]="p.pct"></span></div>
-                  <span class="rank-sub">{{ p.count }} facture(s)</span>
-                </div>
-              </div>
-              <div class="empty-state" *ngIf="topPharmacies.length === 0">
-                <mat-icon>leaderboard</mat-icon>
-                <p>Aucune donnée</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- Carte « Factures » réutilisée : en tête pour le Service Régional, sinon dans la grille du bas -->
-      <ng-template #facturesCard>
-        <div class="section-card">
-          <div class="section-header">
-            <div class="section-title-group">
-              <mat-icon class="section-icon">receipt_long</mat-icon>
-              <h2>{{ authService.isServiceRegional() ? 'Factures de la région' : 'Factures récentes' }}</h2>
-            </div>
-            <a class="btn btn-outline btn-sm" [routerLink]="authService.isServiceRegional() ? '/dashboard/factures-regionales' : '/dashboard/regions'">
-              Voir tout <mat-icon>arrow_forward</mat-icon>
-            </a>
-          </div>
-          <div class="table-body">
-            <table mat-table [dataSource]="recentFactures" class="w-100">
-              <ng-container matColumnDef="pharmacie">
-                <th mat-header-cell *matHeaderCellDef> Pharmacie </th>
-                <td mat-cell *matCellDef="let f"> {{ f.pharmacieNom }} </td>
-              </ng-container>
-
-              <ng-container matColumnDef="montant">
-                <th mat-header-cell *matHeaderCellDef> Montant </th>
-                <td mat-cell *matCellDef="let f"> <strong>{{ f.montantTotal | number }} CFA</strong> </td>
-              </ng-container>
-
-              <ng-container matColumnDef="statut">
-                <th mat-header-cell *matHeaderCellDef> Statut </th>
-                <td mat-cell *matCellDef="let f"> <app-status-badge [statut]="f.statut"></app-status-badge> </td>
-              </ng-container>
-
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let f">
-                  <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]">
-                    <mat-icon>visibility</mat-icon>
-                  </a>
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-            </table>
-            <div class="empty-state" *ngIf="recentFactures.length === 0">
-              <mat-icon>receipt_long</mat-icon>
-              <p>Aucune facture récente</p>
-            </div>
-          </div>
-        </div>
-      </ng-template>
 
       <!-- Visionneuse plein écran d'une pièce justificative -->
       <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">

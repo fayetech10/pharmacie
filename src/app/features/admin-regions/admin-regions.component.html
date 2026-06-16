@@ -40,11 +40,6 @@
       </div>
     </div>
 
-    <!-- Tableau de bord de la région sélectionnée -->
-    <app-stats [embedded]="true" *ngIf="level === 'pharmacies' && regionScope" [scope]="regionScope"></app-stats>
-    <!-- Tableau de bord de la pharmacie sélectionnée -->
-    <app-stats [embedded]="true" *ngIf="level === 'factures' && pharmacieScope" [scope]="pharmacieScope"></app-stats>
-
     <!-- ===================== NIVEAU 1 : RÉGIONS ===================== -->
     <div class="m-cards" *ngIf="level === 'regions'">
       <div class="m-card clickable" *ngFor="let s of regionSummaries" (click)="selectRegion(s)">

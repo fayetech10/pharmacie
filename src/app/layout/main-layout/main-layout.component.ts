@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
@@ -40,6 +41,7 @@ export class MainLayoutComponent implements OnInit {
   currentUrl = '';
   /** Nombre de factures par statut, pour les badges de la navigation basse. */
   counts: StatutCounts = {};
+  private destroyRef = inject(DestroyRef);
 
   /** Le rôle courant affiche-t-il des badges de comptage ? */
   private get countsEnabled(): boolean {
@@ -114,7 +116,10 @@ export class MainLayoutComponent implements OnInit {
     this.currentUrl = this.router.url;
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
         // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
@@ -126,12 +131,16 @@ export class MainLayoutComponent implements OnInit {
       });
 
     // Badges de notification (Service Régional / Central)
-    this.factureCount.counts$.subscribe(c => this.counts = c);
+    this.factureCount.counts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(c => this.counts = c);
     if (this.countsEnabled) this.factureCount.refresh();
     // Recalcule les badges après toute modification de facture (sans recharger la page).
-    this.factureEvents.changed$.subscribe(() => {
-      if (this.countsEnabled) this.factureCount.refresh();
-    });
+    this.factureEvents.changed$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.countsEnabled) this.factureCount.refresh();
+      });
 
     // Redirect logic for Espace components
     if (this.router.url === '/dashboard' || this.router.url === '/dashboard/espace') {

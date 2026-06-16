@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -16,6 +17,7 @@ import { FactureCountService, StatutCounts } from '../../core/services/facture-c
 export class EspaceCentralComponent implements OnInit {
   selectedTab = 0;
   counts: StatutCounts = {};
+  private destroyRef = inject(DestroyRef);
 
   constructor(
     private route: ActivatedRoute,
@@ -24,14 +26,18 @@ export class EspaceCentralComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.route.queryParamMap.subscribe(params => {
-      this.selectedTab = +(params.get('tab') ?? 0);
-      this.markActiveTabSeen();
-    });
-    this.factureCount.counts$.subscribe(c => {
-      this.counts = c;
-      this.markActiveTabSeen();
-    });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.selectedTab = +(params.get('tab') ?? 0);
+        this.markActiveTabSeen();
+      });
+    this.factureCount.counts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(c => {
+        this.counts = c;
+        this.markActiveTabSeen();
+      });
     this.factureCount.refresh();
   }
 

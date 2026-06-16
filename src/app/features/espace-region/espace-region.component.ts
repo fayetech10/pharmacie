@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -22,6 +23,7 @@ export class EspaceRegionComponent implements OnInit {
   isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   /** Nombre de factures par statut, pour les badges de notification. */
   counts: StatutCounts = {};
+  private destroyRef = inject(DestroyRef);
 
   constructor(
     private route: ActivatedRoute,
@@ -31,22 +33,28 @@ export class EspaceRegionComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.breakpoints.observe('(max-width: 768px)').subscribe(state => {
-      this.isMobile = state.matches;
-      // En mobile, seuls les onglets 0..3 existent : on borne l'index courant.
-      if (this.isMobile && this.selectedTab > 3) {
-        this.selectedTab = 3;
-      }
-    });
-    this.route.queryParamMap.subscribe(params => {
-      this.selectedTab = +(params.get('tab') ?? 0);
-      this.markActiveTabSeen();
-    });
-    this.factureCount.counts$.subscribe(c => {
-      this.counts = c;
-      // Une fois les compteurs chargés, on efface d'emblée le badge de l'onglet ouvert.
-      this.markActiveTabSeen();
-    });
+    this.breakpoints.observe('(max-width: 768px)')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.isMobile = state.matches;
+        // En mobile, seuls les onglets 0..3 existent : on borne l'index courant.
+        if (this.isMobile && this.selectedTab > 3) {
+          this.selectedTab = 3;
+        }
+      });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.selectedTab = +(params.get('tab') ?? 0);
+        this.markActiveTabSeen();
+      });
+    this.factureCount.counts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(c => {
+        this.counts = c;
+        // Une fois les compteurs chargés, on efface d'emblée le badge de l'onglet ouvert.
+        this.markActiveTabSeen();
+      });
     this.factureCount.refresh();
   }
 

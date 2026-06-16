@@ -91,7 +91,9 @@ export class FacturesListComponent implements OnInit {
   private factureEvents = inject(FactureEventsService);
 
   ngOnInit() {
-    this.breakpoints.observe('(max-width: 768px)').subscribe(state => this.isMobile = state.matches);
+    this.breakpoints.observe('(max-width: 768px)')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => this.isMobile = state.matches);
     this.loadFactures();
     // Rafraîchit la liste sans recharger la page après toute modification de facture
     // (ex. enregistrement dans l'onglet « Facturation » de l'espace pharmacie).

@@ -72,7 +72,7 @@ export class AdminRegionsComponent implements OnInit {
   selectedPharmacie: PharmacieSummary | null = null;
   factureColumns = ['mois', 'montant', 'statut', 'action'];
 
-  // Périmètres pour les tableaux de bord scopés (drill-down)
+  // Scopes pour le composant Stats (drill-down)
   regionScope: StatsScope | null = null;
   pharmacieScope: StatsScope | null = null;
 
@@ -179,7 +179,6 @@ export class AdminRegionsComponent implements OnInit {
   // Niveau 2 → 3
   selectPharmacie(ps: PharmacieSummary) {
     this.selectedPharmacie = ps;
-    this.pharmacieScope = { type: 'pharmacie', id: ps.pharmacie.id, label: ps.pharmacie.nom };
     this.filterYear = 0;
     this.filterStatut = '';
     this.level = 'factures';
@@ -190,7 +189,6 @@ export class AdminRegionsComponent implements OnInit {
     if (this.level === 'factures') {
       this.level = 'pharmacies';
       this.selectedPharmacie = null;
-      this.pharmacieScope = null;
     } else if (this.level === 'pharmacies') {
       this.goToRegions();
     }
