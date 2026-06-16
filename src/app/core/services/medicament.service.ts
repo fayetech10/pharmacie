@@ -1,44 +1,40 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { Observable, of, shareReplay } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Medicament } from '../models/medicament.model';
 import { environment } from '../../../environments/environment';
 import { SKIP_LOADING } from '../interceptors/loading.interceptor';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MedicamentService {
   private apiUrl = `${environment.apiUrl}/medicaments`;
+  /** Chemin relatif utilisé par le cache central (ApiService). */
+  private readonly path = '/medicaments';
+
+  // Le cache est désormais centralisé dans ApiService (partagé avec le reste du projet,
+  // dédoublonnage des requêtes simultanées, invalidation après écriture).
+  constructor(private http: HttpClient, private api: ApiService) {}
+
+  /** Liste complète, via le cache projet (chargée une fois puis réutilisée). */
+  getAll(): Observable<Medicament[]> {
+    return this.api.get<Medicament[]>(this.path);
+  }
 
   /**
-   * Cache de la liste complète des médicaments.
-   * Chargée une seule fois (shareReplay) puis réutilisée : la recherche
-   * d'autocomplétion filtre ce cache localement → instantané, sans requête répétée.
+   * Liste complète en cache-first (chargée une seule fois, sans overlay et sans revalidation) :
+   * la recherche d'autocomplétion filtre ce cache localement → instantané, zéro requête répétée.
    */
-  private medicaments$?: Observable<Medicament[]>;
-
-  constructor(private http: HttpClient) {}
-
-  /** Liste complète, toujours fraîche depuis le serveur (ex: tableau de gestion). */
-  getAll(): Observable<Medicament[]> {
-    return this.http.get<Medicament[]>(this.apiUrl);
-  }
-
-  /** Liste complète mise en cache (chargée une fois par session, sans overlay de chargement). */
   getAllCached(): Observable<Medicament[]> {
-    if (!this.medicaments$) {
-      this.medicaments$ = this.http.get<Medicament[]>(this.apiUrl, {
-        context: new HttpContext().set(SKIP_LOADING, true)
-      }).pipe(shareReplay(1));
-    }
-    return this.medicaments$;
+    return this.api.get<Medicament[]>(this.path, { skipLoading: true, cacheFirst: true });
   }
 
-  /** Vide le cache (à appeler après un import ou une modification). */
+  /** Vide le cache des médicaments (à appeler après un import ou une modification). */
   invalidateCache(): void {
-    this.medicaments$ = undefined;
+    this.api.invalidate(this.path);
   }
 
   /**

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Observable, of, concat, EMPTY, asapScheduler } from 'rxjs';
-import { tap, catchError, distinctUntilChanged, observeOn } from 'rxjs/operators';
+import { tap, catchError, distinctUntilChanged, observeOn, shareReplay, finalize } from 'rxjs/operators';
 import { SKIP_LOADING } from '../interceptors/loading.interceptor';
 
 @Injectable({
@@ -21,16 +21,35 @@ export class ApiService {
    */
   private cache = new Map<string, unknown>();
 
+  /**
+   * Requêtes GET en cours, par URL. Si plusieurs composants demandent la même donnée
+   * « en même temps » (avant la 1ère réponse), ils partagent la MÊME requête réseau
+   * au lieu d'en déclencher plusieurs (ex: dashboard régional + service de comptage
+   * qui chargent /factures simultanément).
+   */
+  private inFlight = new Map<string, Observable<unknown>>();
+
   constructor(private http: HttpClient) {}
 
-  get<T>(path: string): Observable<T> {
+  /**
+   * GET mis en cache pour tout le projet (médicaments, factures, etc.).
+   * Stratégie « stale-while-revalidate » : la donnée déjà en cache est renvoyée
+   * immédiatement puis rafraîchie en arrière-plan. Les requêtes simultanées sur la
+   * même URL sont mutualisées (une seule requête réseau).
+   * @param opts.skipLoading masque la barre de chargement globale (ex: autocomplétion).
+   * @param opts.cacheFirst sert la valeur en cache SANS revalider (idéal pour les données
+   *   de référence quasi-statiques comme les médicaments → vraiment « chargé une seule fois »).
+   */
+  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean }): Observable<T> {
     const url = `${this.baseUrl}${path}`;
     const hasCache = this.cache.has(url);
 
-    // Si on sert déjà du cache, la revalidation est silencieuse (pas de barre de chargement).
-    const fresh$ = this.http
-      .get<T>(url, { context: new HttpContext().set(SKIP_LOADING, hasCache) })
-      .pipe(tap(data => this.cache.set(url, data)));
+    // Cache-first : on renvoie le cache tel quel, aucune requête de revalidation.
+    if (hasCache && opts?.cacheFirst) {
+      return of(this.cache.get(url) as T);
+    }
+
+    const fresh$ = this.fetch<T>(url, hasCache, opts?.skipLoading === true);
 
     if (!hasCache) {
       return fresh$;
@@ -48,6 +67,24 @@ export class ApiService {
       // On ne ré-émet la version fraîche que si elle diffère réellement du cache.
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
     );
+  }
+
+  /** Requête réseau réelle, avec mutualisation des appels concurrents (in-flight). */
+  private fetch<T>(url: string, hasCache: boolean, skipLoading: boolean): Observable<T> {
+    const existing = this.inFlight.get(url);
+    if (existing) {
+      return existing as Observable<T>;
+    }
+    // Revalidation silencieuse si on sert déjà du cache, ou si l'appelant le demande.
+    const request$ = this.http
+      .get<T>(url, { context: new HttpContext().set(SKIP_LOADING, hasCache || skipLoading) })
+      .pipe(
+        tap(data => this.cache.set(url, data)),
+        finalize(() => this.inFlight.delete(url)),
+        shareReplay(1)
+      );
+    this.inFlight.set(url, request$ as Observable<unknown>);
+    return request$;
   }
 
   post<T>(path: string, body: any): Observable<T> {
@@ -73,8 +110,18 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}${path}`, { responseType: 'blob' });
   }
 
-  /** Vide le cache GET (après une modification, ou au changement de session). */
+  /** Vide tout le cache GET (après une modification, ou au changement de session). */
   invalidateCache(): void {
     this.cache.clear();
+  }
+
+  /** Vide uniquement les entrées de cache dont l'URL commence par ce chemin (ex: '/medicaments'). */
+  invalidate(pathFragment: string): void {
+    const prefix = `${this.baseUrl}${pathFragment}`;
+    for (const key of Array.from(this.cache.keys())) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
   }
 }
