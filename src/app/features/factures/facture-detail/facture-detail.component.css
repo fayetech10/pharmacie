@@ -6,6 +6,17 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Indicateur de chargement */
+    .empty-state.big { padding: 60px 20px; }
+    .spin-animation { animation: spin 1.2s linear infinite; }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spin-animation { animation: none !important; }
+    }
+
     .detail-header {
       display: flex;
       justify-content: space-between;

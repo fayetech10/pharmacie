@@ -1,4 +1,16 @@
-    <div class="detail-page" *ngIf="facture">
+    <!-- Chargement : évite la page blanche -->
+    <div class="empty-state big" *ngIf="loading">
+      <mat-icon class="spin-animation">autorenew</mat-icon>
+      <p>Chargement de la facture…</p>
+    </div>
+
+    <!-- Erreur de chargement -->
+    <div class="empty-state big" *ngIf="loadError && !loading">
+      <mat-icon>error_outline</mat-icon>
+      <p>Impossible de charger la facture.</p>
+    </div>
+
+    <div class="detail-page" *ngIf="facture && !loading">
       <!-- Header -->
       <div class="detail-header">
         <div class="header-left">

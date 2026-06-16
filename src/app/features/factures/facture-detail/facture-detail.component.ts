@@ -7,8 +7,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Facture, LigneFacture, LigneDecisionRequest, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
@@ -35,6 +36,9 @@ interface PatientGroup {
     MatButtonModule,
     MatIconModule,
     MatTableModule,
+    MatDialogModule,
+    MatSnackBarModule,
+    MatTooltipModule,
     StatusBadgeComponent
   ],
   templateUrl: './facture-detail.component.html',
@@ -42,6 +46,9 @@ interface PatientGroup {
 })
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
+  /** Chargement de la facture : évite la page blanche en affichant un indicateur. */
+  loading = true;
+  loadError = false;
 
   // Pièces justificatives affichées dans le dossier patient
   readonly photoFields: { key: 'ticketCaisse' | 'bonCommande' | 'ordonnance'; label: string }[] = [
@@ -148,8 +155,18 @@ export class FactureDetailComponent implements OnInit {
   }
 
   loadFacture(id: string) {
-    this.factureService.getById(id).subscribe((data: Facture) => {
-      this.facture = data;
+    this.loading = true;
+    this.loadError = false;
+    this.factureService.getById(id).subscribe({
+      next: (data: Facture) => {
+        this.facture = data;
+        this.loading = false;
+      },
+      error: (e: any) => {
+        this.loading = false;
+        this.loadError = true;
+        this.showError(e);
+      }
     });
   }
 

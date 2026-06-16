@@ -22,7 +22,8 @@
         <div [ngSwitch]="level">
           <ng-container *ngSwitchCase="'pharmacies'">
             <h1>Factures de la région</h1>
-            <p>{{ pharmacieSummaries.length }} pharmacie(s) · {{ totalRegionMontant | number:'1.0-0':'fr' }} CFA au total</p>
+            <p *ngIf="!loading">{{ pharmacieSummaries.length }} pharmacie(s) · {{ totalRegionMontant | number:'1.0-0':'fr' }} CFA au total</p>
+            <p *ngIf="loading">Chargement…</p>
           </ng-container>
           <ng-container *ngSwitchCase="'factures'">
             <h1>{{ selectedPharmacie?.pharmacie?.nom }}</h1>
@@ -32,8 +33,14 @@
       </div>
     </div>
 
+    <!-- Chargement des données de la région -->
+    <div class="empty-state big" *ngIf="level === 'pharmacies' && loading">
+      <mat-icon class="spin-animation">autorenew</mat-icon>
+      <p>Chargement des données de la région…</p>
+    </div>
+
     <!-- ===================== NIVEAU 1 : PHARMACIES ===================== -->
-    <div class="m-cards" *ngIf="level === 'pharmacies'">
+    <div class="m-cards" *ngIf="level === 'pharmacies' && !loading">
       <div class="m-card clickable" *ngFor="let p of pharmacieSummaries" (click)="selectPharmacie(p)">
         <div class="m-card-top">
           <span class="m-title">{{ p.pharmacie.nom }}</span>
@@ -53,7 +60,7 @@
       </div>
     </div>
 
-    <mat-card class="table-card desktop-only" *ngIf="level === 'pharmacies'">
+    <mat-card class="table-card desktop-only" *ngIf="level === 'pharmacies' && !loading">
       <table mat-table [dataSource]="pharmacieSummaries" class="w-100">
         <ng-container matColumnDef="pharmacie">
           <th mat-header-cell *matHeaderCellDef> Pharmacie </th>

@@ -48,6 +48,9 @@ export class RegionalFacturesComponent implements OnInit {
   pharmacies: Pharmacie[] = [];
   factures: Facture[] = [];
 
+  /** Chargement initial des données de la région (pharmacies + factures). */
+  loading = true;
+
   // Niveau de navigation courant
   level: DrillLevel = 'pharmacies';
 
@@ -80,14 +83,22 @@ export class RegionalFacturesComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loading = true;
     forkJoin({
       pharmacies: this.pharmacieService.getAll(),
       factures: this.factureService.getAll()
-    }).subscribe(({ pharmacies, factures }) => {
-      // Pour le service régional, l'API devrait déjà filtrer par région, mais par sécurité on garde toutes celles reçues
-      this.pharmacies = pharmacies;
-      this.factures = factures;
-      this.buildPharmacieSummaries();
+    }).subscribe({
+      next: ({ pharmacies, factures }) => {
+        // Pour le service régional, l'API devrait déjà filtrer par région, mais par sécurité on garde toutes celles reçues
+        this.pharmacies = pharmacies;
+        this.factures = factures;
+        this.buildPharmacieSummaries();
+        this.loading = false;
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.snackBar.open('Erreur lors du chargement des données de la région: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
     });
   }
 
