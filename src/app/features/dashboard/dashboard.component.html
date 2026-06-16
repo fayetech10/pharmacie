@@ -3,49 +3,9 @@
       <!-- ==================== PHARMACIEN : SAISIE & RÉSUMÉ DU MOIS ==================== -->
       <ng-container>
 
-        <!-- Accueil pharmacien + périmètre -->
-        <div class="welcome-section welcome-flex">
-          <div>
-            <h1>Bonjour, {{ currentUser?.prenom }} 👋</h1>
-            <p>Facturation du mois · {{ todayLabel }}</p>
-          </div>
-          <span class="scope-pill">
-            <mat-icon>local_pharmacy</mat-icon>
-            {{ pharmacieNom }}
-          </span>
-        </div>
 
-        <!-- Résumé de la facture du mois en cours -->
-        <div class="summary-strip cols-4">
-          <div class="sum-pill">
-            <div class="sum-ic violet"><mat-icon>groups</mat-icon></div>
-            <div class="sum-body">
-              <span class="sum-val">{{ nbPatientsMois }}</span>
-              <span class="sum-cap">Patients ce mois</span>
-            </div>
-          </div>
-          <div class="sum-pill">
-            <div class="sum-ic blue"><mat-icon>medication</mat-icon></div>
-            <div class="sum-body">
-              <span class="sum-val">{{ nbLignesMois }}</span>
-              <span class="sum-cap">Lignes facturées</span>
-            </div>
-          </div>
-          <div class="sum-pill">
-            <div class="sum-ic green"><mat-icon>payments</mat-icon></div>
-            <div class="sum-body">
-              <span class="sum-val">{{ montantMois | number:'1.0-0':'fr' }} <small>CFA</small></span>
-              <span class="sum-cap">Montant du mois</span>
-            </div>
-          </div>
-          <div class="sum-pill">
-            <div class="sum-ic amber"><mat-icon>volunteer_activism</mat-icon></div>
-            <div class="sum-body">
-              <span class="sum-val">{{ partCsuMois | number:'1.0-0':'fr' }} <small>CFA</small></span>
-              <span class="sum-cap">Part CSU (50%)</span>
-            </div>
-          </div>
-        </div>
+
+
 
         <!-- Alerte : factures rejetées à corriger -->
         <a class="reject-alert" *ngIf="facturesRejetees > 0"
@@ -65,9 +25,6 @@
               </div>
             </div>
             <div class="header-actions">
-              <a class="btn btn-outline btn-sm" routerLink="/dashboard/espace-pharmacie" [queryParams]="{ tab: 1 }">
-                <mat-icon>folder_open</mat-icon> Mes factures
-              </a>
               <button class="btn btn-primary btn-sm" *ngIf="canSendFacture" (click)="envoyerFacture()">
                 <mat-icon>send</mat-icon> Envoyer
               </button>

@@ -52,6 +52,7 @@ export class StatsComponent implements OnInit, OnChanges {
 
   s: StatsData | null = null;
   loading = false;
+  showDetails = false;
   error = false;
   noPharmacie = false;
   chartYear = new Date().getFullYear();

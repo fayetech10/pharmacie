@@ -8,6 +8,17 @@
     }
     .scope-chip mat-icon { font-size: 17px; width: 17px; height: 17px; }
 
+    /* Toggle stats */
+    .stats-toggle-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .stats-toggle-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 8px; border: 1.5px solid var(--primary);
+      background: transparent; color: var(--primary); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background 0.18s, color 0.18s;
+    }
+    .stats-toggle-btn:hover { background: var(--primary-light); }
+    .stats-toggle-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
     /* KPI */
     .kpi-card { position: relative; overflow: hidden; }
     .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--border); }

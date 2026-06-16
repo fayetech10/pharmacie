@@ -7,7 +7,16 @@
     </div>
 
     <ng-container *ngIf="s">
+      <!-- ============ BOUTON TOGGLE STATS ============ -->
+      <div class="stats-toggle-row">
+        <button type="button" class="stats-toggle-btn" (click)="showDetails = !showDetails">
+          <mat-icon>{{ showDetails ? 'expand_less' : 'bar_chart' }}</mat-icon>
+          {{ showDetails ? 'Masquer les statistiques' : 'Afficher les statistiques' }}
+        </button>
+      </div>
+
       <!-- ============ KPI PRINCIPAUX ============ -->
+      <ng-container *ngIf="showDetails">
       <div class="kpi-grid">
         <div class="kpi-card accent-green">
           <div class="kpi-icon green"><mat-icon>payments</mat-icon></div>
@@ -61,6 +70,7 @@
           </div>
         </div>
       </div>
+      <!-- fin kpi-grid -->
 
       <!-- ============ INDICATEURS DE PERFORMANCE ============ -->
       <div class="perf-grid">
@@ -217,6 +227,7 @@
           </div>
         </div>
       </div>
+      </ng-container><!-- fin showDetails -->
     </ng-container>
 
     <div class="empty-state big" *ngIf="loading && !error && !noPharmacie">
