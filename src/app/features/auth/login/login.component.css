@@ -43,15 +43,12 @@
       left: 28px;
       width: 72px;
       height: 72px;
-      border-radius: 18px;
-      background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: var(--shadow-md);
       z-index: 1;
     }
-    .brand-csu-chip img { width: 56px; height: 56px; object-fit: contain; }
+    .brand-csu-chip img { width: 64px; height: 64px; object-fit: contain; }
     .brand-center { text-align: center; z-index: 1; }
     .brand-logo-card {
       display: inline-flex;
@@ -59,12 +56,9 @@
       justify-content: center;
       width: 200px;
       height: 200px;
-      border-radius: 36px;
-      background: #fff;
-      box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.35);
       margin-bottom: 28px;
     }
-    .brand-logo-card img { width: 150px; height: 150px; object-fit: contain; }
+    .brand-logo-card img { width: 180px; height: 180px; object-fit: contain; }
     .brand-center h2 {
       color: #fff;
       font-size: 24px;

@@ -6,19 +6,16 @@
           <p>Gérez et suivez le statut des factures pharmaceutiques</p>
         </div>
         <div class="page-head-actions">
-          <button class="btn btn-outline" (click)="exportExcel()">
+          <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="exportExcel()">
             <mat-icon>table_view</mat-icon> Excel
           </button>
-          <button class="btn btn-outline" (click)="exportPdf()">
+          <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="exportPdf()">
             <mat-icon>picture_as_pdf</mat-icon> PDF
           </button>
           <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="fileInput.click()">
             <mat-icon>upload_file</mat-icon> Import
           </button>
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
-          <a class="btn btn-primary" routerLink="/dashboard" *ngIf="authService.isPharmacien()">
-            <mat-icon>add</mat-icon> Nouvelle Facture
-          </a>
         </div>
       </div>
 
@@ -54,30 +51,7 @@
         </mat-form-field>
       </div>
 
-      <!-- Bandeau de synthèse (s'adapte aux filtres) -->
-      <div class="summary-strip" *ngIf="dataSource">
-        <div class="sum-pill">
-          <div class="sum-ic blue"><mat-icon>receipt_long</mat-icon></div>
-          <div class="sum-body">
-            <span class="sum-val">{{ summaryCount | number:'1.0-0':'fr' }}</span>
-            <span class="sum-cap">Factures affichées</span>
-          </div>
-        </div>
-        <div class="sum-pill">
-          <div class="sum-ic green"><mat-icon>payments</mat-icon></div>
-          <div class="sum-body">
-            <span class="sum-val">{{ summaryMontant | number:'1.0-0':'fr' }} <small>CFA</small></span>
-            <span class="sum-cap">Montant total</span>
-          </div>
-        </div>
-        <div class="sum-pill">
-          <div class="sum-ic violet"><mat-icon>volunteer_activism</mat-icon></div>
-          <div class="sum-body">
-            <span class="sum-val">{{ summaryCsu | number:'1.0-0':'fr' }} <small>CFA</small></span>
-            <span class="sum-cap">Part CSU (50%)</span>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Tableau (desktop) -->
       <mat-card class="table-card desktop-only">

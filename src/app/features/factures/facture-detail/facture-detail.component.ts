@@ -2,6 +2,7 @@ import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Facture, LigneFacture, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
+import { Facture, LigneFacture, LigneDecisionRequest, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
@@ -29,6 +30,7 @@ interface PatientGroup {
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -50,11 +52,21 @@ export class FactureDetailComponent implements OnInit {
   dossierPatient: PatientGroup | null = null;
   viewerImage: string | null = null;
 
+  // Rejet par ligne (SR)
+  rejetLigneIndex: number | null = null;
+  rejetLigneMotif = '';
+  rejetLigneSubmitting = false;
+
   /** Colonne "Décision" affichée pour les services (régional/central) ou si des décisions existent déjà. */
   get showDecision(): boolean {
     return this.authService.isServiceRegional() ||
       this.authService.isServiceCentral() ||
       (this.facture?.lignes || []).some(l => l.statutLigne && l.statutLigne !== StatutLigne.EN_ATTENTE);
+  }
+
+  /** True si le SR peut décider ligne par ligne (facture ENVOYEE). */
+  get canDeciderLignes(): boolean {
+    return this.authService.isServiceRegional() && this.facture?.statut === StatutFacture.ENVOYEE;
   }
 
   /** Regroupe les lignes par patient : le nom n'apparaît qu'une fois (rowspan). */
@@ -237,6 +249,37 @@ export class FactureDetailComponent implements OnInit {
         });
       }
     );
+  }
+
+  openRejetLigne(index: number) {
+    this.rejetLigneIndex = index;
+    this.rejetLigneMotif = '';
+  }
+
+  closeRejetLigne() {
+    this.rejetLigneIndex = null;
+    this.rejetLigneMotif = '';
+  }
+
+  confirmDeciderLigne(index: number, accepter: boolean) {
+    if (!accepter && !this.rejetLigneMotif.trim()) return;
+    this.rejetLigneSubmitting = true;
+    const req: LigneDecisionRequest = {
+      accepter,
+      motif: accepter ? undefined : this.rejetLigneMotif.trim()
+    };
+    this.factureService.deciderLigne(this.facture.id, index, req).subscribe({
+      next: (f: Facture) => {
+        this.facture = f;
+        this.closeRejetLigne();
+        this.rejetLigneSubmitting = false;
+        this.snackBar.open(accepter ? 'Ligne acceptée' : 'Ligne rejetée', 'Fermer', { duration: 2500 });
+      },
+      error: (e: any) => {
+        this.rejetLigneSubmitting = false;
+        this.showError(e);
+      }
+    });
   }
 
   private openConfirm(title: string, message: string, onConfirm: () => void) {

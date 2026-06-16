@@ -60,6 +60,10 @@ export class FactureService {
     return this.api.post<Facture>(`/factures/${id}/rejeter`, req).pipe(this.notify());
   }
 
+  deciderLigne(factureId: string, ligneIndex: number, req: LigneDecisionRequest): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${factureId}/lignes/${ligneIndex}/decider`, req).pipe(this.notify());
+  }
+
   payer(id: string): Observable<Facture> {
     return this.api.post<Facture>(`/factures/${id}/payer`, {}).pipe(this.notify());
   }

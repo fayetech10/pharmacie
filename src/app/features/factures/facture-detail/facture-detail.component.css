@@ -348,4 +348,62 @@
       .info-value { font-size: 15px; }
       .info-value.montant { font-size: 18px; }
     }
+
+    /* ---- Décision par ligne (SR) ---- */
+    .ligne-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-ligne {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 6px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-ligne mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .btn-ligne.accept { background: #DCFCE7; color: #166534; }
+    .btn-ligne.accept:hover { background: #BBF7D0; }
+    .btn-ligne.reject { background: #FEE2E2; color: #991B1B; }
+    .btn-ligne.reject:hover { background: #FECACA; }
+    .ligne-actions.mobile { margin-top: 8px; }
+    .inline-rejet {
+      margin-top: 8px; padding: 10px;
+      background: #FFF7ED; border: 1px solid #FED7AA;
+      border-radius: 8px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .rejet-input {
+      width: 100%; padding: 7px 10px;
+      border: 1.5px solid #FDBA74; border-radius: 6px;
+      font-size: 13px; outline: none; box-sizing: border-box;
+    }
+    .rejet-input:focus { border-color: #F97316; }
+    .rejet-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+      font-size: 12px; font-weight: 600; cursor: pointer; background: #fff;
+    }
+    .btn-sm.danger { background: #EF4444; color: #fff; border-color: #EF4444; }
+    .btn-sm.danger:hover { background: #DC2626; }
+    .btn-sm.danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ---- Part CSU / Bénéficiaire ---- */
+    .th-csu, .td-csu { color: #7C3AED; }
+    .th-benef, .td-benef { color: #0369A1; }
+    .th-csu, .th-benef { font-weight: 700; white-space: nowrap; }
+    .td-csu, .td-benef { white-space: nowrap; font-size: 13px; }
+    .td-csu small, .td-benef small { font-size: 10px; opacity: 0.7; margin-left: 2px; }
+
+    /* Mobile parts */
+    .med-parts {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-top: 5px; font-size: 12.5px;
+    }
+    .med-parts .part-csu {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: #7C3AED; background: #EDE9FE; padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .med-parts .part-benef {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: #0369A1; background: #E0F2FE; padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .med-parts mat-icon { font-size: 13px; width: 13px; height: 13px; }
   

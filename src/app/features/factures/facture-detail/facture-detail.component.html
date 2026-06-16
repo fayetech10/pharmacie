@@ -126,9 +126,31 @@
               {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number }} =
               <strong>{{ item.ligne.montant | number }} CFA</strong>
             </div>
+            <div class="med-parts">
+              <span class="part-csu"><mat-icon>volunteer_activism</mat-icon> CSU : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+              <span class="part-benef"><mat-icon>person</mat-icon> Bénéf. : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+            </div>
             <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
               <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
             </div>
+            <!-- Actions SR mobile -->
+            <ng-container *ngIf="canDeciderLignes && item.ligne.statutLigne !== 'ACCEPTEE' && item.ligne.statutLigne !== 'REJETEE'">
+              <div class="ligne-actions mobile">
+                <button class="btn-ligne accept" type="button" (click)="confirmDeciderLigne(item.index, true)">
+                  <mat-icon>check</mat-icon> Accepter
+                </button>
+                <button class="btn-ligne reject" type="button" (click)="openRejetLigne(item.index)">
+                  <mat-icon>close</mat-icon> Rejeter
+                </button>
+              </div>
+              <div class="inline-rejet" *ngIf="rejetLigneIndex === item.index">
+                <input class="rejet-input" [(ngModel)]="rejetLigneMotif" placeholder="Motif du rejet...">
+                <div class="rejet-actions">
+                  <button class="btn-sm danger" type="button" [disabled]="!rejetLigneMotif.trim() || rejetLigneSubmitting" (click)="confirmDeciderLigne(item.index, false)">Confirmer</button>
+                  <button class="btn-sm" type="button" (click)="closeRejetLigne()">Annuler</button>
+                </div>
+              </div>
+            </ng-container>
           </div>
         </div>
         <div class="empty-state" *ngIf="patientGroups.length === 0">
@@ -153,6 +175,8 @@
                 <th>Qté</th>
                 <th>Prix Unit.</th>
                 <th>Montant</th>
+                <th class="th-csu">Part CSU (50%)</th>
+                <th class="th-benef">Part bénéf. (50%)</th>
                 <th *ngIf="showDecision">Décision</th>
               </tr>
             </thead>
@@ -181,14 +205,35 @@
                   <td [class.line-rejected]="item.ligne.statutLigne === 'REJETEE'">
                     <strong>{{ item.ligne.montant | number }}</strong>
                   </td>
+                  <td class="td-csu">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
+                  <td class="td-benef">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
                   <td *ngIf="showDecision">
-                    <!-- Lecture seule : badge de statut -->
-                    <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)">
-                      {{ lineTagLabel(item.ligne.statutLigne) }}
-                    </span>
-                    <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
-                      <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
-                    </div>
+                    <!-- Mode décision SR : boutons accepter/rejeter -->
+                    <ng-container *ngIf="canDeciderLignes && item.ligne.statutLigne !== 'ACCEPTEE' && item.ligne.statutLigne !== 'REJETEE'; else readOnlyDecision">
+                      <div class="ligne-actions">
+                        <button class="btn-ligne accept" type="button" (click)="confirmDeciderLigne(item.index, true)" matTooltip="Accepter">
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button class="btn-ligne reject" type="button" (click)="openRejetLigne(item.index)" matTooltip="Rejeter">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                      <div class="inline-rejet" *ngIf="rejetLigneIndex === item.index">
+                        <input class="rejet-input" [(ngModel)]="rejetLigneMotif" placeholder="Motif du rejet..." (keydown.escape)="closeRejetLigne()">
+                        <div class="rejet-actions">
+                          <button class="btn-sm danger" type="button" [disabled]="!rejetLigneMotif.trim() || rejetLigneSubmitting" (click)="confirmDeciderLigne(item.index, false)">Confirmer</button>
+                          <button class="btn-sm" type="button" (click)="closeRejetLigne()">Annuler</button>
+                        </div>
+                      </div>
+                    </ng-container>
+                    <ng-template #readOnlyDecision>
+                      <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)">
+                        {{ lineTagLabel(item.ligne.statutLigne) }}
+                      </span>
+                      <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
+                        <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
+                      </div>
+                    </ng-template>
                   </td>
                 </tr>
               </ng-container>
