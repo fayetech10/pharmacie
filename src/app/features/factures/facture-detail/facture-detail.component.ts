@@ -222,7 +222,11 @@ export class FactureDetailComponent implements OnInit {
   envoyer() {
     this.openConfirm('Envoyer la facture', 'Êtes-vous sûr de vouloir envoyer cette facture au service régional ? Vous ne pourrez plus la modifier.', () => {
       this.factureService.envoyer(this.facture.id).subscribe({
-        next: (f: Facture) => this.setFacture(f),
+        next: () => {
+          this.snackBar.open('Facture envoyée avec succès', 'Fermer', { duration: 3000 });
+          // Après envoi/renvoi, retour vers « Mes Factures » (goBack redirige le pharmacien vers espace-pharmacie ?tab=1).
+          this.goBack();
+        },
         error: (e: any) => this.showError(e)
       });
     });

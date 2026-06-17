@@ -283,7 +283,8 @@ export class FactureFormComponent implements OnInit {
       this.factureService.envoyer(this.facture!.id).subscribe({
         next: () => {
           this.snackBar.open('Facture envoyée avec succès', 'Fermer', { duration: 3000 });
-          this.router.navigate(['/dashboard/factures']);
+          // Retour vers « Mes Factures » (la route /dashboard/factures n'existe pas).
+          this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
         },
         error: (err) => {
           this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
