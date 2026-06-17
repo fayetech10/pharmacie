@@ -55,7 +55,7 @@
 
             <button class="btn btn-primary btn-block submit-btn" type="submit" [disabled]="loginForm.invalid || isLoading">
               <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
-              <span *ngIf="!isLoading">Se connecter</span>
+              <span>{{ isLoading ? 'Connexion…' : 'Se connecter' }}</span>
             </button>
           </form>
 

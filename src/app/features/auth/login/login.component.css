@@ -133,7 +133,17 @@
     .full-width { width: 100%; }
     .full-width mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
 
-    .submit-btn { height: 48px; font-size: 15px; margin-top: 8px; }
+    .submit-btn {
+      height: 48px;
+      font-size: 15px;
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    /* Spinner blanc (sinon vert sur fond vert = invisible) */
+    .submit-btn mat-spinner { --mdc-circular-progress-active-indicator-color: #fff; }
 
     .error-message {
       display: flex;
