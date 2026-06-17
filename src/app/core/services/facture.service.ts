@@ -89,4 +89,11 @@ export class FactureService {
     formData.append('file', file);
     return this.api.post<void>('/factures/import', formData).pipe(this.notify());
   }
+
+  /** Réimporte une facture corrigée (format Excel détaillé) : remplace ses lignes. */
+  importFactureExcel(id: string, file: File): Observable<Facture> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.api.post<Facture>(`/factures/${id}/import`, formData).pipe(this.notify());
+  }
 }

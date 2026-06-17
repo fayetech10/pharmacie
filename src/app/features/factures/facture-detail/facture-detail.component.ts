@@ -76,8 +76,19 @@ export class FactureDetailComponent implements OnInit {
     return this.authService.isServiceRegional() && this.facture?.statut === StatutFacture.ENVOYEE;
   }
 
-  /** Regroupe les lignes par patient : le nom n'apparaît qu'une fois (rowspan). */
-  get patientGroups(): PatientGroup[] {
+  /**
+   * Lignes regroupées par patient (le nom n'apparaît qu'une fois — rowspan).
+   *
+   * IMPORTANT : c'est un CHAMP recalculé via setFacture(), surtout PAS un getter.
+   * Un getter renverrait de nouveaux tableaux à chaque cycle de détection de
+   * changements ; combiné au champ [(ngModel)] du motif de rejet, cela créait une
+   * boucle infinie (NgModel reprogramme un microtask → nouveau rendu → nouvelles
+   * références → input recréé → …) qui figeait l'onglet dès l'ouverture du rejet
+   * d'une ligne.
+   */
+  patientGroups: PatientGroup[] = [];
+
+  private buildPatientGroups(): PatientGroup[] {
     const groups: PatientGroup[] = [];
     const byKey = new Map<string, PatientGroup>();
     (this.facture?.lignes || []).forEach((ligne, index) => {
@@ -102,6 +113,10 @@ export class FactureDetailComponent implements OnInit {
 
   trackGroup(_i: number, g: PatientGroup): string {
     return (g.matricule || '') + '|' + (g.nom || '');
+  }
+
+  trackLigne(_i: number, item: { ligne: LigneFacture; index: number }): number {
+    return item.index;
   }
 
   dossierCount(g: PatientGroup): number {
@@ -154,12 +169,18 @@ export class FactureDetailComponent implements OnInit {
       });
   }
 
+  /** Affecte la facture courante et reconstruit (une seule fois) les groupes patients. */
+  private setFacture(f: Facture) {
+    this.facture = f;
+    this.patientGroups = this.buildPatientGroups();
+  }
+
   loadFacture(id: string) {
     this.loading = true;
     this.loadError = false;
     this.factureService.getById(id).subscribe({
       next: (data: Facture) => {
-        this.facture = data;
+        this.setFacture(data);
         this.loading = false;
       },
       error: (e: any) => {
@@ -201,7 +222,7 @@ export class FactureDetailComponent implements OnInit {
   envoyer() {
     this.openConfirm('Envoyer la facture', 'Êtes-vous sûr de vouloir envoyer cette facture au service régional ? Vous ne pourrez plus la modifier.', () => {
       this.factureService.envoyer(this.facture.id).subscribe({
-        next: (f: Facture) => this.facture = f,
+        next: (f: Facture) => this.setFacture(f),
         error: (e: any) => this.showError(e)
       });
     });
@@ -211,7 +232,7 @@ export class FactureDetailComponent implements OnInit {
     const commentaire = prompt("Commentaire de validation (optionnel) :") || "";
     this.factureService.valider(this.facture.id, { commentaire }).subscribe({
       next: (f: Facture) => {
-        this.facture = f;
+        this.setFacture(f);
         this.snackBar.open('Facture validée avec succès', 'Fermer', { duration: 3000 });
       },
       error: (e: any) => this.showError(e)
@@ -228,7 +249,7 @@ export class FactureDetailComponent implements OnInit {
     this.openConfirm('Rejeter la facture', 'Êtes-vous sûr de vouloir rejeter cette facture ?', () => {
       this.factureService.rejeter(this.facture.id, { commentaire }).subscribe({
         next: (f: Facture) => {
-          this.facture = f;
+          this.setFacture(f);
           this.snackBar.open('Facture rejetée avec succès', 'Fermer', { duration: 3000 });
         },
         error: (e: any) => this.showError(e)
@@ -243,7 +264,7 @@ export class FactureDetailComponent implements OnInit {
       () => {
         this.factureService.renvoyerAPharmacie(this.facture.id).subscribe({
           next: (f: Facture) => {
-            this.facture = f;
+            this.setFacture(f);
             this.snackBar.open('Facture renvoyée à la pharmacie avec succès', 'Fermer', { duration: 3000 });
           },
           error: (e: any) => this.showError(e)
@@ -259,7 +280,7 @@ export class FactureDetailComponent implements OnInit {
       () => {
         this.factureService.payer(this.facture.id).subscribe({
           next: (f: Facture) => {
-            this.facture = f;
+            this.setFacture(f);
             this.snackBar.open('Paiement enregistré avec succès', 'Fermer', { duration: 3000 });
           },
           error: (e: any) => this.showError(e)
@@ -287,7 +308,7 @@ export class FactureDetailComponent implements OnInit {
     };
     this.factureService.deciderLigne(this.facture.id, index, req).subscribe({
       next: (f: Facture) => {
-        this.facture = f;
+        this.setFacture(f);
         this.closeRejetLigne();
         this.rejetLigneSubmitting = false;
         this.snackBar.open(accepter ? 'Ligne acceptée' : 'Ligne rejetée', 'Fermer', { duration: 2500 });

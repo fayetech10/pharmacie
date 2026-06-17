@@ -1,4 +1,7 @@
     <div class="list-page fade-in">
+      <!-- Sélecteur de fichier partagé pour l'import « facture corrigée » par ligne -->
+      <input type="file" #singleFileInput style="display: none" (change)="onSingleFileSelected($event)" accept=".xlsx, .xls">
+
       <!-- En-tête -->
       <div class="page-head" *ngIf="showToolbar">
         <div>
@@ -97,6 +100,9 @@
                 <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir">
                   <mat-icon>visibility</mat-icon>
                 </a>
+                <button class="action-btn primary" *ngIf="canImportCorrige(f)" (click)="triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
+                  <mat-icon>upload_file</mat-icon>
+                </button>
                 <button class="action-btn success" (click)="exportSingleExcel(f.id, f.mois, f.annee)" title="Excel">
                   <mat-icon>table_view</mat-icon>
                 </button>
@@ -130,6 +136,10 @@
           <div class="m-card-top">
             <span class="m-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
             <div class="m-actions">
+              <button class="action-btn primary" *ngIf="canImportCorrige(f)"
+                      (click)="$event.stopPropagation(); triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
+                <mat-icon>upload_file</mat-icon>
+              </button>
               <button class="action-btn success" (click)="$event.stopPropagation(); exportSingleExcel(f.id, f.mois, f.annee)" title="Télécharger">
                 <mat-icon>download</mat-icon>
               </button>

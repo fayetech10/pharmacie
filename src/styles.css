@@ -219,6 +219,8 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   transition: all var(--transition);
 }
 .action-btn:hover { background: var(--primary-light); color: var(--primary); }
+.action-btn.primary { color: var(--primary); }
+.action-btn.primary:hover { background: var(--primary-light); color: var(--primary); }
 .action-btn.success:hover { background: var(--success-light); color: var(--success); }
 .action-btn.danger:hover { background: var(--warn-light); color: var(--warn); }
 .action-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }

@@ -127,7 +127,7 @@
             </button>
           </div>
           <div class="m-sub">{{ g.matricule || '—' }}</div>
-          <div class="med-line" *ngFor="let item of g.lignes" [class.rejected]="item.ligne.statutLigne === 'REJETEE'">
+          <div class="med-line" *ngFor="let item of g.lignes; trackBy: trackLigne" [class.rejected]="item.ligne.statutLigne === 'REJETEE'">
             <div class="med-head">
               <span class="med-name">{{ item.ligne.medicament }}</span>
               <span class="line-tag" *ngIf="showDecision" [ngClass]="lineTagClass(item.ligne.statutLigne)">
@@ -194,7 +194,7 @@
             </thead>
             <tbody>
               <ng-container *ngFor="let g of patientGroups; trackBy: trackGroup">
-                <tr *ngFor="let item of g.lignes; let first = first"
+                <tr *ngFor="let item of g.lignes; let first = first; trackBy: trackLigne"
                     [class.row-rejected]="item.ligne.statutLigne === 'REJETEE'"
                     [class.group-start]="first">
                   <!-- Patient : affiché une seule fois par dossier -->

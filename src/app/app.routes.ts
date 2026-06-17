@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { noAuthGuard } from './core/guards/no-auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { homeRedirectGuard } from './core/guards/home-redirect.guard';
 import { Role } from './core/models/user.model';
 
 export const routes: Routes = [
@@ -17,9 +18,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        // Accueil du tableau de bord : redirige vers l'espace selon le rôle.
         path: '',
-        redirectTo: 'espace',
-        pathMatch: 'full'
+        pathMatch: 'full',
+        canActivate: [homeRedirectGuard],
+        children: []
       },
       {
         path: 'espace-pharmacie',
@@ -40,10 +43,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/espace-central/espace-central.component').then(m => m.EspaceCentralComponent)
       },
       {
+        // Alias historique : même redirection dynamique selon le rôle.
         path: 'espace',
-        // Generic route that will be handled by a generic redirect or in the layout
-        redirectTo: 'espace-pharmacie', // We will handle dynamic redirection in main-layout or an auth-guard. Let's just keep the routes accessible.
-        pathMatch: 'full'
+        pathMatch: 'full',
+        canActivate: [homeRedirectGuard],
+        children: []
       },
       {
         path: 'factures/:id/edit',

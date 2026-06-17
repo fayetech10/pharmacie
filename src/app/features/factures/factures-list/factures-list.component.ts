@@ -56,6 +56,8 @@ export class FacturesListComponent implements OnInit {
   statuts = Object.values(StatutFacture);
   anneesDispo: number[] = [];
   isImporting = false;
+  /** Facture ciblée par l'import par ligne (« importer la facture corrigée »). */
+  pendingImportId: string | null = null;
   /** Mobile (≤768px) : vue cartes sans pagination → on affiche toutes les factures. */
   isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
@@ -262,6 +264,55 @@ export class FacturesListComponent implements OnInit {
         }
       });
     }
+  }
+
+  /** Le rôle courant peut-il réimporter une facture corrigée (SR / SC, hors payée) ? */
+  canImportCorrige(f: Facture): boolean {
+    return (this.authService.isServiceRegional() || this.authService.isServiceCentral())
+      && f.statut !== StatutFacture.PAYEE;
+  }
+
+  /** Mémorise la facture ciblée puis ouvre le sélecteur de fichier partagé. */
+  triggerSingleImport(id: string, fileInput: HTMLInputElement) {
+    this.pendingImportId = id;
+    fileInput.value = '';
+    fileInput.click();
+  }
+
+  onSingleFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    const id = this.pendingImportId;
+    if (!file || !id) {
+      event.target.value = '';
+      return;
+    }
+    this.isImporting = true;
+    this.snackBar.open('Importation de la facture corrigée…', '', { duration: 0 });
+    this.factureService.importFactureExcel(id, file).subscribe({
+      next: () => {
+        this.snackBar.open('Facture corrigée importée avec succès.', 'Fermer', { duration: 3000 });
+        this.loadFactures();
+        this.isImporting = false;
+        this.pendingImportId = null;
+        event.target.value = '';
+      },
+      error: (err: any) => {
+        let errorMsg = 'Erreur lors de l\'importation.';
+        if (err.error && err.error.message) {
+          errorMsg = err.error.message;
+        } else if (err.error && err.error.cause) {
+          errorMsg = err.error.cause;
+        } else if (err.status === 403) {
+          errorMsg = 'Accès refusé. Vous n\'avez pas les droits pour effectuer cette action.';
+        } else if (err.status === 0) {
+          errorMsg = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
+        }
+        this.snackBar.open(errorMsg, 'Fermer', { duration: 8000, panelClass: 'error-snackbar' });
+        this.isImporting = false;
+        this.pendingImportId = null;
+        event.target.value = '';
+      }
+    });
   }
 
   deleteFacture(id: string) {
