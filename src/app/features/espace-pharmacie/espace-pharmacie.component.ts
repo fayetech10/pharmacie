@@ -20,11 +20,17 @@ export class EspacePharmacieComponent implements OnInit {
   selectedTab = 0;
   /** Factures non vues par statut (pour le badge « Mes factures »). */
   counts: StatutCounts = {};
+  /**
+   * Statuts qui alertent la pharmacie : uniquement les décisions du SR / du central.
+   * On EXCLUT BROUILLON et ENVOYEE (actions propres de la pharmacie) — envoyer une
+   * facture ne doit pas créer de badge ici, c'est le Service Régional qui la reçoit.
+   */
+  private readonly NOTIF_STATUSES = ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'];
   private destroyRef = inject(DestroyRef);
 
-  /** Nombre total de factures non lues. */
+  /** Nombre de factures non lues dont le statut a été changé par le SR ou le central. */
   get totalCount(): number {
-    return Object.values(this.counts).reduce((sum, count) => sum + count, 0);
+    return this.NOTIF_STATUSES.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
   }
 
   /** Nombre de factures rejetées non encore consultées (SR + central) pour l'affichage en rouge. */

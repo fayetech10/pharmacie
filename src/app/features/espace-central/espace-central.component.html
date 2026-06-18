@@ -20,36 +20,36 @@
           </ng-template>
           <div class="tab-content">
             <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
-            <app-factures-list [allowedStatuses]="['VALIDEE_SR']"></app-factures-list>
+            <app-factures-list [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
+            <!-- Pas de badge : valider est l'action propre du central (pas une notification). -->
             Factures validées
-            <span class="tab-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
           </ng-template>
           <div class="tab-content">
             <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
-            <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true"></app-factures-list>
+            <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
+            <!-- Pas de badge : payer est l'action propre du central (pas une notification). -->
             Factures payées
-            <span class="tab-count" *ngIf="counts['PAYEE']">{{ counts['PAYEE'] }}</span>
           </ng-template>
           <div class="tab-content">
-            <app-factures-list [allowedStatuses]="['PAYEE']"></app-factures-list>
+            <app-factures-list [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
           </div>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
+            <!-- Pas de badge : rejeter est l'action propre du central (pas une notification). -->
             Factures rejetées
-            <span class="tab-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
           </ng-template>
           <div class="tab-content">
             <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
-            <app-factures-list [allowedStatuses]="['REJETEE_NC']"></app-factures-list>
+            <app-factures-list [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
           </div>
         </mat-tab>
       </mat-tab-group>

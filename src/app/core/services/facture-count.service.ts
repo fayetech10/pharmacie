@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { FactureService } from './facture.service';
+import { AuthService } from './auth.service';
 
 /** Nombre de factures par statut (clé = StatutFacture). */
 export type StatutCounts = Record<string, number>;
@@ -13,21 +14,35 @@ export type StatutCounts = Record<string, number>;
  * nombre de factures NON encore vues dans chaque statut. Ouvrir l'onglet d'un statut
  * (markSeen) remet son badge à zéro. L'état « vu » est persisté (localStorage) pour
  * survivre aux rechargements et n'est purgé que des factures ayant disparu.
+ *
+ * IMPORTANT : l'état « vu » est ISOLÉ PAR UTILISATEUR (clé suffixée par l'userId).
+ * Sinon, sur un même navigateur, une facture marquée vue par un compte (ex. la
+ * pharmacie qui consulte « Mes factures ») masquerait à tort le badge d'un autre
+ * compte (ex. le Service Régional qui doit voir la facture renvoyée dans « Reçues »).
  */
 @Injectable({ providedIn: 'root' })
 export class FactureCountService {
-  private readonly STORAGE_KEY = 'csu_seen_factures';
+  /** Préfixe de la clé localStorage ; la clé réelle est suffixée par l'userId. */
+  private readonly STORAGE_PREFIX = 'csu_seen_factures';
+  /** Ancienne clé globale (non scellée par utilisateur) : purgée au démarrage. */
+  private readonly LEGACY_STORAGE_KEY = 'csu_seen_factures';
   private readonly countsSubject = new BehaviorSubject<StatutCounts>({});
   /** Émet le nombre de factures NON vues par statut ; mis à jour par refresh()/markSeen(). */
   readonly counts$ = this.countsSubject.asObservable();
   private loading = false;
 
-  /** IDs des factures déjà vues, par statut (persistées). */
-  private seenIds: Record<string, Set<string>> = this.loadSeen();
+  /** IDs des factures déjà vues, par statut (persistées), pour l'utilisateur chargé. */
+  private seenIds: Record<string, Set<string>> = {};
+  /** userId dont seenIds est actuellement chargé (pour détecter un changement de compte). */
+  private seenUserId: string | null = null;
   /** IDs des factures présentes au dernier refresh, par statut. */
   private currentIds: Record<string, string[]> = {};
 
-  constructor(private factureService: FactureService) {}
+  constructor(private factureService: FactureService, private auth: AuthService) {
+    // Purge l'ancien état « vu » global (partagé entre comptes) au profit des clés par utilisateur.
+    try { localStorage.removeItem(this.LEGACY_STORAGE_KEY); } catch { /* mode privé : on ignore */ }
+    this.loadSeenForCurrentUser();
+  }
 
   /** Dernière valeur connue des compteurs (synchrone). */
   get snapshot(): StatutCounts {
@@ -36,6 +51,7 @@ export class FactureCountService {
 
   /** Recharge les factures, purge les IDs disparus et recalcule les non-vues. */
   refresh(): void {
+    this.syncUserScope();
     if (this.loading) return;
     this.loading = true;
     this.factureService.getAll().subscribe({
@@ -59,6 +75,7 @@ export class FactureCountService {
    * tombe à zéro. Appelé quand l'utilisateur ouvre l'onglet correspondant.
    */
   markSeen(statuses: string[]): void {
+    this.syncUserScope();
     let changed = false;
     for (const s of statuses) {
       const ids = this.currentIds[s] || [];
@@ -98,9 +115,34 @@ export class FactureCountService {
     if (changed) this.persistSeen();
   }
 
-  private loadSeen(): Record<string, Set<string>> {
+  /** Clé localStorage propre à un utilisateur (les états « vu » ne fuient pas d'un compte à l'autre). */
+  private storageKey(userId: string | null): string {
+    return `${this.STORAGE_PREFIX}_${userId ?? 'anon'}`;
+  }
+
+  /** (Re)charge l'état « vu » de l'utilisateur connecté et mémorise son userId. */
+  private loadSeenForCurrentUser(): void {
+    const uid = this.auth.getCurrentUser()?.userId ?? null;
+    this.seenUserId = uid;
+    this.seenIds = this.loadSeen(this.storageKey(uid));
+  }
+
+  /**
+   * Si le compte connecté a changé depuis le dernier accès, recharge l'état « vu »
+   * correspondant et oublie le dernier instantané de factures (qui appartenait à
+   * l'ancien compte). Appelé avant chaque refresh()/markSeen().
+   */
+  private syncUserScope(): void {
+    const uid = this.auth.getCurrentUser()?.userId ?? null;
+    if (uid !== this.seenUserId) {
+      this.loadSeenForCurrentUser();
+      this.currentIds = {};
+    }
+  }
+
+  private loadSeen(key: string): Record<string, Set<string>> {
     try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const raw = localStorage.getItem(key);
       if (!raw) return {};
       const obj = JSON.parse(raw) as Record<string, string[]>;
       const result: Record<string, Set<string>> = {};
@@ -115,7 +157,7 @@ export class FactureCountService {
     try {
       const obj: Record<string, string[]> = {};
       for (const k of Object.keys(this.seenIds)) obj[k] = [...this.seenIds[k]];
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(obj));
+      localStorage.setItem(this.storageKey(this.seenUserId), JSON.stringify(obj));
     } catch { /* quota dépassé / mode privé : on ignore */ }
   }
 }

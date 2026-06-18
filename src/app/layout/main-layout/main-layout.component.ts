@@ -56,6 +56,33 @@ export class MainLayoutComponent implements OnInit {
     return item.statuts.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
   }
 
+  /**
+   * Statuts « notifiables » du rôle courant : uniquement les changements d'état
+   * provoqués par d'AUTRES rôles, jamais ses propres actions — un rôle ne doit pas
+   * se notifier lui-même (ex. une pharmacie qui envoie ne doit pas voir de badge,
+   * c'est le Service Régional qui le voit dans « Reçues »).
+   */
+  private get notifiableStatuts(): string[] {
+    if (this.authService.isPharmacien()) {
+      // Décisions du SR / du central sur ses factures (pas ses brouillons ni ses envois).
+      return ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'];
+    }
+    if (this.authService.isServiceRegional()) {
+      // Reçues des pharmacies (ENVOYEE) + décisions du central (VALIDEE_NC / REJETEE_NC).
+      return ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'];
+    }
+    if (this.authService.isServiceCentral()) {
+      // Transmises par les SR (VALIDEE_SR). Ses propres validations/paiements/rejets n'alertent pas.
+      return ['VALIDEE_SR'];
+    }
+    return [];
+  }
+
+  /** Badge agrégé affiché sur le lien « espace » du rôle dans la barre du haut. */
+  get espaceBadge(): number {
+    return this.notifiableStatuts.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
+  }
+
   /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour Régional/Central/Admin. */
   get brandLogo(): string {
     return this.authService.isPharmacien()
@@ -74,7 +101,7 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isPharmacien()) {
       return [
         { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', tab: 0 },
-        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1, statuts: ['BROUILLON', 'ENVOYEE', 'VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'] },
+        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1, statuts: ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'] },
         { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
       ];
     }
@@ -82,8 +109,10 @@ export class MainLayoutComponent implements OnInit {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2, statuts: ['VALIDEE_SR', 'VALIDEE_NC'] },
-        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_SR', 'REJETEE_NC'] },
+        // Seules les décisions du central alertent le SR (VALIDEE_NC) ; ses propres validations (VALIDEE_SR) non.
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2, statuts: ['VALIDEE_NC'] },
+        // De même côté rejets : seul le rejet par le central (REJETEE_NC) alerte le SR.
+        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
     }
@@ -91,8 +120,9 @@ export class MainLayoutComponent implements OnInit {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'] },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2, statuts: ['VALIDEE_NC'] },
-        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3, statuts: ['PAYEE'] }
+        // Validées (VALIDEE_NC) et Payées (PAYEE) sont les actions PROPRES du central → pas de badge.
+        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
+        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 }
       ];
     }
     return [

@@ -25,15 +25,15 @@
         <!-- Validées par le SR (transmises au central) -->
         <mat-tab>
           <ng-template mat-tab-label>
+            <!-- Pas de badge : valider est l'action propre du SR (pas une notification). -->
             Validées
-            <span class="tab-count" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
           </ng-template>
           <div class="tab-content">
             <!-- Mobile : la barre du bas n'a qu'un onglet « Validées » → bascule SR / SC ici.
                  Desktop : onglet « Validées SC » dédié ci-dessous. -->
             <div class="seg-toggle" *ngIf="isMobile">
               <button type="button" [class.active]="valideeView === 'SR'" (click)="valideeView = 'SR'">
-                Validée <span class="seg-count" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
+                Validée
               </button>
               <button type="button" [class.active]="valideeView === 'SC'" (click)="valideeView = 'SC'">
                 Validée par SC <span class="seg-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
@@ -57,13 +57,13 @@
         <!-- Rejetées par le SR (renvoyées à la pharmacie) -->
         <mat-tab>
           <ng-template mat-tab-label>
+            <!-- Pas de badge : rejeter est l'action propre du SR (pas une notification). -->
             Rejetées
-            <span class="tab-count danger" *ngIf="counts['REJETEE_SR']">{{ counts['REJETEE_SR'] }}</span>
           </ng-template>
           <div class="tab-content">
             <div class="seg-toggle" *ngIf="isMobile">
               <button type="button" [class.active]="rejeteeView === 'SR'" (click)="rejeteeView = 'SR'">
-                Rejetée <span class="seg-count danger" *ngIf="counts['REJETEE_SR']">{{ counts['REJETEE_SR'] }}</span>
+                Rejetée
               </button>
               <button type="button" [class.active]="rejeteeView === 'SC'" (click)="rejeteeView = 'SC'">
                 Rejetée par SC <span class="seg-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
