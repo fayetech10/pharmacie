@@ -7,15 +7,30 @@
 
         <nav class="nav-links">
           <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
-            <mat-icon>dashboard</mat-icon>
+            <div class="nav-icon-wrapper">
+              <mat-icon>dashboard</mat-icon>
+              <span class="nav-badge" *ngIf="navBadge({label: '', icon: '', link: '', statuts: ['BROUILLON', 'ENVOYEE', 'VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE']}) > 0">
+                {{ navBadge({label: '', icon: '', link: '', statuts: ['BROUILLON', 'ENVOYEE', 'VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE']}) }}
+              </span>
+            </div>
             <span>Mon Espace</span>
           </a>
           <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
-            <mat-icon>dashboard</mat-icon>
+            <div class="nav-icon-wrapper">
+              <mat-icon>dashboard</mat-icon>
+              <span class="nav-badge" *ngIf="navBadge({label: '', icon: '', link: '', statuts: ['ENVOYEE']}) > 0">
+                {{ navBadge({label: '', icon: '', link: '', statuts: ['ENVOYEE']}) }}
+              </span>
+            </div>
             <span>Espace Régional</span>
           </a>
           <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral()">
-            <mat-icon>dashboard</mat-icon>
+            <div class="nav-icon-wrapper">
+              <mat-icon>dashboard</mat-icon>
+              <span class="nav-badge" *ngIf="navBadge({label: '', icon: '', link: '', statuts: ['VALIDEE_SR']}) > 0">
+                {{ navBadge({label: '', icon: '', link: '', statuts: ['VALIDEE_SR']}) }}
+              </span>
+            </div>
             <span>Espace Central</span>
           </a>
           <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { ApiService } from './api.service';
 import { LoginRequest, LoginResponse, Role } from '../models/user.model';
 import { Observable, tap } from 'rxjs';
@@ -16,7 +16,31 @@ export class AuthService {
   /** Minuteur de déconnexion automatique à l'expiration du token. */
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private api: ApiService, private router: Router) {
+  /**
+   * Stockage de la session : `sessionStorage` (et non `localStorage`) pour que
+   * la session soit EFFACÉE à la fermeture de l'onglet / du navigateur.
+   * Conséquence : à la réouverture, l'utilisateur retombe sur la page de connexion.
+   */
+  private readonly store: Storage = sessionStorage;
+
+  // ----- Déconnexion automatique après inactivité -----
+  /** Durée d'inactivité (souris/clavier) au-delà de laquelle on déconnecte. */
+  private readonly IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  /** Événements considérés comme une activité de l'utilisateur. */
+  private readonly ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+  /** Minuteur d'inactivité. */
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Horodatage de la dernière réinitialisation (anti-rafale sur mousemove). */
+  private lastIdleResetAt = 0;
+  /** Référence stable du gestionnaire (nécessaire pour add/removeEventListener). */
+  private readonly activityHandler = () => this.onUserActivity();
+
+  constructor(private api: ApiService, private router: Router, private zone: NgZone) {
+    // Migration / sécurité : on purge toute session persistée par l'ancien
+    // comportement (localStorage), qui survivait à la fermeture du navigateur.
+    localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem(this.LEGACY_EXPIRY_KEY);
+
     // Au démarrage de l'application, on vérifie l'état de la session existante
     // à partir de l'expiration réelle du token JWT.
     if (this.getRawToken()) {
@@ -25,6 +49,7 @@ export class AuthService {
         this.clearSession();
       } else {
         this.scheduleAutoLogout();
+        this.startIdleTracking();
       }
     }
   }
@@ -32,9 +57,10 @@ export class AuthService {
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.api.post<LoginResponse>('/auth/login', request).pipe(
       tap(res => {
-        localStorage.setItem(this.USER_KEY, JSON.stringify(res));
+        this.store.setItem(this.USER_KEY, JSON.stringify(res));
         // L'expiration est désormais déduite du token : aucun horodatage séparé à poser.
         this.scheduleAutoLogout();
+        this.startIdleTracking();
       })
     );
   }
@@ -47,7 +73,7 @@ export class AuthService {
   }
 
   getCurrentUser(): LoginResponse | null {
-    const userStr = localStorage.getItem(this.USER_KEY);
+    const userStr = this.store.getItem(this.USER_KEY);
     if (!userStr) {
       return null;
     }
@@ -95,7 +121,7 @@ export class AuthService {
 
   /** Lit le token brut depuis le stockage, sans contrôle d'expiration (évite la récursion). */
   private getRawToken(): string | null {
-    const userStr = localStorage.getItem(this.USER_KEY);
+    const userStr = this.store.getItem(this.USER_KEY);
     if (!userStr) return null;
     try {
       return JSON.parse(userStr).token ?? null;
@@ -155,13 +181,61 @@ export class AuthService {
     );
   }
 
-  /** Vide la session locale et annule le minuteur (sans redirection). */
+  // ----- Inactivité -----
+
+  /**
+   * Démarre le suivi d'inactivité : écoute l'activité de l'utilisateur et arme
+   * le minuteur de déconnexion. Les écouteurs sont posés hors zone Angular pour
+   * ne pas déclencher de détection de changement à chaque mouvement de souris.
+   */
+  private startIdleTracking(): void {
+    this.zone.runOutsideAngular(() => {
+      this.ACTIVITY_EVENTS.forEach(evt =>
+        document.addEventListener(evt, this.activityHandler, { passive: true })
+      );
+    });
+    this.armIdleTimer();
+  }
+
+  /** Arrête le suivi d'inactivité et annule le minuteur. */
+  private stopIdleTracking(): void {
+    this.ACTIVITY_EVENTS.forEach(evt =>
+      document.removeEventListener(evt, this.activityHandler)
+    );
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+  }
+
+  /** (Ré)arme le minuteur d'inactivité pour IDLE_TIMEOUT_MS à partir de maintenant. */
+  private armIdleTimer(): void {
+    this.lastIdleResetAt = Date.now();
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    // Au bout du délai sans activité : déconnexion (retour dans la zone Angular
+    // pour que la navigation/le rendu se mettent à jour).
+    this.idleTimer = setTimeout(
+      () => this.zone.run(() => this.logout()),
+      this.IDLE_TIMEOUT_MS
+    );
+  }
+
+  /** Activité détectée : réarme le minuteur (au plus une fois par seconde). */
+  private onUserActivity(): void {
+    const now = Date.now();
+    // Les événements « mousemove » sont très fréquents : on limite la cadence.
+    if (now - this.lastIdleResetAt < 1000) return;
+    this.armIdleTimer();
+  }
+
+  /** Vide la session locale, annule les minuteurs et coupe le suivi d'inactivité. */
   private clearSession(): void {
-    localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem(this.LEGACY_EXPIRY_KEY);
+    this.store.removeItem(this.USER_KEY);
+    this.store.removeItem(this.LEGACY_EXPIRY_KEY);
     if (this.expiryTimer) {
       clearTimeout(this.expiryTimer);
       this.expiryTimer = null;
     }
+    this.stopIdleTracking();
   }
 }

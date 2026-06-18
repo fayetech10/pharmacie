@@ -66,6 +66,29 @@
       transition: all 0.2s ease;
     }
     .nav-link mat-icon { font-size: 19px; width: 19px; height: 19px; }
+    .nav-icon-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-link .nav-badge {
+      position: absolute;
+      top: -6px;
+      right: -8px;
+      box-sizing: border-box;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #EF4444;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 15px;
+      text-align: center;
+      box-shadow: 0 0 0 2px var(--ink);
+    }
     .nav-link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
     .nav-link.active {
       background: var(--ink-soft);
