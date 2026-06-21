@@ -67,7 +67,7 @@
               <mat-icon>close</mat-icon>
             </button>
           </div>
-          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" [positionActiveOption]="'above'" [disableOptionCentering]="true" position="above">
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" position="above">
             <mat-option *ngFor="let med of suggestions" [value]="med.nom">
               {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non éligible)</span>
             </mat-option>

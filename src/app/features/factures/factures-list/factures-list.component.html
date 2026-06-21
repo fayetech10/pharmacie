@@ -313,7 +313,11 @@
         <div class="m-card clickable" *ngFor="let f of pagedFactures" (click)="openFacture(f.id)">
           <div class="m-card-top flex items-center justify-between">
             <div class="flex items-center gap-1.5 min-w-0">
-              <!-- Export Icon on Top Left -->
+              <span class="m-title truncate">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+            </div>
+            
+            <div class="m-actions">
+              <!-- Export Icon on Top Right -->
               <button mat-icon-button [matMenuTriggerFor]="exportMenu" (click)="$event.stopPropagation()" class="text-[var(--primary)] flex-shrink-0" style="width: 32px; height: 32px; line-height: 32px; padding: 0;">
                 <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin: 0;">file_download</mat-icon>
               </button>
@@ -328,10 +332,6 @@
                 </button>
               </mat-menu>
               
-              <span class="m-title truncate">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
-            </div>
-            
-            <div class="m-actions">
               <button class="action-btn primary" *ngIf="canImportCorrige(f)"
                       (click)="$event.stopPropagation(); triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
                 <mat-icon>upload_file</mat-icon>
@@ -342,7 +342,7 @@
                 <mat-icon>edit</mat-icon>
               </a>
               <button class="action-btn danger" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
-                      (click)="$event.stopPropagation(); deleteFacture(f.id)" title="Supprimer">
+                       (click)="$event.stopPropagation(); deleteFacture(f.id)" title="Supprimer">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
