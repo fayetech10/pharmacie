@@ -232,8 +232,8 @@
       </button>
     </div>
 
-    <!-- ACTION PRINCIPALE : enregistrer le patient (visible on Step 3 for mobile, always on desktop) -->
-    <div class="ff-commit" [class.hidden]="currentStep !== 3" class="md:flex ff-commit">
+    <!-- ACTION PRINCIPALE : enregistrer le patient (visible on Step 3 only) -->
+    <div class="ff-commit" [class.hidden]="currentStep !== 3" class="flex ff-commit">
       <div class="ff-commit-total" *ngIf="patientLignes.length > 0">
         <span class="ff-commit-cap">Total patient</span>
         <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>

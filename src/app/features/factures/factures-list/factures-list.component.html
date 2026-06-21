@@ -17,8 +17,12 @@
             
             <div class="monthly-list">
               <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
-                <div class="month-row" [class.month-row--has-facture]="getFactureForMonth(m)"
-                     [class.month-row--current]="m === currentMonth && selectedYear === currentYear">
+                <!-- Each row is clickable if it has an invoice -->
+                <div class="month-row" 
+                     [class.month-row--has-facture]="getFactureForMonth(m)"
+                     [class.clickable]="getFactureForMonth(m)"
+                     [class.month-row--current]="m === currentMonth && selectedYear === currentYear"
+                     (click)="getFactureForMonth(m) ? openFacture(getFactureForMonth(m)!.id) : null">
                   
                   <div class="month-left">
                     <span class="month-name" [class.month-name--active]="getFactureForMonth(m)">{{ getMonthName(m) }}</span>
@@ -45,23 +49,51 @@
                   </div>
 
                   <!-- Actions -->
-                  <div class="month-actions" *ngIf="getFactureForMonth(m) as f">
-                    <a class="btn btn-outline btn-sm"
+                  <div class="month-actions" *ngIf="getFactureForMonth(m) as f" (click)="$event.stopPropagation()">
+                    <!-- Desktop Actions -->
+                    <a class="btn btn-outline btn-sm hidden md:inline-flex"
                        *ngIf="f.statut === 'BROUILLON'"
                        [routerLink]="['/dashboard/factures', f.id, 'edit']">Modifier</a>
-                    <button class="btn btn-outline btn-sm"
+                    <button class="btn btn-outline btn-sm hidden md:inline-flex"
                             (click)="exportSingleExcel(f.id, f.mois, f.annee)">
                       Excel ↓
                     </button>
-                    <button class="btn btn-outline btn-sm"
+                    <button class="btn btn-outline btn-sm hidden md:inline-flex"
                             (click)="exportSinglePdf(f.id, f.mois, f.annee)">
                       PDF ↓
                     </button>
-                    <button class="btn btn-primary btn-sm btn-envoyer"
+                    <button class="btn btn-primary btn-sm btn-envoyer hidden md:inline-flex"
                             *ngIf="f.statut === 'BROUILLON'"
                             (click)="envoyerFacture(f)">
                       Envoyer
                     </button>
+
+                    <!-- Mobile Menu Actions (Icon at the top right of the row) -->
+                    <div class="flex items-center gap-1 md:hidden">
+                      <a class="action-btn text-[var(--primary)]"
+                         *ngIf="f.statut === 'BROUILLON'"
+                         [routerLink]="['/dashboard/factures', f.id, 'edit']"
+                         (click)="$event.stopPropagation()" title="Modifier">
+                        <mat-icon>edit</mat-icon>
+                      </a>
+                      <button mat-icon-button [matMenuTriggerFor]="monthMobileMenu" (click)="$event.stopPropagation()" class="text-slate-600">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #monthMobileMenu="matMenu">
+                        <button mat-menu-item (click)="exportSingleExcel(f.id, f.mois, f.annee)">
+                          <mat-icon>table_view</mat-icon>
+                          <span>Excel</span>
+                        </button>
+                        <button mat-menu-item (click)="exportSinglePdf(f.id, f.mois, f.annee)">
+                          <mat-icon>picture_as_pdf</mat-icon>
+                          <span>PDF</span>
+                        </button>
+                        <button mat-menu-item *ngIf="f.statut === 'BROUILLON'" (click)="envoyerFacture(f)">
+                          <mat-icon>send</mat-icon>
+                          <span>Envoyer</span>
+                        </button>
+                      </mat-menu>
+                    </div>
                   </div>
                 </div>
               </ng-container>

@@ -88,13 +88,13 @@
 
 <!-- Navigation basse (mobile) — le header est masqué sur mobile.
      La session expire automatiquement après 1 jour (redirection vers la connexion). -->
-<nav class="flex md:hidden fixed left-3 right-3 bottom-[calc(0.625rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[22px] shadow-[0_10px_28px_-6px_rgba(6,78,59,0.45),0_2px_8px_rgba(6,78,59,0.25)] p-1.5 gap-0.5">
-  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 border-0 rounded-[15px] bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
+<nav class="flex md:hidden fixed left-3 right-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[16px] shadow-[0_8px_20px_-6px_rgba(6,78,59,0.45)] p-1 gap-0">
+  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0 py-1 px-0.5 border-0 rounded-[12px] bg-transparent text-ink-text text-[9px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
      *ngFor="let item of bottomNav"
      [class.active]="isBottomActive(item)"
      [routerLink]="item.link"
      [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
-    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9.5px] font-bold leading-[15px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
     <mat-icon>{{ item.icon }}</mat-icon>
     <span>{{ item.label }}</span>
   </a>
