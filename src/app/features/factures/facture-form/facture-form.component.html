@@ -67,7 +67,7 @@
               <mat-icon>close</mat-icon>
             </button>
           </div>
-          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" [positionActiveOption]="'above'" [disableOptionCentering]="true" position="above">
             <mat-option *ngFor="let med of suggestions" [value]="med.nom">
               {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non éligible)</span>
             </mat-option>
@@ -233,7 +233,7 @@
     </div>
 
     <!-- ACTION PRINCIPALE : enregistrer le patient (visible on Step 3 only) -->
-    <div class="ff-commit" [class.hidden]="currentStep !== 3" class="flex ff-commit">
+    <div class="ff-commit" *ngIf="currentStep === 3" class="flex ff-commit">
       <div class="ff-commit-total" *ngIf="patientLignes.length > 0">
         <span class="ff-commit-cap">Total patient</span>
         <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>

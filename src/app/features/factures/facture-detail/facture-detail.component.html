@@ -1,3 +1,6 @@
+    <!-- Sélecteur de fichier pour l'import facture corrigée (SR uniquement) -->
+    <input type="file" #importFileInput style="display: none" (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
+
     <!-- Chargement : évite la page blanche -->
     <div class="empty-state big" *ngIf="loading">
       <mat-icon class="spin-animation">autorenew</mat-icon>
@@ -25,8 +28,13 @@
         <div class="header-actions">
           <app-status-badge [statut]="facture.statut"></app-status-badge>
 
-          <button class="btn btn-outline" (click)="exportExcel()">
-            <mat-icon>table_view</mat-icon> Excel
+          <button class="btn btn-outline" (click)="exportPdf()">
+            <mat-icon>picture_as_pdf</mat-icon> PDF
+          </button>
+
+          <!-- Import : visible uniquement pour le Service Régional -->
+          <button class="btn btn-outline" *ngIf="authService.isServiceRegional()" (click)="importFileInput.click()">
+            <mat-icon>upload_file</mat-icon> Importer
           </button>
 
           <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')">

@@ -610,7 +610,7 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   .m-cards {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 0 !important;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -622,6 +622,7 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
     border-bottom: 1px solid var(--border-light) !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    margin-bottom: 0 !important;
   }
   .m-card:last-child {
     border-bottom: none !important;

@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ViewChild, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -60,7 +60,7 @@ export class FactureDetailComponent implements OnInit {
   dossierPatient: PatientGroup | null = null;
   viewerImage: string | null = null;
 
-
+  @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
 
 
 
@@ -181,19 +181,43 @@ export class FactureDetailComponent implements OnInit {
     }
   }
 
-  exportExcel() {
-    this.factureService.exportFactureExcel(this.facture.id).subscribe({
+  exportPdf() {
+    this.factureService.exportFacturePdf(this.facture.id).subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Facture_${this.getMonthName(this.facture.mois)}_${this.facture.annee}.xlsx`;
+        a.download = `Facture_${this.getMonthName(this.facture.mois)}_${this.facture.annee}.pdf`;
         a.click();
         window.URL.revokeObjectURL(url);
-        this.snackBar.open('Export Excel réussi', 'Fermer', { duration: 3000 });
+        this.snackBar.open('Export PDF réussi', 'Fermer', { duration: 3000 });
       },
       error: (err: any) => this.showError(err)
     });
+  }
+
+  /** Import d'une facture corrigée (Service Régional uniquement) — écrase les données existantes. */
+  onImportFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.openConfirm(
+      'Importer la facture corrigée',
+      `Le fichier « ${file.name} » va remplacer les données actuelles de cette facture. Cette action est irréversible.`,
+      () => {
+        this.factureService.importFactureExcel(this.facture.id, file).subscribe({
+          next: (f: Facture) => {
+            this.setFacture(f);
+            this.snackBar.open('Facture importée avec succès — données mises à jour', 'Fermer', { duration: 4000 });
+          },
+          error: (err: any) => this.showError(err)
+        });
+      }
+    );
+
+    // Reset file input so the same file can be re-selected
+    input.value = '';
   }
 
   envoyer() {
