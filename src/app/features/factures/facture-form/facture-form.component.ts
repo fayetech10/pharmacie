@@ -95,7 +95,7 @@ export class FactureFormComponent implements OnInit {
       medicament: ['', Validators.required],
       codeProduit: ['', Validators.required],
       quantite: [1, [Validators.required, Validators.min(1)]],
-      prixUnitaire: [0, [Validators.required, Validators.min(0)]]
+      prixUnitaire: [null, [Validators.required, Validators.min(1)]]
     });
   }
 

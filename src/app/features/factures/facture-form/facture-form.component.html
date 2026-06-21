@@ -59,7 +59,7 @@
           <label class="ff-label" for="ff-med">Médicament</label>
           <div class="ff-input-clear">
             <input id="ff-med" type="text" class="ff-input" formControlName="medicament"
-                   [matAutocomplete]="auto" (input)="onMedicamentInput($event)"
+                   [matAutocomplete]="auto" [matAutocompletePosition]="'above'" (input)="onMedicamentInput($event)"
                    style="text-transform: uppercase;" placeholder="Rechercher un médicament…"
                    [readonly]="isMedicamentSelected">
             <button type="button" class="ff-clear" *ngIf="isMedicamentSelected"
