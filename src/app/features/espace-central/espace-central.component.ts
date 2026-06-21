@@ -30,18 +30,22 @@ export class EspaceCentralComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         this.selectedTab = +(params.get('tab') ?? 0);
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.counts$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(c => {
         this.counts = c;
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.refresh();
   }
 
   onTabChange(index: number) {
+    const currentTab = +(this.route.snapshot.queryParamMap.get('tab') ?? 0);
+    if (index === currentTab) {
+      return; // Évite les navigations redondantes et les boucles infinies de routage
+    }
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: index },

@@ -1,24 +1,11 @@
 /* Barre de progression fine en haut de l'écran — non bloquante.
-   Remplace l'ancien overlay plein écran qui figeait la navigation. */
+   Portée sur Tailwind (@apply) ; l'animation/ombre reste en brut. */
 .top-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 9999;
-  pointer-events: none;        /* n'intercepte aucun clic → navigation fluide */
-  overflow: hidden;
-  background: transparent;
+  @apply fixed top-0 left-0 right-0 h-[3px] z-[9999] pointer-events-none overflow-hidden bg-transparent;
 }
 
 .top-progress-bar {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 35%;
-  border-radius: 3px;
-  background: var(--primary, #009688);
+  @apply absolute top-0 h-full w-[35%] rounded-[3px] bg-primary;
   box-shadow: 0 0 8px rgba(0, 150, 136, 0.5);
   animation: top-progress-slide 1.2s ease-in-out infinite;
 }

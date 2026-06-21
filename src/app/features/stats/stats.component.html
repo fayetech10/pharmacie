@@ -7,16 +7,7 @@
     </div>
 
     <ng-container *ngIf="s">
-      <!-- ============ BOUTON TOGGLE STATS ============ -->
-      <div class="stats-toggle-row">
-        <button type="button" class="stats-toggle-btn" (click)="showDetails = !showDetails">
-          <mat-icon>{{ showDetails ? 'expand_less' : 'bar_chart' }}</mat-icon>
-          {{ showDetails ? 'Masquer les statistiques' : 'Afficher les statistiques' }}
-        </button>
-      </div>
-
-      <!-- ============ KPI PRINCIPAUX ============ -->
-      <ng-container *ngIf="showDetails">
+      <!-- ============ KPI PRINCIPAUX (toujours visibles) ============ -->
       <div class="kpi-grid">
         <div class="kpi-card accent-green">
           <div class="kpi-icon green"><mat-icon>payments</mat-icon></div>
@@ -86,6 +77,15 @@
         </div>
       </div>
 
+      <!-- ============ TOGGLE ANALYSE DÉTAILLÉE (KPI + perfs restent visibles) ============ -->
+      <div class="stats-toggle-row">
+        <button type="button" class="stats-toggle-btn" (click)="showDetails = !showDetails" [attr.aria-expanded]="showDetails">
+          <mat-icon>{{ showDetails ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ showDetails ? 'Masquer l\'analyse détaillée' : 'Afficher l\'analyse détaillée' }}
+        </button>
+      </div>
+
+      <ng-container *ngIf="showDetails">
       <!-- ============ ÉVOLUTION (N vs N-1) + RÉPARTITION STATUT ============ -->
       <div class="analytics-grid">
         <div class="section-card chart-card">

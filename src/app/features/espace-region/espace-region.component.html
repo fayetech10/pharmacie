@@ -1,4 +1,4 @@
-    <div class="espace-page fade-in">
+    <div class="fade-in">
       <div class="page-head">
         <div>
           <h1>Espace Régional</h1>
@@ -8,80 +8,100 @@
 
       <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
         <mat-tab label="Tableau de bord">
-          <div class="tab-content">
-            <app-regional-factures></app-regional-factures>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <app-regional-factures></app-regional-factures>
+            </div>
+          </ng-template>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
             Factures reçues
             <span class="tab-count" *ngIf="counts['ENVOYEE']">{{ counts['ENVOYEE'] }}</span>
           </ng-template>
-          <div class="tab-content">
-            <!-- Factures envoyées par les pharmacies (et corrections renvoyées) à contrôler -->
-            <app-factures-list [allowedStatuses]="['ENVOYEE']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- Factures envoyées par les pharmacies (et corrections renvoyées) à contrôler -->
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['ENVOYEE']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
         <!-- Validées par le SR (transmises au central) -->
         <mat-tab>
           <ng-template mat-tab-label>
             <!-- Pas de badge : valider est l'action propre du SR (pas une notification). -->
-            Validées
+            Validé CSUR
           </ng-template>
-          <div class="tab-content">
-            <!-- Mobile : la barre du bas n'a qu'un onglet « Validées » → bascule SR / SC ici.
-                 Desktop : onglet « Validées SC » dédié ci-dessous. -->
-            <div class="seg-toggle" *ngIf="isMobile">
-              <button type="button" [class.active]="valideeView === 'SR'" (click)="valideeView = 'SR'">
-                Validée
-              </button>
-              <button type="button" [class.active]="valideeView === 'SC'" (click)="valideeView = 'SC'">
-                Validée par SC <span class="seg-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
-              </button>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- Mobile : la barre du bas n'a qu'un onglet « Validé CSUR » → bascule CSUR / Centrale ici.
+                   Desktop : onglet « Validé Centrale » dédié ci-dessous. -->
+              <div class="seg-toggle" *ngIf="isMobile">
+                <button type="button" [class.active]="valideeView === 'SR'" (click)="valideeView = 'SR'">
+                  Validé CSUR
+                </button>
+                <button type="button" [class.active]="valideeView === 'SC'" (click)="valideeView = 'SC'">
+                  Validé Centrale <span class="seg-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
+                </button>
+              </div>
+              <app-factures-list [monthlyView]="true" *ngIf="!isMobile || valideeView === 'SR'" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
+              <app-factures-list [monthlyView]="true" *ngIf="isMobile && valideeView === 'SC'" [allowedStatuses]="['VALIDEE_NC']" [showToolbar]="false"></app-factures-list>
             </div>
-            <app-factures-list *ngIf="!isMobile || valideeView === 'SR'" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
-            <app-factures-list *ngIf="isMobile && valideeView === 'SC'" [allowedStatuses]="['VALIDEE_NC']" [showToolbar]="false"></app-factures-list>
-          </div>
+          </ng-template>
         </mat-tab>
         <!-- Validées par le service central (desktop : onglet dédié) -->
         <mat-tab *ngIf="!isMobile">
           <ng-template mat-tab-label>
-            Validées SC
+            Validé Centrale
             <span class="tab-count" *ngIf="counts['VALIDEE_NC']">{{ counts['VALIDEE_NC'] }}</span>
           </ng-template>
-          <div class="tab-content">
-            <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['VALIDEE_NC']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
 
         <!-- Rejetées par le SR (renvoyées à la pharmacie) -->
         <mat-tab>
           <ng-template mat-tab-label>
             <!-- Pas de badge : rejeter est l'action propre du SR (pas une notification). -->
-            Rejetées
+            Rejeté CSUR
           </ng-template>
-          <div class="tab-content">
-            <div class="seg-toggle" *ngIf="isMobile">
-              <button type="button" [class.active]="rejeteeView === 'SR'" (click)="rejeteeView = 'SR'">
-                Rejetée
-              </button>
-              <button type="button" [class.active]="rejeteeView === 'SC'" (click)="rejeteeView = 'SC'">
-                Rejetée par SC <span class="seg-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
-              </button>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <div class="seg-toggle" *ngIf="isMobile">
+                <button type="button" [class.active]="rejeteeView === 'SR'" (click)="rejeteeView = 'SR'">
+                  Rejeté CSUR
+                </button>
+                <button type="button" [class.active]="rejeteeView === 'SC'" (click)="rejeteeView = 'SC'">
+                  Rejeté Centrale <span class="seg-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
+                </button>
+              </div>
+              <app-factures-list [monthlyView]="true" *ngIf="!isMobile || rejeteeView === 'SR'" [allowedStatuses]="['REJETEE_SR']" [showToolbar]="false"></app-factures-list>
+              <app-factures-list [monthlyView]="true" *ngIf="isMobile && rejeteeView === 'SC'" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
             </div>
-            <app-factures-list *ngIf="!isMobile || rejeteeView === 'SR'" [allowedStatuses]="['REJETEE_SR']" [showToolbar]="false"></app-factures-list>
-            <app-factures-list *ngIf="isMobile && rejeteeView === 'SC'" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
-          </div>
+          </ng-template>
         </mat-tab>
         <!-- Rejetées par le service central (desktop : onglet dédié) -->
         <mat-tab *ngIf="!isMobile">
           <ng-template mat-tab-label>
-            Rejetées SC
+            Rejeté Centrale
             <span class="tab-count danger" *ngIf="counts['REJETEE_NC']">{{ counts['REJETEE_NC'] }}</span>
           </ng-template>
-          <div class="tab-content">
-            <app-factures-list [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
+        </mat-tab>
+        <!-- Factures payées de la région -->
+        <mat-tab label="Payé">
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
       </mat-tab-group>
     </div>

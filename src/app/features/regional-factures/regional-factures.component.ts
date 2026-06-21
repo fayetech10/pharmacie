@@ -180,4 +180,47 @@ export class RegionalFacturesComponent implements OnInit {
     ];
     return moisNoms[mois] || '';
   }
+
+  // ===== VUE MENSUELLE =====
+
+  /** Retourne les factures pour un mois donné (filtrées par année et statut). */
+  getFacturesForMonth(month: number): Facture[] {
+    let fs = this.selectedPharmacie?.factures ?? [];
+    if (this.filterYear) fs = fs.filter(f => f.annee === this.filterYear);
+    if (this.filterStatut) fs = fs.filter(f => f.statut === this.filterStatut);
+    return fs.filter(f => f.mois === month);
+  }
+
+  /** Nombre de patients distincts dans une facture. */
+  countPatients(f: Facture): number {
+    if (!f.lignes || f.lignes.length === 0) return 0;
+    const ids = new Set(
+      f.lignes
+        .map(l => (l.patientMatricule || l.patientNomPrenom || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    return ids.size;
+  }
+
+  /** Génère l'identifiant de facture affiché. */
+  getFactureRef(f: Facture): string {
+    const mm = String(f.mois).padStart(2, '0');
+    return `FACT-PHARMA-${f.annee}-${mm}`;
+  }
+
+  /** Date d'envoi (première action ENVOYEE dans l'historique). */
+  getDateEnvoi(f: Facture): string | null {
+    if (!f.historique) return null;
+    const envoi = f.historique.find(h => h.statut === StatutFacture.ENVOYEE);
+    return envoi ? envoi.date : null;
+  }
+
+  /** Le statut affiché sous forme de label pour le badge de la vue mensuelle. */
+  getStatutDateLabel(f: Facture): string {
+    const dateEnvoi = this.getDateEnvoi(f);
+    if (f.statut === StatutFacture.ENVOYEE && dateEnvoi) {
+      return `Envoyé le ${dateEnvoi.substring(0, 10)}`;
+    }
+    return this.statutLabel(f.statut);
+  }
 }

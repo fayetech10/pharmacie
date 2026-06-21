@@ -49,6 +49,7 @@ export class FactureFormComponent implements OnInit {
   ];
   photos: Record<PhotoKey, string | null> = { ticketCaisse: null, bonCommande: null, ordonnance: null };
   viewerImage: string | null = null;
+  isMedicamentSelected = false;
 
   constructor(
     private fb: FormBuilder,
@@ -88,6 +89,38 @@ export class FactureFormComponent implements OnInit {
           this.loadCurrentFacture();
         }
       });
+    // L'avertissement « limite mensuelle ≥ 2 » est désormais affiché en ligne
+    // (bloc calme près du champ Quantité) plutôt que via un snackbar à chaque frappe.
+  }
+
+  // ===== Dossier (pièces justificatives) : repliable pour alléger l'écran =====
+  dossierOpen = false;
+  toggleDossier() { this.dossierOpen = !this.dossierOpen; }
+  get photosCount(): number {
+    return this.photoFields.filter(p => !!this.photos[p.key]).length;
+  }
+
+  // ===== Totaux courants du patient en cours de saisie =====
+  get patientTotal(): number {
+    return this.patientLignes.reduce((s, pl) => s + pl.quantite * pl.prixUnitaire, 0);
+  }
+  get patientCsu(): number { return Math.round(this.patientTotal / 2); }
+
+  // ===== Synthèse de la facture du mois (en-tête de contexte) =====
+  get factureLignesCount(): number { return this.facture?.lignes?.length ?? 0; }
+  get facturePatientsCount(): number {
+    const ls = this.facture?.lignes ?? [];
+    const ids = new Set(
+      ls.map(l => (l.patientMatricule || l.patientNomPrenom || '').trim().toLowerCase()).filter(Boolean)
+    );
+    return ids.size;
+  }
+
+  /** Stepper de quantité (min 1). */
+  adjustQuantite(delta: number) {
+    const ctrl = this.medicamentForm.get('quantite');
+    const next = Math.max(1, (Number(ctrl?.value) || 1) + delta);
+    ctrl?.setValue(next);
   }
 
   loadCurrentFacture() {
@@ -139,6 +172,7 @@ export class FactureFormComponent implements OnInit {
     const med = this.suggestions.find(m => m.nom === nom);
     if (med) {
       this.medicamentForm.patchValue({ codeProduit: med.code });
+      this.isMedicamentSelected = true;
       if (med.statut === StatutMedicament.EXCLU) {
         this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
         this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
@@ -148,6 +182,13 @@ export class FactureFormComponent implements OnInit {
         this.excludedInfo = null;
       }
     }
+  }
+
+  clearMedicamentSelection() {
+    this.medicamentForm.patchValue({ medicament: '', codeProduit: '' });
+    this.isMedicamentSelected = false;
+    this.suggestions = [];
+    this.excludedInfo = null;
   }
 
   ajouterMedicamentLigne() {
@@ -161,10 +202,18 @@ export class FactureFormComponent implements OnInit {
       prixUnitaire: val.prixUnitaire
     });
 
+    const quantiteAjoutee = val.quantite;
+
     this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
+    this.isMedicamentSelected = false;
     this.suggestions = [];
     this.excludedInfo = null;
-    this.snackBar.open('Médicament préparé pour le patient', 'Fermer', { duration: 2000 });
+
+    if (quantiteAjoutee >= 2) {
+      this.snackBar.open('Avertissement : La quantité de ce médicament (' + quantiteAjoutee + ') atteint ou dépasse la limite mensuelle autorisée de 2 unités.', 'Fermer', { duration: 6000 });
+    } else {
+      this.snackBar.open('Médicament préparé pour le patient', 'Fermer', { duration: 2000 });
+    }
   }
 
   retirerMedicamentTemp(index: number) {

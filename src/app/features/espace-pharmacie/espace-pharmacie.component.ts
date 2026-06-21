@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
-import { DashboardComponent } from '../dashboard/dashboard.component';
+import { FactureFormComponent } from '../factures/facture-form/facture-form.component';
 import { FacturesListComponent } from '../factures/factures-list/factures-list.component';
 import { StatsComponent } from '../stats/stats.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -12,7 +12,7 @@ import { FactureCountService, StatutCounts } from '../../core/services/facture-c
 @Component({
   selector: 'app-espace-pharmacie',
   standalone: true,
-  imports: [CommonModule, MatTabsModule, DashboardComponent, FacturesListComponent, StatsComponent],
+  imports: [CommonModule, FactureFormComponent, FacturesListComponent, StatsComponent],
   templateUrl: './espace-pharmacie.component.html',
   styleUrls: ['./espace-pharmacie.component.css']
 })
@@ -51,19 +51,23 @@ export class EspacePharmacieComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         this.selectedTab = +(params.get('tab') ?? 0);
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.counts$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(c => {
         this.counts = c;
         // Une fois les compteurs chargés, on efface le badge si « Mes factures » est ouvert.
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.refresh();
   }
 
   onTabChange(index: number) {
+    const currentTab = +(this.route.snapshot.queryParamMap.get('tab') ?? 0);
+    if (index === currentTab) {
+      return; // Évite les navigations redondantes et les boucles infinies de routage
+    }
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: index },

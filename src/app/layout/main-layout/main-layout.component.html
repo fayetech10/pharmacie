@@ -1,100 +1,101 @@
-    <header class="topbar">
-      <div class="topbar-inner">
-        <a routerLink="/dashboard" class="brand">
-          <span class="brand-logo"><img [src]="brandLogo" alt="Logo" /></span>
-          <span class="brand-name">CSU <strong>Sénégal</strong></span>
-        </a>
+<!-- Topbar (desktop ≥ md) — masquée sur mobile, navigation via la pilule basse -->
+<header class="hidden md:block sticky top-0 z-[100] bg-ink-gradient shadow-[0_2px_12px_rgba(6,78,59,0.22)]">
+  <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center gap-7">
+    <a routerLink="/dashboard" class="flex items-center gap-2.5 no-underline shrink-0">
+      <span class="w-10 h-10 rounded bg-white flex items-center justify-center overflow-hidden shrink-0"><img [src]="brandLogo" alt="Logo" class="w-8 h-8 object-contain block" /></span>
+      <span class="text-[17px] font-normal tracking-[-0.01em] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
+    </a>
 
-        <nav class="nav-links">
-          <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link" *ngIf="authService.isPharmacien()">
-            <div class="nav-icon-wrapper">
-              <mat-icon>dashboard</mat-icon>
-              <span class="nav-badge" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
-            </div>
-            <span>Mon Espace</span>
-          </a>
-          <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceRegional()">
-            <div class="nav-icon-wrapper">
-              <mat-icon>dashboard</mat-icon>
-              <span class="nav-badge" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
-            </div>
-            <span>Espace Régional</span>
-          </a>
-          <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link" *ngIf="authService.isServiceCentral()">
-            <div class="nav-icon-wrapper">
-              <mat-icon>dashboard</mat-icon>
-              <span class="nav-badge" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
-            </div>
-            <span>Espace Central</span>
-          </a>
-          <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
-            <mat-icon>map</mat-icon>
-            <span>Régions</span>
-          </a>
-          <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
-            <mat-icon>medication</mat-icon>
-            <span>Médicaments</span>
-          </a>
-          <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin() || authService.isServiceRegional()">
-            <mat-icon>local_pharmacy</mat-icon>
-            <span>Pharmacies</span>
-          </a>
-          <a routerLink="/dashboard/utilisateurs" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
-            <mat-icon>manage_accounts</mat-icon>
-            <span>Utilisateurs</span>
-          </a>
-        </nav>
-
-        <div class="topbar-right">
-          <div class="user-pill" [matMenuTriggerFor]="userMenu">
-            <div class="user-details">
-              <span class="user-name">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
-              <span class="user-role">{{ getRoleLabel(currentUser?.role || '') }}</span>
-            </div>
-            <div class="user-avatar">
-              {{ initials }}
-            </div>
-          </div>
-          <mat-menu #userMenu="matMenu" xPosition="before">
-            <button mat-menu-item (click)="logout()">
-              <mat-icon>logout</mat-icon>
-              <span>Se déconnecter</span>
-            </button>
-          </mat-menu>
+    <nav class="nav-links flex items-center gap-1 flex-1 overflow-x-auto">
+      <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isPharmacien()">
+        <div class="relative flex items-center justify-center">
+          <mat-icon>dashboard</mat-icon>
+          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
         </div>
-      </div>
-    </header>
-
-    <div class="alert-banner" *ngIf="retards.length > 0">
-      <div class="alert-inner">
-        <mat-icon>warning_amber</mat-icon>
-        <span>
-          Vous avez <strong>{{ retards.length }}</strong> facture(s) en retard à l'état BROUILLON.
-          Veuillez les envoyer au service régional.
-        </span>
-        <button class="alert-btn" (click)="voirRetards()">Voir les retards</button>
-      </div>
-    </div>
-
-    <main class="main-content">
-      <router-outlet></router-outlet>
-    </main>
-
-    <!-- Bouton de déconnexion flottant (mobile uniquement, pour tests) -->
-    <button type="button" class="mobile-logout" (click)="logout()" aria-label="Se déconnecter">
-      <mat-icon>logout</mat-icon>
-    </button>
-
-    <!-- Navigation basse (mobile) — le header est masqué sur mobile.
-         La session expire automatiquement après 1 jour (redirection vers la connexion). -->
-    <nav class="bottom-nav">
-      <a class="bn-item" *ngFor="let item of bottomNav"
-         [class.active]="isBottomActive(item)"
-         [routerLink]="item.link"
-         [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
-        <span class="bn-badge" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
-        <mat-icon>{{ item.icon }}</mat-icon>
-        <span>{{ item.label }}</span>
+        <span>Mon Espace</span>
+      </a>
+      <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isServiceRegional()">
+        <div class="relative flex items-center justify-center">
+          <mat-icon>dashboard</mat-icon>
+          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+        </div>
+        <span>Espace Régional</span>
+      </a>
+      <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isServiceCentral()">
+        <div class="relative flex items-center justify-center">
+          <mat-icon>dashboard</mat-icon>
+          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+        </div>
+        <span>Espace Central</span>
+      </a>
+      <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
+        <mat-icon>map</mat-icon>
+        <span>Régions</span>
+      </a>
+      <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
+        <mat-icon>medication</mat-icon>
+        <span>Médicaments</span>
+      </a>
+      <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin() || authService.isServiceRegional()">
+        <mat-icon>local_pharmacy</mat-icon>
+        <span>Pharmacies</span>
+      </a>
+      <a routerLink="/dashboard/utilisateurs" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
+        <mat-icon>manage_accounts</mat-icon>
+        <span>Utilisateurs</span>
       </a>
     </nav>
-  
+
+    <div class="shrink-0 ml-auto">
+      <div class="flex items-center gap-2.5 py-[5px] pl-3.5 pr-[5px] rounded-full cursor-pointer bg-white/[0.06] border border-white/[0.14] transition-colors hover:bg-white/[0.12]" [matMenuTriggerFor]="userMenu">
+        <div class="flex flex-col items-end">
+          <span class="text-[13px] font-semibold leading-tight text-white">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
+          <span class="text-[11px] text-ink-text">{{ getRoleLabel(currentUser?.role || '') }}</span>
+        </div>
+        <div class="w-9 h-9 rounded-full bg-white text-ink flex items-center justify-center text-[13px] font-extrabold tracking-[0.02em] shrink-0">
+          {{ initials }}
+        </div>
+      </div>
+      <mat-menu #userMenu="matMenu" xPosition="before">
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Se déconnecter</span>
+        </button>
+      </mat-menu>
+    </div>
+  </div>
+</header>
+
+<div class="bg-gradient-to-r from-[#FEF2F2] to-[#FFF7ED] border-b border-[#FECACA]" *ngIf="retards.length > 0">
+  <div class="alert-inner max-w-[1400px] mx-auto px-6 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3 flex items-center gap-3 text-sm font-medium text-[#B91C1C] flex-wrap">
+    <mat-icon>warning_amber</mat-icon>
+    <span>
+      Vous avez <strong>{{ retards.length }}</strong> facture(s) en retard à l'état BROUILLON.
+      Veuillez les envoyer au service régional.
+    </span>
+    <button class="ml-0 md:ml-auto w-full md:w-auto py-1.5 px-4 rounded-sm border border-warn bg-white text-warn font-semibold text-[13px] cursor-pointer transition-all duration-200 hover:bg-warn hover:text-white" (click)="voirRetards()">Voir les retards</button>
+  </div>
+</div>
+
+<main class="max-w-[1400px] mx-auto px-3 md:px-6 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-7 pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-10">
+  <router-outlet></router-outlet>
+</main>
+
+<!-- Bouton de déconnexion flottant (mobile uniquement, pour tests) -->
+<button type="button" class="mobile-logout flex md:hidden fixed top-[calc(0.625rem+env(safe-area-inset-top))] right-3 z-[250] w-10 h-10 items-center justify-center border-0 rounded-full bg-ink-gradient text-white shadow-[0_6px_16px_-4px_rgba(6,78,59,0.45)] cursor-pointer" (click)="logout()" aria-label="Se déconnecter">
+  <mat-icon>logout</mat-icon>
+</button>
+
+<!-- Navigation basse (mobile) — le header est masqué sur mobile.
+     La session expire automatiquement après 1 jour (redirection vers la connexion). -->
+<nav class="flex md:hidden fixed left-3 right-3 bottom-[calc(0.625rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[22px] shadow-[0_10px_28px_-6px_rgba(6,78,59,0.45),0_2px_8px_rgba(6,78,59,0.25)] p-1.5 gap-0.5">
+  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 border-0 rounded-[15px] bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
+     *ngFor="let item of bottomNav"
+     [class.active]="isBottomActive(item)"
+     [routerLink]="item.link"
+     [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
+    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9.5px] font-bold leading-[15px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+    <mat-icon>{{ item.icon }}</mat-icon>
+    <span>{{ item.label }}</span>
+  </a>
+</nav>

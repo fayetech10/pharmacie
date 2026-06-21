@@ -1,66 +1,137 @@
-    <div class="login-layout">
-      <!-- Panneau marque (masqué sur mobile) -->
-      <aside class="brand-panel">
-        <span class="brand-csu-chip">
-          <img src="assets/logo-csu.png" alt="SEN-CSU">
-        </span>
-        <div class="brand-center">
-          <span class="brand-logo-card">
-            <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie">
-          </span>
-          <h2>Gestion des Factures Pharmaceutiques</h2>
-          <p>Couverture Sanitaire Universelle · Sénégal</p>
-          <ul class="brand-features">
-            <li><mat-icon>insights</mat-icon> Suivi des factures en temps réel</li>
-            <li><mat-icon>verified_user</mat-icon> Validation régionale &amp; centrale</li>
-            <li><mat-icon>lock</mat-icon> Données sécurisées et traçables</li>
-          </ul>
-        </div>
-        <span class="brand-foot">© {{ year }} SEN-CSU · Tous droits réservés</span>
-      </aside>
+<div class="login-container min-h-screen grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] bg-[var(--bg)] overflow-hidden relative font-sans">
+  
+  <!-- Glowing Background Orbs (ambient lighting utilizing theme primary green color) -->
+  <div class="absolute w-[600px] h-[600px] rounded-full bg-[var(--primary-light)] opacity-40 blur-[130px] -top-40 -left-40 pointer-events-none"></div>
+  <div class="absolute w-[500px] h-[500px] rounded-full bg-[var(--primary-light)] opacity-30 blur-[120px] -bottom-20 -right-20 pointer-events-none"></div>
 
-      <!-- Panneau formulaire -->
-      <section class="form-panel">
-        <div class="form-wrap fade-in">
-          <div class="form-logo-mobile">
-            <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie" class="logo-img-mobile">
+  <!-- Left Side: Interactive Brand Showcase Panel using the deep green gradient of the project -->
+  <aside class="brand-showcase relative hidden lg:flex flex-col justify-between p-16 overflow-hidden bg-[linear-gradient(135deg,var(--ink)_0%,var(--ink-deep)_100%)] border-r border-[var(--primary-200)]/30">
+    <!-- Grid overlay pattern -->
+    <div class="grid-overlay absolute inset-0 opacity-[0.04] pointer-events-none"></div>
+    
+    <!-- Top Bar: Logo & Title -->
+    <div class="flex items-center gap-4 z-10 animate-fade-in">
+      <div class="logo-wrapper p-2 rounded-xl bg-white/10 border border-white/10 backdrop-blur-md">
+        <img src="assets/logo-csu.png" alt="SEN-CSU Logo" class="w-10 h-10 object-contain">
+      </div>
+      <div>
+        <h3 class="text-white font-bold tracking-tight text-lg m-0">SEN-CSU</h3>
+        <p class="text-[var(--ink-text)] text-xs m-0">République du Sénégal</p>
+      </div>
+    </div>
+
+    <!-- Center content: App Pitch & Illustration Wrapper -->
+    <div class="my-auto z-10 space-y-8 max-w-lg">
+      <div class="space-y-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/20">
+          <span class="w-2 h-2 rounded-full bg-[var(--primary-200)] animate-pulse"></span>
+          Plateforme Officielle
+        </span>
+        <h1 class="text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight">
+          Simplifiez le suivi des <span class="text-[var(--primary-100)]">factures</span> médicales.
+        </h1>
+        <p class="text-[var(--ink-text)] text-base leading-relaxed opacity-95">
+          Gérez, validez et suivez l'avancement des factures de la Couverture Sanitaire Universelle en toute sécurité et simplicité.
+        </p>
+      </div>
+
+      <!-- Feature Card (Glassmorphic using theme background blur and light borders) -->
+      <div class="glass-card p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-white/10 text-white">
+            <mat-icon class="w-5 h-5 text-base">verified</mat-icon>
+          </div>
+          <h4 class="text-white font-semibold text-sm m-0">Fonctionnalités Clés</h4>
+        </div>
+        
+        <ul class="space-y-3.5 pl-0 list-none m-0">
+          <li class="flex items-center gap-3 text-white text-sm">
+            <mat-icon class="text-[var(--primary-100)] text-base w-4 h-4">check_circle_outline</mat-icon>
+            <span>Dépôts et réimports Excel simplifiés</span>
+          </li>
+          <li class="flex items-center gap-3 text-white text-sm">
+            <mat-icon class="text-[var(--primary-100)] text-base w-4 h-4">check_circle_outline</mat-icon>
+            <span>Circuit de validation à double niveau (SR / NC)</span>
+          </li>
+          <li class="flex items-center gap-3 text-white text-sm">
+            <mat-icon class="text-[var(--primary-100)] text-base w-4 h-4">check_circle_outline</mat-icon>
+            <span>Rapports analytiques et exports automatisés</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer of Left Panel -->
+    <div class="z-10 text-[var(--ink-text)] opacity-75 text-xs flex justify-between items-center border-t border-white/10 pt-6">
+      <span>© {{ year }} SEN-CSU</span>
+      <span>v2.1.0</span>
+    </div>
+  </aside>
+
+  <!-- Right Side: Clean Modern Form Panel using Light theme values from index.css -->
+  <section class="flex items-center justify-center p-8 lg:p-16 z-10">
+    <div class="w-full max-w-[420px] space-y-8 animate-slide-up">
+      
+      <!-- Top header for mobile -->
+      <div class="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
+        <div class="lg:hidden p-3 rounded-2xl bg-white border border-[var(--border)] shadow-lg">
+          <img src="assets/logo-pharmacie.png" alt="Logo Pharmacie" class="w-16 h-16 object-contain">
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight m-0">Bon retour</h2>
+          <p class="text-[var(--text-secondary)] text-sm m-0">Veuillez renseigner vos identifiants pour continuer.</p>
+        </div>
+      </div>
+
+      <!-- Form Card using light clean background card tokens -->
+      <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-6 lg:p-8 shadow-lg space-y-6">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
+          
+          <!-- Email Field -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-[var(--text-secondary)] tracking-wider uppercase">Adresse e-mail</label>
+            <mat-form-field appearance="outline" class="w-full custom-field">
+              <input matInput formControlName="email" type="email" placeholder="nom.prenom@csu.sn" autocomplete="email">
+              <mat-icon matPrefix class="text-[var(--text-muted)]">mail</mat-icon>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('required')">L'adresse email est requise</mat-error>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('email')">Veuillez entrer une adresse valide</mat-error>
+            </mat-form-field>
           </div>
 
-          <h1>Connexion</h1>
-          <p class="subtitle">Accédez à votre espace de gestion</p>
-
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Adresse e-mail</mat-label>
-              <input matInput formControlName="email" type="email" placeholder="vous@csu.sn" autocomplete="email">
-              <mat-icon matPrefix>mail_outline</mat-icon>
-              <mat-error *ngIf="loginForm.get('email')?.hasError('required')">L'email est requis</mat-error>
-              <mat-error *ngIf="loginForm.get('email')?.hasError('email')">Format d'email invalide</mat-error>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Mot de passe</mat-label>
-              <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" autocomplete="current-password">
-              <mat-icon matPrefix>lock_outline</mat-icon>
-              <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button" [attr.aria-label]="hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe'">
+          <!-- Password Field -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-[var(--text-secondary)] tracking-wider uppercase">Mot de passe</label>
+            <mat-form-field appearance="outline" class="w-full custom-field">
+              <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" placeholder="••••••••" autocomplete="current-password">
+              <mat-icon matPrefix class="text-[var(--text-muted)]">lock</mat-icon>
+              <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button" class="text-[var(--text-muted)]" [attr.aria-label]="hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe'">
                 <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
               </button>
               <mat-error *ngIf="loginForm.get('password')?.hasError('required')">Le mot de passe est requis</mat-error>
             </mat-form-field>
+          </div>
 
-            <div class="error-message" *ngIf="errorMessage">
-              <mat-icon>error_outline</mat-icon>
-              <span>{{ errorMessage }}</span>
-            </div>
+          <!-- Error Alert Banner using theme warn system -->
+          <div class="error-banner flex items-start gap-3 bg-[var(--warn-light)] border border-[var(--warn)]/20 text-[var(--warn)] p-3.5 rounded-xl animate-shake" *ngIf="errorMessage">
+            <mat-icon class="w-5 h-5 text-base mt-0.5">error_outline</mat-icon>
+            <div class="text-sm font-semibold">{{ errorMessage }}</div>
+          </div>
 
-            <button class="btn btn-primary btn-block submit-btn" type="submit" [disabled]="loginForm.invalid || isLoading">
-              <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
-              <span>{{ isLoading ? 'Connexion…' : 'Se connecter' }}</span>
-            </button>
-          </form>
+          <!-- Submit Action Button using theme primary green color -->
+          <button class="w-full flex items-center justify-center gap-3 h-12 rounded-xl bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] font-bold text-sm tracking-wide shadow-lg shadow-[var(--primary)]/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer border-0 mt-2" type="submit" [disabled]="loginForm.invalid || isLoading">
+            <mat-spinner diameter="18" *ngIf="isLoading" class="white-spinner"></mat-spinner>
+            <span>{{ isLoading ? 'Authentification…' : 'Se connecter' }}</span>
+          </button>
+        </form>
+      </div>
 
-          <p class="form-foot"><mat-icon>shield</mat-icon> Connexion sécurisée et chiffrée</p>
-        </div>
-      </section>
+      <!-- Security footer message -->
+      <div class="flex items-center justify-center gap-2 text-[var(--text-muted)] text-xs">
+        <mat-icon class="w-4 h-4 text-xs text-[var(--text-muted)] leading-none">security</mat-icon>
+        <span>Connexion hautement sécurisée et chiffrée.</span>
+      </div>
+
     </div>
-  
+  </section>
+
+</div>

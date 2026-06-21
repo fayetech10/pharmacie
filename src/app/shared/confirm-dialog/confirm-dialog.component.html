@@ -1,9 +1,39 @@
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <p>{{ data.message }}</p>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>{{ data.cancelText }}</button>
-      <button mat-flat-button [color]="data.danger ? 'warn' : 'primary'" [mat-dialog-close]="true">{{ data.confirmText }}</button>
-    </mat-dialog-actions>
-  
+<div class="cfd" [class.cfd--danger]="data.danger">
+  <div class="cfd-head">
+    <span class="cfd-icon">
+      <mat-icon>{{ data.icon || (data.danger ? 'report' : 'help_outline') }}</mat-icon>
+    </span>
+    <h2 class="cfd-title" mat-dialog-title>{{ data.title }}</h2>
+  </div>
+
+  <div mat-dialog-content class="cfd-body">
+    <p class="cfd-msg" *ngIf="data.message">{{ data.message }}</p>
+
+    <div class="cfd-field" *ngIf="data.prompt">
+      <label class="cfd-label" for="cfd-input" *ngIf="data.label">
+        {{ data.label }} <span class="cfd-req" *ngIf="data.required">*</span>
+      </label>
+
+      <textarea *ngIf="data.multiline; else singleLine" id="cfd-input" class="cfd-input"
+                rows="3" [(ngModel)]="value" [placeholder]="data.placeholder || ''"
+                [attr.maxlength]="data.maxLength || null" cdkFocusInitial
+                (keydown.escape)="dialogRef.close()"></textarea>
+      <ng-template #singleLine>
+        <input id="cfd-input" type="text" class="cfd-input"
+               [(ngModel)]="value" [placeholder]="data.placeholder || ''"
+               [attr.maxlength]="data.maxLength || null" cdkFocusInitial
+               (keydown.enter)="confirm()" (keydown.escape)="dialogRef.close()">
+      </ng-template>
+
+      <div class="cfd-counter" *ngIf="data.maxLength">{{ value.length }}/{{ data.maxLength }}</div>
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="cfd-actions">
+    <button type="button" class="btn btn-ghost" (click)="dialogRef.close()">{{ data.cancelText }}</button>
+    <button type="button" class="btn" [class.btn-danger]="data.danger" [class.btn-primary]="!data.danger"
+            [disabled]="!canConfirm" (click)="confirm()">
+      {{ data.confirmText }}
+    </button>
+  </div>
+</div>

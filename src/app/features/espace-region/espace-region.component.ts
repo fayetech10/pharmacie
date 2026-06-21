@@ -37,28 +37,34 @@ export class EspaceRegionComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(state => {
         this.isMobile = state.matches;
-        // En mobile, seuls les onglets 0..3 existent : on borne l'index courant.
-        if (this.isMobile && this.selectedTab > 3) {
-          this.selectedTab = 3;
+        // En mobile, seuls les onglets 0..4 existent (les onglets « … Centrale »
+        // dédiés du desktop sont fusionnés dans les bascules CSUR/Centrale) :
+        // on borne l'index courant pour ne pas pointer sur un onglet absent.
+        if (this.isMobile && this.selectedTab > 4) {
+          this.selectedTab = 4;
         }
       });
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         this.selectedTab = +(params.get('tab') ?? 0);
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.counts$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(c => {
         this.counts = c;
         // Une fois les compteurs chargés, on efface d'emblée le badge de l'onglet ouvert.
-        this.markActiveTabSeen();
+        setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.refresh();
   }
 
   onTabChange(index: number) {
+    const currentTab = +(this.route.snapshot.queryParamMap.get('tab') ?? 0);
+    if (index === currentTab) {
+      return; // Évite les navigations redondantes et les boucles infinies de routage
+    }
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: index },
@@ -73,6 +79,7 @@ export class EspaceRegionComponent implements OnInit {
         case 1: return ['ENVOYEE'];
         case 2: return ['VALIDEE_SR', 'VALIDEE_NC'];
         case 3: return ['REJETEE_SR', 'REJETEE_NC'];
+        case 4: return ['PAYEE'];
         default: return [];
       }
     }
@@ -82,6 +89,7 @@ export class EspaceRegionComponent implements OnInit {
       case 3: return ['VALIDEE_NC'];
       case 4: return ['REJETEE_SR'];
       case 5: return ['REJETEE_NC'];
+      case 6: return ['PAYEE'];
       default: return [];
     }
   }

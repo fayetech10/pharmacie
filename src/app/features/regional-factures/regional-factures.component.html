@@ -95,87 +95,65 @@
       </table>
     </mat-card>
 
-    <!-- ===================== NIVEAU 2 : FACTURES ===================== -->
-    <!-- Filtres Année + Statut -->
-    <div class="dash-filters" *ngIf="level === 'factures'">
-      <label class="dash-select">
-        <span>Année</span>
-        <select [(ngModel)]="filterYear">
-          <option [ngValue]="0">Toutes</option>
-          <option *ngFor="let y of anneesDispo" [ngValue]="y">{{ y }}</option>
-        </select>
-      </label>
-      <label class="dash-select">
-        <span>Statut</span>
-        <select [(ngModel)]="filterStatut">
-          <option value="">Tous les statuts</option>
-          <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="m-cards" *ngIf="level === 'factures'">
-      <div class="m-card" *ngFor="let f of displayedFactures">
-        <div class="m-card-top">
-          <span class="m-title">{{ getMonthName(f.mois) }} {{ f.annee }}</span>
-          <div class="m-actions">
-            <button class="action-btn success" (click)="exportFacture(f)" title="Télécharger">
-              <mat-icon>download</mat-icon>
-            </button>
-            <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir">
-              <mat-icon>visibility</mat-icon>
-            </a>
+    <!-- ===================== NIVEAU 2 : FACTURES (vue mensuelle) ===================== -->
+    <ng-container *ngIf="level === 'factures'">
+      <div class="monthly-card">
+        <div class="monthly-header">
+          <h2 class="monthly-title">Factures</h2>
+          <div class="monthly-filters">
+            <select class="year-select" [(ngModel)]="filterYear">
+              <option [ngValue]="0">Toutes</option>
+              <option *ngFor="let y of anneesDispo" [ngValue]="y">{{ y }}</option>
+            </select>
+            <select class="year-select" [(ngModel)]="filterStatut">
+              <option value="">Tous les statuts</option>
+              <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
+            </select>
           </div>
         </div>
-        <div class="m-foot">
-          <app-status-badge [statut]="f.statut"></app-status-badge>
-          <span class="m-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</span>
+
+        <div class="monthly-list">
+          <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
+            <ng-container *ngIf="getFacturesForMonth(m) as monthFactures">
+              <div class="month-row" [class.month-row--has-facture]="monthFactures.length > 0">
+                
+                <div class="month-left">
+                  <span class="month-name" [class.month-name--active]="monthFactures.length > 0">{{ getMonthName(m) }}</span>
+                  
+                  <div class="month-content">
+                    <!-- Mois sans facture -->
+                    <span *ngIf="monthFactures.length === 0" class="month-empty">Aucune facturation</span>
+
+                    <!-- Mois avec facture(s) -->
+                    <div class="facture-info-grid" *ngIf="monthFactures.length > 0">
+                      <div *ngFor="let f of monthFactures" class="facture-row-item">
+                        <div class="facture-top-line">
+                          <span class="month-ref">{{ getFactureRef(f) }}</span>
+                          <span class="month-statut-badge status-badge"
+                                [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
+                        </div>
+                        <div class="facture-bottom-line">
+                          <span>{{ countPatients(f) }} patient(s) · SEN-CSU</span>
+                          <strong class="month-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions (on prend la première facture du mois) -->
+                <div class="month-actions" *ngIf="monthFactures.length > 0">
+                  <button class="btn btn-outline btn-sm" (click)="exportFacture(monthFactures[0])">
+                    Excel ↓
+                  </button>
+                  <a class="btn btn-outline btn-sm" [routerLink]="['/dashboard/factures', monthFactures[0].id]">
+                    <mat-icon>visibility</mat-icon> Voir
+                  </a>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
         </div>
       </div>
-      <div class="empty-state" *ngIf="displayedFactures.length === 0">
-        <mat-icon>receipt_long</mat-icon>
-        <p>Aucune facture pour ce filtre</p>
-      </div>
-    </div>
-
-    <mat-card class="table-card desktop-only" *ngIf="level === 'factures'">
-      <table mat-table [dataSource]="displayedFactures" class="w-100">
-        <ng-container matColumnDef="mois">
-          <th mat-header-cell *matHeaderCellDef> Mois / Année </th>
-          <td mat-cell *matCellDef="let f">
-            <div class="entity-cell">
-              <div class="entity-icon month"><mat-icon>event</mat-icon></div>
-              <span class="entity-name">{{ getMonthName(f.mois) }} {{ f.annee }}</span>
-            </div>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="montant">
-          <th mat-header-cell *matHeaderCellDef> Montant </th>
-          <td mat-cell *matCellDef="let f"><strong>{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</strong></td>
-        </ng-container>
-        <ng-container matColumnDef="statut">
-          <th mat-header-cell *matHeaderCellDef> Statut </th>
-          <td mat-cell *matCellDef="let f"><app-status-badge [statut]="f.statut"></app-status-badge></td>
-        </ng-container>
-        <ng-container matColumnDef="action">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
-          <td mat-cell *matCellDef="let f">
-            <div class="action-group">
-              <button class="action-btn success" (click)="exportFacture(f)" title="Télécharger">
-                <mat-icon>download</mat-icon>
-              </button>
-              <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir la facture">
-                <mat-icon>visibility</mat-icon>
-              </a>
-            </div>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="factureColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: factureColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="empty-cell" colspan="4">Aucune facture pour ce filtre.</td>
-        </tr>
-      </table>
-    </mat-card>
+    </ng-container>
   

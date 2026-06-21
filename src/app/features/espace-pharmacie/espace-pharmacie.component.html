@@ -1,31 +1,28 @@
-    <div class="espace-page fade-in">
-      <div class="page-head">
-        <div>
-          <h1>Espace Pharmacie</h1>
-          <p>Gérez vos facturations et suivez vos statistiques</p>
-        </div>
-      </div>
+<div class="fade-in">
+  <!-- Sélecteur d'onglet personnalisé (Segment Control comme dans la photo) -->
+  <div class="custom-tabs-nav">
+    <button type="button" class="tab-nav-btn" [class.active]="selectedTab === 0" (click)="onTabChange(0)">
+      Facturation
+    </button>
+    <button type="button" class="tab-nav-btn" [class.active]="selectedTab === 1" (click)="onTabChange(1)">
+      Mes factures
+      <span class="tab-badge" [class.danger]="rejeteeCount > 0" *ngIf="totalCount">{{ totalCount }}</span>
+    </button>
+    <button type="button" class="tab-nav-btn" [class.active]="selectedTab === 2" (click)="onTabChange(2)">
+      Tableau de bord
+    </button>
+  </div>
 
-      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
-        <mat-tab label="Facturation">
-          <div class="tab-content">
-            <app-dashboard></app-dashboard>
-          </div>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            Mes factures
-            <span class="tab-count" [class.danger]="rejeteeCount > 0" *ngIf="totalCount">{{ totalCount }}</span>
-          </ng-template>
-          <div class="tab-content">
-            <app-factures-list></app-factures-list>
-          </div>
-        </mat-tab>
-        <mat-tab label="Tableau de bord">
-          <div class="tab-content">
-            <app-stats></app-stats>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
+  <!-- Contenu des onglets -->
+  <div class="tab-content-container" [ngSwitch]="selectedTab">
+    <div *ngSwitchCase="0" class="pt-2 md:pt-4">
+      <app-facture-form></app-facture-form>
     </div>
-  
+    <div *ngSwitchCase="1" class="pt-2 md:pt-4">
+      <app-factures-list [monthlyView]="true" [showToolbar]="false"></app-factures-list>
+    </div>
+    <div *ngSwitchCase="2" class="pt-2 md:pt-4">
+      <app-stats></app-stats>
+    </div>
+  </div>
+</div>

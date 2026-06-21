@@ -1,10 +1,322 @@
-    .pay-btn { margin-top: 12px; }
+/* Mobile : on masque la barre de recherche + filtres (Statut/Mois/Année)
+   et la barre d'outils (titre + Excel/PDF/Import/Nouvelle facture) sur tous
+   les écrans qui réutilisent cette liste. */
+@media (max-width: 768px) {
+  .filter-strip { display: none; }
+  .page-head { display: none; }
+}
 
-    /* Mobile : on masque la barre de recherche + filtres (Statut/Mois/Année)
-       et la barre d'outils (titre + Excel/PDF/Import/Nouvelle facture) sur tous
-       les écrans qui réutilisent cette liste. */
-    @media (max-width: 768px) {
-      .filter-strip { display: none; }
-      .page-head { display: none; }
-    }
-  
+/* ============================================================
+   VUE MENSUELLE — affichage calendrier (Janvier → Décembre)
+   ============================================================ */
+
+/* En-tête : titre + sélecteur d'année */
+/* Card contenant l'en-tête et les mois (fond blanc global + lignes séparatrices) */
+.monthly-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: var(--sp-6);
+}
+
+.monthly-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0;
+}
+
+.monthly-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.year-select {
+  height: 40px;
+  padding: 0 32px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--field-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748B'/%3E%3C/svg%3E") no-repeat right 12px center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.year-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+}
+
+/* Liste des 12 mois */
+.monthly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Pas d'espace entre les mois, séparation par trait */
+}
+
+/* Ligne de mois (commune) */
+.month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 16px var(--sp-6);
+  background: transparent; /* Hérite du fond blanc de la carte */
+  border: none;
+  border-bottom: 1px solid var(--border-light); /* Trait de séparation */
+  transition: all var(--transition);
+  min-height: 58px;
+}
+.month-row:last-child {
+  border-bottom: none; /* Pas de ligne de séparation sous le dernier mois */
+}
+.month-row:hover {
+  background: #f9fafb;
+}
+
+/* Mois avec facture */
+.month-row--has-facture {
+  background: transparent;
+}
+.month-row--has-facture:hover {
+  background: #f9fafb;
+}
+
+/* Mois en cours → léger halo */
+.month-row--current {
+  box-shadow: inset 3px 0 0 var(--primary); /* Surlignage vert à gauche pour le mois en cours, ou aucun pour rester sobre */
+}
+
+/* Partie gauche (flex horizontal pour nom et contenu) */
+.month-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nom du mois */
+.month-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+.month-name--active {
+  font-weight: 800;
+}
+
+/* Contenu du mois */
+.month-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Mois vide */
+.month-empty {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-style: normal; /* Pas d'italique dans la photo */
+}
+
+/* Infos factures */
+.facture-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.facture-top-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.facture-bottom-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.month-ref {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Badge statut dans la vue mensuelle — plus compact, sans bullet, arrondi */
+.month-statut-badge {
+  font-size: 11px !important;
+  padding: 2px 10px !important;
+  border-radius: 9999px !important; /* Pilule */
+  border: none !important;
+  font-weight: 700 !important;
+}
+.month-statut-badge::before {
+  display: none !important;
+}
+
+.month-amount {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Actions (boutons alignés à droite) */
+.month-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.month-actions .btn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  transition: all 0.2s;
+}
+.month-actions .btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* Bouton Envoyer en bleu solide */
+.month-actions .btn-envoyer {
+  background: #1976d2 !important; /* Bleu primaire */
+  color: #fff !important;
+  border: none !important;
+  font-weight: 600 !important;
+}
+.month-actions .btn-envoyer:hover {
+  background: #1565c0 !important;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .month-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+  .month-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .monthly-header {
+    padding: var(--sp-4);
+  }
+  .monthly-title {
+    font-size: 18px;
+  }
+  .month-row {
+    padding: var(--sp-3) var(--sp-4);
+  }
+  .month-row--has-facture {
+    padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) - 2px);
+  }
+  .month-name {
+    font-size: 14px;
+    min-width: 70px;
+  }
+  .month-name--active {
+    font-size: 15px;
+  }
+  .month-actions .btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  /* Densité mobile : sections pharmacie resserrées, pleine largeur */
+  .pharmacy-group-list { gap: var(--sp-3); }
+  .pharmacy-section-card { border-radius: var(--radius); }
+  .pharmacy-section-header { padding: var(--sp-3) var(--sp-4); }
+}
+
+/* ============================================================
+   GROUPEMENT PAR PHARMACIE — vue mensuelle multi-pharmacies
+   ============================================================ */
+.pharmacy-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.pharmacy-section-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden; /* Important pour les coins arrondis et le survol */
+}
+
+.pharmacy-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Pour pousser le selecteur d'année à droite */
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0;
+}
+
+.pharma-title-block {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.pharma-icon {
+  color: var(--primary) !important;
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px !important;
+}
+
+.pharmacy-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}

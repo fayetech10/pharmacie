@@ -51,6 +51,9 @@
               <button class="btn btn-warning" (click)="renvoyerAPharmacie()">
                 <mat-icon>undo</mat-icon> Renvoyer à la pharmacie
               </button>
+              <button class="btn btn-primary" (click)="renvoyerAuCentral()">
+                <mat-icon>send</mat-icon> Renvoyer Centrale
+              </button>
             </ng-container>
           </ng-container>
 
@@ -108,9 +111,9 @@
       <div class="correction-card" *ngIf="facture.statut === 'REJETEE_SR'">
         <mat-icon>build</mat-icon>
         <div>
-          <strong>Facture à corriger ({{ countLignes('REJETEE') }} ligne(s) rejetée(s))</strong>
-          <p>Les lignes rejetées sont signalées ci-dessous avec leur motif.
-            <ng-container *ngIf="authService.isPharmacien()">Cliquez sur <em>Corriger</em> pour les modifier, puis <em>Renvoyer</em>.</ng-container>
+          <strong>Facture à corriger</strong>
+          <p>Le motif du rejet est indiqué ci-dessus.
+            <ng-container *ngIf="authService.isPharmacien()">Cliquez sur <em>Corriger</em> pour modifier la facture, puis <em>Renvoyer</em>.</ng-container>
           </p>
         </div>
       </div>
@@ -119,50 +122,50 @@
 
       <!-- Détail mobile : une carte par patient -->
       <div class="m-cards">
-        <div class="m-card" *ngFor="let g of patientGroups; trackBy: trackGroup">
-          <div class="m-card-top">
+        <div class="m-card" *ngFor="let g of patientGroups; trackBy: trackGroup" [class.is-expanded]="g.expanded">
+          <div class="m-card-top" (click)="toggleGroup(g)">
             <span class="m-title">{{ g.nom || 'Patient sans nom' }}</span>
-            <button class="dossier-btn" type="button" *ngIf="dossierCount(g) > 0" (click)="openDossier(g)">
-              <mat-icon>folder</mat-icon> {{ dossierCount(g) }}
-            </button>
+            <div class="m-header-right">
+              <span class="m-badge" *ngIf="!g.expanded">{{ g.lignes.length }} ligne(s)</span>
+              <mat-icon class="expand-icon" [class.rotated]="g.expanded">expand_more</mat-icon>
+            </div>
           </div>
-          <div class="m-sub">{{ g.matricule || '—' }}</div>
-          <div class="med-line" *ngFor="let item of g.lignes; trackBy: trackLigne" [class.rejected]="item.ligne.statutLigne === 'REJETEE'">
-            <div class="med-head">
-              <span class="med-name">{{ item.ligne.medicament }}</span>
-              <span class="line-tag" *ngIf="showDecision" [ngClass]="lineTagClass(item.ligne.statutLigne)">
-                {{ lineTagLabel(item.ligne.statutLigne) }}
-              </span>
-            </div>
-            <div class="med-calc">
-              {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number }} =
-              <strong>{{ item.ligne.montant | number }} CFA</strong>
-            </div>
-            <div class="med-parts">
-              <span class="part-csu"><mat-icon>volunteer_activism</mat-icon> CSU : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
-              <span class="part-benef"><mat-icon>person</mat-icon> Bénéf. : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
-            </div>
-            <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
-              <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
-            </div>
-            <!-- Actions SR mobile -->
-            <ng-container *ngIf="canDeciderLignes && item.ligne.statutLigne !== 'ACCEPTEE' && item.ligne.statutLigne !== 'REJETEE'">
-              <div class="ligne-actions mobile">
-                <button class="btn-ligne accept" type="button" (click)="confirmDeciderLigne(item.index, true)">
-                  <mat-icon>check</mat-icon> Accepter
-                </button>
-                <button class="btn-ligne reject" type="button" (click)="openRejetLigne(item.index)">
-                  <mat-icon>close</mat-icon> Rejeter
+          
+          <!-- Collapsible content (Patient Info + Medicines) -->
+          <div class="m-card-expanded-content" *ngIf="g.expanded">
+            <!-- Collapsible patient details (Matricule & Dossier) -->
+            <div class="m-patient-details-box">
+              <div class="m-detail-row">
+                <mat-icon>badge</mat-icon>
+                <span>Matricule : <strong>{{ g.matricule || '—' }}</strong></span>
+              </div>
+              <div class="m-detail-row" *ngIf="dossierCount(g) > 0">
+                <mat-icon>folder_shared</mat-icon>
+                <span>Dossier : </span>
+                <button class="dossier-mini-btn" (click)="openDossier(g); $event.stopPropagation()">
+                  <mat-icon>visibility</mat-icon>
+                  Voir {{ dossierCount(g) }} pièces
                 </button>
               </div>
-              <div class="inline-rejet" *ngIf="rejetLigneIndex === item.index">
-                <input class="rejet-input" [(ngModel)]="rejetLigneMotif" placeholder="Motif du rejet...">
-                <div class="rejet-actions">
-                  <button class="btn-sm danger" type="button" [disabled]="!rejetLigneMotif.trim() || rejetLigneSubmitting" (click)="confirmDeciderLigne(item.index, false)">Confirmer</button>
-                  <button class="btn-sm" type="button" (click)="closeRejetLigne()">Annuler</button>
-                </div>
+              <div class="m-detail-row no-docs" *ngIf="dossierCount(g) === 0">
+                <mat-icon>folder_off</mat-icon>
+                <span>Dossier : <span class="text-text-muted">Aucune pièce</span></span>
               </div>
-            </ng-container>
+            </div>
+            
+            <div class="med-line" *ngFor="let item of g.lignes; trackBy: trackLigne">
+              <div class="med-head">
+                <span class="med-name">{{ item.ligne.medicament }}</span>
+              </div>
+              <div class="med-calc">
+                {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number }} =
+                <strong>{{ item.ligne.montant | number }} CFA</strong>
+              </div>
+              <div class="med-parts">
+                <span class="part-csu"><mat-icon>volunteer_activism</mat-icon> CSU : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+                <span class="part-benef"><mat-icon>person</mat-icon> Bénéf. : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="empty-state" *ngIf="patientGroups.length === 0">
@@ -171,88 +174,71 @@
         </div>
       </div>
 
-      <!-- Medications Table (desktop) -->
-      <mat-card class="table-card desktop-only">
-        <div class="card-title-row">
-          <h2>Détail des médicaments</h2>
-          <span class="line-count">{{ facture.lignes.length || 0 }} ligne(s)</span>
-        </div>
-        <div class="table-scroll">
-          <table class="detail-table">
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Dossier</th>
-                <th>Médicament</th>
-                <th>Qté</th>
-                <th>Prix Unit.</th>
-                <th>Montant</th>
-                <th class="th-csu">Part CSU (50%)</th>
-                <th class="th-benef">Part bénéf. (50%)</th>
-                <th *ngIf="showDecision">Décision</th>
-              </tr>
-            </thead>
-            <tbody>
-              <ng-container *ngFor="let g of patientGroups; trackBy: trackGroup">
-                <tr *ngFor="let item of g.lignes; let first = first; trackBy: trackLigne"
-                    [class.row-rejected]="item.ligne.statutLigne === 'REJETEE'"
-                    [class.group-start]="first">
-                  <!-- Patient : affiché une seule fois par dossier -->
-                  <td *ngIf="first" [attr.rowspan]="g.lignes.length" class="patient-cell">
-                    <div class="patient-name">{{ g.nom || '-' }}</div>
-                    <div class="patient-mat">{{ g.matricule || '-' }}</div>
-                  </td>
-                  <!-- Dossier : pièces justificatives, une seule fois par patient -->
-                  <td *ngIf="first" [attr.rowspan]="g.lignes.length" class="dossier-cell">
-                    <button class="dossier-btn" *ngIf="dossierCount(g) > 0; else noDossier" (click)="openDossier(g)">
-                      <mat-icon>folder</mat-icon>
-                      <span>Dossier</span>
-                      <span class="dossier-count">{{ dossierCount(g) }}</span>
-                    </button>
-                    <ng-template #noDossier><span class="no-dossier">—</span></ng-template>
-                  </td>
-                  <td>{{ item.ligne.medicament }}</td>
+      <!-- Medications Accordions (desktop) -->
+      <div class="desktop-only patient-accordions-container">
+        <div class="patient-acc-card" *ngFor="let g of patientGroups; trackBy: trackGroup" [class.is-expanded]="g.expanded">
+          <!-- Accordion Header -->
+          <div class="patient-acc-header" (click)="toggleGroup(g)">
+            <div class="patient-acc-title">
+              <mat-icon class="patient-icon">person</mat-icon>
+              <span class="patient-name">{{ g.nom || 'Patient sans nom' }}</span>
+              <span class="patient-lines-badge">{{ g.lignes.length }} médicament(s)</span>
+            </div>
+            <div class="patient-acc-actions">
+              <mat-icon class="expand-icon" [class.rotated]="g.expanded">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <!-- Accordion Content -->
+          <div class="patient-acc-content" *ngIf="g.expanded">
+            <!-- Patient Info strip inside -->
+            <div class="patient-info-strip">
+              <div class="info-item">
+                <mat-icon>badge</mat-icon>
+                <span>Matricule : <strong>{{ g.matricule || '—' }}</strong></span>
+              </div>
+              <div class="info-item" *ngIf="dossierCount(g) > 0">
+                <mat-icon>folder_shared</mat-icon>
+                <span>Dossier : </span>
+                <button class="dossier-mini-btn" (click)="openDossier(g); $event.stopPropagation()">
+                  <mat-icon>visibility</mat-icon>
+                  Voir {{ dossierCount(g) }} pièces
+                </button>
+              </div>
+              <div class="info-item no-docs" *ngIf="dossierCount(g) === 0">
+                <mat-icon>folder_off</mat-icon>
+                <span>Dossier : <span class="text-text-muted">Aucune pièce</span></span>
+              </div>
+            </div>
+
+            <!-- Medicines Table -->
+            <table class="acc-medicines-table">
+              <thead>
+                <tr>
+                  <th>Médicament</th>
+                  <th>Quantité</th>
+                  <th>Prix Unitaire</th>
+                  <th>Montant</th>
+                  <th class="th-csu">Part CSU (50%)</th>
+                  <th class="th-benef">Part bénéf. (50%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of g.lignes; trackBy: trackLigne">
+                  <td class="med-name">{{ item.ligne.medicament }}</td>
                   <td>{{ item.ligne.quantite }}</td>
                   <td>{{ item.ligne.prixUnitaire | number }}</td>
-                  <td [class.line-rejected]="item.ligne.statutLigne === 'REJETEE'">
+                  <td>
                     <strong>{{ item.ligne.montant | number }}</strong>
                   </td>
                   <td class="td-csu">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
                   <td class="td-benef">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
-                  <td *ngIf="showDecision">
-                    <!-- Mode décision SR : boutons accepter/rejeter -->
-                    <ng-container *ngIf="canDeciderLignes && item.ligne.statutLigne !== 'ACCEPTEE' && item.ligne.statutLigne !== 'REJETEE'; else readOnlyDecision">
-                      <div class="ligne-actions">
-                        <button class="btn-ligne accept" type="button" (click)="confirmDeciderLigne(item.index, true)" matTooltip="Accepter">
-                          <mat-icon>check</mat-icon>
-                        </button>
-                        <button class="btn-ligne reject" type="button" (click)="openRejetLigne(item.index)" matTooltip="Rejeter">
-                          <mat-icon>close</mat-icon>
-                        </button>
-                      </div>
-                      <div class="inline-rejet" *ngIf="rejetLigneIndex === item.index">
-                        <input class="rejet-input" [(ngModel)]="rejetLigneMotif" placeholder="Motif du rejet..." (keydown.escape)="closeRejetLigne()">
-                        <div class="rejet-actions">
-                          <button class="btn-sm danger" type="button" [disabled]="!rejetLigneMotif.trim() || rejetLigneSubmitting" (click)="confirmDeciderLigne(item.index, false)">Confirmer</button>
-                          <button class="btn-sm" type="button" (click)="closeRejetLigne()">Annuler</button>
-                        </div>
-                      </div>
-                    </ng-container>
-                    <ng-template #readOnlyDecision>
-                      <span class="line-tag" [ngClass]="lineTagClass(item.ligne.statutLigne)">
-                        {{ lineTagLabel(item.ligne.statutLigne) }}
-                      </span>
-                      <div class="line-motif" *ngIf="item.ligne.statutLigne === 'REJETEE' && item.ligne.motifRejet">
-                        <mat-icon>info</mat-icon> {{ item.ligne.motifRejet }}
-                      </div>
-                    </ng-template>
-                  </td>
                 </tr>
-              </ng-container>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </mat-card>
+      </div>
 
       <!-- Modal Dossier : pièces justificatives du patient -->
       <div class="dossier-overlay" *ngIf="dossierPatient" (click)="dossierPatient = null">

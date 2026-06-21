@@ -52,7 +52,9 @@ export class StatsComponent implements OnInit, OnChanges {
 
   s: StatsData | null = null;
   loading = false;
-  showDetails = false;
+  /** Les KPI + indicateurs sont toujours visibles ; ce drapeau ne pilote QUE
+   *  l'analyse détaillée (graphiques, funnel, classements), ouverte par défaut. */
+  showDetails = true;
   error = false;
   noPharmacie = false;
   chartYear = new Date().getFullYear();

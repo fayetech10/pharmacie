@@ -1,19 +1,66 @@
-    .espace-page { padding: 0; }
-    .tab-content { padding-top: 24px; }
+/* Onglets segmentés — alignés sur le style « pills » des espaces régional / central
+   (cohérence de navigation dans toute l'app). */
+.custom-tabs-nav {
+  display: inline-flex;
+  gap: 6px;
+  background: #E9EEF5;
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: var(--sp-5);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.custom-tabs-nav::-webkit-scrollbar { display: none; }
 
-    /* Badge de notification (factures rejetées) sur l'onglet — label projeté par Material */
-    :host ::ng-deep .tab-count {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px;
-      border-radius: 999px; background: var(--primary); color: #fff;
-      font-size: 11px; font-weight: 700; line-height: 1;
-    }
-    :host ::ng-deep .tab-count.danger { background: var(--warn); }
+.tab-nav-btn {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+.tab-nav-btn:hover:not(.active) { color: var(--text-primary); }
+.tab-nav-btn.active {
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
 
-    @media (max-width: 768px) {
-      /* Mobile : navigation via la barre du bas → en-tête + onglets redondants masqués. */
-      :host ::ng-deep .mat-mdc-tab-header { display: none; }
-      .page-head { display: none; }
-      .tab-content { padding-top: 8px; }
-    }
-  
+/* Badge de notification (onglet « Mes factures ») — pill identique à .tab-count
+   des espaces régional / central. */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.tab-badge.danger { background: var(--warn); }
+
+/* Mobile : navigation via la barre du bas → onglets en page masqués
+   (comportement déjà adopté par les espaces régional et central). */
+@media (max-width: 768px) {
+  .custom-tabs-nav { display: none; }
+}

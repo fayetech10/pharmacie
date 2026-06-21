@@ -12,6 +12,20 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 
+export interface PromptOptions {
+  title?: string;
+  message?: string;
+  label?: string;
+  placeholder?: string;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+  required?: boolean;
+  multiline?: boolean;
+  initialValue?: string;
+  maxLength?: number;
+}
+
 /**
  * Service centralisé pour les dialogues de confirmation.
  * Remplace les appels `confirm()` natifs par le ConfirmDialogComponent stylé.
@@ -33,5 +47,30 @@ export class ConfirmService {
       }
     });
     return ref.afterClosed().pipe(map(result => result === true));
+  }
+
+  /**
+   * Ouvre une modale de saisie texte (remplace le `prompt()` natif).
+   * Retourne la valeur saisie (trim) si validé, sinon `null` (annulé).
+   */
+  prompt(options: PromptOptions): Observable<string | null> {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '460px',
+      data: {
+        title: options.title ?? 'Saisie',
+        message: options.message ?? '',
+        confirmText: options.confirmText ?? 'Valider',
+        cancelText: options.cancelText ?? 'Annuler',
+        danger: options.danger ?? false,
+        prompt: true,
+        label: options.label,
+        placeholder: options.placeholder ?? '',
+        required: options.required ?? false,
+        multiline: options.multiline ?? false,
+        initialValue: options.initialValue ?? '',
+        maxLength: options.maxLength
+      }
+    });
+    return ref.afterClosed().pipe(map(result => (typeof result === 'string' ? result : null)));
   }
 }

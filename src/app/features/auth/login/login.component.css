@@ -1,167 +1,144 @@
-    .login-layout {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1.05fr 1fr;
-      background: var(--bg);
-    }
+/* ============================================================
+   RECONSTRUCTION GLOBALE DU LOGIN — Harmonisation des Couleurs
+   ============================================================ */
 
-    /* ---- Panneau marque navy ---- */
-    .brand-panel {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 48px;
-      background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
-      overflow: hidden;
-    }
-    .brand-panel::before {
-      content: '';
-      position: absolute;
-      width: 560px;
-      height: 560px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 65%);
-      top: -160px;
-      right: -160px;
-    }
-    /* Lueur verte (identité CSU) en bas à gauche */
-    .brand-panel::after {
-      content: '';
-      position: absolute;
-      width: 460px;
-      height: 460px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(47,110,84,0.22), transparent 65%);
-      bottom: -160px;
-      left: -150px;
-    }
-    .brand-csu-chip {
-      position: absolute;
-      top: 28px;
-      left: 28px;
-      width: 72px;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1;
-    }
-    .brand-csu-chip img { width: 64px; height: 64px; object-fit: contain; }
-    .brand-center { text-align: center; z-index: 1; }
-    .brand-logo-card {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 200px;
-      height: 200px;
-      margin-bottom: 28px;
-    }
-    .brand-logo-card img { width: 180px; height: 180px; object-fit: contain; }
-    .brand-center h2 {
-      color: #fff;
-      font-size: 24px;
-      font-weight: 800;
-      margin: 0 0 8px;
-      letter-spacing: -0.02em;
-    }
-    .brand-center p {
-      color: var(--ink-text);
-      margin: 0;
-      font-size: 15px;
-    }
-    /* Arguments de confiance */
-    .brand-features {
-      list-style: none;
-      margin: 30px auto 0;
-      padding: 0;
-      display: inline-flex;
-      flex-direction: column;
-      gap: 14px;
-      text-align: left;
-    }
-    .brand-features li {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 14.5px;
-      font-weight: 500;
-    }
-    .brand-features mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #9FCBB4;
-      flex-shrink: 0;
-    }
-    .brand-foot {
-      position: absolute;
-      bottom: 22px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 12px;
-      z-index: 1;
-    }
+/* Halo de lumière décoratif animé sur le panneau de gauche */
+.brand-showcase::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  top: -10%;
+  right: -10%;
+  pointer-events: none;
+}
 
-    /* ---- Panneau formulaire ---- */
-    .form-panel {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 40px 24px;
-    }
-    .form-wrap {
-      width: 100%;
-      max-width: 400px;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 38px 34px;
-      box-shadow: 0 16px 40px -20px rgba(15, 23, 42, 0.22);
-    }
-    .form-logo-mobile { display: none; align-items: center; justify-content: center; margin-bottom: 24px; }
-    .logo-img-mobile { width: 120px; height: auto; object-fit: contain; }
+/* Grille de fond subtile */
+.grid-overlay {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
 
-    .form-wrap h1 { font-size: 28px; font-weight: 700; margin: 0 0 6px; color: var(--text-primary); }
-    .subtitle { color: var(--text-secondary); margin: 0 0 32px; font-size: 15px; }
+/* Glassmorphism premium pour le panneau de gauche */
+.glass-card {
+  box-shadow: 0 8px 32px 0 rgba(15, 69, 52, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06);
+}
 
-    .full-width { width: 100%; }
-    .full-width mat-icon[matPrefix] { margin-right: 8px; color: var(--text-muted); }
+/* Animations de transition */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-    .submit-btn {
-      height: 48px;
-      font-size: 15px;
-      margin-top: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-    /* Spinner blanc (sinon vert sur fond vert = invisible) */
-    .submit-btn mat-spinner { --mdc-circular-progress-active-indicator-color: #fff; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-    .error-message {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--warn-light);
-      color: #B91C1C;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      margin-bottom: 16px;
-      font-size: 13.5px;
-      font-weight: 500;
-    }
-    .error-message mat-icon { font-size: 18px; width: 18px; height: 18px; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
 
-    @media (max-width: 900px) {
-      .login-layout { grid-template-columns: 1fr; }
-      .brand-panel { display: none; }
-      .form-logo-mobile { display: flex; }
-    }
-  
+.animate-slide-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Personnalisation avancée d'Angular Material Inputs pour s'accorder avec le thème global du projet (sur fond clair) */
+::ng-deep .custom-field {
+  width: 100%;
+}
+
+::ng-deep .custom-field .mat-mdc-text-field-wrapper {
+  background-color: var(--field-bg) !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+::ng-deep .custom-field .mat-mdc-form-field-flex {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+::ng-deep .custom-field .mdc-notched-outline__leading,
+::ng-deep .custom-field .mdc-notched-outline__notch,
+::ng-deep .custom-field .mdc-notched-outline__trailing {
+  border-color: var(--border) !important;
+  border-width: 1px !important;
+  transition: border-color 0.2s ease !important;
+}
+
+::ng-deep .custom-field.mat-focused .mdc-notched-outline__leading,
+::ng-deep .custom-field.mat-focused .mdc-notched-outline__notch,
+::ng-deep .custom-field.mat-focused .mdc-notched-outline__trailing {
+  border-color: var(--primary) !important; /* Couleur primaire verte */
+  border-width: 2px !important;
+}
+
+::ng-deep .custom-field:hover .mdc-notched-outline__leading,
+::ng-deep .custom-field:hover .mdc-notched-outline__notch,
+::ng-deep .custom-field:hover .mdc-notched-outline__trailing {
+  border-color: var(--primary-200) !important;
+}
+
+::ng-deep .custom-field .mat-mdc-input-element {
+  color: var(--text-primary) !important;
+  caret-color: var(--primary) !important;
+  font-size: 14px !important;
+}
+
+::ng-deep .custom-field .mat-mdc-input-element::placeholder {
+  color: var(--text-secondary) !important;
+}
+
+::ng-deep .custom-field mat-icon {
+  color: var(--text-secondary) !important;
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+::ng-deep .custom-field.mat-focused mat-icon {
+  color: var(--primary) !important;
+}
+
+/* Spinner blanc */
+.white-spinner ::ng-deep circle {
+  stroke: #ffffff !important;
+}
+
+/* Masquer les sous-lignes par défaut d'Angular Material */
+::ng-deep .custom-field .mat-mdc-form-field-subscript-wrapper {
+  margin-top: 2px !important;
+  padding-left: 4px !important;
+}
+
+::ng-deep .custom-field .mat-mdc-form-field-error {
+  color: var(--warn) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}

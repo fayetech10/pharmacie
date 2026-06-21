@@ -1,4 +1,4 @@
-    <div class="espace-page fade-in">
+    <div class="fade-in">
       <div class="page-head">
         <div>
           <h1>Espace Central</h1>
@@ -8,49 +8,59 @@
 
       <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
         <mat-tab label="Tableau de bord">
-          <div class="tab-content">
-            <!-- admin-regions agit comme vue drill-down Région -> Pharmacies -->
-            <app-admin-regions></app-admin-regions>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- admin-regions agit comme vue drill-down Région -> Pharmacies -->
+              <app-admin-regions></app-admin-regions>
+            </div>
+          </ng-template>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
             Factures reçues
             <span class="tab-count" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
           </ng-template>
-          <div class="tab-content">
-            <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
-            <app-factures-list [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
             <!-- Pas de badge : valider est l'action propre du central (pas une notification). -->
             Factures validées
           </ng-template>
-          <div class="tab-content">
-            <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
-            <app-factures-list [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
             <!-- Pas de badge : payer est l'action propre du central (pas une notification). -->
             Factures payées
           </ng-template>
-          <div class="tab-content">
-            <app-factures-list [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
         <mat-tab>
           <ng-template mat-tab-label>
             <!-- Pas de badge : rejeter est l'action propre du central (pas une notification). -->
             Factures rejetées
           </ng-template>
-          <div class="tab-content">
-            <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
-            <app-factures-list [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
-          </div>
+          <ng-template matTabContent>
+            <div class="pt-2 md:pt-6">
+              <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
+              <app-factures-list [monthlyView]="true" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
+            </div>
+          </ng-template>
         </mat-tab>
       </mat-tab-group>
     </div>

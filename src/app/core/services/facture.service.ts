@@ -72,6 +72,10 @@ export class FactureService {
     return this.api.post<Facture>(`/factures/${id}/renvoyer-pharmacie`, {}).pipe(this.notify());
   }
 
+  renvoyerAuCentral(id: string): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/renvoyer-central`, {}).pipe(this.notify());
+  }
+
   exportExcel(): Observable<Blob> {
     return this.api.getBlob('/factures/export/excel');
   }
@@ -88,6 +92,10 @@ export class FactureService {
     const formData = new FormData();
     formData.append('file', file);
     return this.api.post<void>('/factures/import', formData).pipe(this.notify());
+  }
+
+  exportFacturePdf(id: string): Observable<Blob> {
+    return this.api.getBlob(`/factures/${id}/export/pdf`);
   }
 
   /** Réimporte une facture corrigée (format Excel détaillé) : remplace ses lignes. */

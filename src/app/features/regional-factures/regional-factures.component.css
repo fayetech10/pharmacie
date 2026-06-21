@@ -1,77 +1,267 @@
-    /* En-tête avec bouton retour */
-    .header-content { display: flex; align-items: center; gap: 16px; }
-    .header-content h1 {
-      margin: 0 0 4px 0;
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-    }
-    .header-content p { margin: 0; color: var(--text-secondary); font-size: 15px; }
-    .back-btn {
-      flex-shrink: 0;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition);
-    }
-    .back-btn:hover { background: var(--bg); transform: scale(1.05); }
+/* CSS porté sur Tailwind (@apply). Animations/keyframes et @media en brut. */
 
-    tr.clickable { cursor: pointer; }
-    tr.clickable:hover { background: var(--primary-light); }
-    .chevron { color: var(--text-muted); }
-    tr.clickable:hover .chevron { color: var(--primary); }
+/* En-tête avec bouton retour */
+.header-content { @apply flex items-center gap-4; }
+.header-content h1 {
+  @apply m-0 mb-1 text-[26px] font-extrabold text-text-primary tracking-[-0.02em];
+}
+.header-content p { @apply m-0 text-text-secondary text-[15px]; }
+.back-btn {
+  @apply shrink-0 bg-white border border-border rounded-full w-11 h-11 flex items-center justify-center cursor-pointer shadow-sm transition-all duration-200 ease-smooth;
+}
+.back-btn:hover { @apply bg-bg scale-105; }
 
-    .empty-cell {
-      text-align: center;
-      padding: 32px !important;
-      color: var(--text-secondary);
-      font-style: italic;
-    }
+tr.clickable { @apply cursor-pointer; }
+tr.clickable:hover { @apply bg-primary-light; }
+.chevron { @apply text-text-muted; }
+tr.clickable:hover .chevron { @apply text-primary; }
 
-    /* Indicateur de chargement */
-    .empty-state.big { padding: 60px 20px; }
-    .spin-animation { animation: spin 1.2s linear infinite; }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .spin-animation { animation: none !important; }
-    }
+.empty-cell { @apply text-center !p-8 text-text-secondary italic; }
 
-    .inline-ic {
-      font-size: 15px; width: 15px; height: 15px;
-      vertical-align: -2px; color: var(--text-muted);
-    }
-    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
+/* Indicateur de chargement */
+.empty-state.big { @apply py-[60px] px-5; }
+.spin-animation { animation: spin 1.2s linear infinite; }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin-animation { animation: none !important; }
+}
 
-    /* Filtres de tableau de bord (Année / Statut) */
-    .dash-filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-    .dash-select { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 1; max-width: 220px; }
-    .dash-select span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-    .dash-select select {
-      height: 44px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--field-bg);
-      padding: 0 12px;
-      font-family: inherit;
-      font-size: 14px;
-      color: var(--text-primary);
-      cursor: pointer;
-    }
-    .dash-select select:focus { outline: none; border-color: var(--primary); background: #fff; }
+.inline-ic { @apply text-[15px] w-[15px] h-[15px] align-[-2px] text-text-muted; }
+.m-row span { @apply inline-flex items-center gap-1; }
 
-    @media (max-width: 768px) {
-      .header-content h1 { font-size: 21px; }
-      .dash-select { max-width: none; }
-    }
-  
+/* Filtres de tableau de bord (Année / Statut) */
+.dash-filters { @apply flex gap-3 mb-4 flex-wrap; }
+.dash-select { @apply flex flex-col gap-1 min-w-[150px] flex-1 max-w-[220px]; }
+.dash-select span { @apply text-xs font-semibold text-text-secondary; }
+.dash-select select {
+  @apply h-11 border border-border rounded bg-field px-3 text-sm text-text-primary cursor-pointer;
+  font-family: inherit;
+}
+.dash-select select:focus { @apply outline-none border-primary bg-white; }
+
+@media (max-width: 768px) {
+  .header-content h1 { font-size: 21px; }
+  .dash-select { max-width: none; }
+}
+
+/* Card contenant l'en-tête et les mois (fond blanc global + lignes séparatrices) */
+.monthly-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: var(--sp-6);
+}
+
+.monthly-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.monthly-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.monthly-filters {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.year-select {
+  height: 40px;
+  padding: 0 32px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--field-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748B'/%3E%3C/svg%3E") no-repeat right 12px center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.year-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+}
+
+.monthly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Pas d'espace entre les mois, séparation par trait */
+}
+.month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 16px var(--sp-6);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light); /* Trait de séparation */
+  transition: all var(--transition);
+  min-height: 58px;
+}
+.month-row:last-child {
+  border-bottom: none;
+}
+.month-row:hover {
+  background: #f9fafb;
+}
+.month-row--has-facture {
+  background: transparent;
+}
+.month-row--has-facture:hover {
+  background: #f9fafb;
+}
+.month-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+.month-name--active {
+  font-weight: 800;
+}
+.month-empty {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-style: normal;
+}
+.month-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  min-width: 0;
+}
+.month-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.facture-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.facture-row-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.facture-row-item:not(:first-child) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.facture-top-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.facture-bottom-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.month-ref {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.month-statut-badge {
+  font-size: 11px !important;
+  padding: 2px 10px !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  font-weight: 700 !important;
+}
+.month-statut-badge::before {
+  display: none !important;
+}
+.month-amount {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+.month-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.month-actions .btn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  transition: all 0.2s;
+}
+.month-actions .btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+.month-actions .btn mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 900px) {
+  .month-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+  .month-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .monthly-header { padding: var(--sp-4); }
+  .monthly-title { font-size: 18px; }
+  .month-row { padding: var(--sp-3) var(--sp-4); }
+  .month-row--has-facture { padding: var(--sp-3) var(--sp-4); }
+  .month-name { font-size: 14px; min-width: 70px; }
+  .month-name--active { font-size: 15px; }
+  .month-actions .btn { height: 34px; padding: 0 10px; font-size: 12px; }
+}

@@ -1,66 +1,37 @@
-    /* En-tête avec bouton retour */
-    .header-content { display: flex; align-items: center; gap: 16px; }
-    .header-content h1 {
-      margin: 0 0 4px 0;
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-    }
-    .header-content p { margin: 0; color: var(--text-secondary); font-size: 15px; }
-    .back-btn {
-      flex-shrink: 0;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition);
-    }
-    .back-btn:hover { background: var(--bg); transform: scale(1.05); }
+/* CSS porté sur Tailwind (@apply). Le bloc responsive reste en @media. */
 
-    tr.clickable { cursor: pointer; }
-    tr.clickable:hover { background: var(--primary-light); }
-    .chevron { color: var(--text-muted); }
-    tr.clickable:hover .chevron { color: var(--primary); }
+/* En-tête avec bouton retour */
+.header-content { @apply flex items-center gap-4; }
+.header-content h1 {
+  @apply m-0 mb-1 text-[26px] font-extrabold text-text-primary tracking-[-0.02em];
+}
+.header-content p { @apply m-0 text-text-secondary text-[15px]; }
+.back-btn {
+  @apply shrink-0 bg-white border border-border rounded-full w-11 h-11 flex items-center justify-center cursor-pointer shadow-sm transition-all duration-200 ease-smooth;
+}
+.back-btn:hover { @apply bg-bg scale-105; }
 
-    .empty-cell {
-      text-align: center;
-      padding: 32px !important;
-      color: var(--text-secondary);
-      font-style: italic;
-    }
+tr.clickable { @apply cursor-pointer; }
+tr.clickable:hover { @apply bg-primary-light; }
+.chevron { @apply text-text-muted; }
+tr.clickable:hover .chevron { @apply text-primary; }
 
-    .inline-ic {
-      font-size: 15px; width: 15px; height: 15px;
-      vertical-align: -2px; color: var(--text-muted);
-    }
-    .m-row span { display: inline-flex; align-items: center; gap: 4px; }
+.empty-cell { @apply text-center !p-8 text-text-secondary italic; }
 
-    /* Filtres de tableau de bord (Année / Statut) */
-    .dash-filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-    .dash-select { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 1; max-width: 220px; }
-    .dash-select span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-    .dash-select select {
-      height: 44px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--field-bg);
-      padding: 0 12px;
-      font-family: inherit;
-      font-size: 14px;
-      color: var(--text-primary);
-      cursor: pointer;
-    }
-    .dash-select select:focus { outline: none; border-color: var(--primary); background: #fff; }
+.inline-ic { @apply text-[15px] w-[15px] h-[15px] align-[-2px] text-text-muted; }
+.m-row span { @apply inline-flex items-center gap-1; }
 
-    @media (max-width: 768px) {
-      .header-content h1 { font-size: 21px; }
-      .dash-select { max-width: none; }
-    }
-  
+/* Filtres de tableau de bord (Année / Statut) */
+.dash-filters { @apply flex gap-3 mb-4 flex-wrap; }
+.dash-select { @apply flex flex-col gap-1 min-w-[150px] flex-1 max-w-[220px]; }
+.dash-select span { @apply text-xs font-semibold text-text-secondary; }
+.dash-select select {
+  @apply h-11 border border-border rounded bg-field px-3 text-sm text-text-primary cursor-pointer;
+  font-family: inherit;
+}
+.dash-select select:focus { @apply outline-none border-primary bg-white; }
+
+@media (max-width: 768px) {
+  .header-content h1 { font-size: 21px; }
+  .dash-select { max-width: none; }
+}

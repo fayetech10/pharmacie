@@ -23,6 +23,7 @@ interface PatientGroup {
   bonCommande?: string;
   ordonnance?: string;
   lignes: { ligne: LigneFacture; index: number }[];
+  expanded?: boolean;
 }
 
 @Component({
@@ -59,22 +60,11 @@ export class FactureDetailComponent implements OnInit {
   dossierPatient: PatientGroup | null = null;
   viewerImage: string | null = null;
 
-  // Rejet par ligne (SR)
-  rejetLigneIndex: number | null = null;
-  rejetLigneMotif = '';
-  rejetLigneSubmitting = false;
 
-  /** Colonne "Décision" affichée pour les services (régional/central) ou si des décisions existent déjà. */
-  get showDecision(): boolean {
-    return this.authService.isServiceRegional() ||
-      this.authService.isServiceCentral() ||
-      (this.facture?.lignes || []).some(l => l.statutLigne && l.statutLigne !== StatutLigne.EN_ATTENTE);
-  }
 
-  /** True si le SR peut décider ligne par ligne (facture ENVOYEE). */
-  get canDeciderLignes(): boolean {
-    return this.authService.isServiceRegional() && this.facture?.statut === StatutFacture.ENVOYEE;
-  }
+
+
+
 
   /**
    * Lignes regroupées par patient (le nom n'apparaît qu'une fois — rowspan).
@@ -101,7 +91,8 @@ export class FactureDetailComponent implements OnInit {
           ticketCaisse: ligne.ticketCaisse,
           bonCommande: ligne.bonCommande,
           ordonnance: ligne.ordonnance,
-          lignes: []
+          lignes: [],
+          expanded: false
         };
         byKey.set(key, g);
         groups.push(g);
@@ -127,27 +118,13 @@ export class FactureDetailComponent implements OnInit {
     this.dossierPatient = g;
   }
 
-
-
-  countLignes(statut: string): number {
-    return (this.facture?.lignes || []).filter(l => (l.statutLigne || StatutLigne.EN_ATTENTE) === statut).length;
+  toggleGroup(g: PatientGroup) {
+    g.expanded = !g.expanded;
   }
 
-  lineTagClass(statut?: StatutLigne): string {
-    switch (statut) {
-      case StatutLigne.ACCEPTEE: return 'tag-ok';
-      case StatutLigne.REJETEE: return 'tag-ko';
-      default: return 'tag-wait';
-    }
-  }
 
-  lineTagLabel(statut?: StatutLigne): string {
-    switch (statut) {
-      case StatutLigne.ACCEPTEE: return 'Acceptée';
-      case StatutLigne.REJETEE: return 'Rejetée';
-      default: return 'En attente';
-    }
-  }
+
+
 
   constructor(
     private route: ActivatedRoute,
@@ -233,25 +210,40 @@ export class FactureDetailComponent implements OnInit {
   }
 
   valider() {
-    const commentaire = prompt("Commentaire de validation (optionnel) :") || "";
-    this.factureService.valider(this.facture.id, { commentaire }).subscribe({
-      next: (f: Facture) => {
-        this.setFacture(f);
-        this.snackBar.open('Facture validée avec succès', 'Fermer', { duration: 3000 });
-      },
-      error: (e: any) => this.showError(e)
+    const transmet = this.authService.isServiceRegional();
+    this.openPrompt({
+      title: 'Valider la facture',
+      message: transmet
+        ? 'La facture sera validée et transmise au niveau central.'
+        : 'La facture sera validée au niveau central.',
+      label: 'Commentaire (optionnel)',
+      placeholder: 'Ajouter un commentaire…',
+      confirmText: 'Valider',
+      required: false,
+      maxLength: 500
+    }, (commentaire) => {
+      this.factureService.valider(this.facture.id, { commentaire }).subscribe({
+        next: (f: Facture) => {
+          this.setFacture(f);
+          this.snackBar.open('Facture validée avec succès', 'Fermer', { duration: 3000 });
+        },
+        error: (e: any) => this.showError(e)
+      });
     });
   }
 
   rejeter() {
-    const commentaire = prompt("Motif du rejet (OBLIGATOIRE) :");
-    if (!commentaire || !commentaire.trim()) {
-      this.snackBar.open('Le motif est obligatoire pour un rejet', 'Fermer', { duration: 3000 });
-      return;
-    }
-    
-    this.openConfirm('Rejeter la facture', 'Êtes-vous sûr de vouloir rejeter cette facture ?', () => {
-      this.factureService.rejeter(this.facture.id, { commentaire }).subscribe({
+    this.openPrompt({
+      title: 'Rejeter la facture',
+      message: 'Indiquez le motif du rejet. Il sera transmis pour correction.',
+      label: 'Motif du rejet',
+      placeholder: 'Ex : pièces justificatives manquantes, quantité non conforme…',
+      confirmText: 'Rejeter',
+      danger: true,
+      required: true,
+      maxLength: 500
+    }, (motif) => {
+      this.factureService.rejeter(this.facture.id, { commentaire: motif }).subscribe({
         next: (f: Facture) => {
           this.setFacture(f);
           this.snackBar.open('Facture rejetée avec succès', 'Fermer', { duration: 3000 });
@@ -277,6 +269,22 @@ export class FactureDetailComponent implements OnInit {
     );
   }
 
+  renvoyerAuCentral() {
+    this.openConfirm(
+      'Renvoyer au central',
+      'Êtes-vous sûr de vouloir renvoyer cette facture au niveau central pour réexamen ?',
+      () => {
+        this.factureService.renvoyerAuCentral(this.facture.id).subscribe({
+          next: (f: Facture) => {
+            this.setFacture(f);
+            this.snackBar.open('Facture renvoyée au central avec succès', 'Fermer', { duration: 3000 });
+          },
+          error: (e: any) => this.showError(e)
+        });
+      }
+    );
+  }
+
   payer() {
     this.openConfirm(
       'Payer la facture',
@@ -293,36 +301,7 @@ export class FactureDetailComponent implements OnInit {
     );
   }
 
-  openRejetLigne(index: number) {
-    this.rejetLigneIndex = index;
-    this.rejetLigneMotif = '';
-  }
 
-  closeRejetLigne() {
-    this.rejetLigneIndex = null;
-    this.rejetLigneMotif = '';
-  }
-
-  confirmDeciderLigne(index: number, accepter: boolean) {
-    if (!accepter && !this.rejetLigneMotif.trim()) return;
-    this.rejetLigneSubmitting = true;
-    const req: LigneDecisionRequest = {
-      accepter,
-      motif: accepter ? undefined : this.rejetLigneMotif.trim()
-    };
-    this.factureService.deciderLigne(this.facture.id, index, req).subscribe({
-      next: (f: Facture) => {
-        this.setFacture(f);
-        this.closeRejetLigne();
-        this.rejetLigneSubmitting = false;
-        this.snackBar.open(accepter ? 'Ligne acceptée' : 'Ligne rejetée', 'Fermer', { duration: 2500 });
-      },
-      error: (e: any) => {
-        this.rejetLigneSubmitting = false;
-        this.showError(e);
-      }
-    });
-  }
 
   private openConfirm(title: string, message: string, onConfirm: () => void) {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -331,7 +310,37 @@ export class FactureDetailComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) onConfirm();
+      if (result === true) onConfirm();
+    });
+  }
+
+  /** Modale de saisie (remplace `prompt()`) : appelle `onConfirm` avec la valeur saisie. */
+  private openPrompt(
+    opts: {
+      title: string; message?: string; label?: string; placeholder?: string;
+      confirmText?: string; danger?: boolean; required?: boolean; maxLength?: number;
+    },
+    onConfirm: (value: string) => void
+  ) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '460px',
+      data: {
+        title: opts.title,
+        message: opts.message ?? '',
+        confirmText: opts.confirmText ?? 'Valider',
+        cancelText: 'Annuler',
+        danger: opts.danger ?? false,
+        prompt: true,
+        label: opts.label,
+        placeholder: opts.placeholder ?? '',
+        required: opts.required ?? false,
+        multiline: true,
+        maxLength: opts.maxLength
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (typeof result === 'string') onConfirm(result);
     });
   }
 

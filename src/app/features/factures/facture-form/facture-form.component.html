@@ -1,194 +1,271 @@
-    <div class="page-header flex-header">
-      <div>
-        <h1>{{ facture ? ('Facture de ' + getMonthName(facture.mois) + ' ' + facture.annee) : 'Saisie Rapide de Facture' }}</h1>
-        <p>Saisissez les informations du patient et ses médicaments, puis ajoutez-les à la facture du mois.</p>
+<div class="ff-page fade-in">
+
+  <!-- ===================== EN-TÊTE DE CONTEXTE ===================== -->
+  <header class="ff-head">
+    <div class="ff-head-text">
+      <h1>{{ facture ? ('Facture · ' + getMonthName(facture.mois) + ' ' + facture.annee) : 'Nouvelle facture du mois' }}</h1>
+      <p>Ajoutez un patient et ses médicaments, puis enregistrez. Répétez pour chaque patient.</p>
+    </div>
+
+    <!-- Synthèse facture + envoi (visibles dès qu'il y a des lignes) -->
+    <div class="ff-head-summary" *ngIf="facture && factureLignesCount > 0">
+      <div class="ff-mini-stats">
+        <div class="ff-mini">
+          <span class="ff-mini-val">{{ facturePatientsCount }}</span>
+          <span class="ff-mini-lbl">patient(s)</span>
+        </div>
+        <div class="ff-mini">
+          <span class="ff-mini-val">{{ factureLignesCount }}</span>
+          <span class="ff-mini-lbl">ligne(s)</span>
+        </div>
+        <div class="ff-mini ff-mini--amount">
+          <span class="ff-mini-val">{{ facture.montantTotal | number:'1.0-0':'fr' }} F</span>
+          <span class="ff-mini-lbl">total</span>
+        </div>
       </div>
-      <button mat-flat-button color="primary" *ngIf="facture && facture.lignes && facture.lignes.length > 0" (click)="envoyerFacture()">
+      <button class="btn btn-primary ff-send" (click)="envoyerFacture()">
         <mat-icon>send</mat-icon> Envoyer la facture
       </button>
     </div>
+  </header>
 
-    <!-- Étape 1 : Saisie par Patient -->
-    <mat-card class="mb-4">
-      <mat-card-header>
-        <mat-card-title>Saisie par Patient</mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="mt-3">
-        <!-- Informations du Patient -->
-        <form [formGroup]="patientForm" class="form-row-multi mb-3">
-          <mat-form-field appearance="outline" class="flex-1">
-            <mat-label>Nom & Prénom du Patient</mat-label>
-            <input matInput formControlName="patientNomPrenom" placeholder="Ex: Diop Ousmane">
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="flex-1">
-            <mat-label>Numéro Matricule</mat-label>
-            <input matInput formControlName="patientMatricule" placeholder="Ex: PAT-2026-987">
-          </mat-form-field>
-        </form>
+  <!-- ===================== CARTE DE SAISIE (3 ÉTAPES) ===================== -->
+  <div class="ff-card">
 
-        <!-- Dossier du patient : prise de photo des pièces justificatives -->
-        <div class="dossier-section">
-          <h3 class="dossier-title"><mat-icon>folder_open</mat-icon> Dossier du patient</h3>
-          <p class="dossier-hint">Prenez en photo les pièces justificatives (appareil photo ou fichier).</p>
-          <div class="photo-grid">
-            <div class="photo-slot" *ngFor="let p of photoFields">
-              <span class="photo-label">{{ p.label }}</span>
-              <div class="photo-drop" *ngIf="!photos[p.key]; else preview">
-                <input type="file" accept="image/*" capture="environment" hidden
-                       #photoInput (change)="onPhotoSelected(p.key, $event)">
-                <button type="button" class="photo-btn" (click)="photoInput.click()">
-                  <mat-icon>photo_camera</mat-icon>
-                  <span>Prendre une photo</span>
-                </button>
-              </div>
-              <ng-template #preview>
-                <div class="photo-preview">
-                  <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
-                  <button type="button" class="photo-remove" (click)="removePhoto(p.key)" matTooltip="Supprimer">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-              </ng-template>
-            </div>
+    <!-- ÉTAPE 1 — PATIENT -->
+    <section class="ff-step">
+      <div class="ff-step-head">
+        <span class="ff-step-num">1</span>
+        <div class="ff-step-titles">
+          <h2>Patient</h2>
+          <p>Identité du bénéficiaire CSU</p>
+        </div>
+      </div>
+      <form [formGroup]="patientForm" class="ff-grid-2">
+        <div class="ff-field">
+          <label class="ff-label" for="ff-nom">Nom &amp; prénom <span class="ff-req">*</span></label>
+          <input id="ff-nom" type="text" class="ff-input" formControlName="patientNomPrenom"
+                 autocomplete="name" placeholder="Ex : Diop Ousmane">
+        </div>
+        <div class="ff-field">
+          <label class="ff-label" for="ff-mat">Numéro matricule <span class="ff-req">*</span></label>
+          <input id="ff-mat" type="text" class="ff-input" formControlName="patientMatricule"
+                 placeholder="Ex : PAT-2026-987">
+        </div>
+      </form>
+    </section>
+
+    <!-- ÉTAPE 2 — MÉDICAMENTS -->
+    <section class="ff-step">
+      <div class="ff-step-head">
+        <span class="ff-step-num">2</span>
+        <div class="ff-step-titles">
+          <h2>Médicaments</h2>
+          <p>Recherchez, ajustez la quantité, puis ajoutez</p>
+        </div>
+        <span class="ff-count" *ngIf="patientLignes.length">{{ patientLignes.length }}</span>
+      </div>
+
+      <!-- Ligne d'ajout de médicament -->
+      <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="ff-add">
+        <div class="ff-field ff-add-med">
+          <label class="ff-label" for="ff-med">Médicament</label>
+          <div class="ff-input-clear">
+            <input id="ff-med" type="text" class="ff-input" formControlName="medicament"
+                   [matAutocomplete]="auto" (input)="onMedicamentInput($event)"
+                   style="text-transform: uppercase;" placeholder="Rechercher un médicament…"
+                   [readonly]="isMedicamentSelected">
+            <button type="button" class="ff-clear" *ngIf="isMedicamentSelected"
+                    (click)="clearMedicamentSelection()" aria-label="Effacer la sélection">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
+            <mat-option *ngFor="let med of suggestions" [value]="med.nom">
+              {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non éligible)</span>
+            </mat-option>
+          </mat-autocomplete>
+          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
+            Ce médicament n'est pas éligible.
+          </div>
+          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('notFound')">
+            Sélectionnez un médicament de la liste.
           </div>
         </div>
 
-        <hr class="divider">
-
-        <!-- Saisie des Médicaments -->
-        <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="form-row-multi mt-3">
-          <mat-form-field appearance="outline" class="flex-2">
-            <mat-label>Médicament</mat-label>
-            <input type="text" matInput formControlName="medicament" [matAutocomplete]="auto" (input)="onMedicamentInput($event)" style="text-transform: uppercase;">
-            <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)">
-              <mat-option *ngFor="let med of suggestions" [value]="med.nom">
-                {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non Éligible)</span>
-              </mat-option>
-            </mat-autocomplete>
-            <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
-              Ce médicament n'est pas éligible.
-            </mat-error>
-            <mat-error *ngIf="medicamentForm.get('medicament')?.hasError('notFound')">
-              Sélectionnez un médicament de la liste.
-            </mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Quantité</mat-label>
-            <input matInput type="number" formControlName="quantite">
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Prix Unit.</mat-label>
-            <input matInput type="number" formControlName="prixUnitaire">
-          </mat-form-field>
-
-          <button mat-stroked-button color="primary" type="submit" [disabled]="medicamentForm.invalid" class="add-btn">
-            <mat-icon>add</mat-icon> Ajouter
-          </button>
-        </form>
-
-        <!-- Alerte médicament exclu : motif + description -->
-        <div class="exclu-alert" *ngIf="excludedInfo">
-          <mat-icon>block</mat-icon>
-          <div class="exclu-body">
-            <span class="exclu-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
-            <span class="exclu-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
-            <span class="exclu-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
-          </div>
-        </div>
-
-        <!-- Liste temporaire des médicaments préparés pour le patient -->
-        <div *ngIf="patientLignes.length > 0" class="mt-4 patient-temp-list">
-          <h3 class="mb-2">Médicaments préparés pour ce patient</h3>
-          <table class="temp-table">
-            <thead>
-              <tr>
-                <th>Médicament</th>
-                <th>Qté</th>
-                <th>Prix Unit.</th>
-                <th>Total</th>
-                <th>Part CSU (50%)</th>
-                <th>Part bénéf. (50%)</th>
-                <th style="width: 80px;">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let pl of patientLignes; let i = index">
-                <td>{{ pl.medicament }}</td>
-                <td>{{ pl.quantite }}</td>
-                <td>{{ pl.prixUnitaire | number }}</td>
-                <td><strong>{{ pl.quantite * pl.prixUnitaire | number }}</strong></td>
-                <td class="part-csu">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
-                <td class="part-benef">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
-                <td>
-                  <button mat-icon-button color="warn" type="button" (click)="retirerMedicamentTemp(i)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="commit-section mt-3">
-            <button mat-flat-button color="accent" [disabled]="patientForm.invalid || isSubmitting" (click)="enregistrerPatientFacture()">
-              <mat-icon>save_alt</mat-icon> Enregistrer les médicaments pour ce patient
+        <div class="ff-field ff-add-qty">
+          <label class="ff-label">Quantité</label>
+          <div class="ff-stepper">
+            <button type="button" class="ff-step-btn" (click)="adjustQuantite(-1)" aria-label="Diminuer la quantité">
+              <mat-icon>remove</mat-icon>
+            </button>
+            <input type="number" class="ff-input ff-qty-input" formControlName="quantite"
+                   inputmode="numeric" min="1" aria-label="Quantité">
+            <button type="button" class="ff-step-btn" (click)="adjustQuantite(1)" aria-label="Augmenter la quantité">
+              <mat-icon>add</mat-icon>
             </button>
           </div>
         </div>
-      </mat-card-content>
-    </mat-card>
 
-    <!-- Lignes déjà enregistrées sur la facture (utile en correction) -->
-    <mat-card class="mb-4" *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0">
-      <mat-card-header>
-        <mat-card-title>
-          Lignes de la facture ({{ facture.lignes.length }})
-        </mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="mt-3">
-        <div class="correction-hint" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
-          <mat-icon>build</mat-icon>
-          Corrigez les lignes rejetées (supprimez-les puis ressaisissez-les correctement ci-dessus), puis cliquez sur « Envoyer la facture ».
+        <div class="ff-field ff-add-prix">
+          <label class="ff-label" for="ff-prix">Prix unit.</label>
+          <div class="ff-input-suffix">
+            <input id="ff-prix" type="number" class="ff-input" formControlName="prixUnitaire"
+                   inputmode="numeric" min="0" placeholder="0">
+            <span class="ff-suffix">F</span>
+          </div>
         </div>
-        <table class="temp-table">
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Médicament</th>
-              <th>Qté</th>
-              <th>Prix Unit.</th>
-              <th>Total</th>
-              <th>Statut</th>
-              <th style="width: 80px;">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let l of facture.lignes; let i = index" [class.row-rejected]="l.statutLigne === 'REJETEE'">
-              <td>{{ l.patientNomPrenom || '-' }}</td>
-              <td>{{ l.medicament }}</td>
-              <td>{{ l.quantite }}</td>
-              <td>{{ l.prixUnitaire | number }}</td>
-              <td><strong>{{ l.montant | number }}</strong></td>
-              <td>
-                <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [matTooltip]="l.motifRejet || ''">
-                  Rejetée
-                </span>
-                <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
-              </td>
-              <td>
-                <button mat-icon-button color="warn" type="button" (click)="supprimerLigne(i)" matTooltip="Supprimer cette ligne">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </mat-card-content>
-    </mat-card>
 
-    <!-- Visionneuse plein écran d'une pièce justificative -->
-    <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
-      <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
-      <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+        <button class="btn btn-primary ff-add-btn" type="submit" [disabled]="medicamentForm.invalid">
+          <mat-icon>add</mat-icon> Ajouter
+        </button>
+      </form>
+
+      <!-- Alerte médicament exclu -->
+      <div class="ff-alert ff-alert--danger" *ngIf="excludedInfo">
+        <mat-icon>block</mat-icon>
+        <div>
+          <span class="ff-alert-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
+          <span class="ff-alert-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+          <span class="ff-alert-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+        </div>
+      </div>
+
+      <!-- Avertissement limite mensuelle quantité >= 2 -->
+      <div class="ff-alert ff-alert--warn" *ngIf="medicamentForm.get('quantite')?.value >= 2">
+        <mat-icon>warning</mat-icon>
+        <div>
+          <span class="ff-alert-title">Limite mensuelle atteinte ou dépassée</span>
+          <span class="ff-alert-line">La quantité saisie atteint ou dépasse la limite autorisée (2 unités par médicament et par mois).</span>
+        </div>
+      </div>
+
+      <!-- État vide -->
+      <div class="ff-empty" *ngIf="patientLignes.length === 0">
+        <mat-icon>medication</mat-icon>
+        <p>Aucun médicament ajouté pour ce patient</p>
+      </div>
+
+      <!-- Liste des médicaments préparés (cartes : zéro scroll horizontal) -->
+      <div class="ff-lines" *ngIf="patientLignes.length > 0">
+        <div class="ff-line" *ngFor="let pl of patientLignes; let i = index">
+          <div class="ff-line-main">
+            <span class="ff-line-name">{{ pl.medicament }}</span>
+            <span class="ff-line-meta">{{ pl.quantite }} × {{ pl.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <div class="ff-line-amounts">
+            <strong class="ff-line-total">{{ pl.quantite * pl.prixUnitaire | number:'1.0-0':'fr' }} F</strong>
+            <span class="ff-line-split">CSU {{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <button class="ff-del" type="button" (click)="retirerMedicamentTemp(i)" aria-label="Retirer ce médicament">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <!-- Total courant du patient -->
+        <div class="ff-line-foot">
+          <span>Total patient</span>
+          <div class="ff-line-foot-amounts">
+            <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>
+            <span>dont CSU {{ patientCsu | number:'1.0-0':'fr' }} F</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3 — DOSSIER (repliable) -->
+    <section class="ff-step ff-step--collapsible">
+      <button type="button" class="ff-step-head ff-step-toggle" (click)="toggleDossier()"
+              [attr.aria-expanded]="dossierOpen">
+        <span class="ff-step-num">3</span>
+        <div class="ff-step-titles">
+          <h2>Dossier du patient</h2>
+          <p>Pièces justificatives — optionnel</p>
+        </div>
+        <span class="ff-count ff-count--soft" *ngIf="photosCount">{{ photosCount }}/3</span>
+        <mat-icon class="ff-chevron" [class.open]="dossierOpen">expand_more</mat-icon>
+      </button>
+
+      <div class="ff-dossier" *ngIf="dossierOpen">
+        <p class="ff-dossier-hint">Prenez en photo les pièces (appareil photo ou fichier).</p>
+        <div class="ff-photos">
+          <div class="ff-photo" *ngFor="let p of photoFields">
+            <span class="ff-photo-label">{{ p.label }}</span>
+            <div class="ff-photo-drop" *ngIf="!photos[p.key]; else preview">
+              <input type="file" accept="image/*" capture="environment" hidden
+                     #photoInput (change)="onPhotoSelected(p.key, $event)">
+              <button type="button" class="ff-photo-btn" (click)="photoInput.click()">
+                <mat-icon>photo_camera</mat-icon>
+                <span>Prendre une photo</span>
+              </button>
+            </div>
+            <ng-template #preview>
+              <div class="ff-photo-preview">
+                <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
+                <button type="button" class="ff-photo-remove" (click)="removePhoto(p.key)" aria-label="Supprimer la photo">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTION PRINCIPALE : enregistrer le patient -->
+    <div class="ff-commit">
+      <div class="ff-commit-total" *ngIf="patientLignes.length > 0">
+        <span class="ff-commit-cap">Total patient</span>
+        <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>
+      </div>
+      <button class="btn btn-primary ff-commit-btn"
+              [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting"
+              (click)="enregistrerPatientFacture()">
+        <mat-icon *ngIf="!isSubmitting">person_add</mat-icon>
+        <mat-icon *ngIf="isSubmitting" class="ff-spin">autorenew</mat-icon>
+        {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer ce patient' }}
+      </button>
     </div>
+  </div>
+
+  <!-- ===================== LIGNES DÉJÀ ENREGISTRÉES (correction) ===================== -->
+  <div class="ff-card" *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0">
+    <div class="ff-step-head ff-step-head--plain">
+      <div class="ff-step-titles">
+        <h2>Lignes de la facture</h2>
+        <p>{{ facture.lignes.length }} ligne(s) enregistrée(s)</p>
+      </div>
+    </div>
+
+    <div class="ff-alert ff-alert--warn" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
+      <mat-icon>build</mat-icon>
+      <div>
+        <span class="ff-alert-title">Facture à corriger</span>
+        <span class="ff-alert-line">Supprimez les lignes rejetées puis ressaisissez-les correctement ci-dessus, puis cliquez sur « Envoyer la facture ».</span>
+      </div>
+    </div>
+
+    <div class="ff-lines">
+      <div class="ff-line" *ngFor="let l of facture.lignes; let i = index" [class.ff-line--rejected]="l.statutLigne === 'REJETEE'">
+        <div class="ff-line-main">
+          <span class="ff-line-name">{{ l.medicament }}</span>
+          <span class="ff-line-meta">{{ l.patientNomPrenom || '—' }} · {{ l.quantite }} × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+          <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [title]="l.motifRejet || ''">Rejetée</span>
+          <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
+        </div>
+        <div class="ff-line-amounts">
+          <strong class="ff-line-total">{{ l.montant | number:'1.0-0':'fr' }} F</strong>
+        </div>
+        <button class="ff-del" type="button" (click)="supprimerLigne(i)" aria-label="Supprimer cette ligne">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visionneuse plein écran d'une pièce justificative -->
+  <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
+    <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
+    <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+  </div>
+</div>

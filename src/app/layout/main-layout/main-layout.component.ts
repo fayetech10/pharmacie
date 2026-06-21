@@ -120,9 +120,11 @@ export class MainLayoutComponent implements OnInit {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'] },
-        // Validées (VALIDEE_NC) et Payées (PAYEE) sont les actions PROPRES du central → pas de badge.
+        // Validées (VALIDEE_NC), Payées (PAYEE) et Rejetées (REJETEE_NC) sont les actions PROPRES du central → pas de badge.
         { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
-        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 }
+        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 },
+        // Onglet « Factures rejetées » : sans cette entrée il était inaccessible en mobile (barre d'onglets masquée).
+        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-central', tab: 4 }
       ];
     }
     return [

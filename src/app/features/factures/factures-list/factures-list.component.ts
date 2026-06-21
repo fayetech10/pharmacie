@@ -75,6 +75,27 @@ export class FacturesListComponent implements OnInit {
   @Input() showPaymentButton = false;
   /** Affiche l'en-tête (titre + boutons Excel/PDF/Import). Masqué quand la liste est intégrée dans un espace. */
   @Input() showToolbar = true;
+  /** Active la vue mensuelle (Janvier → Décembre) comme dans la photo de référence. */
+  @Input() monthlyView = false;
+
+  /** Année sélectionnée dans la vue mensuelle. */
+  selectedYear = new Date().getFullYear();
+  /** Années disponibles pour le sélecteur. */
+  availableYears: number[] = [];
+
+  /** Cache des groupes par pharmacie (recalculé seulement à chaque chargement). */
+  private _pharmacyGroups: { pharmacieId: string; pharmacieNom: string; factures: Facture[] }[] = [];
+
+  /** Nom des mois. */
+  readonly monthNames = [
+    '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  ];
+
+  /** Date du jour pour le surlignage du mois courant. */
+  readonly today = new Date();
+  readonly currentMonth = this.today.getMonth() + 1;
+  readonly currentYear = this.today.getFullYear();
 
   constructor(
     public authService: AuthService,
@@ -145,10 +166,23 @@ export class FacturesListComponent implements OnInit {
       // Années présentes dans les données (tri décroissant) pour le filtre
       this.anneesDispo = Array.from(new Set(this.factures.map(f => f.annee))).sort((a, b) => b - a);
 
+      // Vue mensuelle : calculer les années disponibles
+      if (this.monthlyView) {
+        const yearsSet = new Set(this.factures.map(f => f.annee));
+        yearsSet.add(new Date().getFullYear());
+        this.availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+        if (!this.availableYears.includes(this.selectedYear)) {
+          this.selectedYear = this.availableYears[0] || new Date().getFullYear();
+        }
+      }
+
       this.dataSource = new MatTableDataSource(this.factures);
       this.dataSource.paginator = this.paginator;
       this.dataSource.sort = this.sort;
       this.dataSource.filterPredicate = this.customFilterPredicate();
+
+      // Recalculer le cache des groupes (vue mensuelle multi-pharmacies)
+      this.buildPharmacyGroups();
     });
   }
 
@@ -354,11 +388,129 @@ export class FacturesListComponent implements OnInit {
     });
   }
 
+  /** Service Régional : retransmet une facture rejetée par le central (REJETEE_NC) au niveau central. */
+  renvoyerAuCentral(id: string) {
+    this.confirm.ask({
+      title: 'Renvoyer au central',
+      message: 'Confirmez-vous le renvoi de cette facture au niveau central pour réexamen ?',
+      confirmText: 'Renvoyer'
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.factureService.renvoyerAuCentral(id).subscribe({
+        next: () => {
+          this.snackBar.open('Facture renvoyée au central avec succès', 'Fermer', { duration: 3000 });
+          this.loadFactures();
+        },
+        error: (err: any) => {
+          this.snackBar.open('Erreur lors du renvoi: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
   getMonthName(mois: number): string {
-    const moisNoms = [
-      '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-    ];
-    return moisNoms[mois] || '';
+    return this.monthNames[mois] || '';
+  }
+
+  // ===== VUE MENSUELLE =====
+
+  /** Retourne la facture pour un mois donné dans l'année sélectionnée (ou null). */
+  getFactureForMonth(month: number): Facture | null {
+    return this.factures.find(f => f.mois === month && f.annee === this.selectedYear) || null;
+  }
+
+  /** Nombre de patients distincts dans une facture. */
+  countPatients(f: Facture): number {
+    if (!f.lignes || f.lignes.length === 0) return 0;
+    const ids = new Set(
+      f.lignes
+        .map(l => (l.patientMatricule || l.patientNomPrenom || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    return ids.size;
+  }
+
+  /** Génère l'identifiant de facture affiché (FACT-PHARMA-YYYY-MM). */
+  getFactureLabel(f: Facture): string {
+    const mm = String(f.mois).padStart(2, '0');
+    return `FACT-PHARMA-${f.annee}-${mm}`;
+  }
+
+  /** Date d'envoi (première action ENVOYEE dans l'historique). */
+  getDateEnvoi(f: Facture): string | null {
+    if (!f.historique) return null;
+    const envoi = f.historique.find(h => h.statut === StatutFacture.ENVOYEE);
+    return envoi ? envoi.date : null;
+  }
+
+  /** Export PDF d'une facture individuelle. */
+  exportSinglePdf(id: string, mois: number, annee: number) {
+    this.factureService.exportFacturePdf(id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${this.getMonthName(mois)}_${annee}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export PDF réussi', 'Fermer', { duration: 3000 });
+      },
+      error: (err: any) => {
+        this.snackBar.open('Erreur lors de l\'export PDF: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  /** Le statut affiché sous forme de label pour le badge de la vue mensuelle. */
+  getStatutDateLabel(f: Facture): string {
+    const dateEnvoi = this.getDateEnvoi(f);
+    if (f.statut === StatutFacture.ENVOYEE && dateEnvoi) {
+      return `Envoyé le ${dateEnvoi.substring(0, 10)}`;
+    }
+    return this.statutLabel(f.statut);
+  }
+
+  /** Envoyer une facture (depuis la vue mensuelle). */
+  envoyerFacture(f: Facture) {
+    this.confirm.ask({
+      title: 'Envoyer la facture',
+      message: 'Êtes-vous sûr de vouloir envoyer cette facture au service régional ? Vous ne pourrez plus la modifier.',
+      confirmText: 'Envoyer'
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.factureService.envoyer(f.id).subscribe({
+        next: () => {
+          this.snackBar.open('Facture envoyée avec succès', 'OK', { duration: 3000 });
+          this.loadFactures();
+        },
+        error: (err: any) => {
+          this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
+  /** Regroupe les factures chargées par pharmacie pour la vue mensuelle multi-pharmacies. */
+  get pharmacyGroups(): { pharmacieId: string; pharmacieNom: string; factures: Facture[] }[] {
+    return this._pharmacyGroups;
+  }
+
+  /** Recalcule le cache des groupes par pharmacie (appelé une seule fois par chargement). */
+  private buildPharmacyGroups(): void {
+    const groupsMap = new Map<string, { pharmacieId: string; pharmacieNom: string; factures: Facture[] }>();
+    this.factures.forEach(f => {
+      const key = f.pharmacieId || 'default';
+      const nom = f.pharmacieNom || 'Pharmacie';
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, { pharmacieId: key, pharmacieNom: nom, factures: [] });
+      }
+      groupsMap.get(key)!.factures.push(f);
+    });
+    this._pharmacyGroups = Array.from(groupsMap.values()).sort((a, b) => a.pharmacieNom.localeCompare(b.pharmacieNom));
+  }
+
+  /** Retourne la facture pour un mois donné et un groupe de factures spécifique (ou null). */
+  getFactureForMonthAndGroup(month: number, groupFactures: Facture[]): Facture | null {
+    return groupFactures.find(f => f.mois === month && f.annee === this.selectedYear) || null;
   }
 }

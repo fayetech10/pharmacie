@@ -1,5 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* Tailwind CSS — base/components/utilities.
+   (preflight désactivé dans tailwind.config.js : le reset reste maison.) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Preflight désactivé → on réintroduit UNIQUEMENT le reset de bordure dont les
+   utilitaires Tailwind (border, border-2, border-x…) ont besoin : sans lui,
+   border-style reste à 'none' et les bordures ne s'affichent pas. En @layer base
+   (priorité minimale) → les bordures explicites (app/Material) restent prioritaires. */
+@layer base {
+  *, ::before, ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--border);
+  }
+}
+
 /* ============================================================
    DESIGN SYSTEM v2 — CSU Pharmacie
    Structure « app » : topbar navy · contenu carte · bottom nav
@@ -83,6 +101,10 @@ body {
 
 h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
+/* Design system partagé dans la couche « components » de Tailwind :
+   apparence identique, mais surclassable par les utilitaires dans les écrans. */
+@layer components {
+
 /* ============================================================
    EN-TÊTE DE PAGE (partagé par toutes les pages)
    ============================================================ */
@@ -157,73 +179,56 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 .section-body { padding: var(--sp-6); }
 
 .table-card { padding: 0 !important; overflow: hidden; }
+}
 
 /* ============================================================
-   BOUTONS
+   BOUTONS — portés sur Tailwind (@layer components + @apply).
+   Les valeurs (tailles, couleurs via tokens) sont identiques à l'origine ;
+   ces classes restent surclassables par les utilitaires Tailwind.
    ============================================================ */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  height: 42px;
-  padding: 0 var(--sp-5);
-  border-radius: var(--radius);
-  border: 1px solid transparent;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: all var(--transition);
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 h-[42px] px-5 py-0 rounded border border-transparent text-sm font-semibold cursor-pointer whitespace-nowrap no-underline transition-all duration-200 ease-smooth;
+    font-family: inherit;
+  }
+  .btn:disabled { @apply opacity-[0.55] cursor-not-allowed; }
+  .btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
+  .btn-sm { @apply h-9 px-3 text-[13px]; }
+  .btn-sm mat-icon { font-size: 17px; width: 17px; height: 17px; }
+  .btn-block { @apply w-full; }
+
+  .btn-primary { @apply bg-primary text-white; }
+  .btn-primary:hover:not(:disabled) { @apply bg-primary-hover shadow-md; }
+
+  .btn-outline { @apply bg-white text-text-primary border-border; }
+  .btn-outline:hover:not(:disabled) { @apply border-primary text-primary bg-primary-light; }
+
+  .btn-ghost { @apply bg-transparent text-text-secondary; }
+  .btn-ghost:hover:not(:disabled) { @apply bg-border-light text-text-primary; }
+
+  .btn-danger { @apply bg-warn text-white; }
+  .btn-danger:hover:not(:disabled) { @apply bg-[#DC2626]; }
+
+  .btn-warning { @apply bg-[#EA580C] text-white; }
+  .btn-warning:hover:not(:disabled) { @apply bg-[#C2410C]; }
+
+  .btn-teal { @apply bg-accent text-white; }
+  .btn-teal:hover:not(:disabled) { @apply bg-primary-dark; }
+
+  /* Boutons d'action (icônes en table / cartes) */
+  .action-group { @apply inline-flex gap-1; }
+  .action-btn {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-sm border-0 bg-transparent text-text-secondary cursor-pointer no-underline transition-all duration-200 ease-smooth;
+  }
+  .action-btn:hover { @apply bg-primary-light text-primary; }
+  .action-btn.primary { @apply text-primary; }
+  .action-btn.primary:hover { @apply bg-primary-light text-primary; }
+  .action-btn.success:hover { @apply bg-success-light text-success; }
+  .action-btn.danger:hover { @apply bg-warn-light text-warn; }
+  .action-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
 }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
-.btn-sm { height: 36px; padding: 0 var(--sp-3); font-size: 13px; }
-.btn-sm mat-icon { font-size: 17px; width: 17px; height: 17px; }
-.btn-block { width: 100%; }
 
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: var(--shadow-md); }
-
-.btn-outline { background: #fff; color: var(--text-primary); border-color: var(--border); }
-.btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-
-.btn-ghost { background: transparent; color: var(--text-secondary); }
-.btn-ghost:hover:not(:disabled) { background: var(--border-light); color: var(--text-primary); }
-
-.btn-danger { background: var(--warn); color: #fff; }
-.btn-danger:hover:not(:disabled) { background: #DC2626; }
-
-.btn-warning { background: #EA580C; color: #fff; }
-.btn-warning:hover:not(:disabled) { background: #C2410C; }
-
-.btn-teal { background: var(--accent); color: #fff; }
-.btn-teal:hover:not(:disabled) { background: var(--primary-dark); }
-
-/* Boutons d'action (icônes en table / cartes) */
-.action-group { display: inline-flex; gap: var(--sp-1); }
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-decoration: none;
-  transition: all var(--transition);
-}
-.action-btn:hover { background: var(--primary-light); color: var(--primary); }
-.action-btn.primary { color: var(--primary); }
-.action-btn.primary:hover { background: var(--primary-light); color: var(--primary); }
-.action-btn.success:hover { background: var(--success-light); color: var(--success); }
-.action-btn.danger:hover { background: var(--warn-light); color: var(--warn); }
-.action-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+@layer components {
 
 /* ============================================================
    BADGES DE STATUT (alignés sur l'enum StatutFacture)
@@ -247,7 +252,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   background: currentColor;
 }
 .status-BROUILLON  { background: #F1F5F9; color: #64748B; border-color: #DBE3EC; }
-.status-ENVOYEE    { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+.status-ENVOYEE    { background: #E6F4EA; color: #137333; border-color: #CEEAD6; }
 .status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); border-color: var(--primary-200); }
 .status-REJETEE_SR { background: #FFF7ED; color: #EA580C; border-color: #FED7AA; }
 .status-VALIDEE_NC { background: var(--primary-100); color: var(--primary-hover); border-color: var(--primary-200); }
@@ -583,6 +588,7 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 }
 .m-chip.danger { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .m-chip.neutral { background: var(--border-light); color: var(--text-secondary); border-color: var(--border); }
+}
 
 /* ============================================================
    UTILITAIRES
@@ -595,15 +601,31 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
-  .m-cards { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .m-cards { display: flex; flex-direction: column; gap: var(--sp-2); }
   /* Liste des factures : pas de pagination sur mobile (toutes les cartes sont affichées). */
   .list-page mat-paginator { display: none !important; }
-  .page-head h1 { font-size: 22px; }
+  .page-head { margin-bottom: var(--sp-4); }
+  .page-head h1 { font-size: 21px; }
+  .page-head p { font-size: 13.5px; }
   .page-head-actions { width: 100%; }
   .page-head-actions .btn { flex: 1; min-width: 0; }
-  .filter-strip { gap: var(--sp-2); }
+  .filter-strip { gap: var(--sp-2); margin-bottom: var(--sp-3); }
   .filter-field { flex: 1; min-width: calc(50% - var(--sp-2)); }
   .search-box { min-width: 100%; }
+  .search-box input { height: 44px; }
+
+  /* ----------------------------------------------------------
+     DENSITÉ MOBILE (mobile-first, « chaque pixel compte ») :
+     les cartes occupent toute la largeur, marges latérales gérées
+     par le conteneur (px-3 = 12px). On supprime les doubles marges
+     et on resserre le rythme vertical sans sacrifier la lisibilité.
+     ---------------------------------------------------------- */
+  .card, .section-card { margin-bottom: var(--sp-3); border-radius: var(--radius); }
+  .section-header { padding: var(--sp-3) var(--sp-4); }
+  .section-body { padding: var(--sp-4); }
+  .m-card { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); }
+  .summary-strip { margin-bottom: var(--sp-3); }
+  .kpi-grid { margin-bottom: var(--sp-3); }
 }
 
 /* ============================================================
