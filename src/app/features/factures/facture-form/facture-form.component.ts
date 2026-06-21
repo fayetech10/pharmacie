@@ -50,6 +50,32 @@ export class FactureFormComponent implements OnInit {
   photos: Record<PhotoKey, string | null> = { ticketCaisse: null, bonCommande: null, ordonnance: null };
   viewerImage: string | null = null;
   isMedicamentSelected = false;
+  currentStep = 1; // 1: Médicaments, 2: Patient, 3: Dossier
+
+  nextStep() {
+    if (this.currentStep < 3 && this.canGoNext()) {
+      this.currentStep++;
+      if (this.currentStep === 3) {
+        this.dossierOpen = true;
+      }
+    }
+  }
+
+  prevStep() {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
+  }
+
+  canGoNext(): boolean {
+    if (this.currentStep === 1) {
+      return this.patientLignes.length > 0;
+    }
+    if (this.currentStep === 2) {
+      return this.patientForm.valid;
+    }
+    return true;
+  }
 
   constructor(
     private fb: FormBuilder,
@@ -271,6 +297,7 @@ export class FactureFormComponent implements OnInit {
           this.patientForm.reset();
           this.patientLignes = [];
           this.resetPhotos();
+          this.currentStep = 1;
           this.isSubmitting = false;
           this.snackBar.open('Patient et médicaments ajoutés à la facture', 'Fermer', { duration: 3000 });
         },
@@ -310,6 +337,7 @@ export class FactureFormComponent implements OnInit {
           this.patientForm.reset();
           this.patientLignes = [];
           this.resetPhotos();
+          this.currentStep = 1;
         }
         this.isSubmitting = false;
         this.snackBar.open('Facture mise à jour', 'Fermer', { duration: 2000 });

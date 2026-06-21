@@ -19,6 +19,7 @@ import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ConfirmService } from '../../../core/services/confirm.service';
+import { MatMenuModule } from '@angular/material/menu';
 
 @Component({
   selector: 'app-factures-list',
@@ -36,7 +37,8 @@ import { ConfirmService } from '../../../core/services/confirm.service';
     MatSelectModule,
     FormsModule,
     StatusBadgeComponent,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatMenuModule
   ],
   templateUrl: './factures-list.component.html',
   styleUrls: ['./factures-list.component.css']

@@ -279,15 +279,30 @@
       <!-- Cartes (mobile) -->
       <div class="m-cards">
         <div class="m-card clickable" *ngFor="let f of pagedFactures" (click)="openFacture(f.id)">
-          <div class="m-card-top">
-            <span class="m-title">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+          <div class="m-card-top flex items-center justify-between">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <!-- Export Icon on Top Left -->
+              <button mat-icon-button [matMenuTriggerFor]="exportMenu" (click)="$event.stopPropagation()" class="text-[var(--primary)] flex-shrink-0" style="width: 32px; height: 32px; line-height: 32px; padding: 0;">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin: 0;">file_download</mat-icon>
+              </button>
+              <mat-menu #exportMenu="matMenu">
+                <button mat-menu-item (click)="exportSingleExcel(f.id, f.mois, f.annee)">
+                  <mat-icon>table_view</mat-icon>
+                  <span>Télécharger Excel</span>
+                </button>
+                <button mat-menu-item (click)="exportSinglePdf(f.id, f.mois, f.annee)">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                  <span>Télécharger PDF</span>
+                </button>
+              </mat-menu>
+              
+              <span class="m-title truncate">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
+            </div>
+            
             <div class="m-actions">
               <button class="action-btn primary" *ngIf="canImportCorrige(f)"
                       (click)="$event.stopPropagation(); triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
                 <mat-icon>upload_file</mat-icon>
-              </button>
-              <button class="action-btn success" (click)="$event.stopPropagation(); exportSingleExcel(f.id, f.mois, f.annee)" title="Télécharger">
-                <mat-icon>download</mat-icon>
               </button>
               <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
                  [routerLink]="['/dashboard/factures', f.id, 'edit']"

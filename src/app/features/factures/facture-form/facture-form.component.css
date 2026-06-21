@@ -336,3 +336,23 @@
 @media (max-width: 420px) {
   .ff-photos { grid-template-columns: 1fr; }
 }
+
+/* Stepper Mobile */
+.ff-stepper-progress {
+  display: flex;
+}
+.ff-stepper-actions {
+  display: flex;
+  gap: var(--sp-3);
+}
+.ff-stepper-actions .btn {
+  flex: 1;
+  height: 44px;
+}
+@media (min-width: 768px) {
+  .ff-stepper-progress,
+  .ff-stepper-actions {
+    display: none !important;
+  }
+}
+
