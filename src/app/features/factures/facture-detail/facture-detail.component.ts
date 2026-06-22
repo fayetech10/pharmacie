@@ -236,14 +236,14 @@ export class FactureDetailComponent implements OnInit {
   valider() {
     const transmet = this.authService.isServiceRegional();
     this.openPrompt({
-      title: 'Valider la facture',
+      title: transmet ? 'Transmettre la facture au central' : 'Valider la facture',
       message: transmet
-        ? 'La facture sera validée et transmise au niveau central.'
+        ? 'Veuillez saisir un commentaire / motif de transmission obligatoire pour envoyer la facture au niveau central.'
         : 'La facture sera validée au niveau central.',
-      label: 'Commentaire (optionnel)',
+      label: transmet ? 'Motif de transmission' : 'Commentaire (optionnel)',
       placeholder: 'Ajouter un commentaire…',
-      confirmText: 'Valider',
-      required: false,
+      confirmText: transmet ? 'Valider et Transmettre' : 'Valider',
+      required: transmet, // Obligatoire si niveau régional (transmet)
       maxLength: 500
     }, (commentaire) => {
       this.factureService.valider(this.facture.id, { commentaire }).subscribe({
