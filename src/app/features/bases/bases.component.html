@@ -1,0 +1,114 @@
+<div class="bases-page">
+  <header class="page-head">
+    <div>
+      <h1>Bases — Service régional de Thiès</h1>
+      <p class="page-sub">Importez, consultez et imprimez la base traité et la base immatriculé&nbsp;&amp; imprimé.</p>
+    </div>
+  </header>
+
+  <!-- ============ Base traité ============ -->
+  <section class="card base-section">
+    <div class="base-head">
+      <h2><mat-icon>fact_check</mat-icon> Base traité <span class="count">{{ traite.length }}</span></h2>
+      <div class="base-actions">
+        <button class="btn btn-ghost" (click)="downloadTemplateTraite()">
+          <mat-icon>download</mat-icon> Modèle
+        </button>
+        <button class="btn btn-outline" (click)="imprimerTraite()" [disabled]="!traite.length">
+          <mat-icon>print</mat-icon> Imprimer
+        </button>
+        <label class="btn btn-primary import-btn" [class.is-disabled]="importingTraite">
+          <mat-icon *ngIf="!importingTraite">upload_file</mat-icon>
+          <mat-icon *ngIf="importingTraite" class="spin">autorenew</mat-icon>
+          {{ importingTraite ? 'Import…' : 'Importer' }}
+          <input type="file" accept=".xlsx,.xls" hidden (change)="onImportTraite($event)" [disabled]="importingTraite">
+        </label>
+      </div>
+    </div>
+
+    <div class="import-result" *ngIf="resultTraite" [class.has-error]="resultTraite.echecs > 0">
+      <span class="chip ok">{{ resultTraite.importes }} importée(s)</span>
+      <span class="chip warn" *ngIf="resultTraite.doublons > 0">{{ resultTraite.doublons }} doublon(s) ignoré(s)</span>
+      <span class="chip err" *ngIf="resultTraite.echecs > 0">{{ resultTraite.echecs }} échec(s)</span>
+      <ul class="errors" *ngIf="resultTraite.erreurs?.length">
+        <li *ngFor="let e of resultTraite.erreurs">{{ e }}</li>
+      </ul>
+    </div>
+
+    <div class="table-wrap" *ngIf="traite.length; else emptyTraite">
+      <table class="data-table">
+        <thead>
+          <tr><th *ngFor="let c of traiteColumns">{{ c.label }}</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of traite">
+            <td *ngFor="let c of traiteColumns">
+              <img *ngIf="c.image && isImage(row[c.key]); else txtT" class="thumb" [src]="row[c.key] || ''" alt="">
+              <ng-template #txtT>{{ row[c.key] }}</ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #emptyTraite>
+      <div class="empty-state" *ngIf="!loadingTraite">
+        <mat-icon>inbox</mat-icon>
+        <p>Aucune donnée. Importez un fichier Excel (colonnes : Region, Departement, Commune, Nom, …, Photo, Index).</p>
+      </div>
+      <div class="empty-state" *ngIf="loadingTraite"><mat-icon class="spin">autorenew</mat-icon><p>Chargement…</p></div>
+    </ng-template>
+  </section>
+
+  <!-- ============ Base immatriculé & imprimé ============ -->
+  <section class="card base-section">
+    <div class="base-head">
+      <h2><mat-icon>badge</mat-icon> Base immatriculé &amp; imprimé <span class="count">{{ immatricule.length }}</span></h2>
+      <div class="base-actions">
+        <button class="btn btn-ghost" (click)="downloadTemplateImmatricule()">
+          <mat-icon>download</mat-icon> Modèle
+        </button>
+        <button class="btn btn-outline" (click)="imprimerImmatricule()" [disabled]="!immatricule.length">
+          <mat-icon>print</mat-icon> Imprimer
+        </button>
+        <label class="btn btn-primary import-btn" [class.is-disabled]="importingImmat">
+          <mat-icon *ngIf="!importingImmat">upload_file</mat-icon>
+          <mat-icon *ngIf="importingImmat" class="spin">autorenew</mat-icon>
+          {{ importingImmat ? 'Import…' : 'Importer' }}
+          <input type="file" accept=".xlsx,.xls" hidden (change)="onImportImmatricule($event)" [disabled]="importingImmat">
+        </label>
+      </div>
+    </div>
+
+    <div class="import-result" *ngIf="resultImmat" [class.has-error]="resultImmat.echecs > 0">
+      <span class="chip ok">{{ resultImmat.importes }} importée(s)</span>
+      <span class="chip warn" *ngIf="resultImmat.doublons > 0">{{ resultImmat.doublons }} doublon(s) ignoré(s)</span>
+      <span class="chip err" *ngIf="resultImmat.echecs > 0">{{ resultImmat.echecs }} échec(s)</span>
+      <ul class="errors" *ngIf="resultImmat.erreurs?.length">
+        <li *ngFor="let e of resultImmat.erreurs">{{ e }}</li>
+      </ul>
+    </div>
+
+    <div class="table-wrap" *ngIf="immatricule.length; else emptyImmat">
+      <table class="data-table">
+        <thead>
+          <tr><th *ngFor="let c of immatriculeColumns">{{ c.label }}</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of immatricule">
+            <td *ngFor="let c of immatriculeColumns">
+              <img *ngIf="c.image && isImage(row[c.key]); else txtI" class="thumb" [src]="row[c.key] || ''" alt="">
+              <ng-template #txtI>{{ row[c.key] }}</ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #emptyImmat>
+      <div class="empty-state" *ngIf="!loadingImmat">
+        <mat-icon>inbox</mat-icon>
+        <p>Aucune donnée. Importez un fichier Excel (colonnes : ID, Date Enregistrement, Code Immatriculation, …, CNI, Photo).</p>
+      </div>
+      <div class="empty-state" *ngIf="loadingImmat"><mat-icon class="spin">autorenew</mat-icon><p>Chargement…</p></div>
+    </ng-template>
+  </section>
+</div>

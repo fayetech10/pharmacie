@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { RegionService } from '../../core/services/region.service';
 import { FactureService } from '../../core/services/facture.service';
 import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
 import { FactureEventsService } from '../../core/services/facture-events.service';
@@ -39,6 +40,8 @@ export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
   currentUrl = '';
+  /** Vrai si l'utilisateur est le service régional de Thiès (affiche l'entrée « Bases »). */
+  isThies = false;
   /** Nombre de factures par statut, pour les badges de la navigation basse. */
   counts: StatutCounts = {};
   private destroyRef = inject(DestroyRef);
@@ -106,7 +109,7 @@ export class MainLayoutComponent implements OnInit {
       ];
     }
     if (this.authService.isServiceRegional()) {
-      return [
+      const items: NavItem[] = [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
         // Seules les décisions du central alertent le SR (VALIDEE_NC) ; ses propres validations (VALIDEE_SR) non.
@@ -115,6 +118,11 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
+      // Fonctionnalité « Bases » réservée au service régional de Thiès.
+      if (this.isThies) {
+        items.push({ label: 'Bases', icon: 'dataset', link: '/dashboard/bases' });
+      }
+      return items;
     }
     if (this.authService.isServiceCentral()) {
       return [
@@ -137,6 +145,7 @@ export class MainLayoutComponent implements OnInit {
 
   constructor(
     public authService: AuthService,
+    private regionService: RegionService,
     private factureService: FactureService,
     private factureCount: FactureCountService,
     private factureEvents: FactureEventsService,
@@ -146,6 +155,13 @@ export class MainLayoutComponent implements OnInit {
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
     this.currentUrl = this.router.url;
+
+    // Détermine si l'utilisateur est le service régional de Thiès (entrée de menu « Bases »).
+    if (this.authService.isServiceRegional()) {
+      this.regionService.isCurrentUserThies()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(ok => this.isThies = ok);
+    }
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
       .pipe(
