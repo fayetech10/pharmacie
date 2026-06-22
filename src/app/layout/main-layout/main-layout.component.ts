@@ -118,9 +118,9 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
-      // Fonctionnalité « Bases » réservée au service régional de Thiès.
+      // Gestion des adhérents (bases traité / immatriculé) réservée au SR de Thiès.
       if (this.isThies) {
-        items.push({ label: 'Bases', icon: 'dataset', link: '/dashboard/bases' });
+        items.push({ label: 'Adhérents', icon: 'groups', link: '/dashboard/bases' });
       }
       return items;
     }
