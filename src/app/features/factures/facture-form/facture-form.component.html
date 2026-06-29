@@ -59,7 +59,7 @@
           <label class="ff-label" for="ff-med">Médicament</label>
           <div class="ff-input-clear">
             <input id="ff-med" type="text" class="ff-input" formControlName="medicament"
-                   [matAutocomplete]="auto" [matAutocompletePosition]="'above'" (input)="onMedicamentInput($event)"
+                   [matAutocomplete]="auto" [matAutocompletePosition]="'auto'" (input)="onMedicamentInput($event)"
                    style="text-transform: uppercase;" placeholder="Rechercher un médicament…"
                    [readonly]="isMedicamentSelected">
             <button type="button" class="ff-clear" *ngIf="isMedicamentSelected"
@@ -67,7 +67,7 @@
               <mat-icon>close</mat-icon>
             </button>
           </div>
-          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" position="above">
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" position="auto">
             <mat-option *ngFor="let med of suggestions" [value]="med.nom">
               {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non éligible)</span>
             </mat-option>
