@@ -324,7 +324,9 @@
    ============================================================ */
 @media (max-width: 767px) {
   .ff-step { padding: var(--sp-4); }
-  .ff-commit { padding: var(--sp-4); flex-direction: column; align-items: stretch; }
+  /* Wizard mobile : la barre d'action ne s'affiche qu'à l'étape 3 */
+  .ff-commit { display: none; padding: var(--sp-4); flex-direction: column; align-items: stretch; }
+  .ff-commit.ff-commit--active { display: flex; }
   .ff-commit-total { flex-direction: row; align-items: baseline; justify-content: space-between; }
   .ff-commit-btn { width: 100%; min-width: 0; }
   .ff-head-summary { width: 100%; }

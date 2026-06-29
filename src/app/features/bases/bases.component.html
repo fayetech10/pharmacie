@@ -1,114 +1,130 @@
-<div class="bases-page">
+<div class="adh-page">
   <header class="page-head">
     <div>
-      <h1>Gestion des adhérents — Service régional de Thiès</h1>
-      <p class="page-sub">Importez, consultez et imprimez la base traité et la base immatriculé&nbsp;&amp; imprimé.</p>
+      <h1>Gestion des adhérents</h1>
+      <p class="page-sub">Service régional de Thiès — import, statistiques et impression des bases.</p>
     </div>
   </header>
 
-  <!-- ============ Base traité ============ -->
-  <section class="card base-section">
-    <div class="base-head">
-      <h2><mat-icon>fact_check</mat-icon> Base traité <span class="count">{{ traite.length }}</span></h2>
-      <div class="base-actions">
-        <button class="btn btn-ghost" (click)="downloadTemplateTraite()">
-          <mat-icon>download</mat-icon> Modèle
-        </button>
-        <button class="btn btn-outline" (click)="imprimerTraite()" [disabled]="!traite.length">
-          <mat-icon>print</mat-icon> Imprimer
-        </button>
-        <label class="btn btn-primary import-btn" [class.is-disabled]="importingTraite">
-          <mat-icon *ngIf="!importingTraite">upload_file</mat-icon>
-          <mat-icon *ngIf="importingTraite" class="spin">autorenew</mat-icon>
-          {{ importingTraite ? 'Import…' : 'Importer' }}
-          <input type="file" accept=".xlsx,.xls" hidden (change)="onImportTraite($event)" [disabled]="importingTraite">
+  <!-- Onglets -->
+  <div class="seg" role="tablist">
+    <button class="seg-btn" [class.active]="activeTab==='traite'" (click)="setTab('traite')">
+      <mat-icon>fact_check</mat-icon> Base traité <span class="seg-count">{{ traite.length }}</span>
+    </button>
+    <button class="seg-btn" [class.active]="activeTab==='immat'" (click)="setTab('immat')">
+      <mat-icon>badge</mat-icon> Base immatriculé &amp; imprimé <span class="seg-count">{{ immatricule.length }}</span>
+    </button>
+  </div>
+
+  <!-- Barre d'outils -->
+  <div class="toolbar">
+    <div class="search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Rechercher (nom, commune, CNI…)" [(ngModel)]="search" (ngModelChange)="onSearchChange()">
+      <button class="clear" *ngIf="search" (click)="search=''; onSearchChange()" aria-label="Effacer"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" (click)="downloadTemplate()"><mat-icon>download</mat-icon> Modèle</button>
+      <button class="btn btn-outline" (click)="imprimer()" [disabled]="!filteredRows.length"><mat-icon>print</mat-icon> Imprimer</button>
+      <label class="btn btn-primary import-btn" [class.is-disabled]="importing">
+        <mat-icon *ngIf="!importing">upload_file</mat-icon>
+        <mat-icon *ngIf="importing" class="spin">autorenew</mat-icon>
+        {{ importing ? 'Import…' : 'Importer' }}
+        <input type="file" accept=".xlsx,.xls" hidden (change)="onImport($event)" [disabled]="importing">
+      </label>
+    </div>
+  </div>
+
+  <!-- Résultat d'import -->
+  <div class="import-result" *ngIf="currentResult as r">
+    <span class="chip ok">{{ r.importes }} importée(s)</span>
+    <span class="chip warn" *ngIf="r.doublons > 0">{{ r.doublons }} doublon(s) ignoré(s)</span>
+    <span class="chip err" *ngIf="r.echecs > 0">{{ r.echecs }} échec(s)</span>
+    <ul class="errors" *ngIf="r.erreurs?.length"><li *ngFor="let e of r.erreurs">{{ e }}</li></ul>
+  </div>
+
+  <!-- Contenu (avec données) -->
+  <ng-container *ngIf="currentRows.length; else emptyState">
+    <!-- ===== Tableau de bord statistique ===== -->
+    <ng-container *ngIf="currentStats as st">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon green"><mat-icon>groups</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.total | number:'1.0-0':'fr' }}</span><span class="kpi-label">Adhérents</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon red"><mat-icon>woman</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.femmes | number:'1.0-0':'fr' }} <small>{{ st.pctFemmes }}%</small></span><span class="kpi-label">Femmes</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon blue"><mat-icon>man</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.hommes | number:'1.0-0':'fr' }} <small>{{ st.pctHommes }}%</small></span><span class="kpi-label">Hommes</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon amber"><mat-icon>cake</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.ageMoyen !== null ? st.ageMoyen : '—' }} <small *ngIf="st.ageMoyen !== null">ans</small></span><span class="kpi-label">Âge moyen</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon green"><mat-icon>map</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.nbDepartements }}</span><span class="kpi-label">Départements</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon blue"><mat-icon>location_city</mat-icon></div><div class="kpi-body"><span class="kpi-value">{{ st.nbCommunes }}</span><span class="kpi-label">Communes</span></div></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card chart-card">
+          <h3>Répartition par sexe</h3>
+          <div class="chart-box"><canvas baseChart [type]="'doughnut'" [data]="st.sexeChart" [options]="doughnutOptions"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Tranches d'âge</h3>
+          <div class="chart-box"><canvas baseChart [type]="'bar'" [data]="st.ageChart" [options]="barOptions"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Régimes</h3>
+          <div class="chart-box"><canvas baseChart [type]="'doughnut'" [data]="st.regimeChart" [options]="doughnutOptions"></canvas></div>
+        </div>
+        <div class="card chart-card wide">
+          <h3>Top départements</h3>
+          <div class="chart-box"><canvas baseChart [type]="'bar'" [data]="st.deptChart" [options]="hBarOptions"></canvas></div>
+        </div>
+        <div class="card chart-card wide">
+          <h3>Top communes</h3>
+          <div class="chart-box"><canvas baseChart [type]="'bar'" [data]="st.communeChart" [options]="hBarOptions"></canvas></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ===== Tableau paginé ===== -->
+    <div class="card table-card">
+      <div class="table-toolbar">
+        <span class="table-title">{{ filteredRows.length | number:'1.0-0':'fr' }} résultat(s)<span *ngIf="search"> (filtrés)</span></span>
+        <label class="page-size">Lignes
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            <option *ngFor="let s of pageSizes" [ngValue]="s">{{ s }}</option>
+          </select>
         </label>
       </div>
-    </div>
 
-    <div class="import-result" *ngIf="resultTraite" [class.has-error]="resultTraite.echecs > 0">
-      <span class="chip ok">{{ resultTraite.importes }} importée(s)</span>
-      <span class="chip warn" *ngIf="resultTraite.doublons > 0">{{ resultTraite.doublons }} doublon(s) ignoré(s)</span>
-      <span class="chip err" *ngIf="resultTraite.echecs > 0">{{ resultTraite.echecs }} échec(s)</span>
-      <ul class="errors" *ngIf="resultTraite.erreurs?.length">
-        <li *ngFor="let e of resultTraite.erreurs">{{ e }}</li>
-      </ul>
-    </div>
+      <div class="table-wrap" *ngIf="pagedRows.length; else noMatch">
+        <table class="data-table">
+          <thead><tr><th *ngFor="let c of currentColumns">{{ c.label }}</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of pagedRows">
+              <td *ngFor="let c of currentColumns">
+                <img *ngIf="c.image && isImage(row[c.key]); else txt" class="thumb" [src]="row[c.key] || ''" alt="">
+                <ng-template #txt>{{ row[c.key] }}</ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noMatch><div class="empty-inline">Aucun résultat pour « {{ search }} ».</div></ng-template>
 
-    <div class="table-wrap" *ngIf="traite.length; else emptyTraite">
-      <table class="data-table">
-        <thead>
-          <tr><th *ngFor="let c of traiteColumns">{{ c.label }}</th></tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of traite">
-            <td *ngFor="let c of traiteColumns">
-              <img *ngIf="c.image && isImage(row[c.key]); else txtT" class="thumb" [src]="row[c.key] || ''" alt="">
-              <ng-template #txtT>{{ row[c.key] }}</ng-template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="pager" *ngIf="filteredRows.length">
+        <span class="pager-info">{{ rangeStart }}–{{ rangeEnd }} sur {{ filteredRows.length | number:'1.0-0':'fr' }}</span>
+        <div class="pager-ctrl">
+          <button class="btn btn-ghost btn-sm" (click)="prevPage()" [disabled]="page === 0"><mat-icon>chevron_left</mat-icon></button>
+          <span class="pager-page">Page {{ page + 1 }} / {{ totalPages }}</span>
+          <button class="btn btn-ghost btn-sm" (click)="nextPage()" [disabled]="page >= totalPages - 1"><mat-icon>chevron_right</mat-icon></button>
+        </div>
+      </div>
     </div>
-    <ng-template #emptyTraite>
-      <div class="empty-state" *ngIf="!loadingTraite">
+  </ng-container>
+
+  <!-- État vide / chargement -->
+  <ng-template #emptyState>
+    <div class="card">
+      <div class="empty-state" *ngIf="!currentLoading">
         <mat-icon>inbox</mat-icon>
-        <p>Aucune donnée. Importez un fichier Excel (colonnes : Region, Departement, Commune, Nom, …, Photo, Index).</p>
+        <p>Aucune donnée dans cette base. Importez un fichier Excel via le bouton <strong>Importer</strong> ci-dessus (téléchargez d'abord le <strong>Modèle</strong> pour les bonnes colonnes).</p>
       </div>
-      <div class="empty-state" *ngIf="loadingTraite"><mat-icon class="spin">autorenew</mat-icon><p>Chargement…</p></div>
-    </ng-template>
-  </section>
-
-  <!-- ============ Base immatriculé & imprimé ============ -->
-  <section class="card base-section">
-    <div class="base-head">
-      <h2><mat-icon>badge</mat-icon> Base immatriculé &amp; imprimé <span class="count">{{ immatricule.length }}</span></h2>
-      <div class="base-actions">
-        <button class="btn btn-ghost" (click)="downloadTemplateImmatricule()">
-          <mat-icon>download</mat-icon> Modèle
-        </button>
-        <button class="btn btn-outline" (click)="imprimerImmatricule()" [disabled]="!immatricule.length">
-          <mat-icon>print</mat-icon> Imprimer
-        </button>
-        <label class="btn btn-primary import-btn" [class.is-disabled]="importingImmat">
-          <mat-icon *ngIf="!importingImmat">upload_file</mat-icon>
-          <mat-icon *ngIf="importingImmat" class="spin">autorenew</mat-icon>
-          {{ importingImmat ? 'Import…' : 'Importer' }}
-          <input type="file" accept=".xlsx,.xls" hidden (change)="onImportImmatricule($event)" [disabled]="importingImmat">
-        </label>
-      </div>
+      <div class="empty-state" *ngIf="currentLoading"><mat-icon class="spin">autorenew</mat-icon><p>Chargement…</p></div>
     </div>
-
-    <div class="import-result" *ngIf="resultImmat" [class.has-error]="resultImmat.echecs > 0">
-      <span class="chip ok">{{ resultImmat.importes }} importée(s)</span>
-      <span class="chip warn" *ngIf="resultImmat.doublons > 0">{{ resultImmat.doublons }} doublon(s) ignoré(s)</span>
-      <span class="chip err" *ngIf="resultImmat.echecs > 0">{{ resultImmat.echecs }} échec(s)</span>
-      <ul class="errors" *ngIf="resultImmat.erreurs?.length">
-        <li *ngFor="let e of resultImmat.erreurs">{{ e }}</li>
-      </ul>
-    </div>
-
-    <div class="table-wrap" *ngIf="immatricule.length; else emptyImmat">
-      <table class="data-table">
-        <thead>
-          <tr><th *ngFor="let c of immatriculeColumns">{{ c.label }}</th></tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of immatricule">
-            <td *ngFor="let c of immatriculeColumns">
-              <img *ngIf="c.image && isImage(row[c.key]); else txtI" class="thumb" [src]="row[c.key] || ''" alt="">
-              <ng-template #txtI>{{ row[c.key] }}</ng-template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <ng-template #emptyImmat>
-      <div class="empty-state" *ngIf="!loadingImmat">
-        <mat-icon>inbox</mat-icon>
-        <p>Aucune donnée. Importez un fichier Excel (colonnes : ID, Date Enregistrement, Code Immatriculation, …, CNI, Photo).</p>
-      </div>
-      <div class="empty-state" *ngIf="loadingImmat"><mat-icon class="spin">autorenew</mat-icon><p>Chargement…</p></div>
-    </ng-template>
-  </section>
+  </ng-template>
 </div>
