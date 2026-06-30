@@ -42,6 +42,7 @@
   animation: slideUpIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .mobile-bottom-nav.nav-hidden {
+  animation: none;
   transform: translateY(calc(100% + 24px));
   opacity: 0;
   pointer-events: none;
@@ -84,4 +85,28 @@
 /* Animation d'entrée pour le bouton logout mobile */
 .mobile-logout:not(.nav-hidden) {
   animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Bouton déclencheur de navigation mobile (Pharmacien) */
+.mobile-menu-trigger {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.25s ease;
+  animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.mobile-menu-trigger mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.35s ease;
+}
+.mobile-menu-trigger.active mat-icon {
+  transform: rotate(90deg);
+}
+/* Se déplace au-dessus de la barre de navigation mobile lorsqu'elle s'affiche (hauteur de la nav ~ 60px + gap) */
+.mobile-menu-trigger.active {
+  bottom: calc(75px + env(safe-area-inset-bottom));
+}
+.mobile-menu-trigger:active {
+  transform: scale(0.9);
 }

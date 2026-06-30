@@ -99,3 +99,13 @@
     <span>{{ item.label }}</span>
   </a>
 </nav>
+
+<!-- Bouton déclencheur de menu flottant (mobile uniquement, réservé au pharmacien) -->
+<button type="button" 
+        class="mobile-menu-trigger flex md:hidden fixed bottom-4 right-4 z-[250] w-12 h-12 items-center justify-center border-0 rounded-full bg-ink-gradient text-white shadow-[0_6px_16px_-4px_rgba(6,78,59,0.45)] cursor-pointer"
+        *ngIf="authService.isPharmacien()"
+        (click)="togglePharmacienNav()"
+        [class.active]="isPharmacienNavOpen"
+        aria-label="Menu de navigation">
+  <mat-icon>{{ isPharmacienNavOpen ? 'close' : 'menu' }}</mat-icon>
+</button>

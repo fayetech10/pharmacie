@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject, HostListener } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, HostListener, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -44,12 +44,16 @@ export class MainLayoutComponent implements OnInit {
 
   /** Masque la barre de navigation mobile quand l'utilisateur scroll vers le bas. */
   navHidden = false;
+  isPharmacienNavOpen = false;
   private lastScrollY = 0;
   private scrollThreshold = 10;
 
   @HostListener('window:scroll', ['$event'])
   @HostListener('document:scroll', ['$event'])
   onWindowScroll(event?: any): void {
+    // Si c'est une pharmacie, on gère l'affichage par clic uniquement, pas par scroll
+    if (this.authService.isPharmacien()) return;
+
     const currentScrollY = window.scrollY || 
                            window.pageYOffset || 
                            document.documentElement.scrollTop || 
@@ -160,7 +164,8 @@ export class MainLayoutComponent implements OnInit {
     private factureService: FactureService,
     private factureCount: FactureCountService,
     private factureEvents: FactureEventsService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -169,6 +174,9 @@ export class MainLayoutComponent implements OnInit {
 
     // Écouteur global en mode capture (true) pour intercepter le scroll de n'importe quel conteneur interne (ex: formulaire, tableau)
     const handleScroll = (event: Event) => {
+      // Si c'est une pharmacie, on gère l'affichage par clic uniquement, pas par scroll
+      if (this.authService.isPharmacien()) return;
+
       const target = event.target;
       let currentScrollY = 0;
       if (target === document || target === document.documentElement || target === window) {
@@ -180,7 +188,12 @@ export class MainLayoutComponent implements OnInit {
       }
 
       if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
-      this.navHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
+      
+      const newNavHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
+      if (this.navHidden !== newNavHidden) {
+        this.navHidden = newNavHidden;
+        this.cdr.detectChanges();
+      }
       this.lastScrollY = currentScrollY;
     };
 
@@ -188,6 +201,11 @@ export class MainLayoutComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('scroll', handleScroll, true);
     });
+
+    // Si l'utilisateur est pharmacien, on masque la navigation par défaut
+    if (this.authService.isPharmacien()) {
+      this.navHidden = true;
+    }
 
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
@@ -243,6 +261,12 @@ export class MainLayoutComponent implements OnInit {
     const tabMatch = /(?:^|&)tab=(\d+)/.exec(query || '');
     const currentTab = tabMatch ? +tabMatch[1] : 0;
     return currentTab === item.tab;
+  }
+
+  togglePharmacienNav() {
+    this.isPharmacienNavOpen = !this.isPharmacienNavOpen;
+    this.navHidden = !this.isPharmacienNavOpen;
+    this.cdr.detectChanges();
   }
 
   voirRetards() {
