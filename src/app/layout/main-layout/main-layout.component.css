@@ -48,16 +48,28 @@
   pointer-events: none;
 }
 
-.bn-item mat-icon { font-size: 18px; width: 18px; height: 18px; }
-.bn-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bn-item.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+.bn-item mat-icon {
+  font-size: 21px; width: 21px; height: 21px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.bn-item:active { transform: scale(0.95); }
-.bn-badge { box-shadow: 0 0 0 2px #066F52; }
+.bn-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Onglet actif : pastille blanche nette + icône/label en vert de marque
+   (indicateur de sélection à fort contraste, façon app mobile moderne). */
+.bn-item.active {
+  background: #ffffff;
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.28);
+}
+.bn-item.active mat-icon {
+  color: var(--primary);
+  transform: translateY(-1px) scale(1.06);
+}
+.bn-item:active { transform: scale(0.94); }
+/* Anneau du badge adapté au fond (vert sur onglet inactif, blanc sur onglet actif). */
+.bn-badge { box-shadow: 0 0 0 2px #1D4534; }
+.bn-item.active .bn-badge { box-shadow: 0 0 0 2px #ffffff; }
 
 /* ─── Animations d'entrée ─── */
 @keyframes slideUpIn {

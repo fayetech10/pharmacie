@@ -88,8 +88,8 @@
 
 <!-- Navigation basse (mobile) — le header est masqué sur mobile.
      La session expire automatiquement après 1 jour (redirection vers la connexion). -->
-<nav class="mobile-bottom-nav flex md:hidden fixed left-3 right-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[16px] shadow-[0_8px_20px_-6px_rgba(6,78,59,0.45)] p-1 gap-0" [class.nav-hidden]="navHidden">
-  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0 py-1 px-0.5 border-0 rounded-[12px] bg-transparent text-ink-text text-[9px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
+<nav class="mobile-bottom-nav flex md:hidden fixed left-3 right-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[20px] shadow-[0_12px_30px_-8px_rgba(6,78,59,0.55)] ring-1 ring-white/10 p-1.5 gap-1" [class.nav-hidden]="navHidden">
+  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[52px] py-1.5 px-0.5 border-0 rounded-[15px] bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
      *ngFor="let item of bottomNav"
      [class.active]="isBottomActive(item)"
      [routerLink]="item.link"
