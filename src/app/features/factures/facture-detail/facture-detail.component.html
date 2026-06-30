@@ -32,6 +32,11 @@
             <mat-icon>picture_as_pdf</mat-icon> PDF
           </button>
 
+          <!-- Suppression réservée au Super Admin -->
+          <button class="btn btn-danger" *ngIf="authService.isAdmin()" (click)="supprimerFacture()">
+            <mat-icon>delete</mat-icon> Supprimer
+          </button>
+
           <!-- Import : visible uniquement pour le Service Régional -->
           <button class="btn btn-outline" *ngIf="authService.isServiceRegional()" (click)="importFileInput.click()">
             <mat-icon>upload_file</mat-icon> Importer

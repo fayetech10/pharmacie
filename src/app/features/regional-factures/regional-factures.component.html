@@ -1,7 +1,6 @@
     <!-- Statistiques de la région (vue principale) -->
     <app-stats [embedded]="true" *ngIf="level === 'pharmacies'"></app-stats>
-    <!-- Tableau de bord de la pharmacie sélectionnée (drill-down) -->
-    <app-stats [embedded]="true" *ngIf="level === 'factures' && pharmacieScope" [scope]="pharmacieScope"></app-stats>
+
 
     <!-- Fil d'Ariane -->
     <nav class="breadcrumb">

@@ -235,18 +235,13 @@ export class FactureDetailComponent implements OnInit {
 
   valider() {
     const transmet = this.authService.isServiceRegional();
-    this.openPrompt({
-      title: transmet ? 'Transmettre la facture au central' : 'Valider la facture',
-      message: transmet
-        ? 'Veuillez saisir un commentaire / motif de transmission obligatoire pour envoyer la facture au niveau central.'
-        : 'La facture sera validée au niveau central.',
-      label: transmet ? 'Motif de transmission' : 'Commentaire (optionnel)',
-      placeholder: 'Ajouter un commentaire…',
-      confirmText: transmet ? 'Valider et Transmettre' : 'Valider',
-      required: transmet, // Obligatoire si niveau régional (transmet)
-      maxLength: 500
-    }, (commentaire) => {
-      this.factureService.valider(this.facture.id, { commentaire }).subscribe({
+    const title = transmet ? 'Transmettre la facture au central' : 'Valider la facture';
+    const message = transmet
+      ? 'Êtes-vous sûr de vouloir valider et transmettre cette facture au niveau central ?'
+      : 'Confirmer la validation de cette facture au niveau central ?';
+
+    this.openConfirm(title, message, () => {
+      this.factureService.valider(this.facture.id).subscribe({
         next: (f: Facture) => {
           this.setFacture(f);
           this.snackBar.open('Facture validée avec succès', 'Fermer', { duration: 3000 });
@@ -254,6 +249,22 @@ export class FactureDetailComponent implements OnInit {
         error: (e: any) => this.showError(e)
       });
     });
+  }
+
+  supprimerFacture() {
+    this.openConfirm(
+      'Supprimer la facture',
+      'Êtes-vous sûr de vouloir supprimer définitivement cette facture ? Cette action est irréversible.',
+      () => {
+        this.factureService.delete(this.facture.id).subscribe({
+          next: () => {
+            this.snackBar.open('Facture supprimée avec succès', 'Fermer', { duration: 3000 });
+            this.router.navigate(['/dashboard']);
+          },
+          error: (e: any) => this.showError(e)
+        });
+      }
+    );
   }
 
   rejeter() {

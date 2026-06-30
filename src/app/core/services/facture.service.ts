@@ -52,8 +52,8 @@ export class FactureService {
     return this.api.post<Facture>(`/factures/${id}/envoyer`, {}).pipe(this.notify());
   }
 
-  valider(id: string, req: ValidationRequest): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/valider`, req).pipe(this.notify());
+  valider(id: string, req?: ValidationRequest): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/valider`, req || {}).pipe(this.notify());
   }
 
   rejeter(id: string, req: ValidationRequest): Observable<Facture> {
