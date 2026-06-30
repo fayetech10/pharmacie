@@ -30,6 +30,8 @@ export class LoginComponent {
   isLoading = false;
   errorMessage = '';
   year = new Date().getFullYear();
+  emailFocused = false;
+  passwordFocused = false;
 
   constructor(
     private fb: FormBuilder,

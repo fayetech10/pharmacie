@@ -40,10 +40,6 @@
         <mat-icon>local_pharmacy</mat-icon>
         <span>Pharmacies</span>
       </a>
-      <a routerLink="/dashboard/bases" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="isThies">
-        <mat-icon>groups</mat-icon>
-        <span>Gestion des adhérents</span>
-      </a>
       <a routerLink="/dashboard/utilisateurs" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
         <mat-icon>manage_accounts</mat-icon>
         <span>Utilisateurs</span>

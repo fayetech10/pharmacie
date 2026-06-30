@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { RegionService } from '../../core/services/region.service';
 import { FactureService } from '../../core/services/facture.service';
 import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
 import { FactureEventsService } from '../../core/services/facture-events.service';
@@ -40,8 +39,6 @@ export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
   currentUrl = '';
-  /** Vrai si l'utilisateur est le service régional de Thiès (affiche l'entrée « Bases »). */
-  isThies = false;
   /** Nombre de factures par statut, pour les badges de la navigation basse. */
   counts: StatutCounts = {};
 
@@ -50,11 +47,18 @@ export class MainLayoutComponent implements OnInit {
   private lastScrollY = 0;
   private scrollThreshold = 10;
 
-  @HostListener('window:scroll')
-  onWindowScroll(): void {
-    const currentScrollY = window.scrollY;
+  @HostListener('window:scroll', ['$event'])
+  @HostListener('document:scroll', ['$event'])
+  onWindowScroll(event?: any): void {
+    const currentScrollY = window.scrollY || 
+                           window.pageYOffset || 
+                           document.documentElement.scrollTop || 
+                           document.body.scrollTop || 
+                           0;
+    
     // Seuil pour éviter le scintillement sur les micro-scrolls
     if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
+    
     // Scroll vers le bas → cacher | Scroll vers le haut → afficher
     this.navHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
     this.lastScrollY = currentScrollY;
@@ -123,8 +127,7 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
       ];
     }
-    if (this.authService.isServiceRegional()) {
-      const items: NavItem[] = [
+      return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
         // Seules les décisions du central alertent le SR (VALIDEE_NC) ; ses propres validations (VALIDEE_SR) non.
@@ -133,12 +136,6 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
-      // Gestion des adhérents (bases traité / immatriculé) réservée au SR de Thiès.
-      if (this.isThies) {
-        items.push({ label: 'Adhérents', icon: 'groups', link: '/dashboard/bases' });
-      }
-      return items;
-    }
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
@@ -160,7 +157,6 @@ export class MainLayoutComponent implements OnInit {
 
   constructor(
     public authService: AuthService,
-    private regionService: RegionService,
     private factureService: FactureService,
     private factureCount: FactureCountService,
     private factureEvents: FactureEventsService,
@@ -171,12 +167,28 @@ export class MainLayoutComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.currentUrl = this.router.url;
 
-    // Détermine si l'utilisateur est le service régional de Thiès (entrée de menu « Bases »).
-    if (this.authService.isServiceRegional()) {
-      this.regionService.isCurrentUserThies()
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(ok => this.isThies = ok);
-    }
+    // Écouteur global en mode capture (true) pour intercepter le scroll de n'importe quel conteneur interne (ex: formulaire, tableau)
+    const handleScroll = (event: Event) => {
+      const target = event.target;
+      let currentScrollY = 0;
+      if (target === document || target === document.documentElement || target === window) {
+        currentScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      } else if (target instanceof HTMLElement && target.scrollTop !== undefined) {
+        currentScrollY = target.scrollTop;
+      } else {
+        return;
+      }
+
+      if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
+      this.navHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
+      this.lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, true);
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('scroll', handleScroll, true);
+    });
+
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
       .pipe(

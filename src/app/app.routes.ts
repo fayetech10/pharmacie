@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { noAuthGuard } from './core/guards/no-auth.guard';
 import { roleGuard } from './core/guards/role.guard';
-import { thiesGuard } from './core/guards/thies.guard';
 import { homeRedirectGuard } from './core/guards/home-redirect.guard';
 import { Role } from './core/models/user.model';
 
@@ -79,13 +78,6 @@ export const routes: Routes = [
       {
         path: 'medicaments',
         loadComponent: () => import('./features/medicaments/medicaments.component').then(m => m.MedicamentsComponent)
-      },
-      {
-        // Bases (traité / immatriculé & imprimé) : service régional de Thiès uniquement.
-        path: 'bases',
-        canActivate: [roleGuard, thiesGuard],
-        data: { roles: [Role.SERVICE_REGIONAL] },
-        loadComponent: () => import('./features/bases/bases.component').then(m => m.BasesComponent)
       }
     ]
   }
