@@ -136,6 +136,47 @@
 .ff-clear:hover { color: var(--warn); background: var(--warn-light); }
 .ff-clear mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
+/* ---------- Suggestions d'autocomplétion (inline, sans overlay CDK) ----------
+   Ancrée directement sous le champ : fonctionne de façon identique sur desktop
+   et iPhone (pas d'occlusion par le clavier virtuel, taps fiables). */
+.ff-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 50;
+  margin: 0; padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+}
+.ff-suggest li { margin: 0; padding: 0; }
+.ff-suggest-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none; background: transparent;
+  border-radius: 6px;
+  text-align: left; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  color: var(--text-primary);
+}
+/* :active pour un retour visuel au tap sur iOS (où :hover n'existe pas) */
+.ff-suggest-item:hover,
+.ff-suggest-item:active,
+.ff-suggest-item.active { background: var(--primary-light); }
+.ff-suggest-name { flex: 1; min-width: 0; text-transform: uppercase; word-break: break-word; }
+.ff-suggest-tag {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700;
+  color: #B91C1C; background: #FDE2E2;
+  padding: 2px 8px; border-radius: var(--radius-full);
+}
+
 .ff-input-suffix { position: relative; }
 .ff-input-suffix .ff-input { padding-right: 28px; }
 .ff-suffix {

@@ -10,7 +10,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTableModule } from '@angular/material/table';
 import { MedicamentService } from '../../../core/services/medicament.service';
 import { Medicament, StatutMedicament } from '../../../core/models/medicament.model';
@@ -24,8 +23,8 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
   selector: 'app-facture-form',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule, 
-    MatButtonModule, MatIconModule, MatSnackBarModule, MatAutocompleteModule,
+    CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule,
+    MatButtonModule, MatIconModule, MatSnackBarModule,
     MatTableModule, MatTooltipModule, RouterModule
   ],
   templateUrl: './facture-form.component.html',
@@ -39,6 +38,10 @@ export class FactureFormComponent implements OnInit {
   isEditMode = false;
   isSubmitting = false;
   suggestions: Medicament[] = [];
+  /** Affiche la liste de suggestions inline (autocomplétion maison, sans overlay CDK : fiable sur iOS). */
+  showSuggestions = false;
+  /** Index de la suggestion surlignée pour la navigation clavier (-1 = aucune). */
+  activeIndex = -1;
   excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
 
   // Dossier patient : pièces justificatives (data URL base64)
@@ -166,7 +169,9 @@ export class FactureFormComponent implements OnInit {
     if (query.length >= 2) {
       this.medicamentService.search(query).subscribe(res => {
         this.suggestions = res;
-        
+        this.activeIndex = -1;
+        this.showSuggestions = res.length > 0;
+
         const exactMatch = res.find(m => m.nom.toLowerCase() === query.trim().toLowerCase());
         if (exactMatch) {
           this.medicamentForm.patchValue({ codeProduit: exactMatch.code }, { emitEvent: false });
@@ -187,26 +192,64 @@ export class FactureFormComponent implements OnInit {
       });
     } else {
       this.suggestions = [];
+      this.showSuggestions = false;
+      this.activeIndex = -1;
       this.medicamentForm.patchValue({ codeProduit: '' }, { emitEvent: false });
       this.medicamentForm.get('medicament')?.setErrors({ notFound: true });
       this.excludedInfo = null;
     }
   }
 
-  onMedicamentSelected(event: any) {
-    const nom = event.option.value;
-    const med = this.suggestions.find(m => m.nom === nom);
-    if (med) {
-      this.medicamentForm.patchValue({ codeProduit: med.code });
-      this.isMedicamentSelected = true;
-      if (med.statut === StatutMedicament.EXCLU) {
-        this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
-        this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
-        this.snackBar.open("Attention: Ce médicament n'est pas éligible.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
-      } else {
-        this.medicamentForm.get('medicament')?.setErrors(null);
-        this.excludedInfo = null;
-      }
+  /** Sélection d'une suggestion (clic/tap ou Entrée) — remplace l'overlay Material (fiable sur iOS). */
+  selectMedicament(med: Medicament) {
+    this.medicamentForm.patchValue({ medicament: med.nom, codeProduit: med.code });
+    this.isMedicamentSelected = true;
+    this.showSuggestions = false;
+    this.activeIndex = -1;
+    if (med.statut === StatutMedicament.EXCLU) {
+      this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
+      this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
+      this.snackBar.open("Attention: Ce médicament n'est pas éligible.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+    } else {
+      this.medicamentForm.get('medicament')?.setErrors(null);
+      this.excludedInfo = null;
+    }
+  }
+
+  /** Rouvre la liste si on revient dans le champ et que des suggestions sont disponibles. */
+  onMedicamentFocus() {
+    if (!this.isMedicamentSelected && this.suggestions.length > 0) {
+      this.showSuggestions = true;
+    }
+  }
+
+  /** Ferme la liste au blur, avec un court délai pour laisser le tap/clic d'une option s'exécuter (iOS Safari). */
+  onMedicamentBlur() {
+    setTimeout(() => { this.showSuggestions = false; this.activeIndex = -1; }, 150);
+  }
+
+  /** Navigation clavier dans la liste de suggestions (flèches, Entrée, Échap). */
+  onMedicamentKeydown(event: KeyboardEvent) {
+    if (!this.showSuggestions || this.suggestions.length === 0) return;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeIndex = (this.activeIndex + 1) % this.suggestions.length;
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeIndex = (this.activeIndex - 1 + this.suggestions.length) % this.suggestions.length;
+        break;
+      case 'Enter':
+        if (this.activeIndex >= 0) {
+          event.preventDefault();
+          this.selectMedicament(this.suggestions[this.activeIndex]);
+        }
+        break;
+      case 'Escape':
+        this.showSuggestions = false;
+        this.activeIndex = -1;
+        break;
     }
   }
 
@@ -214,6 +257,8 @@ export class FactureFormComponent implements OnInit {
     this.medicamentForm.patchValue({ medicament: '', codeProduit: '' });
     this.isMedicamentSelected = false;
     this.suggestions = [];
+    this.showSuggestions = false;
+    this.activeIndex = -1;
     this.excludedInfo = null;
   }
 
@@ -233,6 +278,8 @@ export class FactureFormComponent implements OnInit {
     this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
     this.isMedicamentSelected = false;
     this.suggestions = [];
+    this.showSuggestions = false;
+    this.activeIndex = -1;
     this.excludedInfo = null;
 
     if (quantiteAjoutee >= 2) {

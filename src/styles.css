@@ -841,19 +841,4 @@ button, a { transition: all var(--transition); }
   }
 }
 
-/* Correctifs spécifiques iOS Safari pour l'autocomplétion (Overlay/MatOption) */
-.mat-mdc-option, .mat-option, .mat-autocomplete-panel {
-  cursor: pointer !important;
-  -webkit-tap-highlight-color: transparent !important;
-  pointer-events: auto !important;
-}
-
-/* S'assure que le conteneur d'overlay ne bloque pas les clics et s'affiche au-dessus du clavier virtuel */
-.cdk-overlay-container {
-  pointer-events: none;
-}
-.cdk-overlay-pane {
-  pointer-events: auto;
-  z-index: 3000 !important;
-}
 

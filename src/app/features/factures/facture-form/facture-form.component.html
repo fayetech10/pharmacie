@@ -59,19 +59,28 @@
           <label class="ff-label" for="ff-med">Médicament</label>
           <div class="ff-input-clear">
             <input id="ff-med" type="text" class="ff-input" formControlName="medicament"
-                   [matAutocomplete]="auto" [matAutocompletePosition]="'auto'" (input)="onMedicamentInput($event)"
+                   (input)="onMedicamentInput($event)" (focus)="onMedicamentFocus()"
+                   (blur)="onMedicamentBlur()" (keydown)="onMedicamentKeydown($event)"
+                   role="combobox" aria-autocomplete="list" [attr.aria-expanded]="showSuggestions"
+                   autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
                    style="text-transform: uppercase;" placeholder="Rechercher un médicament…"
                    [readonly]="isMedicamentSelected">
             <button type="button" class="ff-clear" *ngIf="isMedicamentSelected"
                     (click)="clearMedicamentSelection()" aria-label="Effacer la sélection">
               <mat-icon>close</mat-icon>
             </button>
+
+            <!-- Suggestions inline : pas d'overlay CDK → aucun bug de clavier/tap sur iPhone -->
+            <ul class="ff-suggest" *ngIf="showSuggestions && suggestions.length > 0" role="listbox">
+              <li *ngFor="let med of suggestions; let i = index" role="option" [attr.aria-selected]="i === activeIndex">
+                <button type="button" class="ff-suggest-item" [class.active]="i === activeIndex"
+                        (mousedown)="$event.preventDefault()" (click)="selectMedicament(med)">
+                  <span class="ff-suggest-name">{{ med.nom }}</span>
+                  <span *ngIf="med.statut === 'EXCLU'" class="ff-suggest-tag">Non éligible</span>
+                </button>
+              </li>
+            </ul>
           </div>
-          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onMedicamentSelected($event)" position="auto">
-            <mat-option *ngFor="let med of suggestions" [value]="med.nom">
-              {{ med.nom }} <span *ngIf="med.statut === 'EXCLU'" class="text-warn">(Non éligible)</span>
-            </mat-option>
-          </mat-autocomplete>
           <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
             Ce médicament n'est pas éligible.
           </div>
