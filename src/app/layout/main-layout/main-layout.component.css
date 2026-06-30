@@ -25,8 +25,28 @@
 /* Bouton de déconnexion flottant (mobile) */
 .mobile-logout mat-icon { font-size: 20px; width: 20px; height: 20px; }
 .mobile-logout:active { transform: scale(0.92); }
+.mobile-logout {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+.mobile-logout.nav-hidden {
+  transform: translateY(-80px);
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* Navigation basse (mobile) */
+.mobile-bottom-nav {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+  animation: slideUpIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.mobile-bottom-nav.nav-hidden {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
 .bn-item mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .bn-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bn-item.active {
@@ -37,3 +57,31 @@
 }
 .bn-item:active { transform: scale(0.95); }
 .bn-badge { box-shadow: 0 0 0 2px #066F52; }
+
+/* ─── Animations d'entrée ─── */
+@keyframes slideUpIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Animation d'entrée pour le bouton logout mobile */
+.mobile-logout:not(.nav-hidden) {
+  animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

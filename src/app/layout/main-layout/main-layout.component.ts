@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, HostListener } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -44,6 +44,21 @@ export class MainLayoutComponent implements OnInit {
   isThies = false;
   /** Nombre de factures par statut, pour les badges de la navigation basse. */
   counts: StatutCounts = {};
+
+  /** Masque la barre de navigation mobile quand l'utilisateur scroll vers le bas. */
+  navHidden = false;
+  private lastScrollY = 0;
+  private scrollThreshold = 10;
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const currentScrollY = window.scrollY;
+    // Seuil pour éviter le scintillement sur les micro-scrolls
+    if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
+    // Scroll vers le bas → cacher | Scroll vers le haut → afficher
+    this.navHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
+    this.lastScrollY = currentScrollY;
+  }
   private destroyRef = inject(DestroyRef);
 
   /** Le rôle courant affiche-t-il des badges de comptage ? */
