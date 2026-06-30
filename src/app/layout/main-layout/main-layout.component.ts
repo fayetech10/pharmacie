@@ -131,6 +131,7 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
       ];
     }
+    if (this.authService.isServiceRegional()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
@@ -140,6 +141,7 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
         { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
       ];
+    }
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
