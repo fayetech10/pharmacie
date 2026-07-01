@@ -293,6 +293,32 @@ export class FactureFormComponent implements OnInit {
     this.patientLignes.splice(index, 1);
   }
 
+  /**
+   * Déclenché quand le pharmacien quitte le champ « Numéro matricule ».
+   * Vérifie si le bénéficiaire a déjà reçu, ce mois-ci, un des médicaments en cours de saisie.
+   */
+  onMatriculeBlur() {
+    const matricule = (this.patientForm.get('patientMatricule')?.value || '').toString().trim().toLowerCase();
+    if (!matricule || this.patientLignes.length === 0) return;
+
+    const lignesExistantes = (this.facture?.lignes ?? []).filter(
+      l => (l.patientMatricule || '').toString().trim().toLowerCase() === matricule
+    );
+    if (lignesExistantes.length === 0) return;
+
+    const codesDejaDelivres = new Set(lignesExistantes.map(l => l.codeProduit));
+    const doublons = this.patientLignes.filter(pl => codesDejaDelivres.has(pl.codeProduit));
+    if (doublons.length === 0) return;
+
+    const noms = doublons.map(d => d.medicament).join(', ');
+    this.confirm.ask({
+      title: `Médicament déjà délivré : ${noms}`,
+      message: 'Médicament déjà délivré durant le mois. Vérifier le respect du traitement mensuel.',
+      confirmText: 'Continuer',
+      hideCancel: true
+    }).subscribe();
+  }
+
   onPhotoSelected(key: PhotoKey, event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];

@@ -10,6 +10,8 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  /** Masque le bouton d'annulation : force le pharmacien à cliquer sur le bouton de confirmation pour fermer. */
+  hideCancel?: boolean;
 }
 
 export interface PromptOptions {
@@ -43,7 +45,8 @@ export class ConfirmService {
         message: options.message,
         confirmText: options.confirmText ?? 'Confirmer',
         cancelText: options.cancelText ?? 'Annuler',
-        danger: options.danger ?? false
+        danger: options.danger ?? false,
+        hideCancel: options.hideCancel ?? false
       }
     });
     return ref.afterClosed().pipe(map(result => result === true));

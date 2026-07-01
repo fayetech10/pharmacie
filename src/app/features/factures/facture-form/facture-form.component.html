@@ -132,7 +132,7 @@
         <mat-icon>warning</mat-icon>
         <div>
           <span class="ff-alert-title">Limite mensuelle atteinte ou dépassée</span>
-          <span class="ff-alert-line">La quantité saisie atteint ou dépasse la limite autorisée (2 unités par médicament et par mois).</span>
+          <span class="ff-alert-line">Plus d'une boite : Vérifier le respect du traitement mensuel.</span>
         </div>
       </div>
 
@@ -187,7 +187,7 @@
         <div class="ff-field">
           <label class="ff-label" for="ff-mat">Numéro matricule <span class="ff-req">*</span></label>
           <input id="ff-mat" type="text" class="ff-input" formControlName="patientMatricule"
-                 placeholder="Ex : PAT-2026-987">
+                 placeholder="Ex : PAT-2026-987" (blur)="onMatriculeBlur()">
         </div>
       </form>
     </section>

@@ -12,6 +12,8 @@ export interface ConfirmDialogData {
   danger?: boolean;
   /** Icône Material affichée dans l'en-tête (défaut déduit de `danger`). */
   icon?: string;
+  /** Masque le bouton d'annulation : seul le bouton de confirmation permet de fermer la modale. */
+  hideCancel?: boolean;
 
   // ----- Mode « prompt » : capture une saisie texte -----
   prompt?: boolean;
