@@ -1,4 +1,5 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, DestroyRef, inject, Input } from '@angular/core';
+import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -103,3 +104,4 @@ export class BonsCommandeListComponent implements OnInit {
     });
   }
 }
+

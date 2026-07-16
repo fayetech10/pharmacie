@@ -1,4 +1,5 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, DestroyRef, inject, Input } from '@angular/core';
+import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -295,3 +296,4 @@ export class FacturesStructureListComponent implements OnInit {
 
   Math = Math;
 }
+

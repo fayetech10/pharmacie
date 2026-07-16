@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="bcl-loading">Chargement...</div>
+  <app-skeleton-list *ngIf="loading" [rows]="4" [cols]="6"></app-skeleton-list>
   <div *ngIf="!loading && filteredBons.length === 0" class="bcl-empty">Aucun bon de commande trouvé.</div>
 
   <div *ngIf="!loading && filteredBons.length > 0"

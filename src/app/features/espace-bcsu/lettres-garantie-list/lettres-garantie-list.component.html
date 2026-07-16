@@ -37,10 +37,7 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="lgl-loading">
-    <mat-icon>hourglass_empty</mat-icon>
-    Chargement des dossiers…
-  </div>
+  <app-skeleton-list *ngIf="loading" [rows]="5" [cols]="7"></app-skeleton-list>
   <div *ngIf="!loading && filteredLettres.length === 0" class="lgl-empty">
     <mat-icon>folder_off</mat-icon>
     <p>Aucun dossier trouvé.</p>

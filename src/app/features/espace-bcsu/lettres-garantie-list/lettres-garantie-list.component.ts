@@ -1,5 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -24,7 +25,7 @@ const STATUT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-lettres-garantie-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
   templateUrl: './lettres-garantie-list.component.html',
   styleUrls: ['./lettres-garantie-list.component.css']
 })

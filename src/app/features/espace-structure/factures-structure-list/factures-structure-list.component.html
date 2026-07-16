@@ -25,10 +25,7 @@
     </select>
   </div>
 
-  <div *ngIf="loading" class="fsl-loading">
-    <mat-icon>hourglass_empty</mat-icon>
-    Chargement des factures…
-  </div>
+  <app-skeleton-list *ngIf="loading" [rows]="4" [cols]="5"></app-skeleton-list>
   <div *ngIf="!loading && factures.length === 0" class="fsl-empty">
     <mat-icon>receipt_long</mat-icon>
     <p>Aucune facture pour le moment.</p>
