@@ -25,7 +25,13 @@ export interface OcrCarteAssureResult {
 
 /** Lance l'OCR (français) sur une image (File ou data URL) et renvoie le texte brut. */
 async function extraireTexte(image: File | string): Promise<string> {
-  const { createWorker } = await import('tesseract.js');
+  const Tesseract = await import('tesseract.js');
+  // Compatibilité CommonJS / ESM selon que l'on soit en dev ou en production avec esbuild
+  const createWorker = Tesseract.createWorker || (Tesseract as any).default?.createWorker;
+  
+  if (!createWorker) {
+    throw new Error("Impossible de charger la fonction createWorker de Tesseract.");
+  }
   // En production, les Web Workers cross-origin (CDN) sont bloqués par la sécurité du navigateur.
   // On utilise donc les fichiers qu'on a placés dans src/assets/tesseract/.
   try {
