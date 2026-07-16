@@ -26,18 +26,22 @@ export interface OcrCarteAssureResult {
 /** Lance l'OCR (français) sur une image (File ou data URL) et renvoie le texte brut. */
 async function extraireTexte(image: File | string): Promise<string> {
   const { createWorker } = await import('tesseract.js');
-  // En production (Vercel), les fichiers worker/WASM/langue ne sont pas bundlés.
-  // On force le chargement depuis le CDN jsDelivr pour que ça marche partout.
-  const worker = await createWorker('fra', 1, {
-    workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
-    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
-    langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-  });
+  // En production, les Web Workers cross-origin (CDN) sont bloqués par la sécurité du navigateur.
+  // On utilise donc les fichiers qu'on a placés dans src/assets/tesseract/.
   try {
+    const worker = await createWorker('fra', 1, {
+      workerPath: '/assets/tesseract/worker.min.js',
+      corePath: '/assets/tesseract/tesseract-core-simd-lstm.wasm.js',
+      // Les données de langue (fra.traineddata) peuvent rester sur le CDN (elles ne sont pas soumises aux restrictions des Web Workers).
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+    });
+    
     const { data } = await worker.recognize(image);
-    return data.text || '';
-  } finally {
     await worker.terminate();
+    return data.text || '';
+  } catch (err) {
+    console.error("Erreur critique OCR:", err);
+    throw err;
   }
 }
 
