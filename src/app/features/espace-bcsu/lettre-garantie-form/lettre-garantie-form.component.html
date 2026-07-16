@@ -1,0 +1,130 @@
+<div class="lg-form">
+  <!-- Stepper -->
+  <div class="lg-stepper-progress flex items-center justify-between px-1 py-3">
+    <span class="text-xs font-semibold">Étape {{ currentStep }} sur 2</span>
+    <div class="flex gap-1">
+      <span class="lg-dot" [class.active]="currentStep >= 1"></span>
+      <span class="lg-dot" [class.active]="currentStep >= 2"></span>
+    </div>
+  </div>
+
+  <!-- Étape 1 : Patient -->
+  <mat-card *ngIf="currentStep === 1" class="lg-card">
+    <!-- Le régime est choisi EN PREMIER : il détermine la pièce à photographier
+         (Classique/BSF-CEC : carte d'assuré recto · 0-5 ans : extrait de naissance · autres : CNI). -->
+    <h3 class="lg-section-title">Régime du bénéficiaire</h3>
+    <mat-form-field appearance="outline" class="lg-regime-field">
+      <mat-label>Régime</mat-label>
+      <mat-select [formControl]="regimeControl" (selectionChange)="onRegimeChange()">
+        <mat-option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <h3 class="lg-section-title">Pièces justificatives</h3>
+    <p class="lg-regime-hint">{{ photoHint }}</p>
+
+    <!-- Photos au début pour l'OCR -->
+    <div class="lg-photos mb-6">
+      <div class="lg-photo" *ngFor="let p of photoFields">
+        <span class="lg-photo-label">{{ p.label }}</span>
+
+        <div class="lg-photo-drop" *ngIf="!photos[p.key]; else preview">
+          <input type="file" accept="image/*" capture="environment" hidden
+                 #photoInput (change)="onPhotoSelected(p.key, $event)">
+          <button type="button" class="lg-photo-btn" (click)="photoInput.click()">
+            <mat-icon>photo_camera</mat-icon>
+            <span>Prendre une photo</span>
+          </button>
+        </div>
+
+        <ng-template #preview>
+          <div class="lg-photo-preview">
+            <img [src]="photos[p.key]" [alt]="p.label">
+            <div class="lg-photo-ocr" *ngIf="ocrEnCours === p.key">
+              <mat-icon class="lg-ocr-spin">autorenew</mat-icon>
+              <span>Lecture OCR...</span>
+            </div>
+            <button type="button" class="lg-photo-remove" (click)="removePhoto(p.key)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+
+      </div>
+    </div>
+
+    <h3 class="lg-section-title mt-4">Informations du Bénéficiaire</h3>
+
+    <div class="lg-search">
+      <input type="text" placeholder="Rechercher par CNI, n° d'assuré ou nom..."
+             [value]="searchQuery" (input)="onSearchInput($event)" class="lg-input" />
+      <div class="lg-search-results" *ngIf="searchResults.length > 0">
+        <div class="lg-search-item" *ngFor="let p of searchResults" (click)="selectPatient(p)">
+          <strong>{{ p.prenom }} {{ p.nom }}</strong>
+          <span>{{ p.telephone }} · {{ regimeLabels[p.regime] }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="selectedPatientId" class="lg-selected-banner">
+      Patient existant sélectionné
+      <button type="button" (click)="clearSelectedPatient()">Changer</button>
+    </div>
+
+    <form [formGroup]="patientForm" class="lg-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nom</mat-label>
+        <input matInput formControlName="nom">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Prénom</mat-label>
+        <input matInput formControlName="prenom">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Téléphone</mat-label>
+        <input matInput formControlName="telephone">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Date de naissance</mat-label>
+        <input matInput type="date" formControlName="dateNaissance">
+        <mat-hint *ngIf="ageCalcule"><strong>Âge :</strong> {{ ageCalcule }}</mat-hint>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ sexeLabel }}</mat-label>
+        <mat-select formControlName="sexe">
+          <mat-option *ngFor="let s of sexeOptions" [value]="s.value">{{ s.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>N° CNI (optionnel)</mat-label>
+        <input matInput formControlName="numeroCni">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>N° carte d'assuré (optionnel)</mat-label>
+        <input matInput formControlName="numeroAssure">
+      </mat-form-field>
+    </form>
+
+    <div class="lg-actions">
+      <button mat-flat-button color="primary" [disabled]="!canGoNext()" (click)="nextStep()">Suivant</button>
+    </div>
+  </mat-card>
+
+  <!-- Étape 2 : Confirmation -->
+  <mat-card *ngIf="currentStep === 2" class="lg-card">
+    <h3 class="lg-section-title">Validation du dossier</h3>
+    
+    <div class="lg-summary-box">
+      <p class="lg-summary-row"><strong>Bénéficiaire :</strong> <span>{{ patientForm.value.prenom }} {{ patientForm.value.nom }}</span></p>
+      <p class="lg-summary-row"><strong>Régime :</strong> <span>{{ regimeLabels[regime] }}</span></p>
+      <p class="lg-summary-row"><strong>Photos jointes :</strong> <span>{{ photosJointesLabel }}</span></p>
+    </div>
+
+    <div class="lg-actions">
+      <button mat-stroked-button (click)="prevStep()">Retour</button>
+      <button mat-flat-button color="primary" [disabled]="isSubmitting" (click)="enregistrer()">
+        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer le dossier' }}
+      </button>
+    </div>
+  </mat-card>
+</div>

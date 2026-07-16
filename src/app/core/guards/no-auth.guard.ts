@@ -12,8 +12,7 @@ export const noAuthGuard = () => {
   const router = inject(Router);
 
   if (authService.isLoggedIn()) {
-    router.navigate(['/dashboard']);
-    return false;
+    return router.parseUrl('/dashboard');
   }
 
   return true;

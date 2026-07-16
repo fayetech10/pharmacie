@@ -27,7 +27,11 @@ export interface LigneFacture {
   // Pièces justificatives du dossier patient (images base64 / data URL)
   ticketCaisse?: string;
   bonCommande?: string;
+  bonCommandeNumero?: string;
   ordonnance?: string;
+  
+  // Ajouté pour l'affichage de l'historique dans le dossier patient
+  pharmacieNom?: string;
 }
 
 export interface LigneDecisionRequest {
@@ -74,6 +78,7 @@ export interface LigneFactureDto {
   prixUnitaire: number;
   ticketCaisse?: string;
   bonCommande?: string;
+  bonCommandeNumero?: string;
   ordonnance?: string;
 }
 

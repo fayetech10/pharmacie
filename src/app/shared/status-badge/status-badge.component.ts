@@ -10,7 +10,7 @@ import { StatutFacture } from '../../core/models/facture.model';
   styleUrls: ['./status-badge.component.css']
 })
 export class StatusBadgeComponent {
-  @Input() statut!: StatutFacture;
+  @Input() statut!: string | StatutFacture;
 
   getLabel(): string {
     switch(this.statut) {

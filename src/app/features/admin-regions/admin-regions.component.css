@@ -1,37 +1,56 @@
 /* CSS porté sur Tailwind (@apply). Le bloc responsive reste en @media. */
 
 /* En-tête avec bouton retour */
-.header-content { @apply flex items-center gap-4; }
-.header-content h1 {
+.header-content{ @apply flex items-center gap-4; }.header-content h1 {
   @apply m-0 mb-1 text-[26px] font-extrabold text-text-primary tracking-[-0.02em];
-}
-.header-content p { @apply m-0 text-text-secondary text-[15px]; }
-.back-btn {
+
+}.header-content p {
+  @apply m-0 text-text-secondary text-[15px];
+
+}.back-btn {
   @apply shrink-0 bg-white border border-border rounded-full w-11 h-11 flex items-center justify-center cursor-pointer shadow-sm transition-all duration-200 ease-smooth;
-}
-.back-btn:hover { @apply bg-bg scale-105; }
 
-tr.clickable { @apply cursor-pointer; }
-tr.clickable:hover { @apply bg-primary-light; }
-.chevron { @apply text-text-muted; }
-tr.clickable:hover .chevron { @apply text-primary; }
+}.back-btn:hover {
+  @apply bg-bg scale-105;
 
-.empty-cell { @apply text-center !p-8 text-text-secondary italic; }
+}tr.clickable {
+  @apply cursor-pointer;
 
-.inline-ic { @apply text-[15px] w-[15px] h-[15px] align-[-2px] text-text-muted; }
-.m-row span { @apply inline-flex items-center gap-1; }
+}tr.clickable:hover {
+  @apply bg-primary-light;
 
-/* Filtres de tableau de bord (Année / Statut) */
-.dash-filters { @apply flex gap-3 mb-4 flex-wrap; }
-.dash-select { @apply flex flex-col gap-1 min-w-[150px] flex-1 max-w-[220px]; }
-.dash-select span { @apply text-xs font-semibold text-text-secondary; }
-.dash-select select {
+}.chevron {
+  @apply text-text-muted;
+
+}tr.clickable:hover .chevron {
+  @apply text-primary;
+
+}.empty-cell {
+  @apply text-center !p-8 text-text-secondary italic;
+
+}.inline-ic {
+  @apply text-[15px] w-[15px] h-[15px] align-[-2px] text-text-muted;
+
+}.m-row span {
+  @apply inline-flex items-center gap-1;
+
+}/* Filtres de tableau de bord (Année / Statut) */
+.dash-filters {
+  @apply flex gap-3 mb-4 flex-wrap;
+
+}.dash-select {
+  @apply flex flex-col gap-1 min-w-[150px] flex-1 max-w-[220px];
+
+}.dash-select span {
+  @apply text-xs font-semibold text-text-secondary;
+
+}.dash-select select {
   @apply h-11 border border-border rounded bg-field px-3 text-sm text-text-primary cursor-pointer;
   font-family: inherit;
-}
-.dash-select select:focus { @apply outline-none border-primary bg-white; }
+}.dash-select select:focus {
+  @apply outline-none border-primary bg-white;
 
-@media (max-width: 768px) {
+}@media (max-width: 768px){
   .header-content h1 { font-size: 21px; }
   .dash-select { max-width: none; }
 }

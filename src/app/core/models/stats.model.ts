@@ -5,6 +5,11 @@ export interface StatsData {
   montantCsu: number;
   montantMoyen: number;
 
+  // Nouveaux indicateurs (poussés)
+  totalPatients: number;
+  totalLettresGarantie: number;
+  totalFeuillesSoins: number;
+
   // Indicateurs de performance
   tauxValidation: number;
   tauxRejet: number;
@@ -15,6 +20,8 @@ export interface StatsData {
   // Répartitions
   facturesParStatut: { [key: string]: number };
   montantParStatut: { [key: string]: number };
+  lignesParRegime: { [key: string]: number };
+  montantParRegime: { [key: string]: number };
   parRegion: RegionStat[];
   topPharmacies: PharmacieStat[];
   topMedicaments: MedicamentStat[];
@@ -34,6 +41,18 @@ export interface MedicamentStat {
   quantite: number;
   montant: number;
   nombreLignes: number;
+}
+
+export interface AgentStat {
+  id: string;
+  nom: string;
+  structure: string;
+  dossiersTraites: number;
+  lettresEmises: number;
+  feuillesSoins: number;
+  anomalies: number;
+  tempsMoyen: number;
+  heuresTravailleesSemaine: number;
 }
 
 export interface PharmacieStat {

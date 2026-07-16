@@ -2,218 +2,263 @@
    FORMULAIRE DE FACTURATION — parcours guidé en 3 étapes
    Mobile-first, tokens du design system, zéro scroll horizontal
    ============================================================ */
-.ff-page { display: block; }
+.ff-page {
+  @apply block;
+
+}
+
+/* ---------- Mise en page (Layout Grid) ---------- */
+.ff-layout-grid {
+  @apply flex flex-col lg:flex-row gap-6 items-start;
+}
+.ff-layout-main {
+  @apply w-full lg:flex-1 min-w-0 order-2 lg:order-1;
+}
+.ff-layout-side {
+  @apply w-full lg:w-[400px] xl:w-[450px] shrink-0 order-1 lg:order-2 mb-6 lg:mb-0;
+}
+@media (min-width: 1024px) {
+  .sticky-aside {
+    position: sticky;
+    top: 24px;
+  }
+}
 
 /* ---------- En-tête de contexte ---------- */
 .ff-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-4);
-}
-.ff-head-text h1 {
-  font-size: 22px;
-  font-weight: 800;
+  @apply flex items-start justify-between gap-4 flex-wrap mb-4;
+
+}.ff-head-text h1 {
+  @apply text-[22px] font-extrabold text-text-primary;
   letter-spacing: -0.02em;
   margin: 0 0 2px;
-  color: var(--text-primary);
-}
-.ff-head-text p { font-size: 13.5px; color: var(--text-secondary); margin: 0; }
-@media (min-width: 768px) { .ff-head-text h1 { font-size: 26px; } }
+}.ff-head-text p {
+  @apply text-[13.5px] text-text-secondary m-0;
 
-.ff-head-summary { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
-.ff-mini-stats { display: flex; gap: var(--sp-2); }
-.ff-mini {
-  display: flex; flex-direction: column; align-items: flex-start;
+}@media (min-width: 768px){ .ff-head-text h1 { font-size: 26px; } }.ff-head-summary {
+  @apply flex items-center gap-3 flex-wrap;
+
+}.ff-mini-stats {
+  @apply flex gap-2;
+
+}.ff-mini {
+  @apply flex flex-col items-start bg-white border border-border rounded-sm;
   padding: 6px 12px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
   min-width: 62px;
-}
-.ff-mini-val { font-size: 15px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
-.ff-mini--amount .ff-mini-val { color: var(--primary); }
-.ff-mini-lbl { font-size: 11px; color: var(--text-secondary); }
-.ff-send { white-space: nowrap; }
+}.ff-mini-val {
+  @apply text-[15px] font-extrabold text-text-primary;
+  line-height: 1.2;
+}.ff-mini--amount .ff-mini-val {
+  @apply text-primary;
 
-/* ---------- Carte de saisie ---------- */
+}.ff-mini-lbl {
+  @apply text-[11px] text-text-secondary;
+
+}.ff-send {
+ white-space: nowrap; 
+}/* ---------- Carte de saisie ---------- */
 .ff-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  margin-bottom: var(--sp-4);
-}
+  @apply bg-card border border-border rounded-lg shadow-sm overflow-hidden mb-4;
 
-.ff-step {
-  padding: var(--sp-5) var(--sp-6);
-  border-bottom: 1px solid var(--border-light);
-}
-.ff-step:last-of-type { border-bottom: none; }
+}.ff-step {
+  @apply py-5 px-6 border-b border-border-light;
 
-.ff-step-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  width: 100%;
-  margin-bottom: var(--sp-4);
+}.ff-step:last-of-type {
+  @apply border-b-0;
+
+}.ff-step-head {
+  @apply flex items-center gap-3 w-full mb-4;
   text-align: left;
-}
-.ff-step-head--plain { margin-bottom: var(--sp-3); }
-.ff-step-num {
-  width: 28px; height: 28px;
-  border-radius: 50%;
+}.ff-step-head--plain {
+  @apply mb-3;
+
+}.ff-step-num {
+  @apply rounded-full text-sm font-extrabold flex items-center justify-center shrink-0;
+  width: 28px;
+  height: 28px;
   background: var(--primary);
   color: #fff;
-  font-size: 14px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.ff-step-titles { min-width: 0; }
-.ff-step-titles h2 { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); }
-.ff-step-titles p { font-size: 12.5px; color: var(--text-secondary); margin: 1px 0 0; }
+}.ff-step-titles {
+ min-width: 0; 
+}.ff-step-titles h2 {
+  @apply text-base font-bold m-0 text-text-primary;
 
-.ff-count {
+}.ff-step-titles p {
+  @apply text-xs text-text-secondary;
+  margin: 1px 0 0;
+}.ff-count {
+  @apply rounded-full text-xs font-bold inline-flex items-center justify-center;
   margin-left: auto;
-  min-width: 24px; height: 24px; padding: 0 8px;
-  border-radius: var(--radius-full);
-  background: var(--primary); color: #fff;
-  font-size: 12.5px; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-.ff-count--soft { background: var(--primary-light); color: var(--primary); }
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--primary);
+  color: #fff;
+}.ff-count--soft {
+  @apply text-primary;
+  background: var(--primary-light);
+}/* Étape repliable (dossier) */
+.ff-step-toggle {
+  @apply bg-transparent border-0 mb-0;
+  cursor: pointer;
+  padding: 0;
+}.ff-step--collapsible .ff-step-head {
+  @apply mb-0;
 
-/* Étape repliable (dossier) */
-.ff-step-toggle { background: transparent; border: none; cursor: pointer; padding: 0; margin-bottom: 0; }
-.ff-step--collapsible .ff-step-head { margin-bottom: 0; }
-.ff-chevron { color: var(--text-muted); transition: transform var(--transition); flex-shrink: 0; }
-.ff-chevron.open { transform: rotate(180deg); }
-.ff-dossier { margin-top: var(--sp-4); }
-.ff-dossier-hint { margin: 0 0 var(--sp-3); font-size: 12.5px; color: var(--text-secondary); }
+}.ff-chevron {
+  @apply text-text-muted shrink-0;
+  transition: transform var(--transition);
+}.ff-chevron.open {
+ transform: rotate(180deg); 
+}.ff-dossier {
+  @apply mt-4;
 
-/* ---------- Champs ---------- */
-.ff-grid-2 { display: grid; grid-template-columns: 1fr; gap: var(--sp-4); }
-@media (min-width: 768px) { .ff-grid-2 { grid-template-columns: 1fr 1fr; } }
+}.ff-dossier-hint {
+  @apply text-xs text-text-secondary;
+  margin: 0 0 var(--sp-3);
+}/* ---------- Champs ---------- */
+.ff-grid-2 {
+  @apply grid gap-4;
+  grid-template-columns: 1fr;
+}@media (min-width: 768px){ .ff-grid-2 { grid-template-columns: 1fr 1fr; } }.ff-field {
+  @apply flex flex-col;
+  gap: 6px;
+  min-width: 0;
+}.ff-label {
+  @apply text-xs font-semibold text-text-secondary;
 
-.ff-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.ff-label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
-.ff-req { color: var(--warn); }
-.ff-err { font-size: 12px; color: var(--warn); font-weight: 600; }
-
-.ff-input {
-  height: 44px; width: 100%;
+}.ff-req {
+ color: var(--warn); 
+}.ff-err {
+  @apply text-xs font-semibold;
+  color: var(--warn);
+}.ff-input {
+  @apply w-full border border-border rounded-sm bg-white text-text-primary text-base;
+  height: 44px;
   padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--text-primary);
   font-family: inherit;
-  font-size: 16px; /* ≥16px : évite le zoom auto iOS */
+  /* ≥16px : évite le zoom auto iOS */
   font-weight: 500;
   outline: none;
   transition: border-color var(--transition), box-shadow var(--transition);
-}
-.ff-input::placeholder { color: var(--text-muted); font-weight: 400; }
-.ff-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12); }
-.ff-input[readonly] { background: var(--field-bg); cursor: not-allowed; }
-/* Masque les flèches natives des inputs number */
+}.ff-input::placeholder {
+  @apply text-text-muted font-normal;
+
+}.ff-input:focus {
+ border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12); 
+}.ff-input[readonly] {
+  @apply bg-field;
+  cursor: not-allowed;
+}/* Masque les flèches natives des inputs number */
 .ff-input[type=number]::-webkit-outer-spin-button,
-.ff-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.ff-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
-
-.ff-input-clear { position: relative; }
-.ff-input-clear .ff-input { padding-right: 38px; }
-.ff-clear {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  width: 28px; height: 28px;
-  border: none; background: transparent; color: var(--text-muted);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-sm);
-}
-.ff-clear:hover { color: var(--warn); background: var(--warn-light); }
-.ff-clear mat-icon { font-size: 18px; width: 18px; height: 18px; }
-
-/* ---------- Suggestions d'autocomplétion (inline, sans overlay CDK) ----------
+.ff-input[type=number]::-webkit-inner-spin-button {
+  @apply m-0;
+  -webkit-appearance: none;
+}.ff-input[type=number] {
+ -moz-appearance: textfield; appearance: textfield; 
+}.ff-input-clear {
+ position: relative; 
+}.ff-input-clear .ff-input {
+ padding-right: 38px; 
+}.ff-clear {
+  @apply border-0 bg-transparent text-text-muted flex items-center justify-center rounded-sm;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}.ff-clear:hover {
+ color: var(--warn); background: var(--warn-light); 
+}.ff-clear mat-icon {
+  @apply text-lg;
+  width: 18px;
+  height: 18px;
+}/* ---------- Suggestions d'autocomplétion (inline, sans overlay CDK) ----------
    Ancrée directement sous le champ : fonctionne de façon identique sur desktop
    et iPhone (pas d'occlusion par le clavier virtuel, taps fiables). */
 .ff-suggest {
+  @apply m-0 overflow-y-auto bg-white border border-border rounded-sm;
   position: absolute;
   bottom: calc(100% + 4px);
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
-  margin: 0; padding: 4px;
+  padding: 4px;
   list-style: none;
   max-height: 240px;
-  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
-}
-.ff-suggest li { margin: 0; padding: 0; }
-.ff-suggest-item {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%;
+}.ff-suggest li {
+  @apply m-0;
+  padding: 0;
+}.ff-suggest-item {
+  @apply flex items-center w-full border-0 bg-transparent rounded-md text-[15px] font-medium text-text-primary;
+  gap: 8px;
   padding: 11px 12px;
-  border: none; background: transparent;
-  border-radius: 6px;
-  text-align: left; cursor: pointer;
-  font-family: inherit; font-size: 15px; font-weight: 500;
-  color: var(--text-primary);
-}
-/* :active pour un retour visuel au tap sur iOS (où :hover n'existe pas) */
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}/* :active pour un retour visuel au tap sur iOS (où :hover n'existe pas) */
 .ff-suggest-item:hover,
 .ff-suggest-item:active,
-.ff-suggest-item.active { background: var(--primary-light); }
-.ff-suggest-name { flex: 1; min-width: 0; text-transform: uppercase; word-break: break-word; }
-.ff-suggest-tag {
-  flex-shrink: 0;
-  font-size: 11px; font-weight: 700;
-  color: #B91C1C; background: #FDE2E2;
-  padding: 2px 8px; border-radius: var(--radius-full);
-}
+.ff-suggest-item.active {
+ background: var(--primary-light); 
+}.ff-suggest-name {
+  @apply flex-1;
+  min-width: 0;
+  text-transform: uppercase;
+  word-break: break-word;
+}.ff-suggest-tag {
+  @apply shrink-0 text-[11px] font-bold rounded-full;
+  color: #B91C1C;
+  background: #FDE2E2;
+  padding: 2px 8px;
+}.ff-input-suffix {
+ position: relative; 
+}.ff-input-suffix .ff-input {
+ padding-right: 28px; 
+}.ff-suffix {
+  @apply text-text-muted text-[13px] font-semibold;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}/* ---------- Ligne d'ajout de médicament ---------- */
+.ff-add {
+  @apply flex flex-wrap gap-3 items-end;
 
-.ff-input-suffix { position: relative; }
-.ff-input-suffix .ff-input { padding-right: 28px; }
-.ff-suffix {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  color: var(--text-muted); font-size: 13px; font-weight: 600; pointer-events: none;
-}
-
-/* ---------- Ligne d'ajout de médicament ---------- */
-.ff-add { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: flex-end; }
-.ff-add-med { flex: 1 1 100%; }
-.ff-add-qty, .ff-add-prix { flex: 1 1 calc(50% - var(--sp-2)); }
-.ff-add-btn { flex: 1 1 100%; height: 44px; }
-@media (min-width: 768px) {
+}.ff-add-med {
+ flex: 1 1 100%; 
+}.ff-add-qty, .ff-add-prix {
+ flex: 1 1 calc(50% - var(--sp-2)); 
+}.ff-add-btn {
+ flex: 1 1 100%; height: 44px; 
+}@media (min-width: 768px){
   .ff-add-med { flex: 1 1 240px; }
   .ff-add-qty { flex: 0 0 auto; }
   .ff-add-prix { flex: 0 0 130px; }
   .ff-add-btn { flex: 0 0 auto; }
-}
-
-/* Stepper de quantité */
+}/* Stepper de quantité */
 .ff-stepper {
-  display: flex; align-items: stretch;
+  @apply flex border border-border rounded-sm bg-white overflow-hidden;
+  align-items: stretch;
   height: 44px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  overflow: hidden;
-}
-.ff-step-btn {
-  width: 42px; border: none;
-  background: var(--field-bg); color: var(--primary);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}.ff-step-btn {
+  @apply border-0 bg-field text-primary flex items-center justify-center;
+  width: 42px;
+  cursor: pointer;
   transition: background var(--transition);
-}
-.ff-step-btn:hover { background: var(--primary-light); }
-.ff-step-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
-.ff-qty-input {
+}.ff-step-btn:hover {
+ background: var(--primary-light); 
+}.ff-step-btn mat-icon {
+  @apply text-lg;
+  width: 18px;
+  height: 18px;
+}.ff-qty-input {
+
   width: 56px; height: auto;
   text-align: center;
   border: none !important;
@@ -221,149 +266,232 @@
   border-right: 1px solid var(--border) !important;
   border-radius: 0;
   box-shadow: none !important;
-}
 
-/* ---------- Alertes ---------- */
+}/* ---------- Alertes ---------- */
 .ff-alert {
-  display: flex; gap: var(--sp-3); align-items: flex-start;
-  margin-top: var(--sp-3);
+  @apply flex gap-3 items-start mt-3 rounded-sm;
   padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-sm);
   border: 1px solid;
-}
-.ff-alert mat-icon { flex-shrink: 0; }
-.ff-alert > div { display: flex; flex-direction: column; gap: 2px; }
-.ff-alert-title { font-weight: 700; font-size: 13.5px; }
-.ff-alert-line { font-size: 12.5px; }
-.ff-alert--danger { background: var(--warn-light); border-color: #FCA5A5; color: #B91C1C; }
-.ff-alert--danger mat-icon { color: #DC2626; }
-.ff-alert--danger .ff-alert-line { color: var(--text-primary); }
-.ff-alert--warn { background: #FFFBEB; border-color: #FDE047; color: #92400E; }
-.ff-alert--warn mat-icon { color: #D97706; }
-.ff-alert--warn .ff-alert-line { color: #78350F; }
+}.ff-alert mat-icon {
+  @apply shrink-0;
 
-/* ---------- État vide ---------- */
+}.ff-alert > div {
+  @apply flex flex-col;
+  gap: 2px;
+}.ff-alert-title {
+  @apply font-bold text-[13.5px];
+
+}.ff-alert-line {
+  @apply text-xs;
+
+}.ff-alert--danger {
+ background: var(--warn-light); border-color: #FCA5A5; color: #B91C1C; 
+}.ff-alert--danger mat-icon {
+ color: #DC2626; 
+}.ff-alert--danger .ff-alert-line {
+  @apply text-text-primary;
+
+}.ff-alert--warn {
+ background: #FFFBEB; border-color: #FDE047; color: #92400E; 
+}.ff-alert--warn mat-icon {
+ color: #D97706; 
+}.ff-alert--warn .ff-alert-line {
+ color: #78350F; 
+}/* ---------- État vide ---------- */
 .ff-empty {
-  display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
-  padding: var(--sp-6);
-  margin-top: var(--sp-3);
+  @apply flex flex-col items-center gap-2 p-6 mt-3 text-text-muted bg-field rounded-sm;
   text-align: center;
-  color: var(--text-muted);
-  background: var(--field-bg);
   border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-}
-.ff-empty mat-icon { font-size: 30px; width: 30px; height: 30px; opacity: 0.6; }
-.ff-empty p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+}.ff-empty mat-icon {
+ font-size: 30px; width: 30px; height: 30px; opacity: 0.6; 
+}.ff-empty p {
+  @apply m-0 text-[13px] text-text-secondary;
 
-/* ---------- Liste des médicaments (cartes, pas de table) ---------- */
+}/* ---------- Liste des médicaments (cartes, pas de table) ---------- */
 .ff-lines {
-  margin-top: var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.ff-line {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
-  border-bottom: 1px solid var(--border-light);
-}
-.ff-line:last-child { border-bottom: none; }
-.ff-line-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ff-line-name { font-weight: 700; font-size: 14px; color: var(--text-primary); word-break: break-word; }
-.ff-line-meta { font-size: 12.5px; color: var(--text-secondary); }
-.ff-line-amounts { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
-.ff-line-total { font-size: 14.5px; font-weight: 800; color: var(--text-primary); }
-.ff-line-split { font-size: 11.5px; color: var(--primary); font-weight: 600; }
-.ff-line--rejected { background: #FEF2F2; }
+  @apply mt-3 border border-border rounded overflow-hidden;
 
-.ff-del {
-  width: 36px; height: 36px;
-  border: none; background: transparent; color: var(--warn);
-  border-radius: 50%;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+}.ff-line {
+  @apply flex items-center gap-3 border-b border-border-light;
+  padding: var(--sp-3) var(--sp-4);
+}.ff-line:last-child {
+  @apply border-b-0;
+
+}.ff-line-main {
+  @apply flex-1 flex flex-col;
+  min-width: 0;
+  gap: 2px;
+}.ff-line-name {
+  @apply font-bold text-sm text-text-primary;
+  word-break: break-word;
+}.ff-line-meta {
+  @apply text-xs text-text-secondary;
+
+}.ff-line-amounts {
+  @apply flex flex-col items-end shrink-0;
+  gap: 1px;
+}.ff-line-total {
+  @apply font-extrabold text-text-primary;
+  font-size: 14.5px;
+}.ff-line-split {
+  @apply text-primary font-semibold;
+  font-size: 11.5px;
+}.ff-line--rejected {
+ background: #FEF2F2; 
+}.ff-del {
+  @apply border-0 bg-transparent rounded-full flex items-center justify-center shrink-0;
+  width: 36px;
+  height: 36px;
+  color: var(--warn);
+  cursor: pointer;
   transition: background var(--transition);
-}
-.ff-del:hover { background: var(--warn-light); }
-.ff-del mat-icon { font-size: 19px; width: 19px; height: 19px; }
-
-.ff-line-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+}.ff-del:hover {
+ background: var(--warn-light); 
+}.ff-del mat-icon {
+ font-size: 19px; width: 19px; height: 19px; 
+}.ff-line-foot {
+  @apply flex items-center justify-between gap-3 bg-field;
   padding: var(--sp-3) var(--sp-4);
-  background: var(--field-bg);
-}
-.ff-line-foot > span { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-.ff-line-foot-amounts { display: flex; flex-direction: column; align-items: flex-end; }
-.ff-line-foot-amounts strong { font-size: 16px; font-weight: 800; color: var(--primary); }
-.ff-line-foot-amounts span { font-size: 11.5px; color: var(--text-secondary); }
+}.ff-line-foot > span {
+  @apply text-[13px] font-semibold text-text-secondary;
 
-/* Tags statut ligne (mode correction) */
+}.ff-line-foot-amounts {
+  @apply flex flex-col items-end;
+
+}.ff-line-foot-amounts strong {
+  @apply text-base font-extrabold text-primary;
+
+}.ff-line-foot-amounts span {
+  @apply text-text-secondary;
+  font-size: 11.5px;
+}/* Tags statut ligne (mode correction) */
 .ligne-tag {
-  display: inline-block; width: fit-content; margin-top: 2px;
-  font-weight: 600; padding: 2px 9px; border-radius: var(--radius-full); font-size: 11px;
-}
-.ligne-tag.tag-ok { background: var(--primary-light); color: var(--primary); }
-.ligne-tag.tag-ko { background: #FDE2E2; color: #B91C1C; }
-
-/* ---------- Action principale : enregistrer le patient ---------- */
+  @apply inline-block font-semibold rounded-full text-[11px];
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 9px;
+}.ligne-tag.tag-ok {
+  @apply text-primary;
+  background: var(--primary-light);
+}.ligne-tag.tag-ko {
+ background: #FDE2E2; color: #B91C1C; 
+}/* ---------- Action principale : enregistrer le patient ---------- */
 .ff-commit {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  @apply flex items-center justify-between gap-3;
   padding: var(--sp-4) var(--sp-6);
   border-top: 1px solid var(--border-light);
   background: #FCFDFC;
+}.ff-commit-total {
+  @apply flex flex-col;
+
+}.ff-commit-cap {
+  @apply text-[11px] font-semibold text-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}.ff-commit-total strong {
+  @apply text-lg font-extrabold text-primary;
+
+}.ff-commit-btn {
+ min-width: 220px; 
+}.ff-spin {
+ animation: ff-spin 0.8s linear infinite; 
+}@keyframes ff-spin{ to { transform: rotate(360deg); } }/* ---------- Dossier : bon de commande constitué automatiquement ---------- */
+.ff-bc-auto {
+  border: 1px solid var(--primary-200);
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
-.ff-commit-total { display: flex; flex-direction: column; }
-.ff-commit-cap { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
-.ff-commit-total strong { font-size: 18px; font-weight: 800; color: var(--primary); }
-.ff-commit-btn { min-width: 220px; }
-.ff-spin { animation: ff-spin 0.8s linear infinite; }
-@keyframes ff-spin { to { transform: rotate(360deg); } }
+.ff-bc-auto-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.ff-bc-auto-head mat-icon { color: var(--primary); font-size: 22px; width: 22px; height: 22px; flex-shrink: 0; }
+.ff-bc-auto-titles { display: flex; flex-direction: column; min-width: 0; }
+.ff-bc-auto-title { font-size: 13.5px; font-weight: 700; color: var(--primary-hover); }
+.ff-bc-auto-sub { font-size: 12px; color: var(--text-secondary); }
+/* L'image du bon est un document → affichage entier (pas de recadrage carré). */
+.ff-bc-auto .ff-photo-preview { height: auto; background: #fff; }
+.ff-bc-auto .ff-photo-preview img { height: auto; max-height: 360px; object-fit: contain; }
 
 /* ---------- Dossier : photos ---------- */
-.ff-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
-.ff-photo { display: flex; flex-direction: column; gap: 6px; }
-.ff-photo-label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
-.ff-photo-drop { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); background: var(--field-bg); transition: all var(--transition); }
-.ff-photo-drop:hover { border-color: var(--primary); background: var(--primary-light); }
-.ff-photo-btn {
-  width: 100%; height: 90px; border: none; background: transparent; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  color: var(--text-secondary); font-size: 12.5px; font-weight: 500;
-}
-.ff-photo-btn mat-icon { font-size: 26px; width: 26px; height: 26px; color: var(--primary); }
-.ff-photo-preview { position: relative; height: 90px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
-.ff-photo-preview img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
-.ff-photo-remove {
-  position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
-  border: none; background: rgba(17, 24, 39, 0.7); color: #fff;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: background var(--transition);
-}
-.ff-photo-remove:hover { background: rgba(17, 24, 39, 0.9); }
-.ff-photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+.ff-photos {
+  @apply grid gap-3;
+  grid-template-columns: repeat(3, 1fr);
+}.ff-photo {
+  @apply flex flex-col;
+  gap: 6px;
+}.ff-photo-label {
+  @apply text-xs font-semibold text-text-secondary;
 
-/* ---------- Visionneuse plein écran ---------- */
+}.ff-photo-drop {
+  @apply rounded-sm bg-field;
+  border: 1.5px dashed var(--border);
+  transition: all var(--transition);
+}.ff-photo-drop:hover {
+ border-color: var(--primary); background: var(--primary-light); 
+}.ff-photo-btn {
+  @apply w-full border-0 bg-transparent flex flex-col items-center justify-center text-text-secondary text-xs font-medium;
+  height: 90px;
+  cursor: pointer;
+  gap: 6px;
+}.ff-photo-btn mat-icon {
+  @apply text-[26px] text-primary;
+  width: 26px;
+  height: 26px;
+}.ff-photo-preview {
+  @apply rounded-sm overflow-hidden border border-border;
+  position: relative;
+  height: 90px;
+}.ff-photo-preview img {
+  @apply w-full h-full block;
+  object-fit: cover;
+  cursor: zoom-in;
+}.ff-photo-remove {
+  @apply rounded-full border-0 flex items-center justify-center;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  background: rgba(17, 24, 39, 0.7);
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition);
+}.ff-photo-remove:hover {
+ background: rgba(17, 24, 39, 0.9); 
+}.ff-photo-remove mat-icon {
+  @apply text-base;
+  width: 16px;
+  height: 16px;
+}/* ---------- Visionneuse plein écran ---------- */
 .img-viewer {
-  position: fixed; inset: 0; z-index: 1000;
+  @apply flex items-center justify-center;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   background: rgba(0, 0, 0, 0.85);
-  display: flex; align-items: center; justify-content: center;
   padding: 24px;
-}
-.img-viewer img { max-width: 100%; max-height: 100%; border-radius: var(--radius-sm); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
-.viewer-close {
-  position: absolute; top: 18px; right: 18px;
-  width: 44px; height: 44px; border-radius: 50%;
-  border: none; background: rgba(255, 255, 255, 0.15); color: #fff;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}.img-viewer img {
+  @apply rounded-sm;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}.viewer-close {
+  @apply rounded-full border-0 flex items-center justify-center;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
   transition: background var(--transition);
-}
-.viewer-close:hover { background: rgba(255, 255, 255, 0.3); }
-
-/* ============================================================
+}.viewer-close:hover {
+ background: rgba(255, 255, 255, 0.3); 
+}/* ============================================================
    RESPONSIVE — densité mobile
    ============================================================ */
-@media (max-width: 767px) {
+@media (max-width: 767px){
   .ff-step { padding: var(--sp-4); }
   /* Wizard mobile : la barre d'action ne s'affiche qu'à l'étape 3 */
   .ff-commit { display: none; padding: var(--sp-4); flex-direction: column; align-items: stretch; }
@@ -375,27 +503,121 @@
   .ff-mini { flex: 1; }
   .ff-send { width: 100%; }
   .ff-photos { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 420px) {
+}@media (max-width: 420px){
   .ff-photos { grid-template-columns: 1fr; }
-}
-
-/* Stepper Mobile */
+}/* Stepper Mobile */
 .ff-stepper-progress {
-  display: flex;
-}
-.ff-stepper-actions {
-  display: flex;
-  gap: var(--sp-3);
-}
-.ff-stepper-actions .btn {
-  flex: 1;
+  @apply flex;
+
+}.ff-stepper-actions {
+  @apply flex gap-3;
+
+}.ff-stepper-actions .btn {
+  @apply flex-1;
   height: 44px;
-}
-@media (min-width: 768px) {
+}@media (min-width: 768px){
   .ff-stepper-progress,
   .ff-stepper-actions {
     display: none !important;
   }
 }
 
+
+/* ============================================================
+   BON DE COMMANDE — reproduction du formulaire papier ASCSU
+   ============================================================ */
+.bc-paper {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: var(--sp-4);
+}
+.bc-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.bc-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--ink, var(--primary));
+  padding: 4px 12px;
+  font-size: 15px;
+}
+.bc-num { white-space: nowrap; font-size: 13px; }
+.bc-detach { flex: none; }
+.bc-sub {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.bc-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px var(--sp-4);
+  margin: var(--sp-3) 0;
+  font-size: 13px;
+}
+.bc-meta span { color: var(--text-secondary); }
+.bc-table-wrap { overflow-x: auto; }
+.bc-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.bc-table th, .bc-table td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: center;
+  height: 34px;
+}
+.bc-table th {
+  background: var(--field-bg);
+  font-weight: 700;
+}
+.bc-col-designation { text-align: left; width: 42%; }
+.bc-row-empty td { color: transparent; }
+.bc-table tfoot td { font-weight: 700; text-align: left; }
+.bc-table tfoot td + td { text-align: center; }
+.bc-total td { background: var(--field-bg); }
+.bc-hint {
+  margin: var(--sp-2) 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+/* Indicateur multi-pharmacies : lignes utilisées / disponibles */
+.bc-usage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: var(--sp-2) 0;
+  padding: 8px 12px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #1E40AF;
+}
+.bc-usage mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #3B82F6;
+}
+.bc-usage strong {
+  font-weight: 700;
+}
+.bc-usage-partial {
+  font-size: 11px;
+  color: #6B7280;
+  font-style: italic;
+}
+@media (max-width: 767px) {
+  .bc-meta { grid-template-columns: 1fr; }
+}

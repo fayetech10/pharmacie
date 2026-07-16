@@ -1,0 +1,107 @@
+<div class="fade-in fsl">
+  <div class="fsl-head">
+    <div>
+      <h1 class="fsl-h1">Feuilles de soins</h1>
+      <p class="fsl-sub">
+        Circuit : délivrée au patient par l'agent bureau → déposée à la structure sanitaire → rattachée à la facturation
+      </p>
+    </div>
+    <button *ngIf="canDelivrer" mat-flat-button color="primary" routerLink="/dashboard/feuilles-soins/new">
+      <mat-icon>note_add</mat-icon> Délivrer une feuille de soins
+    </button>
+  </div>
+
+  <!-- Structure sanitaire : retrouver la feuille présentée par le patient -->
+  <mat-card *ngIf="isStructure" class="fsl-search-card">
+    <h4 class="fsl-search-title">
+      <mat-icon>travel_explore</mat-icon>
+      Le patient vous remet sa feuille de soins ? Retrouvez-la par son numéro
+    </h4>
+    <div class="fsl-search-row">
+      <mat-form-field appearance="outline" class="fsl-search-field">
+        <mat-label>N° de la feuille (ex : FDS-260707-XXXXXX)</mat-label>
+        <input matInput [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()">
+      </mat-form-field>
+      <button mat-flat-button color="primary" class="fsl-search-btn" (click)="rechercherParNumero()" [disabled]="searchingNumero">
+        <mat-icon>search</mat-icon> {{ searchingNumero ? 'Recherche…' : 'Retrouver la feuille' }}
+      </button>
+    </div>
+  </mat-card>
+
+  <mat-card class="fsl-filter-card">
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center; width: 100%;">
+      <mat-form-field appearance="outline" class="fsl-filter-field" style="flex: 1; min-width: 250px;">
+        <mat-label>Filtrer par n°, patient, code assuré ou lettre de garantie…</mat-label>
+        <input matInput [(ngModel)]="searchQuery">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 22px;">
+        <select class="fsl-filter-select" [(ngModel)]="filterMois" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; height: 50px; background: white;">
+          <option [ngValue]="0">Tous les mois</option>
+          <option [ngValue]="1">Janvier</option>
+          <option [ngValue]="2">Février</option>
+          <option [ngValue]="3">Mars</option>
+          <option [ngValue]="4">Avril</option>
+          <option [ngValue]="5">Mai</option>
+          <option [ngValue]="6">Juin</option>
+          <option [ngValue]="7">Juillet</option>
+          <option [ngValue]="8">Août</option>
+          <option [ngValue]="9">Septembre</option>
+          <option [ngValue]="10">Octobre</option>
+          <option [ngValue]="11">Novembre</option>
+          <option [ngValue]="12">Décembre</option>
+        </select>
+        <select class="fsl-filter-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; height: 50px; background: white;">
+          <option [ngValue]="0">Toutes les années</option>
+          <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+        </select>
+        <select class="fsl-filter-select" [(ngModel)]="filterRegime" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; height: 50px; background: white;">
+          <option value="">Tous les régimes</option>
+          <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+        </select>
+      </div>
+    </div>
+  </mat-card>
+
+  <div *ngIf="loading" class="fsl-loading">
+    Chargement des feuilles de soins…
+  </div>
+
+  <div *ngIf="!loading && filtered.length === 0" class="fsl-empty">
+    <mat-icon>description</mat-icon>
+    <h3>Aucune feuille de soins</h3>
+    <p *ngIf="canDelivrer">Délivrez une feuille de soins à un patient pour démarrer le circuit.</p>
+    <p *ngIf="isStructure">Les feuilles déposées par les patients apparaîtront ici après remplissage de la prise en charge.</p>
+  </div>
+
+  <div class="fsl-table-wrap" *ngIf="!loading && filtered.length > 0">
+    <table class="fsl-table">
+      <thead>
+        <tr>
+          <th>N° Feuille</th>
+          <th>Patient</th>
+          <th>Régime</th>
+          <th>Structure</th>
+          <th>Part assureur</th>
+          <th>Statut</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of filtered" (click)="open(f.id)"
+            tabindex="0" role="button"
+            [attr.aria-label]="'Ouvrir la feuille ' + f.numero"
+            (keydown.enter)="open(f.id)">
+          <td class="fsl-numero">{{ f.numero }}</td>
+          <td class="fsl-semi">{{ f.patientPrenom }} {{ f.patientNom }}</td>
+          <td class="fsl-upper">{{ regimeLabels[f.regime] }}</td>
+          <td>{{ f.structureNom || '—' }}</td>
+          <td class="fsl-strong">{{ f.montantTotalAssureur | number:'1.0-0':'fr' }} F</td>
+          <td><span class="fsl-badge" [ngClass]="'fsl-badge--' + statutTone(f.statut)">{{ statutLabels[f.statut] }}</span></td>
+          <td>{{ f.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -79,6 +79,11 @@ export class StatsComponent implements OnInit, OnChanges {
   statusBreakdown: { statut: string; label: string; count: number; color: string }[] = [];
   hasStatusData = false;
 
+  // Répartition par régime
+  regimeBreakdown: { regime: string; label: string; count: number; montant: number; color: string }[] = [];
+  hasRegimeData = false;
+  totalMontantRegime = 0;
+
   // Funnel
   funnel: FunnelStage[] = [];
 
@@ -100,6 +105,18 @@ export class StatsComponent implements OnInit, OnChanges {
   };
   private readonly statusOrder = ['ENVOYEE', 'VALIDEE_SR', 'VALIDEE_NC', 'PAYEE', 'REJETEE_SR', 'REJETEE_NC', 'BROUILLON'];
 
+  private readonly regimeMeta: Record<string, { label: string; color: string }> = {
+    CONTRIBUTIF:         { label: 'Contributif (Classique)', color: '#2563EB' },
+    SESAME:              { label: 'Sésame',                 color: '#7C3AED' },
+    CESARIENNE:          { label: 'Césarienne',             color: '#EC4899' },
+    ZERO_CINQ_ANS:       { label: 'Enfants 0-5 ans',        color: '#10B981' },
+    DIALYSE_PERITONEALE: { label: 'Dialyse péritonéale',    color: '#F59E0B' },
+    HEMODIALYSE:         { label: 'Hémodialyse',            color: '#EF4444' },
+    BSF:                 { label: 'BSF (Bourses Familiales)',color: '#6366F1' },
+    CEC:                 { label: 'CEC (Cartes Égalité)',   color: '#06B6D4' },
+    NDONGO_DARA:         { label: 'Ndongo Dara',            color: '#8B5CF6' }
+  };
+
   // ----- Chart.js : doughnut statuts -----
   public pieChartOptions: ChartOptions<'doughnut'> = {
     responsive: true, maintainAspectRatio: false, cutout: '68%',
@@ -118,6 +135,25 @@ export class StatsComponent implements OnInit, OnChanges {
     }
   };
   public pieChartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [] };
+
+  // ----- Chart.js : doughnut régimes -----
+  public regimeChartOptions: ChartOptions<'doughnut'> = {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    animation: this.prefersReducedMotion ? false : undefined,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        padding: 10,
+        callbacks: {
+          label: (ctx: any) => {
+            const total = (ctx.dataset.data as number[]).reduce((a, n) => a + n, 0) || 1;
+            return `  ${ctx.label} : ${Number(ctx.parsed).toLocaleString('fr-FR')} CFA (${Math.round((ctx.parsed / total) * 100)}%)`;
+          }
+        }
+      }
+    }
+  };
+  public regimeChartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [] };
 
   // ----- Chart.js : évolution N vs N-1 -----
   chartMode: 'montant' | 'nombre' = 'montant';
@@ -258,6 +294,35 @@ export class StatsComponent implements OnInit, OnChanges {
           datasets: [{
             data: this.statusBreakdown.map(s => s.count),
             backgroundColor: this.statusBreakdown.map(s => s.color),
+            borderColor: '#fff', borderWidth: 2, hoverOffset: 6
+          }]
+        };
+
+        // Répartition par régime (doughnut + légende)
+        const parRegimeLignes = data.lignesParRegime || {};
+        const parRegimeMontants = data.montantParRegime || {};
+        this.regimeBreakdown = Object.keys(parRegimeMontants)
+          .map(r => {
+            const meta = this.regimeMeta[r] || { label: r, color: '#94A3B8' };
+            return {
+              regime: r,
+              label: meta.label,
+              count: parRegimeLignes[r] || 0,
+              montant: parRegimeMontants[r] || 0,
+              color: meta.color
+            };
+          })
+          .sort((a, b) => b.montant - a.montant)
+          .filter(r => r.montant > 0 || r.count > 0);
+
+        this.hasRegimeData = this.regimeBreakdown.length > 0;
+        this.totalMontantRegime = this.regimeBreakdown.reduce((sum, r) => sum + r.montant, 0);
+
+        this.regimeChartData = {
+          labels: this.regimeBreakdown.map(r => r.label),
+          datasets: [{
+            data: this.regimeBreakdown.map(r => r.montant),
+            backgroundColor: this.regimeBreakdown.map(r => r.color),
             borderColor: '#fff', borderWidth: 2, hoverOffset: 6
           }]
         };

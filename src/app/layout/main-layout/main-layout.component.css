@@ -1,41 +1,196 @@
 /* ============================================================
    SHELL — la structure est portée en classes Tailwind (template).
    Ne restent ici que les bouts non exprimables proprement en
-   utilitaires : tailles d'icônes Material, états liés aux classes
-   routerLinkActive (.active), anneaux des badges, scrollbar masquée.
+   utilitaires : tailles d'icônes Material, états .active
+   (routerLinkActive), anneaux des badges, animations d'entrée.
    ============================================================ */
 
-/* Topbar — barre de navigation défilante sans scrollbar visible */
-.nav-links { scrollbar-width: none; }
-.nav-links::-webkit-scrollbar { display: none; }
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg);
+}
 
-.nav-link mat-icon { font-size: 19px; width: 19px; height: 19px; }
-.nav-link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.nav-link.active {
+.sidebar-desktop {
+  width: 240px;
+  background: var(--ink-gradient);
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 2px 0 12px rgba(6, 78, 59, 0.15);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-desktop.collapsed {
+  width: 80px;
+}
+
+.sidebar-desktop.collapsed .sidebar-brand span:not(.w-9),
+.sidebar-desktop.collapsed .sidebar-nav-label,
+.sidebar-desktop.collapsed .sidebar-user-btn > span:not(.w-9),
+.sidebar-desktop.collapsed .sidebar-user-btn > mat-icon:not(.collapse-icon) {
+  display: none;
+}
+
+.sidebar-desktop.collapsed .sidebar-brand {
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebar-desktop.collapsed .sidebar-nav {
+  padding: 24px 12px;
+}
+
+.sidebar-desktop.collapsed .sidebar-nav-link {
+  padding: 10px;
+  justify-content: center;
+}
+
+.sidebar-desktop.collapsed .sidebar-user-btn {
+  justify-content: center;
+  padding: 8px;
+}
+
+
+.sidebar-brand {
+  height: 72px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+.nav-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 24px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  letter-spacing: 0.05em;
+  transition: opacity 0.2s;
+}
+
+.nav-group-spacer {
+  height: 24px;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink-text);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.sidebar-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.sidebar-nav-link.active {
   background: var(--ink-soft);
   color: #fff;
   font-weight: 600;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
-.nav-badge { box-shadow: 0 0 0 2px var(--ink); }
 
-/* Bandeau d'alerte retards */
-.alert-inner mat-icon { color: #EF4444; font-size: 22px; width: 22px; height: 22px; }
-
-/* Bouton de déconnexion flottant (mobile) */
-.mobile-logout mat-icon { font-size: 20px; width: 20px; height: 20px; }
-.mobile-logout:active { transform: scale(0.92); }
-.mobile-logout {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s ease;
-}
-.mobile-logout.nav-hidden {
-  transform: translateY(-80px);
-  opacity: 0;
-  pointer-events: none;
+.sidebar-nav-link mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
-/* Navigation basse (mobile) */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-user-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-top: auto;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: var(--ink-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.sidebar-desktop.collapsed .sidebar-collapse-btn {
+  padding: 10px;
+  justify-content: center;
+}
+
+.sidebar-desktop.collapsed .sidebar-collapse-btn span {
+  display: none;
+}
+
+.main-content-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-badge {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+/* ─── Bandeau d'alerte retards ─── */
+.alert-inner mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: #EF4444;
+}
+
+/* ─── Navigation basse (mobile) ─── */
 .mobile-bottom-nav {
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.3s ease;
@@ -47,78 +202,180 @@
   opacity: 0;
   pointer-events: none;
 }
-
 .bn-item mat-icon {
-  font-size: 21px; width: 21px; height: 21px;
+  font-size: 21px;
+  width: 21px;
+  height: 21px;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.bn-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Onglet actif : pastille blanche nette + icône/label en vert de marque
-   (indicateur de sélection à fort contraste, façon app mobile moderne). */
+.bn-item span {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Onglet actif : pastille blanche nette + icône/label en vert de marque. */
 .bn-item.active {
-  background: #ffffff;
   color: var(--primary);
   font-weight: 700;
+  background: #ffffff;
   box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.28);
 }
 .bn-item.active mat-icon {
   color: var(--primary);
   transform: translateY(-1px) scale(1.06);
 }
-.bn-item:active { transform: scale(0.94); }
-/* Anneau du badge adapté au fond (vert sur onglet inactif, blanc sur onglet actif). */
-.bn-badge { box-shadow: 0 0 0 2px #1D4534; }
-.bn-item.active .bn-badge { box-shadow: 0 0 0 2px #ffffff; }
+.bn-item:active {
+  transform: scale(0.94);
+}
+/* Anneau du badge adapté au fond (vert sur onglet inactif, blanc sur actif). */
+.bn-badge {
+  box-shadow: 0 0 0 2px #1D4534;
+}
+.bn-item.active .bn-badge {
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+/* ─── Panneau « Plus » (bottom sheet) ─── */
+.more-sheet {
+  animation: sheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+}
+.more-sheet .close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  width: 34px;
+  height: 34px;
+}
+.more-sheet .close-btn:hover {
+  background: var(--border-light);
+  color: var(--text-primary);
+}
+@keyframes sheetUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
 
 /* ─── Animations d'entrée ─── */
 @keyframes slideUpIn {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
-@keyframes fadeSlideIn {
-  from {
-    transform: translateY(-12px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+/* ============================================================
+   MODALES DE POINTAGE (BCSU)
+   ============================================================ */
+.modal-pointage {
+  background: var(--card-bg);
+  width: 100%;
+  max-width: 400px;
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
 }
 
-/* Animation d'entrée pour le bouton logout mobile */
-.mobile-logout:not(.nav-hidden) {
-  animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+.modal-pointage-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-2);
 }
 
-/* Bouton déclencheur de navigation mobile (Pharmacien) */
-.mobile-menu-trigger {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              background 0.25s ease;
-  animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+.modal-pointage-icon mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
 }
-.mobile-menu-trigger mat-icon {
-  font-size: 22px;
-  width: 22px;
-  height: 22px;
-  transition: transform 0.35s ease;
+
+.modal-pointage-icon.arrivee {
+  background: var(--primary-light);
+  color: var(--primary);
 }
-.mobile-menu-trigger.active mat-icon {
-  transform: rotate(90deg);
+
+.modal-pointage-icon.depart {
+  background: var(--warn-light);
+  color: var(--warn);
 }
-/* Se déplace au-dessus de la barre de navigation mobile lorsqu'elle s'affiche (hauteur de la nav ~ 60px + gap) */
-.mobile-menu-trigger.active {
-  bottom: calc(75px + env(safe-area-inset-bottom));
+
+.modal-pointage h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
-.mobile-menu-trigger:active {
-  transform: scale(0.9);
+
+.modal-pointage p {
+  margin: 0 0 var(--sp-2);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.btn-pointage {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--transition);
+  color: #fff;
+}
+
+.btn-pointage mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.btn-pointage.arrivee { background: var(--primary); }
+.btn-pointage.arrivee:hover { background: var(--primary-hover); }
+.btn-pointage.depart { background: var(--warn); }
+.btn-pointage.depart:hover { background: #DC2626; }
+
+.btn-pointage-secondary {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px;
+  margin-top: 4px;
+}
+
+.btn-pointage-secondary:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.btn-pointage-secondary.muted {
+  margin-top: 0;
+  color: var(--text-muted);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }

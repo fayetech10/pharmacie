@@ -1,0 +1,167 @@
+<div class="lgd" *ngIf="!loading; else loadingTpl">
+  <div *ngIf="lettre">
+    <div class="lgd-header no-print">
+      <div>
+        <h2>{{ lettre.numero }}</h2>
+        <span class="lgd-badge" [ngClass]="lettre.statut">{{ lettre.statut }}</span>
+      </div>
+      <!-- SR : retour vers l'onglet « Lettres de garantie » de la page Structures -->
+      <a [routerLink]="isSR ? '/dashboard/structures-sanitaires' : '/dashboard/espace-bcsu'"
+         [queryParams]="isSR ? { tab: 2 } : { tab: 1 }" class="lgd-back">Retour</a>
+    </div>
+
+    <!-- FORMAT PAPIER -->
+    <div class="paper-container">
+      <div class="paper-header-row">
+        <div class="paper-logo">
+          <img src="assets/logo-csu.png" alt="Logo SEN-CSU">
+          <div class="paper-logo-text">
+            AGENCE SENEGALAISE DE LA<br>
+            COUVERTURE SANITAIRE<br>
+            UNIVERSELLE
+          </div>
+        </div>
+        <div class="paper-republique">
+          <div class="rep-title">REPUBLIQUE DU SENEGAL</div>
+          <div class="rep-subtitle">UN PEUPLE _ UN BUT _ UNE FOI</div>
+        </div>
+      </div>
+
+      <div class="paper-title-box">
+        LETTRE DE GARANTIE
+      </div>
+
+      <div class="paper-meta">
+        <strong>N°</strong> <span class="dotted-fill-meta">{{ lettre.numero }}</span>
+      </div>
+      
+      <div class="paper-souche">Souche</div>
+
+      <div class="paper-form">
+        <div class="paper-row">
+          <span class="paper-label">STRUCTURE :</span>
+          <span class="paper-dots">{{ lettre.structureNom || '' }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Prénom et nom de l'assuré :</span>
+          <span class="paper-dots">{{ lettre.patientPrenom }} {{ lettre.patientNom }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Type d'assuré :</span>
+          <span class="paper-dots">{{ regimeLabels[lettre.regime] }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Code assuré/immatriculation :</span>
+          <span class="paper-dots">{{ lettre.patientNumeroAssure || lettre.cniNumeroOcr || '' }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Date de naissance :</span>
+          <span class="paper-dots">{{ (lettre.patientDateNaissance | date:'dd/MM/yyyy') || '' }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Sexe :</span>
+          <span class="paper-dots">{{ lettre.patientSexe === 'M' ? 'Masculin' : (lettre.patientSexe === 'F' ? 'Féminin' : (lettre.patientSexe || '')) }}</span>
+        </div>
+        <div class="paper-row">
+          <span class="paper-label">Motif :</span>
+          <span class="paper-dots">{{ getMotifs() }}</span>
+        </div>
+
+        <div class="paper-spacer"></div>
+
+        <div class="paper-row">
+          <span class="paper-label">Taux de prise en charge :</span>
+          <span class="paper-dots">{{ lettre.regime === 'CONTRIBUTIF' ? '80%' : '100%' }}</span>
+        </div>
+
+        <div class="paper-spacer"></div>
+
+        <div class="paper-row">
+          <span class="paper-label">Date :</span>
+          <span class="paper-dots">{{ lettre.createdAt | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+      <div class="paper-signature">
+        <strong>Signature et cachet</strong>
+      </div>
+
+      <div class="paper-footer">
+        Valable pour une période d'un mois à partir de la date de délivrance
+      </div>
+    </div>
+    <!-- FIN FORMAT PAPIER -->
+
+    <mat-card class="lgd-card no-print" *ngIf="lettre.prestations && lettre.prestations.length > 0">
+      <h3>Prestations (Détails)</h3>
+      <div class="lgd-line" *ngFor="let p of lettre.prestations">
+        <div class="lgd-line-main">
+          <span>{{ p.designation }}</span>
+          <small>{{ p.datePriseEnCharge }}</small>
+        </div>
+        <div class="lgd-line-amounts">
+          <strong>{{ p.montant | number:'1.0-0':'fr' }} F</strong>
+          <small>Bénéf. {{ p.montantBeneficiaire | number:'1.0-0':'fr' }} F · SEN-CSU {{ p.montantSencsu | number:'1.0-0':'fr' }} F</small>
+        </div>
+      </div>
+      <div class="lgd-total">
+        <span>Total à la charge de SEN-CSU</span>
+        <strong>{{ lettre.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</strong>
+      </div>
+    </mat-card>
+
+    <div class="lgd-actions">
+      <button mat-stroked-button *ngIf="lettre.statut === StatutLettreGarantie.BROUILLON" (click)="modifier()">
+        <mat-icon>edit</mat-icon> Modifier
+      </button>
+      <button mat-flat-button color="primary" *ngIf="lettre.statut === StatutLettreGarantie.BROUILLON" [disabled]="busy" (click)="emettre()">
+        <mat-icon>check_circle</mat-icon> Émettre
+      </button>
+      <button mat-stroked-button color="warn" *ngIf="!isSR && lettre.statut !== StatutLettreGarantie.ANNULEE" (click)="annuler()">
+        <mat-icon>cancel</mat-icon> Annuler
+      </button>
+      <button mat-stroked-button (click)="imprimerLettre()">
+        <mat-icon>print</mat-icon> Imprimer
+      </button>
+      <button mat-stroked-button (click)="partagerLettreWhatsApp()">
+        <mat-icon>share</mat-icon> WhatsApp
+      </button>
+    </div>
+
+    <mat-card class="lgd-card" *ngIf="lettre.statut === StatutLettreGarantie.EMISE && lettre.regime === 'CONTRIBUTIF'">
+      <h3>Bon de commande</h3>
+      <p class="lgd-bon-hint" *ngIf="!bon && isSR">Aucun bon de commande généré pour cette lettre.</p>
+      <div class="lgd-bon-gen" *ngIf="!bon && !isSR">
+        <label class="lgd-bon-label">
+          Nombre de lignes de médicaments
+          <span class="lgd-bon-hint">(lignes vides à remplir par le pharmacien)</span>
+        </label>
+        <div class="lgd-bon-row">
+          <input type="number" min="1" max="30" class="lgd-bon-input" [(ngModel)]="nombreLignesBon">
+          <button mat-flat-button color="primary" [disabled]="busy" (click)="genererBonCommande()">
+            <mat-icon>add_box</mat-icon> Générer le bon de commande
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="bon">
+        <div class="lgd-grid">
+          <div><span>Numéro</span><strong>{{ bon.numero }}</strong></div>
+          <div><span>Prise en charge CSU</span><strong>{{ bon.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</strong></div>
+        </div>
+        <div class="lgd-actions">
+          <button mat-stroked-button (click)="imprimerBon()">
+            <mat-icon>print</mat-icon> Imprimer le bon
+          </button>
+          <button mat-stroked-button (click)="partagerBonWhatsApp()">
+            <mat-icon>share</mat-icon> WhatsApp
+          </button>
+        </div>
+      </div>
+    </mat-card>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="lgd-loading">Chargement...</div>
+</ng-template>

@@ -1,10 +1,14 @@
-import { Component, OnInit, ViewChild, Input, ElementRef, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, ViewChild, Input, ElementRef, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FactureService } from '../../../core/services/facture.service';
+import { StructureService } from '../../../core/services/structure.service';
 import { FactureEventsService } from '../../../core/services/facture-events.service';
 import { Facture, StatutFacture } from '../../../core/models/facture.model';
+import { UnifiedFacture, mapToUnifiedFacture } from '../../../core/models/unified.model';
+import { REGIME_OPTIONS, REGIME_LABELS } from '../../../core/models/bcsu.model';
+import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -43,10 +47,10 @@ import { MatMenuModule } from '@angular/material/menu';
   templateUrl: './factures-list.component.html',
   styleUrls: ['./factures-list.component.css']
 })
-export class FacturesListComponent implements OnInit {
+export class FacturesListComponent implements OnInit, OnChanges {
   displayedColumns: string[] = ['id', 'periode', 'montant', 'statut', 'date', 'actions'];
-  dataSource!: MatTableDataSource<Facture>;
-  factures: Facture[] = [];
+  dataSource!: MatTableDataSource<UnifiedFacture>;
+  factures: UnifiedFacture[] = [];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -55,8 +59,11 @@ export class FacturesListComponent implements OnInit {
   filterStatut = '';
   filterMois = 0;
   filterAnnee = 0;
+  filterRegime = '';
+  readonly regimeOptions = REGIME_OPTIONS;
+  readonly regimeLabels = REGIME_LABELS;
   statuts = Object.values(StatutFacture);
-  anneesDispo: number[] = [];
+  anneesDispo: number[] = [2023, 2024, 2025, 2026, 2027]; // Static list for server-side filtering
   isImporting = false;
   /** Facture ciblée par l'import par ligne (« importer la facture corrigée »). */
   pendingImportId: string | null = null;
@@ -73,6 +80,7 @@ export class FacturesListComponent implements OnInit {
     PAYEE: 'Payée'
   };
 
+  @Input() displayMode: 'PHARMACIE' | 'STRUCTURE' | 'ALL' = 'PHARMACIE';
   @Input() allowedStatuses?: string[];
   @Input() showPaymentButton = false;
   /** Affiche l'en-tête (titre + boutons Excel/PDF/Import). Masqué quand la liste est intégrée dans un espace. */
@@ -85,8 +93,8 @@ export class FacturesListComponent implements OnInit {
   /** Années disponibles pour le sélecteur. */
   availableYears: number[] = [];
 
-  /** Cache des groupes par pharmacie (recalculé seulement à chaque chargement). */
-  private _pharmacyGroups: { pharmacieId: string; pharmacieNom: string; factures: Facture[] }[] = [];
+  /** Cache des groupes par prestataire (recalculé seulement à chaque chargement). */
+  private _providerGroups: { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }[] = [];
 
   /** Nom des mois. */
   readonly monthNames = [
@@ -102,6 +110,7 @@ export class FacturesListComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private factureService: FactureService,
+    private structureService: StructureService,
     private snackBar: MatSnackBar,
     private confirm: ConfirmService,
     private router: Router,
@@ -127,9 +136,18 @@ export class FacturesListComponent implements OnInit {
       .subscribe(() => this.loadFactures());
   }
 
+  /** Recharge quand le filtre de statut ou le mode d'affichage change (sous-onglets régionaux). */
+  ngOnChanges(changes: SimpleChanges) {
+    const statutsChange = changes['allowedStatuses'];
+    const modeChange = changes['displayMode'];
+    if ((statutsChange && !statutsChange.firstChange) || (modeChange && !modeChange.firstChange)) {
+      this.loadFactures();
+    }
+  }
+
   /** Cartes affichées sur mobile : toute la liste (pas de pagination).
    *  Sur desktop la pagination ne concerne que le tableau, pas cette vue. */
-  get pagedFactures(): Facture[] {
+  get pagedFactures(): UnifiedFacture[] {
     const data = this.dataSource?.filteredData ?? [];
     if (this.isMobile) return data;
     if (!this.paginator) return data;
@@ -148,8 +166,12 @@ export class FacturesListComponent implements OnInit {
     return Math.round(this.summaryMontant / 2);
   }
 
-  openFacture(id: string) {
-    this.router.navigate(['/dashboard/factures', id]);
+  openFacture(f: UnifiedFacture) {
+    if (f.providerType === 'PHARMACIE') {
+      this.router.navigate(['/dashboard/factures', f.id]);
+    } else {
+      this.router.navigate(['/dashboard/factures-structure', f.id]);
+    }
   }
 
   statutLabel(s: string): string {
@@ -157,16 +179,31 @@ export class FacturesListComponent implements OnInit {
   }
 
   loadFactures() {
-    this.factureService.getAll().subscribe((data: Facture[]) => {
-      // Filtrer par statuts autorisés si spécifié
-      if (this.allowedStatuses && this.allowedStatuses.length > 0) {
-        this.factures = data.filter(f => this.allowedStatuses!.includes(f.statut.toString()));
-      } else {
-        this.factures = data;
-      }
+    let obs$ = of({ pharmacies: [], structures: [] } as any);
+    let params: any = {};
+    if (this.filterMois > 0) params.mois = this.filterMois;
+    if (this.filterAnnee > 0) params.annee = this.filterAnnee;
+    if (this.filterRegime) params.regime = this.filterRegime;
 
-      // Années présentes dans les données (tri décroissant) pour le filtre
-      this.anneesDispo = Array.from(new Set(this.factures.map(f => f.annee))).sort((a, b) => b - a);
+    if (this.displayMode === 'PHARMACIE') {
+      obs$ = forkJoin({ pharmacies: this.factureService.getAll(params), structures: of([]) });
+    } else if (this.displayMode === 'STRUCTURE') {
+      obs$ = forkJoin({ pharmacies: of([]), structures: this.structureService.getFactures(params) });
+    } else {
+      obs$ = forkJoin({ pharmacies: this.factureService.getAll(params), structures: this.structureService.getFactures(params) });
+    }
+
+    obs$.subscribe(({ pharmacies, structures }: any) => {
+      let unified: UnifiedFacture[] = [
+        ...pharmacies.map((f: any) => mapToUnifiedFacture(f, 'PHARMACIE')),
+        ...structures.map((f: any) => mapToUnifiedFacture(f, 'STRUCTURE'))
+      ];
+
+      // Filter by authorized statuses if specified
+      if (this.allowedStatuses && this.allowedStatuses.length > 0) {
+        unified = unified.filter(f => this.allowedStatuses!.includes(f.statut.toString()));
+      }
+      this.factures = unified;
 
       // Vue mensuelle : calculer les années disponibles
       if (this.monthlyView) {
@@ -183,8 +220,8 @@ export class FacturesListComponent implements OnInit {
       this.dataSource.sort = this.sort;
       this.dataSource.filterPredicate = this.customFilterPredicate();
 
-      // Recalculer le cache des groupes (vue mensuelle multi-pharmacies)
-      this.buildPharmacyGroups();
+      // Recalculer le cache des groupes (vue mensuelle)
+      this.buildProviderGroups();
     });
   }
 
@@ -196,39 +233,32 @@ export class FacturesListComponent implements OnInit {
     }
   }
 
+  onYearChange() {
+    this.filterAnnee = this.selectedYear;
+    this.loadFactures();
+  }
+
   applyAdvancedFilter() {
-    this.dataSource.filter = Math.random().toString();
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
+    // When advanced filters change (Mois, Annee, Regime), trigger backend refresh
+    this.loadFactures();
   }
 
   customFilterPredicate() {
-    return (data: Facture, filter: string) => {
+    return (data: UnifiedFacture, filter: string) => {
       let matchSearch = true;
       let matchStatut = true;
-      let matchMois = true;
-      let matchAnnee = true;
 
       if (this.input?.nativeElement?.value) {
         const term = this.input.nativeElement.value.toLowerCase();
         matchSearch = data.id.toLowerCase().includes(term) ||
-          (data.pharmacieNom ? data.pharmacieNom.toLowerCase().includes(term) : false);
+          (data.providerNom ? data.providerNom.toLowerCase().includes(term) : false);
       }
 
       if (this.filterStatut) {
         matchStatut = data.statut === this.filterStatut;
       }
 
-      if (this.filterMois > 0) {
-        matchMois = data.mois === this.filterMois;
-      }
-
-      if (this.filterAnnee > 0) {
-        matchAnnee = data.annee === this.filterAnnee;
-      }
-
-      return matchSearch && matchStatut && matchMois && matchAnnee;
+      return matchSearch && matchStatut;
     };
   }
 
@@ -254,16 +284,38 @@ export class FacturesListComponent implements OnInit {
     });
   }
 
-  exportSingleExcel(id: string, mois: number, annee: number) {
-    this.factureService.exportFactureExcel(id).subscribe({
+  exportSingleExcel(f: UnifiedFacture) {
+    const obs$ = f.providerType === 'PHARMACIE' 
+      ? this.factureService.exportFactureExcel(f.id)
+      : this.structureService.exportFactureExcel(f.id);
+
+    obs$.subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Facture_${this.getMonthName(mois)}_${annee}.xlsx`;
+        a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.xlsx`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.snackBar.open('Export Excel réussi', 'Fermer', { duration: 3000 });
+      },
+      error: (err: any) => {
+        this.snackBar.open('Erreur lors de l\'export: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  exportSingleWord(f: UnifiedFacture) {
+    if (f.providerType !== 'STRUCTURE') return;
+    this.structureService.exportFactureWord(f.id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.docx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export Word réussi', 'Fermer', { duration: 3000 });
       },
       error: (err: any) => {
         this.snackBar.open('Erreur lors de l\'export: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
@@ -303,9 +355,9 @@ export class FacturesListComponent implements OnInit {
   }
 
   /** Le rôle courant peut-il réimporter une facture corrigée (SR / SC, hors payée) ? */
-  canImportCorrige(f: Facture): boolean {
+  canImportCorrige(f: UnifiedFacture): boolean {
     return (this.authService.isServiceRegional() || this.authService.isServiceCentral())
-      && f.statut !== StatutFacture.PAYEE;
+      && f.statut !== 'PAYEE';
   }
 
   /** Mémorise la facture ciblée puis ouvre le sélecteur de fichier partagé. */
@@ -417,42 +469,63 @@ export class FacturesListComponent implements OnInit {
   // ===== VUE MENSUELLE =====
 
   /** Retourne la facture pour un mois donné dans l'année sélectionnée (ou null). */
-  getFactureForMonth(month: number): Facture | null {
+  getFactureForMonth(month: number): UnifiedFacture | null {
     return this.factures.find(f => f.mois === month && f.annee === this.selectedYear) || null;
   }
 
-  /** Nombre de patients distincts dans une facture. */
-  countPatients(f: Facture): number {
-    if (!f.lignes || f.lignes.length === 0) return 0;
-    const ids = new Set(
-      f.lignes
-        .map(l => (l.patientMatricule || l.patientNomPrenom || '').trim().toLowerCase())
-        .filter(Boolean)
-    );
-    return ids.size;
+  countPatients(f: UnifiedFacture): number {
+    if (f.providerType === 'PHARMACIE') {
+      const orig = f.originalFacturePharmacie;
+      if (!orig || !orig.lignes || orig.lignes.length === 0) return 0;
+      const ids = new Set(
+        orig.lignes
+          .map(l => (l.patientMatricule || l.patientNomPrenom || '').trim().toLowerCase())
+          .filter(Boolean)
+      );
+      return ids.size;
+    } else {
+      const orig = f.originalFactureStructure;
+      if (!orig || !orig.lignes || orig.lignes.length === 0) return 0;
+      const ids = new Set(
+        orig.lignes
+          .map(l => (l.lettreGarantieNumero || `${l.patientPrenom}-${l.patientNom}`).trim().toLowerCase())
+          .filter(Boolean)
+      );
+      return ids.size;
+    }
   }
 
-  /** Génère l'identifiant de facture affiché (FACT-PHARMA-YYYY-MM). */
-  getFactureLabel(f: Facture): string {
+  /** Génère l'identifiant de facture affiché. */
+  getFactureLabel(f: UnifiedFacture): string {
     const mm = String(f.mois).padStart(2, '0');
-    return `FACT-PHARMA-${f.annee}-${mm}`;
+    return f.providerType === 'PHARMACIE' 
+      ? `FACT-PHARMA-${f.annee}-${mm}`
+      : `FACT-STRUCT-${f.annee}-${mm}`;
   }
 
   /** Date d'envoi (première action ENVOYEE dans l'historique). */
-  getDateEnvoi(f: Facture): string | null {
-    if (!f.historique) return null;
-    const envoi = f.historique.find(h => h.statut === StatutFacture.ENVOYEE);
-    return envoi ? envoi.date : null;
+  getDateEnvoi(f: UnifiedFacture): string | null {
+    if (f.providerType === 'PHARMACIE') {
+      if (!f.originalFacturePharmacie?.historique) return null;
+      const envoi = f.originalFacturePharmacie.historique.find(h => h.statut === StatutFacture.ENVOYEE);
+      return envoi ? envoi.date : null;
+    } else {
+      return f.date ?? null;
+    }
   }
 
   /** Export PDF d'une facture individuelle. */
-  exportSinglePdf(id: string, mois: number, annee: number) {
-    this.factureService.exportFacturePdf(id).subscribe({
+  exportSinglePdf(f: UnifiedFacture) {
+    const obs$ = f.providerType === 'PHARMACIE' 
+      ? this.factureService.exportFacturePdf(f.id)
+      : this.structureService.exportFacturePdf(f.id);
+
+    obs$.subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Facture_${this.getMonthName(mois)}_${annee}.pdf`;
+        a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.pdf`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.snackBar.open('Export PDF réussi', 'Fermer', { duration: 3000 });
@@ -464,16 +537,17 @@ export class FacturesListComponent implements OnInit {
   }
 
   /** Le statut affiché sous forme de label pour le badge de la vue mensuelle. */
-  getStatutDateLabel(f: Facture): string {
+  getStatutDateLabel(f: UnifiedFacture): string {
     const dateEnvoi = this.getDateEnvoi(f);
-    if (f.statut === StatutFacture.ENVOYEE && dateEnvoi) {
+    if (f.statut === 'ENVOYEE' && dateEnvoi) {
       return `Envoyé le ${dateEnvoi.substring(0, 10)}`;
     }
     return this.statutLabel(f.statut);
   }
 
   /** Envoyer une facture (depuis la vue mensuelle). */
-  envoyerFacture(f: Facture) {
+  envoyerFacture(f: UnifiedFacture) {
+    if (f.providerType !== 'PHARMACIE') return; // Only pharmacies have 'envoyer' from here currently
     this.confirm.ask({
       title: 'Envoyer la facture',
       message: 'Êtes-vous sûr de vouloir envoyer cette facture au service régional ? Vous ne pourrez plus la modifier.',
@@ -492,27 +566,33 @@ export class FacturesListComponent implements OnInit {
     });
   }
 
-  /** Regroupe les factures chargées par pharmacie pour la vue mensuelle multi-pharmacies. */
-  get pharmacyGroups(): { pharmacieId: string; pharmacieNom: string; factures: Facture[] }[] {
-    return this._pharmacyGroups;
+  /** Regroupe les factures chargées par prestataire pour la vue mensuelle. */
+  get providerGroups(): { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }[] {
+    return this._providerGroups;
   }
 
-  /** Recalcule le cache des groupes par pharmacie (appelé une seule fois par chargement). */
-  private buildPharmacyGroups(): void {
-    const groupsMap = new Map<string, { pharmacieId: string; pharmacieNom: string; factures: Facture[] }>();
+  /** Recalcule le cache des groupes par prestataire (appelé une seule fois par chargement). */
+  private buildProviderGroups(): void {
+    const groupsMap = new Map<string, { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }>();
     this.factures.forEach(f => {
-      const key = f.pharmacieId || 'default';
-      const nom = f.pharmacieNom || 'Pharmacie';
+      const regimeSuffix = f.regime ? `_${f.regime}` : '';
+      const key = (f.providerId || 'default') + regimeSuffix;
+      let nom = f.providerNom || 'Prestataire';
+      if (f.regime) {
+        nom = `${nom} - Régime ${f.regime}`;
+      }
+      const type = f.providerType;
+      
       if (!groupsMap.has(key)) {
-        groupsMap.set(key, { pharmacieId: key, pharmacieNom: nom, factures: [] });
+        groupsMap.set(key, { providerId: key, providerNom: nom, providerType: type, regime: f.regime, factures: [] });
       }
       groupsMap.get(key)!.factures.push(f);
     });
-    this._pharmacyGroups = Array.from(groupsMap.values()).sort((a, b) => a.pharmacieNom.localeCompare(b.pharmacieNom));
+    this._providerGroups = Array.from(groupsMap.values()).sort((a, b) => a.providerNom.localeCompare(b.providerNom));
   }
 
   /** Retourne la facture pour un mois donné et un groupe de factures spécifique (ou null). */
-  getFactureForMonthAndGroup(month: number, groupFactures: Facture[]): Facture | null {
+  getFactureForMonthAndGroup(month: number, groupFactures: UnifiedFacture[]): UnifiedFacture | null {
     return groupFactures.find(f => f.mois === month && f.annee === this.selectedYear) || null;
   }
 }

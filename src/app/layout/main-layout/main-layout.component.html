@@ -1,73 +1,101 @@
-<!-- Topbar (desktop ≥ md) — masquée sur mobile, navigation via la pilule basse -->
-<header class="hidden md:block sticky top-0 z-[100] bg-ink-gradient shadow-[0_2px_12px_rgba(6,78,59,0.22)]">
-  <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center gap-7">
-    <a routerLink="/dashboard" class="flex items-center gap-2.5 no-underline shrink-0">
-      <span class="w-10 h-10 rounded bg-white flex items-center justify-center overflow-hidden shrink-0"><img [src]="brandLogo" alt="Logo" class="w-8 h-8 object-contain block" /></span>
-      <span class="text-[17px] font-normal tracking-[-0.01em] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
-    </a>
+<div class="app-layout">
+  <!-- ============================================================
+       SIDEBAR DESKTOP (≥ md)
+       ============================================================ -->
+  <aside class="sidebar-desktop hidden md:flex" [class.collapsed]="isSidebarCollapsed">
+    <div class="sidebar-brand">
+      <a routerLink="/dashboard" class="flex items-center gap-3 no-underline">
+        <span class="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+          <img [src]="brandLogo" alt="Logo CSU" class="w-6 h-6 object-contain block" />
+        </span>
+        <span class="text-[17px] font-normal tracking-[-0.01em] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
+      </a>
+    </div>
 
-    <nav class="nav-links flex items-center gap-1 flex-1 overflow-x-auto">
-      <a routerLink="/dashboard/espace-pharmacie" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isPharmacien()">
-        <div class="relative flex items-center justify-center">
-          <mat-icon>dashboard</mat-icon>
-          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+    <nav class="sidebar-nav" aria-label="Navigation principale">
+      <ng-container *ngFor="let group of topNavGroups">
+        <div class="nav-group-header" *ngIf="group.name !== 'Général' && !isSidebarCollapsed">
+          {{ group.name }}
         </div>
-        <span>Mon Espace</span>
-      </a>
-      <a routerLink="/dashboard/espace-region" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isServiceRegional()">
-        <div class="relative flex items-center justify-center">
-          <mat-icon>dashboard</mat-icon>
-          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
-        </div>
-        <span>Espace Régional</span>
-      </a>
-      <a routerLink="/dashboard/espace-central" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isServiceCentral()">
-        <div class="relative flex items-center justify-center">
-          <mat-icon>dashboard</mat-icon>
-          <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
-        </div>
-        <span>Espace Central</span>
-      </a>
-      <a routerLink="/dashboard/regions" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
-        <mat-icon>map</mat-icon>
-        <span>Régions</span>
-      </a>
-      <a routerLink="/dashboard/medicaments" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
-        <mat-icon>medication</mat-icon>
-        <span>Médicaments</span>
-      </a>
-      <a routerLink="/dashboard/pharmacies" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin() || authService.isServiceRegional()">
-        <mat-icon>local_pharmacy</mat-icon>
-        <span>Pharmacies</span>
-      </a>
-      <a routerLink="/dashboard/utilisateurs" routerLinkActive="active" class="nav-link flex items-center gap-[7px] py-[9px] px-3.5 rounded-[10px] no-underline text-ink-text text-[13.5px] font-medium whitespace-nowrap transition-all duration-200" *ngIf="authService.isAdmin()">
-        <mat-icon>manage_accounts</mat-icon>
-        <span>Utilisateurs</span>
-      </a>
+        <div class="nav-group-spacer" *ngIf="group.name !== 'Général' && isSidebarCollapsed"></div>
+        <a *ngFor="let item of group.items"
+           [routerLink]="item.link"
+           routerLinkActive="active"
+           class="sidebar-nav-link">
+          <span class="relative flex items-center justify-center shrink-0">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center"
+                  *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+          </span>
+          <span class="sidebar-nav-label">{{ item.label }}</span>
+        </a>
+      </ng-container>
     </nav>
 
-    <div class="shrink-0 ml-auto">
-      <div class="flex items-center gap-2.5 py-[5px] pl-3.5 pr-[5px] rounded-full cursor-pointer bg-white/[0.06] border border-white/[0.14] transition-colors hover:bg-white/[0.12]" [matMenuTriggerFor]="userMenu">
-        <div class="flex flex-col items-end">
-          <span class="text-[13px] font-semibold leading-tight text-white">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
-          <span class="text-[11px] text-ink-text">{{ getRoleLabel(currentUser?.role || '') }}</span>
-        </div>
-        <div class="w-9 h-9 rounded-full bg-white text-ink flex items-center justify-center text-[13px] font-extrabold tracking-[0.02em] shrink-0">
+    <!-- Bouton de réduction -->
+    <button class="sidebar-collapse-btn mx-4 mb-2" (click)="toggleSidebar()" aria-label="Réduire le menu">
+      <mat-icon class="collapse-icon">{{ isSidebarCollapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      <span>Réduire</span>
+    </button>
+
+    <div class="sidebar-footer">
+      <button type="button" class="sidebar-user-btn" [matMenuTriggerFor]="userMenu" aria-label="Menu du compte">
+        <span class="w-9 h-9 rounded-xl bg-white text-ink flex items-center justify-center text-[13px] font-bold tracking-[0.02em] shrink-0">
           {{ initials }}
-        </div>
-      </div>
-      <mat-menu #userMenu="matMenu" xPosition="before">
+        </span>
+        <span class="flex flex-col items-start min-w-0">
+          <span class="text-[13px] font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis w-full text-left">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
+          <span class="text-[11.5px] text-ink-text whitespace-nowrap overflow-hidden text-ellipsis w-full text-left">{{ getRoleLabel(currentUser?.role || '') }}</span>
+        </span>
+        <mat-icon class="ml-auto text-ink-text text-[18px]">unfold_more</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu" xPosition="after">
         <button mat-menu-item (click)="logout()">
           <mat-icon>logout</mat-icon>
           <span>Se déconnecter</span>
         </button>
       </mat-menu>
     </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT WRAPPER
+       ============================================================ -->
+  <div class="main-content-wrapper">
+
+<!-- ============================================================
+     TOPBAR MOBILE (< md) — identité + compte (déconnexion incluse).
+     ============================================================ -->
+<header class="md:hidden sticky top-0 z-[150] bg-ink-gradient shadow-[0_2px_10px_rgba(6,78,59,0.25)] pt-[env(safe-area-inset-top)]">
+  <div class="h-[54px] px-3 flex items-center justify-between gap-3">
+    <a routerLink="/dashboard" class="flex items-center gap-2 no-underline min-w-0">
+      <span class="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
+        <img [src]="brandLogo" alt="Logo CSU" class="w-[26px] h-[26px] object-contain block" />
+      </span>
+      <span class="text-[15px] text-white whitespace-nowrap overflow-hidden text-ellipsis">CSU <strong class="font-extrabold">Sénégal</strong></span>
+    </a>
+    <button type="button"
+            class="w-9 h-9 rounded-full bg-white text-ink flex items-center justify-center text-xs font-extrabold tracking-[0.02em] shrink-0 border-2 border-white/40 cursor-pointer"
+            [matMenuTriggerFor]="userMenuMobile"
+            aria-label="Menu du compte">
+      {{ initials }}
+    </button>
+    <mat-menu #userMenuMobile="matMenu" xPosition="before">
+      <div class="px-4 py-2.5 border-b border-border-light" (click)="$event.stopPropagation()">
+        <div class="text-[13.5px] font-bold text-text-primary leading-tight">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
+        <div class="text-xs text-text-secondary mt-0.5">{{ getRoleLabel(currentUser?.role || '') }}</div>
+      </div>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Se déconnecter</span>
+      </button>
+    </mat-menu>
   </div>
 </header>
 
+<!-- Bandeau d'alerte : factures en retard (pharmacien) -->
 <div class="bg-gradient-to-r from-[#FEF2F2] to-[#FFF7ED] border-b border-[#FECACA]" *ngIf="retards.length > 0">
-  <div class="alert-inner max-w-[1400px] mx-auto px-6 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3 flex items-center gap-3 text-sm font-medium text-[#B91C1C] flex-wrap">
+  <div class="alert-inner w-full px-3 md:px-6 py-3 flex items-center gap-3 text-sm font-medium text-[#B91C1C] flex-wrap">
     <mat-icon>warning_amber</mat-icon>
     <span>
       Vous avez <strong>{{ retards.length }}</strong> facture(s) en retard à l'état BROUILLON.
@@ -77,18 +105,16 @@
   </div>
 </div>
 
-<main class="max-w-[1400px] mx-auto px-3 md:px-6 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-7 pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-10">
+<main class="w-full px-3 md:px-6 pt-4 md:pt-7 pb-[calc(84px+env(safe-area-inset-bottom))] md:pb-10">
   <router-outlet></router-outlet>
 </main>
 
-<!-- Bouton de déconnexion flottant (mobile uniquement, pour tests) -->
-<button type="button" class="mobile-logout flex md:hidden fixed top-[calc(0.625rem+env(safe-area-inset-top))] right-3 z-[250] w-10 h-10 items-center justify-center border-0 rounded-full bg-ink-gradient text-white shadow-[0_6px_16px_-4px_rgba(6,78,59,0.45)] cursor-pointer" [class.nav-hidden]="navHidden" (click)="logout()" aria-label="Se déconnecter">
-  <mat-icon>logout</mat-icon>
-</button>
-
-<!-- Navigation basse (mobile) — le header est masqué sur mobile.
-     La session expire automatiquement après 1 jour (redirection vers la connexion). -->
-<nav class="mobile-bottom-nav flex md:hidden fixed left-3 right-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[20px] shadow-[0_12px_30px_-8px_rgba(6,78,59,0.55)] ring-1 ring-white/10 p-1.5 gap-1" [class.nav-hidden]="navHidden">
+<!-- ============================================================
+     NAVIGATION BASSE MOBILE — 5 items max, « Plus » pour le reste.
+     ============================================================ -->
+<nav class="mobile-bottom-nav flex md:hidden fixed left-3 right-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-[20px] shadow-[0_12px_30px_-8px_rgba(6,78,59,0.55)] ring-1 ring-white/10 p-1.5 gap-1"
+     [class.nav-hidden]="navHidden"
+     aria-label="Navigation mobile">
   <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[52px] py-1.5 px-0.5 border-0 rounded-[15px] bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
      *ngFor="let item of bottomNav"
      [class.active]="isBottomActive(item)"
@@ -98,14 +124,80 @@
     <mat-icon>{{ item.icon }}</mat-icon>
     <span>{{ item.label }}</span>
   </a>
+
+  <button type="button"
+          class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[52px] py-1.5 px-0.5 border-0 rounded-[15px] bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] cursor-pointer transition-all duration-200"
+          *ngIf="moreNav.length > 0"
+          [class.active]="isMoreActive || isMoreOpen"
+          (click)="toggleMore()"
+          aria-label="Plus de destinations"
+          [attr.aria-expanded]="isMoreOpen">
+    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="moreBadge > 0">{{ moreBadge }}</span>
+    <mat-icon>apps</mat-icon>
+    <span>Plus</span>
+  </button>
 </nav>
 
-<!-- Bouton déclencheur de menu flottant (mobile uniquement, réservé au pharmacien) -->
-<button type="button" 
-        class="mobile-menu-trigger flex md:hidden fixed bottom-4 right-4 z-[250] w-12 h-12 items-center justify-center border-0 rounded-full bg-ink-gradient text-white shadow-[0_6px_16px_-4px_rgba(6,78,59,0.45)] cursor-pointer"
-        *ngIf="authService.isPharmacien()"
-        (click)="togglePharmacienNav()"
-        [class.active]="isPharmacienNavOpen"
-        aria-label="Menu de navigation">
-  <mat-icon>{{ isPharmacienNavOpen ? 'close' : 'menu' }}</mat-icon>
-</button>
+<!-- Panneau « Plus » : destinations secondaires (mobile) -->
+<div class="md:hidden fixed inset-0 z-[290] bg-slate-900/45" *ngIf="isMoreOpen" (click)="isMoreOpen = false" aria-hidden="true"></div>
+<div class="more-sheet md:hidden fixed left-0 right-0 bottom-0 z-[300] bg-card rounded-t-[22px] shadow-lg pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+     *ngIf="isMoreOpen"
+     role="dialog"
+     aria-label="Plus de destinations">
+  <div class="flex items-center justify-between px-5 pt-3 pb-1">
+    <span class="w-9 h-1 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" aria-hidden="true"></span>
+    <h2 class="text-[15px] font-bold text-text-primary m-0 pt-2">Plus de destinations</h2>
+    <button type="button" class="close-btn" (click)="isMoreOpen = false" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  <nav class="px-2.5 pt-1 grid grid-cols-1 gap-0.5" aria-label="Destinations secondaires">
+    <a *ngFor="let item of moreNav"
+       [routerLink]="item.link"
+       [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
+       (click)="isMoreOpen = false"
+       class="flex items-center gap-3.5 px-3.5 py-3 rounded-xl no-underline text-text-primary transition-colors active:bg-primary-light"
+       [class.bg-primary-light]="isBottomActive(item)">
+      <span class="relative w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center shrink-0">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span class="absolute -top-1 -right-1 box-border min-w-[16px] h-4 px-1 rounded-full bg-warn text-white text-[9.5px] font-bold leading-4 text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+      </span>
+      <span class="flex-1 text-[14.5px] font-semibold">{{ item.label }}</span>
+      <mat-icon class="text-text-muted">chevron_right</mat-icon>
+    </a>
+  </nav>
+</div>
+
+<!-- ============================================================
+     MODALES DE POINTAGE (BCSU)
+     ============================================================ -->
+<div class="modal-overlay" *ngIf="showArriveeModal">
+  <div class="modal-pointage" role="dialog" aria-labelledby="arrivee-title">
+    <div class="modal-pointage-icon arrivee">
+      <mat-icon>login</mat-icon>
+    </div>
+    <h2 id="arrivee-title">Bienvenue !</h2>
+    <p>Vous n'avez pas encore enregistré votre arrivée aujourd'hui.<br>Veuillez pointer votre présence pour commencer votre journée.</p>
+    <button class="btn-pointage arrivee" (click)="enregistrerArrivee()">
+      <mat-icon>fingerprint</mat-icon> Pointer mon arrivée
+    </button>
+    <button class="btn-pointage-secondary" (click)="showArriveeModal = false">Plus tard</button>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showDepartModal">
+  <div class="modal-pointage" role="dialog" aria-labelledby="depart-title">
+    <div class="modal-pointage-icon depart">
+      <mat-icon>logout</mat-icon>
+    </div>
+    <h2 id="depart-title">Fin de journée ?</h2>
+    <p>Confirmez votre départ pour enregistrer votre heure de sortie.</p>
+    <button class="btn-pointage depart" (click)="enregistrerDepart()">
+      <mat-icon>fingerprint</mat-icon> Pointer mon départ
+    </button>
+    <button class="btn-pointage-secondary" (click)="forceLogout()">Se déconnecter sans pointer</button>
+    <button class="btn-pointage-secondary muted" (click)="showDepartModal = false">Annuler</button>
+  </div>
+</div>
+</div>
+</div>

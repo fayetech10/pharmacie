@@ -1,0 +1,19 @@
+<div class="fade-in">
+  <div class="custom-tabs-nav">
+    <button type="button" class="tab-nav-btn" [class.active]="selectedTab === 0" (click)="onTabChange(0)">
+      Nouvelle facturation
+    </button>
+    <button type="button" class="tab-nav-btn" [class.active]="selectedTab === 1" (click)="onTabChange(1)">
+      Mes factures
+    </button>
+  </div>
+
+  <div class="tab-content-container" [ngSwitch]="selectedTab">
+    <div *ngSwitchCase="0" class="pt-2 md:pt-4">
+      <app-facture-structure-form></app-facture-structure-form>
+    </div>
+    <div *ngSwitchCase="1" class="pt-2 md:pt-4">
+      <app-factures-structure-list></app-factures-structure-list>
+    </div>
+  </div>
+</div>

@@ -29,8 +29,10 @@
     </div>
   </header>
 
-  <!-- ===================== CARTE DE SAISIE (3 ÉTAPES) ===================== -->
-  <div class="ff-card">
+  <div class="ff-layout-grid">
+    <div class="ff-layout-main">
+      <!-- ===================== CARTE DE SAISIE (3 ÉTAPES) ===================== -->
+      <div class="ff-card">
 
     <!-- Mobile Stepper Progress Header -->
     <div class="ff-stepper-progress md:hidden flex items-center justify-between px-6 py-4 border-b border-[var(--border-light)] bg-[var(--field-bg)]">
@@ -51,6 +53,21 @@
           <p>Recherchez, ajustez la quantité, puis ajoutez</p>
         </div>
         <span class="ff-count" *ngIf="patientLignes.length">{{ patientLignes.length }}</span>
+      </div>
+
+      <!-- Recherche de Bon de Commande : affiche le bon (lignes vides) comme le formulaire papier -->
+      <div class="ff-grid-1 mb-6 border-b border-[var(--border-light)] pb-4">
+        <div class="ff-field" *ngIf="!rattacheBon">
+          <label class="ff-label">Rechercher par numéro de Bon de Commande (BC)</label>
+          <div class="flex gap-2">
+            <input type="text" class="ff-input" placeholder="Ex: BC-123456" [(ngModel)]="searchBcNumero" (keyup.enter)="rechercherEtPrefiltrerBon(searchBcNumero)">
+            <button type="button" class="btn btn-outline" (click)="rechercherEtPrefiltrerBon(searchBcNumero)">
+              <mat-icon>search</mat-icon> Rechercher
+            </button>
+          </div>
+        </div>
+
+
       </div>
 
       <!-- Ligne d'ajout de médicament -->
@@ -112,7 +129,7 @@
           </div>
         </div>
 
-        <button class="btn btn-primary ff-add-btn" type="submit" [disabled]="medicamentForm.invalid">
+        <button class="btn btn-primary ff-add-btn" type="submit" [disabled]="medicamentForm.invalid || bonLimitAtteinte">
           <mat-icon>add</mat-icon> Ajouter
         </button>
       </form>
@@ -206,9 +223,25 @@
       </button>
 
       <div class="ff-dossier" *ngIf="dossierOpen">
-        <p class="ff-dossier-hint">Prenez en photo les pièces (appareil photo ou fichier).</p>
+        <p class="ff-dossier-hint" *ngIf="!bonCommandeAuto">Prenez en photo les pièces (appareil photo ou fichier).</p>
+        <p class="ff-dossier-hint" *ngIf="bonCommandeAuto">Le bon de commande est constitué automatiquement — ajoutez seulement le ticket de caisse et l'ordonnance.</p>
+
+        <!-- Bon de commande constitué automatiquement depuis le bon rattaché (pas de photo à prendre) -->
+        <div class="ff-bc-auto" *ngIf="bonCommandeAuto && photos.bonCommande">
+          <div class="ff-bc-auto-head">
+            <mat-icon>task_alt</mat-icon>
+            <div class="ff-bc-auto-titles">
+              <span class="ff-bc-auto-title">Bon de commande — constitué automatiquement</span>
+              <span class="ff-bc-auto-sub">Depuis {{ rattacheBonNumero }} · aucune photo à prendre</span>
+            </div>
+          </div>
+          <div class="ff-photo-preview ff-bc-auto-img">
+            <img [src]="photos.bonCommande" alt="Bon de commande" (click)="openViewer(photos.bonCommande!)">
+          </div>
+        </div>
+
         <div class="ff-photos">
-          <div class="ff-photo" *ngFor="let p of photoFields">
+          <div class="ff-photo" *ngFor="let p of manualPhotoFields">
             <span class="ff-photo-label">{{ p.label }}</span>
             <div class="ff-photo-drop" *ngIf="!photos[p.key]; else preview">
               <input type="file" accept="image/*" capture="environment" hidden
@@ -293,6 +326,95 @@
       </div>
     </div>
   </div>
+
+    </div> <!-- Fin .ff-layout-main -->
+
+    <!-- Colonne de droite : Bon de Commande -->
+    <aside class="ff-layout-side" *ngIf="rattacheBon">
+      <div class="bc-paper sticky-aside">
+        <div class="bc-head">
+          <div class="bc-title">BON DE COMMANDE</div>
+          <div class="bc-num">N° <strong>{{ rattacheBon.numero }}</strong></div>
+          <button type="button" class="ff-del bc-detach" (click)="detacherBon()"
+                  matTooltip="Détacher ce bon" aria-label="Détacher ce bon">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="bc-sub">Médicament du circuit d'officine (PEC 50%)</div>
+
+        <!-- Indicateur multi-pharmacies : lignes utilisées / disponibles -->
+        <div class="bc-usage" *ngIf="rattacheBon">
+          <mat-icon>assignment</mat-icon>
+          <span>
+            Lignes : <strong>{{ (rattacheBon.lignesUtilisees ?? 0) + patientLignes.length }}</strong> / {{ rattacheBon.nombreLignes }} utilisée(s)
+            — <strong>{{ lignesDisponibles - patientLignes.length }}</strong> encore disponible(s)
+          </span>
+          <span class="bc-usage-partial" *ngIf="(rattacheBon.lignesUtilisees ?? 0) > 0">
+            (dont {{ rattacheBon.lignesUtilisees }} dans une autre pharmacie)
+          </span>
+        </div>
+
+        <div class="bc-meta">
+          <div><span>Date émission :</span> <strong>{{ rattacheBon.createdAt | date:'dd/MM/yyyy' }}</strong></div>
+          <div><span>Nom du bénéficiaire :</span> <strong>{{ rattacheBon.patientPrenom }} {{ rattacheBon.patientNom }}</strong></div>
+          <div><span>Régime :</span> <strong>{{ regimeLabels[rattacheBon.regime] }}</strong></div>
+          <div><span>Lettre de garantie :</span> <strong>{{ rattacheBon.lettreGarantieNumero }}</strong></div>
+          <div><span>Prise en charge CSU :</span> <strong style="color: var(--primary);">{{ rattacheBon.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</strong></div>
+        </div>
+
+        <div class="bc-table-wrap">
+          <table class="bc-table">
+            <thead>
+              <tr>
+                <th class="bc-col-designation">Désignation</th>
+                <th>Qté</th>
+                <th>P.U.</th>
+                <th>Total</th>
+                <th>PEC</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of bonRows; let i = index" [class.bc-row-empty]="!row">
+                <td class="bc-col-designation">{{ row?.medicament || '' }}</td>
+                <td>{{ row ? row.quantite : '' }}</td>
+                <td>{{ row ? (row.prixUnitaire | number:'1.0-0':'fr') + ' F' : '' }}</td>
+                <td>{{ row ? (row.quantite * row.prixUnitaire | number:'1.0-0':'fr') + ' F' : '' }}</td>
+                <td>{{ row ? '50%' : '' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bc-total">
+                <td colspan="3">TOTAL GENERAL</td>
+                <td>{{ patientTotal | number:'1.0-0':'fr' }} F</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td colspan="3">A payer (patient)</td>
+                <td>{{ bonMontantPatient | number:'1.0-0':'fr' }} F</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td colspan="3">A facturer (tiers payant)</td>
+                <td>{{ bonMontantTiersPayant | number:'1.0-0':'fr' }} F</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="bc-hint" *ngIf="!bonLimitAtteinte">Ajoutez les médicaments ci-dessous : chaque ajout remplit une ligne du bon.</p>
+
+        <!-- Alerte : toutes les lignes disponibles sont remplies -->
+        <div class="ff-alert ff-alert--warn" *ngIf="bonLimitAtteinte">
+          <mat-icon>warning</mat-icon>
+          <div>
+            <span class="ff-alert-title">Toutes les lignes disponibles de ce bon sont remplies</span>
+            <span class="ff-alert-line">Aucun autre médicament ne peut être ajouté. Si le patient a besoin d'autres médicaments, il peut se rendre dans une autre pharmacie avec ce bon de commande.</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div> <!-- Fin .ff-layout-grid -->
 
   <!-- Visionneuse plein écran d'une pièce justificative -->
   <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">

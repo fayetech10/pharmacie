@@ -1,10 +1,12 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, Output, EventEmitter } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FactureService } from '../../../core/services/facture.service';
+import { BcsuService } from '../../../core/services/bcsu.service';
 import { Facture, FactureRequest } from '../../../core/models/facture.model';
+import { BonCommande, REGIME_LABELS } from '../../../core/models/bcsu.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +18,7 @@ import { Medicament, StatutMedicament } from '../../../core/models/medicament.mo
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { compressImageToDataUrl } from '../../../core/utils/image-compression';
+import { renderBonCommandeToDataUrl } from '../../../core/utils/bon-commande-image';
 
 type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
@@ -25,12 +28,13 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule,
     MatButtonModule, MatIconModule, MatSnackBarModule,
-    MatTableModule, MatTooltipModule, RouterModule
+    MatTableModule, MatTooltipModule, RouterModule, FormsModule
   ],
   templateUrl: './facture-form.component.html',
   styleUrls: ['./facture-form.component.css']
 })
 export class FactureFormComponent implements OnInit {
+  searchBcNumero = 'BC-';
   patientForm!: FormGroup;
   medicamentForm!: FormGroup;
   patientLignes: any[] = [];
@@ -52,8 +56,76 @@ export class FactureFormComponent implements OnInit {
   ];
   photos: Record<PhotoKey, string | null> = { ticketCaisse: null, bonCommande: null, ordonnance: null };
   viewerImage: string | null = null;
+  /**
+   * Vrai quand la « photo » du bon de commande a été constituée automatiquement
+   * (un bon a été recherché et rattaché) : le pharmacien n'ajoute alors que le
+   * ticket de caisse et l'ordonnance.
+   */
+  bonCommandeAuto = false;
+
+  /** Émet la liste de lignes du patient en cours à chaque modification (ajout / retrait). */
+  @Output() currentLinesChange = new EventEmitter<any[]>();
+  /** Émet la facture à chaque chargement ou mise à jour. */
+  @Output() factureChange = new EventEmitter<any>();
+
+  /** Pièces à photographier manuellement : le bon de commande est retiré s'il est constitué automatiquement. */
+  get manualPhotoFields(): { key: PhotoKey; label: string }[] {
+    if (this.bonCommandeAuto) {
+      if (!this._cachedManualPhotoFields) {
+        this._cachedManualPhotoFields = this.photoFields.filter(p => p.key !== 'bonCommande');
+      }
+      return this._cachedManualPhotoFields;
+    }
+    return this.photoFields;
+  }
+  private _cachedManualPhotoFields: { key: PhotoKey; label: string }[] | null = null;
   isMedicamentSelected = false;
   currentStep = 1; // 1: Médicaments, 2: Patient, 3: Dossier
+
+  // Bon de commande recherché et rattaché (affiché comme le formulaire papier ASCSU)
+  rattacheBon: BonCommande | null = null;
+  readonly regimeLabels = REGIME_LABELS;
+
+  get rattacheBonNumero(): string | null {
+    return this.rattacheBon?.numero ?? null;
+  }
+
+  /**
+   * Nombre de lignes encore disponibles sur le bon rattaché pour cette pharmacie.
+   * Prend en compte les lignes déjà consommées par d'autres pharmacies.
+   */
+  get lignesDisponibles(): number {
+    if (!this.rattacheBon) return Infinity;
+    return (this.rattacheBon.nombreLignes ?? 0) - (this.rattacheBon.lignesUtilisees ?? 0);
+  }
+
+  /** Vrai si le nombre de médicaments ajoutés atteint la limite du bon. */
+  get bonLimitAtteinte(): boolean {
+    return !!this.rattacheBon && this.patientLignes.length >= this.lignesDisponibles;
+  }
+
+  /**
+   * Lignes du bon de commande affichées comme sur le formulaire papier :
+   * autant de lignes que disponibles pour cette pharmacie, remplies au fur et
+   * à mesure que le pharmacien ajoute des médicaments (null = ligne vide).
+   */
+  get bonRows(): (any | null)[] {
+    // Sans bon rattaché, aucune ligne « papier » à afficher (le bloc est déjà masqué
+    // par *ngIf="rattacheBon"). Garde-fou indispensable : `lignesDisponibles` vaut
+    // Infinity tant qu'aucun bon n'est rattaché — sans ce retour anticipé, un appel
+    // à ce getter construirait `Array.from({ length: Infinity })`, ce qui fige puis
+    // fait planter l'onglet du navigateur.
+    if (!this.rattacheBon) return [];
+    const n = Math.max(this.lignesDisponibles, this.patientLignes.length);
+    // Borne défensive : un `nombreLignes` absent/aberrant renvoyé par le backend ne
+    // doit jamais provoquer la création d'un tableau démesuré.
+    const safeN = Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : this.patientLignes.length;
+    return Array.from({ length: safeN }, (_, i) => this.patientLignes[i] ?? null);
+  }
+
+  /** Circuit d'officine : prise en charge 50 % (cf. formulaire papier). */
+  get bonMontantTiersPayant(): number { return this.patientCsu; }
+  get bonMontantPatient(): number { return this.patientTotal - this.patientCsu; }
 
   nextStep() {
     if (this.currentStep < 3 && this.canGoNext()) {
@@ -83,6 +155,7 @@ export class FactureFormComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private factureService: FactureService,
+    private bcsuService: BcsuService,
     private medicamentService: MedicamentService,
     private router: Router,
     private route: ActivatedRoute,
@@ -100,6 +173,75 @@ export class FactureFormComponent implements OnInit {
       quantite: [1, [Validators.required, Validators.min(1)]],
       prixUnitaire: [null, [Validators.required, Validators.min(1)]]
     });
+  }
+
+  /**
+   * Recherche un bon de commande par numéro et l'affiche tel quel (lignes vides,
+   * comme le formulaire papier) : les médicaments ajoutés viendront remplir ses lignes.
+   */
+  rechercherEtPrefiltrerBon(numero: string) {
+    if (!numero || !numero.trim()) {
+      this.snackBar.open('Veuillez saisir un numéro de bon', 'Fermer', { duration: 3000 });
+      return;
+    }
+    this.bcsuService.searchBonCommandeByNumero(numero.trim()).subscribe({
+      next: (bon) => {
+        this.rattacheBon = bon;
+        this.patientForm.patchValue({
+          patientNomPrenom: `${bon.patientPrenom} ${bon.patientNom}`,
+          patientMatricule: bon.patientMatricule || ''
+        });
+        // Constitue automatiquement la « photo » du bon de commande pour le dossier patient :
+        // le pharmacien n'a plus qu'à ajouter le ticket de caisse et l'ordonnance.
+        this.refreshBonCommandePhoto();
+        const dispo = (bon.nombreLignes ?? 0) - (bon.lignesUtilisees ?? 0);
+        const dejaUtilisees = bon.lignesUtilisees ?? 0;
+        const msgPartiel = dejaUtilisees > 0
+          ? ` (${dejaUtilisees} ligne(s) déjà utilisée(s) dans une autre pharmacie — ${dispo} disponible(s))`
+          : '';
+        this.snackBar.open(`Bon ${bon.numero} rattaché${msgPartiel} : complétez ses lignes puis ajoutez ticket de caisse et ordonnance`, 'Fermer', { duration: 6000 });
+      },
+      error: (err) => {
+        // Message du backend (ex. « déjà utilisé ») si présent, sinon message générique.
+        const msg = err?.error?.message || 'Bon de commande introuvable ou invalide';
+        this.snackBar.open(msg, 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  detacherBon() {
+    this.rattacheBon = null;
+    this.searchBcNumero = 'BC-';
+    // Retire la photo du bon constituée automatiquement : le pharmacien reprend la main.
+    if (this.bonCommandeAuto) {
+      this.photos.bonCommande = null;
+      this.bonCommandeAuto = false;
+    }
+  }
+
+  /**
+   * (Re)constitue la « photo » du bon de commande à partir du bon rattaché et des
+   * médicaments saisis, et l'insère dans le dossier patient — sans photographie.
+   */
+  private refreshBonCommandePhoto() {
+    const bon = this.rattacheBon;
+    if (!bon) return;
+    this.photos.bonCommande = renderBonCommandeToDataUrl(
+      {
+        numero: bon.numero,
+        patientPrenom: bon.patientPrenom,
+        patientNom: bon.patientNom,
+        regimeLabel: this.regimeLabels[bon.regime] ?? '',
+        lettreGarantieNumero: bon.lettreGarantieNumero,
+        dateEmission: bon.createdAt ? new Date(bon.createdAt).toLocaleDateString('fr-FR') : '',
+        nombreLignes: bon.nombreLignes ?? 0,
+        total: this.patientTotal,
+        montantPatient: this.bonMontantPatient,
+        montantTiersPayant: this.bonMontantTiersPayant
+      },
+      this.patientLignes.map(pl => ({ medicament: pl.medicament, quantite: pl.quantite, prixUnitaire: pl.prixUnitaire }))
+    );
+    this.bonCommandeAuto = true;
   }
 
   private destroyRef = inject(DestroyRef);
@@ -155,12 +297,14 @@ export class FactureFormComponent implements OnInit {
   loadCurrentFacture() {
     this.factureService.getCurrent().subscribe(res => {
       this.facture = res;
+      this.factureChange.emit(res);
     });
   }
 
   loadSpecificFacture(id: string) {
     this.factureService.getById(id).subscribe(res => {
       this.facture = res;
+      this.factureChange.emit(res);
     });
   }
 
@@ -265,6 +409,16 @@ export class FactureFormComponent implements OnInit {
   ajouterMedicamentLigne() {
     if (this.medicamentForm.invalid) return;
 
+    // Vérifie la limite de lignes du bon de commande rattaché.
+    if (this.bonLimitAtteinte) {
+      const dispo = this.lignesDisponibles;
+      this.snackBar.open(
+        `Ce bon de commande n'a que ${dispo} ligne(s) disponible(s). Vous avez déjà ajouté ${this.patientLignes.length} médicament(s). Le patient peut se rendre dans une autre pharmacie avec ce bon pour les médicaments restants.`,
+        'Fermer', { duration: 6000, panelClass: 'error-snackbar' }
+      );
+      return;
+    }
+
     const val = this.medicamentForm.value;
     this.patientLignes.push({
       medicament: (val.medicament || '').toString().toUpperCase(),
@@ -272,6 +426,10 @@ export class FactureFormComponent implements OnInit {
       quantite: val.quantite,
       prixUnitaire: val.prixUnitaire
     });
+
+    // Bon rattaché : sa photo constituée reflète les lignes remplies.
+    if (this.rattacheBon) this.refreshBonCommandePhoto();
+    this.currentLinesChange.emit([...this.patientLignes]);
 
     const quantiteAjoutee = val.quantite;
 
@@ -291,6 +449,9 @@ export class FactureFormComponent implements OnInit {
 
   retirerMedicamentTemp(index: number) {
     this.patientLignes.splice(index, 1);
+    // Bon rattaché : on régénère sa photo après retrait d'une ligne.
+    if (this.rattacheBon) this.refreshBonCommandePhoto();
+    this.currentLinesChange.emit([...this.patientLignes]);
   }
 
   /**
@@ -345,18 +506,22 @@ export class FactureFormComponent implements OnInit {
 
   private resetPhotos() {
     this.photos = { ticketCaisse: null, bonCommande: null, ordonnance: null };
+    this.bonCommandeAuto = false;
   }
 
   enregistrerPatientFacture() {
     if (this.patientForm.invalid || this.patientLignes.length === 0) return;
 
     this.isSubmitting = true;
+    // Assure une photo du bon à jour (lignes + patient définitifs) avant enregistrement.
+    if (this.rattacheBon) this.refreshBonCommandePhoto();
     const patientVal = this.patientForm.value;
 
     const nouvellesLignes = this.patientLignes.map(pl => ({
       ...pl,
       patientNomPrenom: patientVal.patientNomPrenom,
       patientMatricule: patientVal.patientMatricule,
+      bonCommandeNumero: this.rattacheBonNumero || undefined,
       ticketCaisse: this.photos.ticketCaisse || undefined,
       bonCommande: this.photos.bonCommande || undefined,
       ordonnance: this.photos.ordonnance || undefined
@@ -367,8 +532,11 @@ export class FactureFormComponent implements OnInit {
       this.factureService.addLignesToCurrent(nouvellesLignes).subscribe({
         next: (res) => {
           this.facture = res;
+          this.factureChange.emit(res);
+          this.currentLinesChange.emit([]);
           this.patientForm.reset();
           this.patientLignes = [];
+          this.rattacheBon = null;
           this.resetPhotos();
           this.currentStep = 1;
           this.isSubmitting = false;
@@ -406,9 +574,11 @@ export class FactureFormComponent implements OnInit {
     this.factureService.update(this.facture.id, req).subscribe({
       next: (res) => {
         this.facture = res;
+        this.factureChange.emit(res);
         if (clearForm) {
           this.patientForm.reset();
           this.patientLignes = [];
+          this.rattacheBon = null;
           this.resetPhotos();
           this.currentStep = 1;
         }

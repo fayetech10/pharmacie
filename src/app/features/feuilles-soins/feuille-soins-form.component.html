@@ -1,0 +1,97 @@
+<div class="fade-in fdf">
+  <div class="fdf-head">
+    <a routerLink="/dashboard/feuilles-soins" class="fdf-back" aria-label="Retour à la liste des feuilles de soins">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="fdf-h1">Délivrer une feuille de soins</h1>
+      <p class="fdf-sub">
+        Recherchez le bénéficiaire, complétez les rubriques du formulaire, puis remettez-lui la feuille imprimée.
+      </p>
+    </div>
+  </div>
+
+  <!-- Recherche du patient -->
+  <mat-card class="fdf-card">
+    <h3 class="fdf-card-title"><mat-icon class="fdf-ic-primary">person_search</mat-icon> Bénéficiaire</h3>
+    <mat-form-field appearance="outline" class="fdf-search-field">
+      <mat-label>Rechercher par nom, n° CNI ou n° d'assuré…</mat-label>
+      <input matInput [value]="searchQuery" (input)="onSearchInput($event)" [disabled]="!!selectedPatientId">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <div *ngIf="searchResults.length > 0" class="fdf-results">
+      <div *ngFor="let p of searchResults" (click)="selectPatient(p)"
+           class="fdf-result-item"
+           tabindex="0" role="button"
+           [attr.aria-label]="'Sélectionner ' + p.prenom + ' ' + p.nom"
+           (keydown.enter)="selectPatient(p)">
+        <span class="fdf-result-name">{{ p.prenom }} {{ p.nom }}</span>
+        <span class="fdf-result-meta">{{ regimeLabels[p.regime] }} · {{ p.numeroAssure || p.numeroCni || p.telephone || '' }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="selectedPatientId" class="fdf-selected">
+      <mat-icon>check_circle</mat-icon>
+      Patient existant rattaché à la feuille
+      <button mat-button color="warn" class="fdf-change-btn" (click)="clearPatient()">Changer</button>
+    </div>
+  </mat-card>
+
+  <!-- Rubriques du formulaire papier -->
+  <mat-card class="fdf-card">
+    <h3 class="fdf-card-title"><mat-icon class="fdf-ic-gold">assignment</mat-icon> Rubriques de la feuille de soins</h3>
+    <form [formGroup]="form" class="fdf-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nom</mat-label>
+        <input matInput formControlName="nom">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Prénom(s)</mat-label>
+        <input matInput formControlName="prenom">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Régime</mat-label>
+        <mat-select formControlName="regime">
+          <mat-option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Code assuré / N° immatriculation</mat-label>
+        <input matInput formControlName="codeAssure">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>N° lettre de garantie (optionnel)</mat-label>
+        <input matInput formControlName="lettreGarantieNumero" placeholder="LG-…">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Sexe</mat-label>
+        <mat-select formControlName="sexe">
+          <mat-option value="">—</mat-option>
+          <mat-option value="M">Masculin (M)</mat-option>
+          <mat-option value="F">Féminin (F)</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Âge</mat-label>
+        <input matInput type="number" min="0" formControlName="age">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Téléphone</mat-label>
+        <input matInput formControlName="telephone">
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="fdf-col-full">
+        <mat-label>Accompagnant — Prénom(s) et Nom (optionnel)</mat-label>
+        <input matInput formControlName="accompagnantPrenomNom">
+      </mat-form-field>
+    </form>
+  </mat-card>
+
+  <div class="fdf-actions">
+    <button mat-stroked-button routerLink="/dashboard/feuilles-soins">Annuler</button>
+    <button mat-flat-button color="primary" (click)="delivrer()" [disabled]="form.invalid || isSubmitting">
+      <mat-icon>print</mat-icon>
+      {{ isSubmitting ? 'Délivrance en cours…' : 'Délivrer la feuille de soins' }}
+    </button>
+  </div>
+</div>

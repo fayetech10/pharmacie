@@ -39,7 +39,11 @@
               "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "tesseract.js",
+              "regenerator-runtime/runtime"
+            ]
           },
           "configurations": {
             "production": {
@@ -51,8 +55,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "16kb",
-                  "maximumError": "24kb"
+                  "maximumWarning": "32kb",
+                  "maximumError": "48kb"
                 }
               ],
               "outputHashing": "all",

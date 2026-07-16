@@ -1,0 +1,91 @@
+<div class="agent-modal-container fade-in">
+  <!-- Header -->
+  <div class="agent-modal-header">
+    <div class="agent-identity">
+      <div class="agent-avatar">{{ data.agentNom.charAt(0) }}</div>
+      <div class="agent-info">
+        <h2 class="agent-name">{{ data.agentNom }}</h2>
+        <span class="structure-badge">{{ data.structure }}</span>
+      </div>
+    </div>
+    <button mat-icon-button (click)="close()" class="close-btn">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="agent-modal-content">
+    
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <mat-card class="kpi-card">
+        <div class="kpi-icon total-heures">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Heures Semaine</span>
+          <span class="kpi-value">{{ heuresTravailleesSemaine }}h</span>
+        </div>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <div class="kpi-icon total-enregistrements">
+          <mat-icon>article</mat-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Enregistrements</span>
+          <span class="kpi-value">{{ nombreEnregistrements }}</span>
+        </div>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <div class="kpi-icon total-lettres">
+          <mat-icon>mark_email_read</mat-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Lettres Émises</span>
+          <span class="kpi-value">{{ lettresEmises }}</span>
+        </div>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <div class="kpi-icon total-feuilles">
+          <mat-icon>receipt_long</mat-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Feuilles Soins</span>
+          <span class="kpi-value">{{ feuillesSoins }}</span>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- Pointages History -->
+    <mat-card class="table-card">
+      <h3 class="card-title">Historique des Pointages (7 derniers jours)</h3>
+      <div class="table-wrap">
+        <table class="pointages-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Arrivée</th>
+              <th>Départ</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of pointages">
+              <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+              <td><strong>{{ p.heureArrivee }}</strong></td>
+              <td><strong>{{ p.heureDepart }}</strong></td>
+              <td>
+                <span class="statut-badge" [ngClass]="'statut-' + p.statut">
+                  {{ p.statut }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-card>
+
+  </div>
+</div>

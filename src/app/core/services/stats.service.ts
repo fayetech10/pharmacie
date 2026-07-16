@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { StatsData, MonthData } from '../models/stats.model';
+import { StatsData, MonthData, AgentStat } from '../models/stats.model';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -12,6 +12,10 @@ export class StatsService {
 
   getStatsRegional(regionId: string): Observable<StatsData> {
     return this.api.get<StatsData>(`/stats/regional?regionId=${regionId}`);
+  }
+
+  getStatsAgents(): Observable<AgentStat[]> {
+    return this.api.get<AgentStat[]>('/stats/agents');
   }
 
   getStatsNational(): Observable<StatsData> {

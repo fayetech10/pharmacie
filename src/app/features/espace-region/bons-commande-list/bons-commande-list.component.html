@@ -1,0 +1,71 @@
+<div class="bcl">
+  <div class="bcl-search" style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 5px;">
+      <input type="text" placeholder="Rechercher un bon par numéro (BC-...)"
+             [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()" class="bcl-input" />
+      <button mat-flat-button color="primary" [disabled]="searching" (click)="rechercherParNumero()">Rechercher</button>
+      <button mat-stroked-button *ngIf="searchNumero" (click)="effacerRecherche()">Effacer</button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-left: auto;">
+      <select class="bcl-input" [(ngModel)]="filterMois" (ngModelChange)="load()" style="width: auto; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        <option [ngValue]="0">Tous les mois</option>
+        <option [ngValue]="1">Janvier</option>
+        <option [ngValue]="2">Février</option>
+        <option [ngValue]="3">Mars</option>
+        <option [ngValue]="4">Avril</option>
+        <option [ngValue]="5">Mai</option>
+        <option [ngValue]="6">Juin</option>
+        <option [ngValue]="7">Juillet</option>
+        <option [ngValue]="8">Août</option>
+        <option [ngValue]="9">Septembre</option>
+        <option [ngValue]="10">Octobre</option>
+        <option [ngValue]="11">Novembre</option>
+        <option [ngValue]="12">Décembre</option>
+      </select>
+      <select class="bcl-input" [(ngModel)]="filterAnnee" (ngModelChange)="load()" style="width: auto; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        <option [ngValue]="0">Toutes les années</option>
+        <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+      </select>
+      <select class="bcl-input" [(ngModel)]="filterRegime" (ngModelChange)="load()" style="width: auto; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        <option value="">Tous les régimes</option>
+        <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="bcl-loading">Chargement...</div>
+  <div *ngIf="!loading && filteredBons.length === 0" class="bcl-empty">Aucun bon de commande trouvé.</div>
+
+  <div *ngIf="!loading && filteredBons.length > 0"
+       style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569;">
+          <th style="padding: 12px 16px;">N° Bon</th>
+          <th style="padding: 12px 16px;">Patient</th>
+          <th style="padding: 12px 16px;">Lettre associée</th>
+          <th style="padding: 12px 16px;">Date</th>
+          <th style="padding: 12px 16px;">Montant CSU</th>
+          <th style="padding: 12px 16px;">Statut</th>
+          <th style="padding: 12px 16px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let b of filteredBons" class="bcl-row">
+          <td style="padding: 12px 16px; font-weight: 600;">{{ b.numero }}</td>
+          <td style="padding: 12px 16px;">{{ b.patientPrenom }} {{ b.patientNom }}</td>
+          <td style="padding: 12px 16px;">{{ b.lettreGarantieNumero }}</td>
+          <td style="padding: 12px 16px;">{{ b.createdAt | date:'dd/MM/yyyy' }}</td>
+          <td style="padding: 12px 16px; font-weight: 700; color: var(--primary);">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+          <td style="padding: 12px 16px;"><span class="bcl-badge" [ngClass]="b.statut">{{ b.statut }}</span></td>
+          <td style="padding: 12px 16px;">
+            <button mat-stroked-button class="bcl-print" (click)="imprimer(b)">
+              <mat-icon>print</mat-icon> Imprimer
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

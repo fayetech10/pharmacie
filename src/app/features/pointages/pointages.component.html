@@ -1,0 +1,72 @@
+<div class="fade-in pointages-page">
+  <div class="page-head">
+    <div>
+      <h1>Pointages des Agents</h1>
+      <p>Suivi des présences et des horaires des agents affectés aux structures sanitaires</p>
+    </div>
+    <span class="pointages-count">
+      {{ filteredPointages.length }} agent(s)
+    </span>
+  </div>
+
+  <mat-card class="pointages-filters">
+    <div class="filters-row">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher un agent ou une structure...</mat-label>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilters()" placeholder="Ex: Awa Diop">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>Date de pointage</mat-label>
+        <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()">
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+    </div>
+  </mat-card>
+
+  <div class="table-wrap">
+    <table class="pointages-table">
+      <thead>
+        <tr>
+          <th>Agent BCSU</th>
+          <th>Structure de rattachement</th>
+          <th>Heure d'arrivée</th>
+          <th>Heure de départ</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredPointages" class="pointage-row clickable-row" (click)="openAgentDetail(p)">
+          <td>
+            <div class="agent-identity">
+              <div class="agent-avatar">{{ getAgentFullName(p).charAt(0) }}</div>
+              <span class="agent-name">{{ getAgentFullName(p) }}</span>
+            </div>
+          </td>
+          <td><span class="structure-badge">{{ p.structureNom }}</span></td>
+          <td>
+            <div class="time-block" *ngIf="getStatut(p) !== 'ABSENT'">
+              <mat-icon class="time-in">login</mat-icon>
+              {{ p.heureArrivee | date:'HH:mm' }}
+            </div>
+            <span *ngIf="getStatut(p) === 'ABSENT'">—</span>
+          </td>
+          <td>
+            <div class="time-block" *ngIf="p.heureDepart">
+              <mat-icon class="time-out">logout</mat-icon>
+              {{ p.heureDepart | date:'HH:mm' }}
+            </div>
+            <span *ngIf="!p.heureDepart">—</span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatut(p).toLowerCase()">
+              {{ getStatut(p) === 'EN_POSTE' ? 'En poste' : getStatut(p) === 'TERMINE' ? 'Terminé' : 'Absent' }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

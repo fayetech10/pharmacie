@@ -12,6 +12,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RegionService, Region } from '../../core/services/region.service';
 import { PharmacieService } from '../../core/services/pharmacie.service';
 import { Pharmacie } from '../../core/models/pharmacie.model';
+import { StructureService } from '../../core/services/structure.service';
+import { StructureSanitaire, FactureStructure } from '../../core/models/structure.model';
 import { FactureService } from '../../core/services/facture.service';
 import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
@@ -21,6 +23,8 @@ interface RegionSummary {
   region: Region;
   pharmacyCount: number;
   factureCount: number;
+  structureCount: number;
+  factureStructureCount: number;
   totalMontant: number;
 }
 
@@ -31,7 +35,14 @@ interface PharmacieSummary {
   totalMontant: number;
 }
 
-type DrillLevel = 'regions' | 'pharmacies' | 'factures';
+interface StructureSummary {
+  structure: StructureSanitaire;
+  factures: FactureStructure[];
+  factureCount: number;
+  totalMontant: number;
+}
+
+type DrillLevel = 'regions' | 'pharmacies' | 'structures' | 'factures' | 'factures_structures';
 
 @Component({
   selector: 'app-admin-regions',
@@ -55,26 +66,33 @@ export class AdminRegionsComponent implements OnInit {
   regions: Region[] = [];
   pharmacies: Pharmacie[] = [];
   factures: Facture[] = [];
+  structures: StructureSanitaire[] = [];
+  facturesStructures: FactureStructure[] = [];
 
   // Niveau de navigation courant
   level: DrillLevel = 'regions';
 
   // Niveau 1
   regionSummaries: RegionSummary[] = [];
-  regionColumns = ['region', 'pharmacies', 'factures', 'montant', 'action'];
+  regionColumns = ['region', 'pharmacies', 'structures', 'factures', 'montant', 'action'];
 
   // Niveau 2
   selectedRegion: RegionSummary | null = null;
   pharmacieSummaries: PharmacieSummary[] = [];
   pharmacieColumns = ['pharmacie', 'factures', 'montant', 'action'];
+  
+  structureSummaries: StructureSummary[] = [];
+  structureColumns = ['structure', 'factures', 'montant', 'action'];
 
   // Niveau 3
   selectedPharmacie: PharmacieSummary | null = null;
+  selectedStructure: StructureSummary | null = null;
   factureColumns = ['mois', 'montant', 'statut', 'action'];
 
   // Scopes pour le composant Stats (drill-down)
   regionScope: StatsScope | null = null;
   pharmacieScope: StatsScope | null = null;
+  structureScope: StatsScope | null = null;
 
   // Filtres niveau 3 (factures d'une pharmacie)
   filterYear = 0;
@@ -89,6 +107,7 @@ export class AdminRegionsComponent implements OnInit {
   constructor(
     private regionService: RegionService,
     private pharmacieService: PharmacieService,
+    private structureService: StructureService,
     private factureService: FactureService,
     private snackBar: MatSnackBar
   ) {}
@@ -97,11 +116,15 @@ export class AdminRegionsComponent implements OnInit {
     forkJoin({
       regions: this.regionService.getAll(),
       pharmacies: this.pharmacieService.getAll(),
-      factures: this.factureService.getAll()
-    }).subscribe(({ regions, pharmacies, factures }) => {
+      factures: this.factureService.getAll(),
+      structures: this.structureService.getStructures(),
+      facturesStructures: this.structureService.getFactures({})
+    }).subscribe(({ regions, pharmacies, factures, structures, facturesStructures }) => {
       this.regions = regions;
       this.pharmacies = pharmacies;
       this.factures = factures;
+      this.structures = structures;
+      this.facturesStructures = facturesStructures;
       this.buildRegionSummaries();
     });
   }
@@ -111,11 +134,18 @@ export class AdminRegionsComponent implements OnInit {
       const regionPharmacies = this.pharmacies.filter(p => p.regionId === region.id);
       const pharmacyIds = regionPharmacies.map(p => p.id);
       const regionFactures = this.factures.filter(f => f.pharmacieId && pharmacyIds.includes(f.pharmacieId));
+      
+      const regionStructures = this.structures.filter(s => s.regionId === region.id);
+      const structureIds = regionStructures.map(s => s.id);
+      const regionFacturesStructures = this.facturesStructures.filter(f => f.structureSanitaireId && structureIds.includes(f.structureSanitaireId));
+      
       return {
         region,
         pharmacyCount: regionPharmacies.length,
         factureCount: regionFactures.length,
-        totalMontant: regionFactures.reduce((sum, f) => sum + f.montantTotal, 0)
+        structureCount: regionStructures.length,
+        factureStructureCount: regionFacturesStructures.length,
+        totalMontant: regionFactures.reduce((sum, f) => sum + f.montantTotal, 0) + regionFacturesStructures.reduce((sum, f) => sum + (f.montantTotal || 0), 0)
       };
     });
     this.regionSummaries.sort((a, b) => a.region.nom.localeCompare(b.region.nom));
@@ -126,6 +156,7 @@ export class AdminRegionsComponent implements OnInit {
     this.selectedRegion = summary;
     this.regionScope = { type: 'region', id: summary.region.id, label: summary.region.nom };
 
+    // Pharmacies
     const regionPharmacies = this.pharmacies.filter(p => p.regionId === summary.region.id);
     this.pharmacieSummaries = regionPharmacies.map(pharmacie => {
       const phFactures = this.factures
@@ -140,18 +171,37 @@ export class AdminRegionsComponent implements OnInit {
     });
     this.pharmacieSummaries.sort((a, b) => a.pharmacie.nom.localeCompare(b.pharmacie.nom));
 
+    // Structures
+    const regionStructures = this.structures.filter(s => s.regionId === summary.region.id);
+    this.structureSummaries = regionStructures.map(structure => {
+      const stFactures = this.facturesStructures
+        .filter(f => f.structureSanitaireId === structure.id)
+        .sort((a, b) => (a.annee !== b.annee ? b.annee - a.annee : b.mois - a.mois));
+      return {
+        structure,
+        factures: stFactures,
+        factureCount: stFactures.length,
+        totalMontant: stFactures.reduce((sum, f) => sum + (f.montantTotal || 0), 0)
+      };
+    });
+    this.structureSummaries.sort((a, b) => a.structure.nom.localeCompare(b.structure.nom));
+
     this.level = 'pharmacies';
   }
 
-  /** Années présentes dans les factures de la pharmacie sélectionnée (tri décroissant). */
+  /** Années présentes dans les factures de la pharmacie ou structure sélectionnée (tri décroissant). */
   get anneesDispo(): number[] {
-    const fs = this.selectedPharmacie?.factures ?? [];
+    let fs: any[] = [];
+    if (this.selectedPharmacie) fs = this.selectedPharmacie.factures;
+    if (this.selectedStructure) fs = this.selectedStructure.factures;
     return Array.from(new Set(fs.map(f => f.annee))).sort((a, b) => b - a);
   }
 
-  /** Factures de la pharmacie sélectionnée filtrées par année + statut. */
-  get displayedFactures(): Facture[] {
-    let fs = this.selectedPharmacie?.factures ?? [];
+  /** Factures sélectionnées filtrées par année + statut. */
+  get displayedFactures(): any[] {
+    let fs: any[] = [];
+    if (this.selectedPharmacie) fs = this.selectedPharmacie.factures;
+    if (this.selectedStructure) fs = this.selectedStructure.factures;
     if (this.filterYear) fs = fs.filter(f => f.annee === this.filterYear);
     if (this.filterStatut) fs = fs.filter(f => f.statut === this.filterStatut);
     return fs;
@@ -161,27 +211,51 @@ export class AdminRegionsComponent implements OnInit {
     return this.statutLabels[s] ?? s;
   }
 
-  exportFacture(f: Facture) {
-    this.factureService.exportFactureExcel(f.id).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Téléchargement lancé', 'Fermer', { duration: 2500 });
-      },
-      error: (err: any) => this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
-    });
+  exportFacture(f: any) {
+    if (this.selectedPharmacie) {
+      this.factureService.exportFactureExcel(f.id).subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.xlsx`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+          this.snackBar.open('Téléchargement lancé', 'Fermer', { duration: 2500 });
+        },
+        error: (err: any) => this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+      });
+    } else if (this.selectedStructure) {
+      this.structureService.exportFactureExcel(f.id).subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Facture_${this.getMonthName(f.mois)}_${f.annee}.xlsx`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+          this.snackBar.open('Téléchargement lancé', 'Fermer', { duration: 2500 });
+        },
+        error: (err: any) => this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+      });
+    }
   }
 
   // Niveau 2 → 3
   selectPharmacie(ps: PharmacieSummary) {
     this.selectedPharmacie = ps;
+    this.selectedStructure = null;
     this.filterYear = 0;
     this.filterStatut = '';
     this.level = 'factures';
+  }
+
+  selectStructure(ss: StructureSummary) {
+    this.selectedStructure = ss;
+    this.selectedPharmacie = null;
+    this.filterYear = 0;
+    this.filterStatut = '';
+    this.level = 'factures_structures';
   }
 
   // Navigation arrière / fil d'Ariane
@@ -189,7 +263,10 @@ export class AdminRegionsComponent implements OnInit {
     if (this.level === 'factures') {
       this.level = 'pharmacies';
       this.selectedPharmacie = null;
-    } else if (this.level === 'pharmacies') {
+    } else if (this.level === 'factures_structures') {
+      this.level = 'structures';
+      this.selectedStructure = null;
+    } else if (this.level === 'pharmacies' || this.level === 'structures') {
       this.goToRegions();
     }
   }
@@ -198,16 +275,30 @@ export class AdminRegionsComponent implements OnInit {
     this.level = 'regions';
     this.selectedRegion = null;
     this.selectedPharmacie = null;
+    this.selectedStructure = null;
     this.regionScope = null;
     this.pharmacieScope = null;
+    this.structureScope = null;
     this.pharmacieSummaries = [];
+    this.structureSummaries = [];
   }
 
   goToPharmacies() {
     if (!this.selectedRegion) return;
     this.level = 'pharmacies';
     this.selectedPharmacie = null;
+    this.selectedStructure = null;
     this.pharmacieScope = null;
+    this.structureScope = null;
+  }
+  
+  goToStructures() {
+    if (!this.selectedRegion) return;
+    this.level = 'structures';
+    this.selectedPharmacie = null;
+    this.selectedStructure = null;
+    this.pharmacieScope = null;
+    this.structureScope = null;
   }
 
   getMonthName(mois: number): string {

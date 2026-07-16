@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, NgZone } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -12,6 +12,10 @@ import { Facture } from '../../core/models/facture.model';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ApiService } from '../../core/services/api.service';
+import { PointageUiService } from '../../core/services/pointage-ui.service';
+import { RegionService } from '../../core/services/region.service';
 
 interface NavItem {
   label: string;
@@ -20,7 +24,12 @@ interface NavItem {
   tab?: number;
   /** Statuts dont la somme alimente le badge de notification. */
   statuts?: string[];
+  /** Groupe logique pour l'affichage avec titre dans la barre latérale. */
+  group?: string;
 }
+
+/** Nombre maximal d'items dans la barre basse mobile (item « Plus » inclus). */
+const BOTTOM_NAV_LIMIT = 5;
 
 @Component({
   selector: 'app-main-layout',
@@ -30,7 +39,8 @@ interface NavItem {
     RouterModule,
     MatIconModule,
     MatButtonModule,
-    MatMenuModule
+    MatMenuModule,
+    MatSnackBarModule
   ],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.css']
@@ -39,34 +49,27 @@ export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
   currentUrl = '';
-  /** Nombre de factures par statut, pour les badges de la navigation basse. */
+  isSidebarCollapsed = false;
+  /** Nombre de factures par statut, pour les badges de la navigation. */
   counts: StatutCounts = {};
+  regionName: string | null = null;
 
-  /** Masque la barre de navigation mobile quand l'utilisateur scroll vers le bas. */
+  /** Masque la navigation mobile quand l'utilisateur défile vers le bas. */
   navHidden = false;
-  isPharmacienNavOpen = false;
+  /** Panneau « Plus » (destinations secondaires) de la barre basse mobile. */
+  isMoreOpen = false;
   private lastScrollY = 0;
-  private scrollThreshold = 10;
+  private readonly scrollThreshold = 10;
 
-  @HostListener('window:scroll', ['$event'])
-  @HostListener('document:scroll', ['$event'])
-  onWindowScroll(event?: any): void {
-    // Si c'est une pharmacie, on gère l'affichage par clic uniquement, pas par scroll
-    if (this.authService.isPharmacien()) return;
+  // Modales de pointage (BCSU)
+  showArriveeModal = false;
+  showDepartModal = false;
 
-    const currentScrollY = window.scrollY || 
-                           window.pageYOffset || 
-                           document.documentElement.scrollTop || 
-                           document.body.scrollTop || 
-                           0;
-    
-    // Seuil pour éviter le scintillement sur les micro-scrolls
-    if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
-    
-    // Scroll vers le bas → cacher | Scroll vers le haut → afficher
-    this.navHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
-    this.lastScrollY = currentScrollY;
-  }
+  bottomNav: NavItem[] = [];
+  moreNav: NavItem[] = [];
+  topNav: NavItem[] = [];
+  topNavGroups: { name: string; items: NavItem[] }[] = [];
+
   private destroyRef = inject(DestroyRef);
 
   /** Le rôle courant affiche-t-il des badges de comptage ? */
@@ -104,12 +107,12 @@ export class MainLayoutComponent implements OnInit {
     return [];
   }
 
-  /** Badge agrégé affiché sur le lien « espace » du rôle dans la barre du haut. */
+  /** Badge agrégé affiché sur le lien « espace » du rôle. */
   get espaceBadge(): number {
     return this.notifiableStatuts.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
   }
 
-  /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour Régional/Central/Admin. */
+  /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour les autres. */
   get brandLogo(): string {
     return this.authService.isPharmacien()
       ? 'assets/logo-pharmacie.png'
@@ -122,43 +125,144 @@ export class MainLayoutComponent implements OnInit {
     return (p + n).toUpperCase();
   }
 
-  /** Éléments de la navigation basse selon le rôle (le bouton Compte est ajouté à part). */
-  get bottomNav(): NavItem[] {
+  /**
+   * Construit les groupes de navigation à partir de topNav.
+   * Appelé une seule fois dans ngOnInit (pas un getter pour éviter les boucles de change detection).
+   */
+  private buildTopNavGroups(): { name: string; items: NavItem[] }[] {
+    const groups: { name: string; items: NavItem[] }[] = [];
+    let currentGroup: { name: string; items: NavItem[] } | null = null;
+
+    for (const item of this.topNav) {
+      const groupName = item.group || 'Général';
+      if (!currentGroup || currentGroup.name !== groupName) {
+        currentGroup = { name: groupName, items: [] };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(item);
+    }
+    return groups;
+  }
+
+  /**
+   * Navigation desktop : liens DIRECTS par rôle (plus de destinations cachées
+   * dans des menus déroulants — découverte immédiate, état actif visible).
+   */
+  private buildTopNav(): NavItem[] {
     if (this.authService.isPharmacien()) {
       return [
-        { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', tab: 0 },
-        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1, statuts: ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'] },
-        { label: 'Tableau', icon: 'insights', link: '/dashboard/espace-pharmacie', tab: 2 }
+        { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie' },
+        { label: 'Mes Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie/factures', statuts: this.notifiableStatuts }
       ];
     }
     if (this.authService.isServiceRegional()) {
       return [
-        { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
-        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE'] },
-        // Seules les décisions du central alertent le SR (VALIDEE_NC) ; ses propres validations (VALIDEE_SR) non.
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-region', tab: 2, statuts: ['VALIDEE_NC'] },
-        // De même côté rejets : seul le rejet par le central (REJETEE_NC) alerte le SR.
-        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-region', tab: 3, statuts: ['REJETEE_NC'] },
-        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' }
+        { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', statuts: this.notifiableStatuts, group: 'Général' },
+        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de Santé' },
+        { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de Santé' },
+        { label: 'Information', icon: 'group', link: '/dashboard/patients', group: 'Dossiers Patients' },
+        { label: 'BCSU', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Gestion Agents' },
+        { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion Agents' },
+        { label: 'Statistiques', icon: 'bar_chart', link: '/dashboard/statistiques-agents', group: 'Gestion Agents' }
+      ];
+    }
+    if (this.authService.isServiceCentral()) {
+      return [
+        { label: 'Espace central', icon: 'space_dashboard', link: '/dashboard/espace-central', statuts: this.notifiableStatuts },
+        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
+        { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' },
+        { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages' }
+      ];
+    }
+    if (this.authService.isBcsu()) {
+      return [
+        { label: 'Enregistrement Patient', icon: 'space_dashboard', link: '/dashboard/espace-bcsu' },
+        { label: 'Information', icon: 'group', link: '/dashboard/patients' }
+      ];
+    }
+    if (this.authService.isStructureSanitaire()) {
+      return [
+        { label: 'Espace structure', icon: 'space_dashboard', link: '/dashboard/espace-structure' }
+      ];
+    }
+    // ADMIN : toutes les destinations, sans menu intermédiaire.
+    return [
+      { label: 'Régions', icon: 'map', link: '/dashboard/regions', group: 'Administration' },
+      { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Administration' },
+      { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments', group: 'Administration' },
+      { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de Santé' },
+      { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de Santé' },
+      { label: 'Information', icon: 'group', link: '/dashboard/patients', group: 'Dossiers Patients' },
+      { label: 'Feuilles de soins', icon: 'description', link: '/dashboard/feuilles-soins', group: 'Dossiers Patients' }
+    ];
+  }
+
+  /**
+   * Éléments de navigation mobile, ordonnés « flux de travail d'abord »
+   * (les destinations de gestion passent dans le panneau « Plus »).
+   */
+  private get allBottomNav(): NavItem[] {
+    if (this.authService.isPharmacien()) {
+      return [
+        { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', tab: 0 },
+        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie', tab: 1, statuts: ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'] }
+      ];
+    }
+    if (this.authService.isServiceRegional()) {
+      // Barre du bas alignée sur le menu latéral : les factures (pharmacie /
+      // structure) sont dissociées en onglets internes à l'Espace régional.
+      return [
+        { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', statuts: this.notifiableStatuts },
+        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
+        { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' },
+        { label: 'Information', icon: 'group', link: '/dashboard/patients' },
+        { label: 'BCSU', icon: 'manage_accounts', link: '/dashboard/utilisateurs' }
       ];
     }
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
         { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'] },
-        // Validées (VALIDEE_NC), Payées (PAYEE) et Rejetées (REJETEE_NC) sont les actions PROPRES du central → pas de badge.
         { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
         { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 },
-        // Onglet « Factures rejetées » : sans cette entrée il était inaccessible en mobile (barre d'onglets masquée).
-        { label: 'Rejetées', icon: 'cancel', link: '/dashboard/espace-central', tab: 4 }
+        { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
+        { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' }
+      ];
+    }
+    if (this.authService.isBcsu()) {
+      return [
+        { label: 'Nouveau dossier', icon: 'note_add', link: '/dashboard/espace-bcsu', tab: 0 },
+        { label: 'Mes dossiers', icon: 'folder_shared', link: '/dashboard/espace-bcsu', tab: 1 },
+        { label: 'Information', icon: 'group', link: '/dashboard/patients' }
+      ];
+    }
+    if (this.authService.isStructureSanitaire()) {
+      return [
+        { label: 'Facturation', icon: 'note_add', link: '/dashboard/espace-structure', tab: 0 },
+        { label: 'Historique', icon: 'history', link: '/dashboard/espace-structure', tab: 1 },
+        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-structure', tab: 2 }
       ];
     }
     return [
       { label: 'Régions', icon: 'map', link: '/dashboard/regions' },
-      { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments' },
       { label: 'Pharmacies', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
-      { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs' }
+      { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs' },
+      { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments' },
+      { label: 'Structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' },
+      { label: 'Information', icon: 'group', link: '/dashboard/patients' },
+      { label: 'Feuilles de soins', icon: 'description', link: '/dashboard/feuilles-soins' }
     ];
+  }
+
+  /** Badge agrégé du bouton « Plus » (notifications des destinations repliées). */
+  get moreBadge(): number {
+    return this.moreNav.reduce((sum, item) => sum + this.navBadge(item), 0);
+  }
+
+  /** Le bouton « Plus » est actif quand la page courante est une destination repliée. */
+  get isMoreActive(): boolean {
+    const path = this.currentUrl.split('?')[0];
+    return this.moreNav.some(item => item.link === path);
   }
 
   constructor(
@@ -167,47 +271,33 @@ export class MainLayoutComponent implements OnInit {
     private factureCount: FactureCountService,
     private factureEvents: FactureEventsService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private zone: NgZone,
+    private api: ApiService,
+    private snackBar: MatSnackBar,
+    private pointageUi: PointageUiService,
+    private regionService: RegionService
   ) {}
 
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
-    this.currentUrl = this.router.url;
-
-    // Écouteur global en mode capture (true) pour intercepter le scroll de n'importe quel conteneur interne (ex: formulaire, tableau)
-    const handleScroll = (event: Event) => {
-      // Si c'est une pharmacie, on gère l'affichage par clic uniquement, pas par scroll
-      if (this.authService.isPharmacien()) return;
-
-      const target = event.target;
-      let currentScrollY = 0;
-      if (target === document || target === document.documentElement || target === window) {
-        currentScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      } else if (target instanceof HTMLElement && target.scrollTop !== undefined) {
-        currentScrollY = target.scrollTop;
-      } else {
-        return;
-      }
-
-      if (Math.abs(currentScrollY - this.lastScrollY) < this.scrollThreshold) return;
-      
-      const newNavHidden = currentScrollY > this.lastScrollY && currentScrollY > 60;
-      if (this.navHidden !== newNavHidden) {
-        this.navHidden = newNavHidden;
-        this.cdr.detectChanges();
-      }
-      this.lastScrollY = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, true);
-    this.destroyRef.onDestroy(() => {
-      window.removeEventListener('scroll', handleScroll, true);
-    });
-
-    // Si l'utilisateur est pharmacien, on masque la navigation par défaut
-    if (this.authService.isPharmacien()) {
-      this.navHidden = true;
+    if (this.currentUser?.regionId) {
+      this.regionService.getAll().subscribe(regions => {
+        const region = regions.find(r => r.id === this.currentUser?.regionId);
+        if (region) {
+          this.regionName = region.nom;
+        }
+      });
     }
+    
+    this.currentUrl = this.router.url;
+    this.topNav = this.buildTopNav();
+    this.topNavGroups = this.buildTopNavGroups();
+
+    const all = this.allBottomNav;
+    this.bottomNav = all.length <= BOTTOM_NAV_LIMIT ? all : all.slice(0, BOTTOM_NAV_LIMIT - 1);
+    this.moreNav = all.length <= BOTTOM_NAV_LIMIT ? [] : all.slice(BOTTOM_NAV_LIMIT - 1);
+
+    this.setupScrollBehavior();
 
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
@@ -217,6 +307,10 @@ export class MainLayoutComponent implements OnInit {
       )
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
+        // Toute navigation referme le panneau « Plus » et réaffiche la barre.
+        this.isMoreOpen = false;
+        this.navHidden = false;
+        this.lastScrollY = 0;
         // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
         const path = this.currentUrl.split('?')[0];
         if (path !== lastPath) {
@@ -225,7 +319,7 @@ export class MainLayoutComponent implements OnInit {
         }
       });
 
-    // Badges de notification (Service Régional / Central)
+    // Badges de notification (Service Régional / Central / Pharmacien)
     this.factureCount.counts$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(c => this.counts = c);
@@ -237,22 +331,60 @@ export class MainLayoutComponent implements OnInit {
         if (this.countsEnabled) this.factureCount.refresh();
       });
 
-    // Redirect logic for Espace components
-    if (this.router.url === '/dashboard' || this.router.url === '/dashboard/espace') {
-      if (this.authService.isPharmacien()) {
-        this.router.navigate(['/dashboard/espace-pharmacie']);
-      } else if (this.authService.isServiceRegional()) {
-        this.router.navigate(['/dashboard/espace-region']);
-      } else if (this.authService.isServiceCentral()) {
-        this.router.navigate(['/dashboard/espace-central']);
-      }
-    }
-
     if (this.authService.isPharmacien()) {
       this.factureService.getRetards().subscribe(res => {
         this.retards = res || [];
       });
     }
+
+    // Modale d'arrivée automatique pour BCSU (premier accès de la journée).
+    if (this.authService.isBcsu() && this.currentUser && !this.currentUser.pointageHeure) {
+      this.showArriveeModal = true;
+    }
+
+    // La bannière de l'espace BCSU peut demander la modale de départ.
+    this.pointageUi.departRequested$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => (this.showDepartModal = true));
+  }
+
+  /**
+   * Auto-masquage de la navigation mobile au défilement.
+   * Un SEUL écouteur (capture, passif) enregistré HORS zone Angular et cadencé
+   * par requestAnimationFrame : la détection de changements n'est déclenchée
+   * qu'au basculement affiché/masqué, jamais à chaque pixel défilé.
+   */
+  private setupScrollBehavior(): void {
+    let ticking = false;
+    const onScroll = (event: Event) => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const target = event.target;
+        let y: number;
+        if (target === document || target === document.documentElement || target === window) {
+          y = window.scrollY || document.documentElement.scrollTop || 0;
+        } else if (target instanceof HTMLElement) {
+          y = target.scrollTop;
+        } else {
+          return;
+        }
+        if (Math.abs(y - this.lastScrollY) < this.scrollThreshold) return;
+        const hidden = y > this.lastScrollY && y > 60;
+        this.lastScrollY = y;
+        if (hidden !== this.navHidden) {
+          this.zone.run(() => (this.navHidden = hidden));
+        }
+      });
+    };
+
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    });
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions);
+    });
   }
 
   /** Actif si l'URL correspond au lien et, le cas échéant, à l'onglet demandé. */
@@ -265,10 +397,8 @@ export class MainLayoutComponent implements OnInit {
     return currentTab === item.tab;
   }
 
-  togglePharmacienNav() {
-    this.isPharmacienNavOpen = !this.isPharmacienNavOpen;
-    this.navHidden = !this.isPharmacienNavOpen;
-    this.cdr.detectChanges();
+  toggleMore(): void {
+    this.isMoreOpen = !this.isMoreOpen;
   }
 
   voirRetards() {
@@ -276,16 +406,73 @@ export class MainLayoutComponent implements OnInit {
     this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
   }
 
+  ngOnDestroy() {}
+
+  toggleSidebar() {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+  }
+
   logout() {
+    if (this.authService.isBcsu() && this.currentUser && !this.currentUser.pointageDepartHeure) {
+      this.showDepartModal = true;
+    } else {
+      this.authService.logout();
+    }
+  }
+
+  forceLogout() {
+    this.showDepartModal = false;
     this.authService.logout();
   }
 
+  enregistrerArrivee() {
+    this.api.post<any>('/pointages/arrivee', {}).subscribe({
+      next: (res) => {
+        const heure = res.heureArrivee ? new Date(res.heureArrivee).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+        if (this.currentUser) {
+          this.currentUser.pointageHeure = heure;
+          this.currentUser.premierPointage = false;
+          sessionStorage.setItem('csu_user', JSON.stringify(this.currentUser));
+        }
+        this.showArriveeModal = false;
+        this.snackBar.open(`Arrivée enregistrée à ${heure}. Bon travail !`, 'Fermer', { duration: 5000 });
+      },
+      error: (err) => {
+        console.error('Erreur lors du pointage d\'arrivée', err);
+        this.snackBar.open('Erreur lors de l\'enregistrement de l\'arrivée', 'Fermer', { duration: 4000 });
+      }
+    });
+  }
+
+  enregistrerDepart() {
+    this.api.post<any>('/pointages/depart', {}).subscribe({
+      next: (res) => {
+        const heure = res.heureDepart ? new Date(res.heureDepart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+        if (this.currentUser) {
+          this.currentUser.pointageDepartHeure = heure;
+          sessionStorage.setItem('csu_user', JSON.stringify(this.currentUser));
+        }
+        this.showDepartModal = false;
+        this.snackBar.open(`Départ enregistré à ${heure}. Bonne fin de journée !`, 'Fermer', { duration: 6000 });
+
+        // Déconnexion automatique après le pointage de départ.
+        this.authService.logout();
+      },
+      error: (err) => {
+        console.error('Erreur lors du pointage de départ', err);
+        this.snackBar.open('Erreur lors de l\'enregistrement du départ', 'Fermer', { duration: 4000 });
+      }
+    });
+  }
+
   getRoleLabel(role: string): string {
-    switch(role) {
+    switch (role) {
       case 'PHARMACIEN': return 'Pharmacien';
-      case 'SERVICE_REGIONAL': return 'Service Régional';
+      case 'SERVICE_REGIONAL': return this.regionName ? `Service Régional - ${this.regionName}` : 'Service Régional';
       case 'SERVICE_CENTRAL': return 'Service Central';
       case 'ADMIN': return 'Administrateur';
+      case 'BCSU': return 'Agent BCSU';
+      case 'STRUCTURE_SANITAIRE': return 'Structure Sanitaire';
       default: return role;
     }
   }

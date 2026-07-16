@@ -2,32 +2,45 @@
    pseudo-éléments conservés en brut car non exprimables en utilitaires. */
 
 /* Cellule « utilisateur » (avatar + nom + email) */
-.user-cell { @apply flex items-center gap-3 py-2; }
-.user-avatar {
+.user-cell {
+  @apply flex items-center gap-3 py-2;
+
+}.user-avatar {
   @apply w-[38px] h-[38px] rounded-full text-white flex items-center justify-center text-[13px] font-bold uppercase;
   background: linear-gradient(135deg, var(--primary), var(--accent));
+}.user-name {
+  @apply font-semibold text-text-primary block;
+
+}.user-email {
+  @apply text-xs text-text-secondary block;
+
+}/* Badges de rôle */
+.role-badge {
+  @apply inline-flex py-1 px-2.5 rounded-[20px] text-[11px] font-semibold uppercase tracking-[0.03em];
+
+}.role-badge.ADMIN {
+ background: #FEE2E2; color: #EF4444; 
+}.role-badge.SERVICE_CENTRAL {
+ background: #DBEAFE; color: #2563EB; 
+}.role-badge.SERVICE_REGIONAL {
+ background: #FEF3C7; color: #D97706; 
+}.role-badge.PHARMACIEN {
+ background: var(--primary-100); color: var(--primary-hover); 
+}/* Indicateur d'état (actif / inactif) */
+.status-indicator {
+  @apply inline-flex items-center gap-1.5 text-[13px] font-medium;
+
+}.status-indicator::before {
+  @apply w-2 h-2 rounded-full;
+  content: "";
+}.status-indicator.active {
+  @apply text-primary;
+
+}.status-indicator.active::before {
+ background: var(--primary); 
+}.status-indicator.inactive {
+ color: #94A3B8; 
+}.status-indicator.inactive::before {
+ background: #94A3B8;
 }
-.user-name { @apply font-semibold text-text-primary block; }
-.user-email { @apply text-xs text-text-secondary block; }
-
-/* Badges de rôle */
-.role-badge { @apply inline-flex py-1 px-2.5 rounded-[20px] text-[11px] font-semibold uppercase tracking-[0.03em]; }
-.role-badge.ADMIN { background: #FEE2E2; color: #EF4444; }
-.role-badge.SERVICE_CENTRAL { background: #DBEAFE; color: #2563EB; }
-.role-badge.SERVICE_REGIONAL { background: #FEF3C7; color: #D97706; }
-.role-badge.PHARMACIEN { background: var(--primary-100); color: var(--primary-hover); }
-
-/* Indicateur d'état (actif / inactif) */
-.status-indicator { @apply inline-flex items-center gap-1.5 text-[13px] font-medium; }
-.status-indicator::before { content: ""; @apply w-2 h-2 rounded-full; }
-.status-indicator.active { color: var(--primary); }
-.status-indicator.active::before { background: var(--primary); }
-.status-indicator.inactive { color: #94A3B8; }
-.status-indicator.inactive::before { background: #94A3B8; }
-
-.form-row { @apply flex gap-3; }
-.form-row .flex-grow { @apply min-w-0; }
-
-/* Icônes en ligne dans les cartes mobiles */
-.inline-ic { @apply text-[15px] w-[15px] h-[15px] align-[-2px] text-text-muted mr-0.5; }
-.m-row span { @apply inline-flex items-center gap-1; }
+/* .form-row, .inline-ic et .m-row span sont désormais dans le design system global (styles.css). */

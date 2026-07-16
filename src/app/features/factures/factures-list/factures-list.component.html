@@ -2,185 +2,7 @@
       <!-- Sélecteur de fichier partagé pour l'import « facture corrigée » par ligne -->
       <input type="file" #singleFileInput style="display: none" (change)="onSingleFileSelected($event)" accept=".xlsx, .xls">
 
-      <!-- ===================== VUE MENSUELLE ===================== -->
-      <ng-container *ngIf="monthlyView">
-        
-        <!-- Cas Pharmacien : un seul bloc carte blanche (exactement comme la photo) -->
-        <ng-container *ngIf="authService.isPharmacien()">
-          <div class="monthly-card">
-            <div class="monthly-header">
-              <h2 class="monthly-title">Mes factures</h2>
-              <select class="year-select" [(ngModel)]="selectedYear">
-                <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
-              </select>
-            </div>
-            
-            <div class="monthly-list">
-              <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
-                <!-- Each row is clickable if it has an invoice -->
-                <div class="month-row" 
-                     [class.month-row--has-facture]="getFactureForMonth(m)"
-                     [class.clickable]="getFactureForMonth(m)"
-                     [class.month-row--current]="m === currentMonth && selectedYear === currentYear"
-                     (click)="getFactureForMonth(m) ? openFacture(getFactureForMonth(m)!.id) : null">
-                  
-                  <div class="month-left">
-                    <span class="month-name" [class.month-name--active]="getFactureForMonth(m)">{{ getMonthName(m) }}</span>
-                    
-                    <div class="month-content">
-                      <!-- Mois sans facture -->
-                      <span *ngIf="!getFactureForMonth(m)" class="month-empty">Aucune facturation</span>
-
-                      <!-- Mois avec facture -->
-                      <ng-container *ngIf="getFactureForMonth(m) as f">
-                        <div class="facture-info-grid">
-                          <div class="facture-top-line">
-                            <span class="month-ref">{{ getFactureLabel(f) }}</span>
-                            <span class="month-statut-badge status-badge"
-                                  [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
-                          </div>
-                          <div class="facture-bottom-line">
-                            <span>{{ countPatients(f) }} patient(s) · SEN-CSU</span>
-                            <strong class="month-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
-                          </div>
-                        </div>
-                      </ng-container>
-                    </div>
-                  </div>
-
-                  <!-- Actions -->
-                  <div class="month-actions" *ngIf="getFactureForMonth(m) as f" (click)="$event.stopPropagation()">
-                    <!-- Desktop Actions -->
-                    <a class="btn btn-outline btn-sm hidden md:inline-flex"
-                       *ngIf="f.statut === 'BROUILLON'"
-                       [routerLink]="['/dashboard/factures', f.id, 'edit']">Modifier</a>
-                    <button class="btn btn-outline btn-sm hidden md:inline-flex"
-                            (click)="exportSingleExcel(f.id, f.mois, f.annee)">
-                      Excel ↓
-                    </button>
-                    <button class="btn btn-outline btn-sm hidden md:inline-flex"
-                            (click)="exportSinglePdf(f.id, f.mois, f.annee)">
-                      PDF ↓
-                    </button>
-                    <button class="btn btn-primary btn-sm btn-envoyer hidden md:inline-flex"
-                            *ngIf="f.statut === 'BROUILLON'"
-                            (click)="envoyerFacture(f)">
-                      Envoyer
-                    </button>
-
-                    <!-- Mobile Menu Actions (Icon at the top right of the row) -->
-                    <div class="flex items-center gap-1 md:hidden">
-                      <a class="action-btn text-[var(--primary)]"
-                         *ngIf="f.statut === 'BROUILLON'"
-                         [routerLink]="['/dashboard/factures', f.id, 'edit']"
-                         (click)="$event.stopPropagation()" title="Modifier">
-                        <mat-icon>edit</mat-icon>
-                      </a>
-                      <button mat-icon-button [matMenuTriggerFor]="monthMobileMenu" (click)="$event.stopPropagation()" class="text-slate-600">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #monthMobileMenu="matMenu">
-                        <button mat-menu-item (click)="exportSingleExcel(f.id, f.mois, f.annee)">
-                          <mat-icon>table_view</mat-icon>
-                          <span>Excel</span>
-                        </button>
-                        <button mat-menu-item (click)="exportSinglePdf(f.id, f.mois, f.annee)">
-                          <mat-icon>picture_as_pdf</mat-icon>
-                          <span>PDF</span>
-                        </button>
-                        <button mat-menu-item *ngIf="f.statut === 'BROUILLON'" (click)="envoyerFacture(f)">
-                          <mat-icon>send</mat-icon>
-                          <span>Envoyer</span>
-                        </button>
-                      </mat-menu>
-                    </div>
-                  </div>
-                </div>
-              </ng-container>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- Cas Régional / Central : regroupé par pharmacie puis les 12 mois -->
-        <ng-container *ngIf="!authService.isPharmacien()">
-          <div class="pharmacy-group-list">
-            <div class="pharmacy-section-card" *ngFor="let g of pharmacyGroups">
-              <div class="pharmacy-section-header">
-                <div class="pharma-title-block">
-                  <mat-icon class="pharma-icon">local_pharmacy</mat-icon>
-                  <h3 class="pharmacy-section-title">{{ g.pharmacieNom }}</h3>
-                </div>
-                <select class="year-select" [(ngModel)]="selectedYear">
-                  <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
-                </select>
-              </div>
-              
-              <div class="monthly-list">
-                <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
-                  <div class="month-row" [class.month-row--has-facture]="getFactureForMonthAndGroup(m, g.factures)"
-                       [class.month-row--current]="m === currentMonth && selectedYear === currentYear">
-                    
-                    <div class="month-left">
-                      <span class="month-name" [class.month-name--active]="getFactureForMonthAndGroup(m, g.factures)">{{ getMonthName(m) }}</span>
-                      
-                      <div class="month-content">
-                        <!-- Mois sans facture -->
-                        <span *ngIf="!getFactureForMonthAndGroup(m, g.factures)" class="month-empty">Aucune facturation</span>
-
-                        <!-- Mois avec facture -->
-                        <ng-container *ngIf="getFactureForMonthAndGroup(m, g.factures) as f">
-                          <div class="facture-info-grid">
-                            <div class="facture-top-line">
-                              <span class="month-ref">{{ getFactureLabel(f) }}</span>
-                              <span class="month-statut-badge status-badge"
-                                    [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
-                            </div>
-                            <div class="facture-bottom-line">
-                              <span>{{ countPatients(f) }} patient(s) · SEN-CSU</span>
-                              <strong class="month-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
-                            </div>
-                          </div>
-                        </ng-container>
-                      </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="month-actions" *ngIf="getFactureForMonthAndGroup(m, g.factures) as f">
-                      <button class="btn btn-outline btn-sm"
-                              (click)="exportSingleExcel(f.id, f.mois, f.annee)">
-                        Excel ↓
-                      </button>
-                      <button class="btn btn-outline btn-sm"
-                              (click)="exportSinglePdf(f.id, f.mois, f.annee)">
-                        PDF ↓
-                      </button>
-                      <a class="btn btn-outline btn-sm"
-                         [routerLink]="['/dashboard/factures', f.id]">
-                        <mat-icon>visibility</mat-icon> Voir
-                      </a>
-                      <button class="btn btn-primary btn-sm"
-                              *ngIf="authService.isServiceRegional() && f.statut === 'REJETEE_NC'"
-                              (click)="renvoyerAuCentral(f.id)">
-                        <mat-icon>send</mat-icon> Renvoyer Centrale
-                      </button>
-                      <button class="btn btn-primary btn-sm btn-payer"
-                              *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
-                              (click)="payerFacture(f.id)">
-                        <mat-icon>payments</mat-icon> Payer
-                      </button>
-                    </div>
-                  </div>
-                </ng-container>
-              </div>
-            </div>
-          </div>
-        </ng-container>
-      </ng-container>
-
-      <!-- ===================== VUE CLASSIQUE (tableau + cartes) ===================== -->
-      <ng-container *ngIf="!monthlyView">
-
-      <!-- En-tête -->
+      <!-- En-tête Global -->
       <div class="page-head" *ngIf="showToolbar">
         <div>
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
@@ -200,11 +22,152 @@
         </div>
       </div>
 
+      <!-- ===================== VUE MENSUELLE ===================== -->
+      <ng-container *ngIf="monthlyView">
+        
+        <!-- Cas Pharmacien : un seul bloc carte blanche (exactement comme la photo) -->
+        <ng-container *ngIf="authService.isPharmacien()">
+          <div class="monthly-card">
+            <div class="monthly-header">
+              <h2 class="monthly-title">Mes factures</h2>
+              <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
+                <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
+              </select>
+            </div>
+            
+            <div class="monthly-grid">
+              <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
+                <!-- Each tile is clickable if it has an invoice -->
+                <div class="month-tile" 
+                     [class.has-facture]="getFactureForMonth(m)"
+                     [class.current]="m === currentMonth && selectedYear === currentYear"
+                     (click)="getFactureForMonth(m) ? openFacture(getFactureForMonth(m)!) : null">
+                  
+                  <div class="tile-header">
+                    <span class="month-name">{{ getMonthName(m) }}</span>
+                    <mat-icon *ngIf="getFactureForMonth(m)" class="tile-icon" [ngClass]="'icon-' + getFactureForMonth(m)?.statut">
+                      {{ getFactureForMonth(m)?.statut === 'VALIDEE_NC' || getFactureForMonth(m)?.statut === 'VALIDEE_SR' ? 'check_circle' : 
+                         getFactureForMonth(m)?.statut === 'BROUILLON' ? 'edit_document' :
+                         getFactureForMonth(m)?.statut === 'ENVOYEE' ? 'send' : 
+                         getFactureForMonth(m)?.statut === 'PAYEE' ? 'payments' : 'cancel' }}
+                    </mat-icon>
+                  </div>
+                  
+                  <div class="tile-body">
+                    <!-- Mois sans facture -->
+                    <div *ngIf="!getFactureForMonth(m)" class="tile-empty">
+                      <span>Aucune facturation</span>
+                    </div>
+
+                    <!-- Mois avec facture -->
+                    <ng-container *ngIf="getFactureForMonth(m) as f">
+                      <div class="tile-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</div>
+                      <div class="tile-patients">{{ countPatients(f) }} patient(s)</div>
+                      
+                      <div class="tile-footer">
+                        <span class="status-badge" [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
+                      </div>
+                    </ng-container>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="tile-actions" *ngIf="getFactureForMonth(m) as f" (click)="$event.stopPropagation()">
+                    <button class="btn-action-icon" matTooltip="Modifier" *ngIf="f.statut === 'BROUILLON'" [routerLink]="['/dashboard/factures', f.id, 'edit']">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="btn-action-icon" matTooltip="Exporter Excel" (click)="exportSingleExcel(f)">
+                      <mat-icon>download</mat-icon>
+                    </button>
+                    <button class="btn-action-icon" matTooltip="Voir les détails" (click)="openFacture(f)">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Cas Régional / Central : regroupé par prestataire puis les 12 mois -->
+        <ng-container *ngIf="!authService.isPharmacien()">
+          <div class="pharmacy-group-list">
+            <div class="pharmacy-section-card" *ngFor="let g of providerGroups">
+              <div class="pharmacy-section-header">
+                <div class="pharma-title-block">
+                  <mat-icon class="pharma-icon" *ngIf="g.providerType === 'PHARMACIE'">local_pharmacy</mat-icon>
+                  <mat-icon class="pharma-icon" style="color:var(--secondary);" *ngIf="g.providerType === 'STRUCTURE'">local_hospital</mat-icon>
+                  <h3 class="pharmacy-section-title">{{ g.providerNom }}</h3>
+                </div>
+                <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
+                  <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
+                </select>
+              </div>
+              
+              <div class="monthly-grid">
+                <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
+                  <div class="month-tile" 
+                       [class.has-facture]="getFactureForMonthAndGroup(m, g.factures)"
+                       [class.current]="m === currentMonth && selectedYear === currentYear"
+                       (click)="getFactureForMonthAndGroup(m, g.factures) ? openFacture(getFactureForMonthAndGroup(m, g.factures)!) : null">
+                    
+                    <div class="tile-header">
+                      <span class="month-name">{{ getMonthName(m) }}</span>
+                      <mat-icon *ngIf="getFactureForMonthAndGroup(m, g.factures)" class="tile-icon" [ngClass]="'icon-' + getFactureForMonthAndGroup(m, g.factures)?.statut">
+                        {{ getFactureForMonthAndGroup(m, g.factures)?.statut === 'VALIDEE_NC' || getFactureForMonthAndGroup(m, g.factures)?.statut === 'VALIDEE_SR' ? 'check_circle' : 
+                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'BROUILLON' ? 'edit_document' :
+                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'ENVOYEE' ? 'send' : 
+                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'PAYEE' ? 'payments' : 'cancel' }}
+                      </mat-icon>
+                    </div>
+                    
+                    <div class="tile-body">
+                      <!-- Mois sans facture -->
+                      <div *ngIf="!getFactureForMonthAndGroup(m, g.factures)" class="tile-empty">
+                        <span>Aucune facturation</span>
+                      </div>
+
+                      <!-- Mois avec facture -->
+                      <ng-container *ngIf="getFactureForMonthAndGroup(m, g.factures) as f">
+                        <div class="tile-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</div>
+                        <div class="tile-patients">{{ countPatients(f) }} patient(s)</div>
+                        
+                        <div class="tile-footer">
+                          <span class="status-badge" [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
+                        </div>
+                      </ng-container>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="tile-actions" *ngIf="getFactureForMonthAndGroup(m, g.factures) as f" (click)="$event.stopPropagation()">
+                      <button class="btn-action-icon" matTooltip="Exporter Excel" (click)="exportSingleExcel(f)">
+                        <mat-icon>download</mat-icon>
+                      </button>
+                      <button class="btn-action-icon" matTooltip="Voir les détails" (click)="openFacture(f)">
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                      <button class="btn-action-icon text-[var(--primary)]" matTooltip="Renvoyer Centrale" *ngIf="authService.isServiceRegional() && f.statut === 'REJETEE_NC'" (click)="renvoyerAuCentral(f.id)">
+                        <mat-icon>send</mat-icon>
+                      </button>
+                      <button class="btn-action-icon text-[var(--gold)]" matTooltip="Payer" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'" (click)="payerFacture(f.id)">
+                        <mat-icon>payments</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- ===================== VUE CLASSIQUE (tableau + cartes) ===================== -->
+      <ng-container *ngIf="!monthlyView">
+
       <!-- Filtres -->
       <div class="filter-strip">
         <div class="search-box">
           <mat-icon>search</mat-icon>
-          <input (keyup)="applyFilter($event)" placeholder="Rechercher par ID ou pharmacie…" #input>
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par ID ou prestataire…" #input>
         </div>
 
         <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
@@ -230,13 +193,21 @@
             <mat-option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</mat-option>
           </mat-select>
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
+          <mat-label>Régime</mat-label>
+          <mat-select [(value)]="filterRegime" (selectionChange)="applyAdvancedFilter()">
+            <mat-option value="">Tous les régimes</mat-option>
+            <mat-option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
 
 
 
       <!-- Tableau (desktop) -->
-      <mat-card class="table-card desktop-only">
-        <table mat-table [dataSource]="dataSource" matSort class="w-100">
+      <div class="glass-table-container desktop-only">
+        <table mat-table [dataSource]="dataSource" matSort class="premium-table">
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
             <td mat-cell *matCellDef="let f">
@@ -245,8 +216,8 @@
           </ng-container>
 
           <ng-container matColumnDef="pharmacie" *ngIf="!authService.isPharmacien()">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Pharmacie </th>
-            <td mat-cell *matCellDef="let f"> {{ f.pharmacieNom }} </td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Prestataire </th>
+            <td mat-cell *matCellDef="let f"> {{ f.providerNom }} </td>
           </ng-container>
 
           <ng-container matColumnDef="periode">
@@ -268,21 +239,24 @@
 
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Modifiée </th>
-            <td mat-cell *matCellDef="let f" class="text-muted"> {{ f.updatedAt | date:'dd/MM/yyyy' }} </td>
+            <td mat-cell *matCellDef="let f" class="text-muted"> {{ f.date | date:'dd/MM/yyyy' }} </td>
           </ng-container>
 
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef> </th>
             <td mat-cell *matCellDef="let f">
               <div class="action-group">
-                <a class="action-btn" [routerLink]="['/dashboard/factures', f.id]" title="Voir">
+                <a class="action-btn" (click)="openFacture(f)" title="Voir" style="cursor: pointer;">
                   <mat-icon>visibility</mat-icon>
                 </a>
                 <button class="action-btn primary" *ngIf="canImportCorrige(f)" (click)="triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
                   <mat-icon>upload_file</mat-icon>
                 </button>
-                <button class="action-btn success" (click)="exportSingleExcel(f.id, f.mois, f.annee)" title="Excel">
+                <button class="action-btn success" (click)="exportSingleExcel(f)" title="Excel">
                   <mat-icon>table_view</mat-icon>
+                </button>
+                <button class="action-btn" style="color:#2b579a;" *ngIf="f.providerType === 'STRUCTURE'" (click)="exportSingleWord(f)" title="Word">
+                  <mat-icon>description</mat-icon>
                 </button>
                 <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'" [routerLink]="['/dashboard/factures', f.id, 'edit']" title="Modifier">
                   <mat-icon>edit</mat-icon>
@@ -306,68 +280,28 @@
             </td>
           </tr>
         </table>
-      </mat-card>
+      </div>
 
-      <!-- Cartes (mobile) -->
-      <div class="m-cards">
-        <div class="m-card clickable" *ngFor="let f of pagedFactures" (click)="openFacture(f.id)">
-          <div class="m-card-top flex items-center justify-between">
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="m-title truncate">{{ authService.isPharmacien() ? (getMonthName(f.mois) + ' ' + f.annee) : f.pharmacieNom }}</span>
-            </div>
-            
-            <div class="m-actions">
-              <!-- Export Icon on Top Right -->
-              <button mat-icon-button [matMenuTriggerFor]="exportMenu" (click)="$event.stopPropagation()" class="text-[var(--primary)] flex-shrink-0" style="width: 32px; height: 32px; line-height: 32px; padding: 0;">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px; margin: 0;">file_download</mat-icon>
-              </button>
-              <mat-menu #exportMenu="matMenu">
-                <button mat-menu-item (click)="exportSingleExcel(f.id, f.mois, f.annee)">
-                  <mat-icon>table_view</mat-icon>
-                  <span>Télécharger Excel</span>
-                </button>
-                <button mat-menu-item (click)="exportSinglePdf(f.id, f.mois, f.annee)">
-                  <mat-icon>picture_as_pdf</mat-icon>
-                  <span>Télécharger PDF</span>
-                </button>
-              </mat-menu>
-              
-              <button class="action-btn primary" *ngIf="canImportCorrige(f)"
-                      (click)="$event.stopPropagation(); triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
-                <mat-icon>upload_file</mat-icon>
-              </button>
-              <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
-                 [routerLink]="['/dashboard/factures', f.id, 'edit']"
-                 (click)="$event.stopPropagation()" title="Modifier">
-                <mat-icon>edit</mat-icon>
-              </a>
-              <button class="action-btn danger" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'"
-                       (click)="$event.stopPropagation(); deleteFacture(f.id)" title="Supprimer">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
+      <!-- Mobile List (m-cards) -->
+      <div class="m-cards md:hidden mt-4">
+        <a *ngFor="let f of dataSource.data" class="m-card clickable" (click)="openFacture(f)">
+          <div class="m-card-top">
+            <h3 class="m-title">{{ f.providerNom || 'Ma Pharmacie' }}</h3>
+            <span class="m-chip" [ngClass]="{'danger': f.statut === 'BROUILLON', 'neutral': f.statut === 'PAYEE'}">{{ statutLabel(f.statut) }}</span>
           </div>
-          <div class="m-sub">#{{ f.id | slice:0:8 }}</div>
-          <div class="m-meta" *ngIf="!authService.isPharmacien()">
-            <mat-icon>event</mat-icon> {{ getMonthName(f.mois) }} {{ f.annee }}
-          </div>
-          <div class="m-meta">
-            <mat-icon>history</mat-icon> Modifiée le {{ f.updatedAt | date:'dd/MM/yyyy' }}
-          </div>
+          <div class="m-sub">{{ getMonthName(f.mois) }} {{ f.annee }} • <span class="id-chip">{{ f.id | slice:0:8 }}</span></div>
           <div class="m-foot">
-            <app-status-badge [statut]="f.statut"></app-status-badge>
             <span class="m-amount">{{ f.montantTotal | number }} CFA</span>
+            <mat-icon class="m-chevron">chevron_right</mat-icon>
           </div>
-          <button class="btn btn-primary btn-block mt-3" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
-                  (click)="$event.stopPropagation(); payerFacture(f.id)">
-            <mat-icon>payments</mat-icon> Payer cette facture
-          </button>
-        </div>
-        <div class="empty-state" *ngIf="!dataSource || dataSource.filteredData.length === 0">
+        </a>
+        <div *ngIf="dataSource.data.length === 0" class="empty-state">
           <mat-icon>search_off</mat-icon>
           <p>Aucune facture trouvée</p>
         </div>
       </div>
+
+
 
       <!-- Pagination (desktop + mobile) -->
       <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des factures"></mat-paginator>

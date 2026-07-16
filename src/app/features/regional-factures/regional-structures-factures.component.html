@@ -1,0 +1,134 @@
+<div class="rsf">
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+    <select class="rsf-input" [(ngModel)]="filterMois" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+      <option [ngValue]="0">Tous les mois</option>
+      <option [ngValue]="1">Janvier</option>
+      <option [ngValue]="2">Février</option>
+      <option [ngValue]="3">Mars</option>
+      <option [ngValue]="4">Avril</option>
+      <option [ngValue]="5">Mai</option>
+      <option [ngValue]="6">Juin</option>
+      <option [ngValue]="7">Juillet</option>
+      <option [ngValue]="8">Août</option>
+      <option [ngValue]="9">Septembre</option>
+      <option [ngValue]="10">Octobre</option>
+      <option [ngValue]="11">Novembre</option>
+      <option [ngValue]="12">Décembre</option>
+    </select>
+    <select class="rsf-input" [(ngModel)]="filterAnnee" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+      <option [ngValue]="0">Toutes les années</option>
+      <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+    </select>
+    <select class="rsf-input" [(ngModel)]="filterRegime" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+      <option value="">Tous les régimes</option>
+      <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+    </select>
+  </div>
+
+  <div *ngIf="loading" class="rsf-loading">
+    <mat-icon>hourglass_empty</mat-icon> Chargement des factures…
+  </div>
+
+  <div *ngIf="isEmpty" class="rsf-empty">
+    <mat-icon>local_hospital</mat-icon>
+    <p>Aucune facture de structure pour ce statut.</p>
+  </div>
+
+  <!-- ===================== Niveau 1 : Structure ===================== -->
+  <section class="rsf-structure" *ngFor="let s of structures">
+    <ng-container *ngIf="s.invoices.length > 0">
+      <div class="rsf-structure-head">
+        <div class="rsf-structure-title">
+          <mat-icon>local_hospital</mat-icon>
+          <h3>{{ s.structureNom }}</h3>
+        </div>
+        <span class="rsf-structure-total">{{ s.totalSencsu | number:'1.0-0':'fr' }} F <small>SEN-CSU</small></span>
+      </div>
+
+      <!-- ===================== Niveau 2 : Facture mensuelle consolidée ===================== -->
+      <article class="rsf-invoice" *ngFor="let inv of s.invoices">
+        <header class="rsf-invoice-head">
+          <div class="rsf-invoice-id">
+            <span class="rsf-invoice-month">
+              <mat-icon>calendar_month</mat-icon> {{ inv.label }}
+            </span>
+            <span class="rsf-invoice-regime">{{ inv.regimeLabel }}</span>
+          </div>
+          <div class="rsf-invoice-meta">
+            <span class="rsf-invoice-count">
+              <mat-icon>group</mat-icon> {{ inv.nbPatients }} patient{{ inv.nbPatients > 1 ? 's' : '' }}
+            </span>
+            <strong class="rsf-invoice-amount">{{ inv.totalSencsu | number:'1.0-0':'fr' }} F</strong>
+          </div>
+          <div class="rsf-invoice-actions">
+            <button mat-stroked-button color="primary" [disabled]="exporting === inv.key" (click)="exporterExcel(inv, $event)">
+              <mat-icon>table_view</mat-icon> {{ exporting === inv.key ? 'Export…' : 'Excel' }}
+            </button>
+            <button mat-stroked-button color="primary" [disabled]="exporting === inv.key" (click)="exporterPdf(inv, $event)">
+              <mat-icon>picture_as_pdf</mat-icon> {{ exporting === inv.key ? 'Export…' : 'PDF' }}
+            </button>
+          </div>
+        </header>
+
+        <!-- ===================== Niveau 3 : Patients de la facture mensuelle ===================== -->
+        <div class="rsf-patients">
+          <div class="rsf-patient" *ngFor="let p of inv.patients" [class.rsf-patient--open]="p.expanded">
+            <div class="rsf-patient-head" (click)="togglePatient(p, $event)" tabindex="0" role="button"
+                 [attr.aria-expanded]="p.expanded" (keydown.enter)="togglePatient(p, $event)">
+              <div class="rsf-patient-id">
+                <mat-icon class="rsf-chevron">{{ p.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                <mat-icon class="rsf-person">person</mat-icon>
+                <div>
+                  <span class="rsf-patient-name">{{ p.nomComplet }}</span>
+                  <span class="rsf-patient-sub">{{ p.matricule }}<ng-container *ngIf="p.lettreNumero"> · L.G {{ p.lettreNumero }}</ng-container></span>
+                </div>
+              </div>
+              <div class="rsf-patient-right">
+                <span class="rsf-patient-nb">{{ p.lignes.length }} prestation{{ p.lignes.length > 1 ? 's' : '' }}</span>
+                <strong class="rsf-patient-amount">{{ p.totalSencsu | number:'1.0-0':'fr' }} F</strong>
+              </div>
+            </div>
+
+            <div class="rsf-patient-detail" *ngIf="p.expanded">
+              <table class="rsf-presta">
+                <thead>
+                  <tr>
+                    <th>Désignation</th>
+                    <th>Date</th>
+                    <th>Qté</th>
+                    <th>PU</th>
+                    <th>Montant</th>
+                    <th>Part bénéf.</th>
+                    <th>Part CSU</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let l of p.lignes">
+                    <td>{{ l.designation }}</td>
+                    <td>{{ l.datePriseEnCharge }}</td>
+                    <td>{{ l.quantite }}</td>
+                    <td>{{ l.prixUnitaire | number:'1.0-0':'fr' }} F</td>
+                    <td>{{ (l.montant ?? 0) | number:'1.0-0':'fr' }} F</td>
+                    <td>{{ (l.montantBeneficiaire ?? 0) | number:'1.0-0':'fr' }} F</td>
+                    <td class="rsf-amount">{{ (l.montantSencsu ?? 0) | number:'1.0-0':'fr' }} F</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Dossier du patient -->
+              <div class="rsf-dossier">
+                <button type="button" class="rsf-doc" *ngIf="p.feuilleSoinsId" (click)="imprimerFeuille(p, $event)">
+                  <mat-icon>description</mat-icon> Feuille de soins
+                </button>
+                <button type="button" class="rsf-doc rsf-doc--primary" (click)="openDossier(p, $event)">
+                  <mat-icon>folder_shared</mat-icon> Dossier complet
+                  <span class="rsf-doc-hint">(bon de commande, ticket de caisse, feuille de soins)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </ng-container>
+  </section>
+</div>

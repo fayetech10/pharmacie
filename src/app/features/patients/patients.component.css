@@ -1,0 +1,178 @@
+/* Page Bénéficiaires (Patients) — alignée sur le design system CSU (vert). */
+
+.patients-page { padding: var(--sp-6, 24px); }
+
+/* Compteur d'en-tête (marque verte) */
+.patients-count {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius, 12px);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Filtres */
+.patients-filters {
+  margin-bottom: var(--sp-6, 24px);
+  padding: var(--sp-4, 16px);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.patients-filters-row {
+  display: flex;
+  gap: var(--sp-4, 16px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.patients-search-field { flex: 2; min-width: 250px; margin-bottom: -16px; }
+.patients-regime-field { flex: 1; min-width: 180px; margin-bottom: -16px; }
+.patients-clear-btn { color: var(--warn); }
+
+/* Résumé filtré */
+.patients-filter-summary {
+  margin-bottom: var(--sp-4, 16px);
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.patients-filter-summary mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+/* États chargement / vide */
+.patients-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--sp-8, 48px);
+  color: var(--text-secondary);
+}
+.spin-icon { animation: patients-spin 1s linear infinite; }
+@keyframes patients-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spin-icon { animation: none; }
+}
+.patients-empty {
+  text-align: center;
+  padding: 64px var(--sp-6, 24px);
+  color: var(--text-secondary);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg, 16px);
+}
+.patients-empty mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--sp-4, 16px);
+  color: var(--text-muted);
+}
+.patients-empty h3 { font-weight: 700; margin: 0 0 8px; color: var(--text-primary); }
+.patients-empty p { margin: 0 0 var(--sp-4, 16px); font-size: 14px; }
+
+/* Tableau */
+.patients-table-wrap {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 16px);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--sp-4, 16px);
+}
+
+.patients-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.patients-table thead tr {
+  background: var(--field-bg, #f8faf9);
+  border-bottom: 1px solid var(--border);
+}
+
+.patients-table th {
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.patients-table td {
+  padding: 12px 16px;
+  color: var(--text-primary);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.row-clickable {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.row-clickable:hover,
+.row-clickable:focus-visible {
+  background: var(--primary-50);
+  outline: none;
+}
+
+.row-clickable:last-child td {
+  border-bottom: none;
+}
+
+.col-action {
+  text-align: right;
+  width: 120px;
+}
+
+/* Identité : avatar (marque verte) + nom */
+.patients-identity { display: flex; align-items: center; gap: 12px; }
+.patients-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(47, 110, 84, 0.25);
+}
+.patients-name { font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+
+/* Badge régime : palette catégorielle (via getRegimeBadgeStyle) */
+.patients-regime-badge { white-space: nowrap; }
+
+/* Lien « Consulter » (marque verte) */
+.patients-consulter {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.patients-consulter mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+.patients-paginator-wrapper {
+  margin-top: var(--sp-4, 16px);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 16px);
+  padding: 0 var(--sp-2);
+}
+
+@media (max-width: 768px) {
+  .patients-page { padding: var(--sp-4, 16px); }
+  .patients-search-field,
+  .patients-regime-field { flex: 1 1 100%; min-width: 0; }
+  .patients-paginator-wrapper { border-radius: var(--radius); }
+}

@@ -1,0 +1,135 @@
+<div class="fs-form">
+  <!-- Recherche lettre de garantie -->
+  <mat-card class="fs-card" *ngIf="!lettre">
+    <h3 class="fs-title">Rechercher une lettre de garantie</h3>
+    <p class="fs-hint">Saisissez le numero de lettre de garantie remis par le BCSU (LG-...).</p>
+    <div class="fs-search">
+      <input type="text" class="fs-input" placeholder="Ex : LG-260701-XXXXXX"
+             [(ngModel)]="searchNumero" (keyup.enter)="rechercher()">
+      <button mat-flat-button color="primary" [disabled]="searching" (click)="rechercher()">Rechercher</button>
+    </div>
+  </mat-card>
+
+  <ng-container *ngIf="lettre">
+    <!-- Feuille de soins rattachee (circuit patient -> agent bureau -> facturation) -->
+    <div *ngIf="feuilleSoins" class="fs-info-banner">
+      <mat-icon>description</mat-icon>
+      Feuille de soins <strong>&nbsp;{{ feuilleSoins.numero }}&nbsp;</strong> rattachee - elle passera au statut "Facturee" a l'enregistrement.
+    </div>
+
+    <!-- Beneficiaire affiche en lecture seule -->
+    <mat-card class="fs-card">
+      <div class="fs-card-head">
+        <h3 class="fs-title">Beneficiaire - {{ lettre.numero }}</h3>
+        <button mat-stroked-button (click)="reset()"><mat-icon>close</mat-icon> Changer</button>
+      </div>
+      <div class="fs-grid">
+        <div><span>Nom &amp; prenom</span><strong>{{ lettre.patientPrenom }} {{ lettre.patientNom }}</strong></div>
+        <div><span>Telephone</span><strong>{{ lettre.patientTelephone }}</strong></div>
+        <div><span>Categorie</span><strong>{{ regimeLabels[lettre.regime] }}</strong></div>
+      </div>
+    </mat-card>
+
+    <!-- Informations médicales -->
+    <mat-card class="fs-card">
+      <h3 class="fs-title">Informations médicales</h3>
+      <form [formGroup]="factureForm">
+        <mat-form-field appearance="outline" style="width: 100%; display: block;">
+          <mat-label>Diagnostique</mat-label>
+          <mat-select formControlName="diagnostique" placeholder="Sélectionner le diagnostique...">
+            <mat-option *ngFor="let option of listDiagnostiques" [value]="option">
+              {{option}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+    </mat-card>
+
+    <!-- Prestations : la structure saisit la prestation, le prix et les details d'hospitalisation de ce patient -->
+    <mat-card class="fs-card">
+      <h3 class="fs-title">Prestations & Hospitalisation</h3>
+      <form [formGroup]="prestationForm" class="fs-prest-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ champs.designationLabel }}</mat-label>
+          <mat-select formControlName="designation" placeholder="Sélectionner la prestation...">
+            <mat-option *ngFor="let option of listPrestations" [value]="option">
+              {{option}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ champs.puLabel }}</mat-label>
+          <input matInput type="number" min="0" formControlName="prixUnitaire">
+        </mat-form-field>
+      </form>
+      <button mat-stroked-button color="primary" (click)="ajouterLigne()">
+        <mat-icon>add</mat-icon> Ajouter la prestation
+      </button>
+
+      <div class="fs-lines" *ngIf="lignes.length > 0">
+        <div class="fs-line" *ngFor="let l of lignes; let i = index">
+          <div class="fs-line-main">
+            <span class="fs-line-name">{{ l.designation }}</span>
+            <span class="fs-line-meta">{{ l.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <div class="fs-line-amounts">
+            <strong>{{ ligneMontant(l) | number:'1.0-0':'fr' }} F</strong>
+            <span>Benef. {{ l.montantBeneficiaire | number:'1.0-0':'fr' }} F - SEN-CSU {{ l.montantSencsu | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <button class="fs-del" type="button" (click)="retirerLigne(i)"><mat-icon>delete</mat-icon></button>
+        </div>
+        <div class="fs-line-foot">
+          <span>Total à ajouter</span>
+          <div class="fs-line-foot-amounts">
+            <strong>{{ montantTotal | number:'1.0-0':'fr' }} F</strong>
+            <span>Benef. {{ montantBeneficiaireTotal | number:'1.0-0':'fr' }} F - SEN-CSU {{ montantSencsuTotal | number:'1.0-0':'fr' }} F</span>
+          </div>
+        </div>
+      </div>
+    </mat-card>
+
+    <!-- Pieces jointes -->
+    <mat-card class="fs-card">
+      <h3 class="fs-title">Pieces justificatives</h3>
+
+      <div class="fs-photo-block">
+        <span class="fs-photo-label">Ticket de caisse</span>
+        <div class="fs-photo-drop" *ngIf="!ticketCaisse; else ticketPreview">
+          <input type="file" accept="image/*" capture="environment" hidden #ticketInput (change)="onTicketSelected($event)">
+          <button type="button" class="fs-photo-btn" (click)="ticketInput.click()">
+            <mat-icon>photo_camera</mat-icon><span>Prendre une photo</span>
+          </button>
+        </div>
+        <ng-template #ticketPreview>
+          <div class="fs-photo-preview">
+            <img [src]="ticketCaisse" alt="Ticket de caisse">
+            <button type="button" class="fs-photo-remove" (click)="removeTicket()"><mat-icon>close</mat-icon></button>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="fs-docs">
+        <span class="fs-photo-label">Documents complementaires</span>
+        <div class="fs-doc-add">
+          <input type="text" class="fs-input" placeholder="Titre du document" [(ngModel)]="docTitre">
+          <input type="file" accept="image/*" capture="environment" hidden #docInput (change)="onDocSelected($event)">
+          <button mat-stroked-button (click)="docInput.click()"><mat-icon>add_a_photo</mat-icon> Ajouter</button>
+        </div>
+        <div class="fs-doc-item" *ngFor="let d of documents; let i = index">
+          <img [src]="d.image" [alt]="d.titre">
+          <span>{{ d.titre }}</span>
+          <button class="fs-del" type="button" (click)="removeDoc(i)"><mat-icon>delete</mat-icon></button>
+        </div>
+      </div>
+    </mat-card>
+
+    <div class="fs-actions">
+      <button mat-stroked-button color="primary" [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(true)" style="margin-right: 16px;">
+        {{ isSubmitting ? 'Patient en cours...' : 'Ajouter un autre patient' }}
+      </button>
+      <button mat-flat-button color="primary" [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(false)">
+        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer et voir la facture' }}
+      </button>
+    </div>
+  </ng-container>
+</div>

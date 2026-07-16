@@ -4,7 +4,9 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { UserService } from '../../core/services/user.service';
 import { RegionService, Region } from '../../core/services/region.service';
 import { PharmacieService } from '../../core/services/pharmacie.service';
+import { StructureService } from '../../core/services/structure.service';
 import { Pharmacie } from '../../core/models/pharmacie.model';
+import { StructureSanitaire } from '../../core/models/structure.model';
 import { User, Role } from '../../core/models/user.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +16,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-utilisateurs',
@@ -36,7 +39,7 @@ export class UtilisateursComponent implements OnInit {
   users: User[] = [];
   regions: Region[] = [];
   pharmacies: Pharmacie[] = [];
-  rolesList = Object.values(Role);
+  structures: StructureSanitaire[] = [];
   
   showModal = false;
   isEditMode = false;
@@ -47,6 +50,8 @@ export class UtilisateursComponent implements OnInit {
     private userService: UserService,
     private regionService: RegionService,
     private pharmacieService: PharmacieService,
+    private structureService: StructureService,
+    public authService: AuthService,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private confirm: ConfirmService
@@ -59,15 +64,28 @@ export class UtilisateursComponent implements OnInit {
     this.loadMetadata();
   }
 
+  get rolesList(): string[] {
+    if (this.authService.isServiceRegional()) {
+      return [Role.BCSU];
+    }
+    return Object.values(Role);
+  }
+
+  get isRegional(): boolean {
+    return this.authService.isServiceRegional();
+  }
+
   initForm() {
+    const defaultRole = this.isRegional ? Role.BCSU : Role.PHARMACIEN;
     this.userForm = this.fb.group({
       nom: ['', Validators.required],
       prenom: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: [''],
-      role: [Role.PHARMACIEN, Validators.required],
+      role: [defaultRole, Validators.required],
       regionId: [''],
-      pharmacieId: ['']
+      pharmacieId: [''],
+      structureSanitaireId: ['']
     });
   }
 
@@ -86,6 +104,7 @@ export class UtilisateursComponent implements OnInit {
   loadMetadata() {
     this.regionService.getAll().subscribe(data => this.regions = data);
     this.pharmacieService.getAll().subscribe(data => this.pharmacies = data);
+    this.structureService.getStructures().subscribe(data => this.structures = data);
   }
 
   getRoleLabel(role: string): string {
@@ -94,6 +113,8 @@ export class UtilisateursComponent implements OnInit {
       case 'SERVICE_CENTRAL': return 'Service Central';
       case 'SERVICE_REGIONAL': return 'Service Régional';
       case 'PHARMACIEN': return 'Pharmacien';
+      case 'BCSU': return 'Agent BCSU';
+      case 'STRUCTURE_SANITAIRE': return 'Structure Sanitaire';
       default: return role;
     }
   }
@@ -110,17 +131,67 @@ export class UtilisateursComponent implements OnInit {
     return ph ? ph.nom : '-';
   }
 
+  getStructureNom(structureId?: string): string {
+    if (!structureId) return '-';
+    const st = this.structures.find(s => s.id === structureId);
+    return st ? st.nom : '-';
+  }
+
+  getRattachementNom(user: User): string {
+    if (user.role === Role.PHARMACIEN && user.pharmacieId) {
+      return this.getPharmacieNom(user.pharmacieId);
+    }
+    if ((user.role === Role.BCSU || user.role === Role.STRUCTURE_SANITAIRE) && user.structureSanitaireId) {
+      return this.getStructureNom(user.structureSanitaireId);
+    }
+    return '-';
+  }
+
   onRoleChange(role: string) {
     const regionCtrl = this.userForm.get('regionId');
     const pharmacieCtrl = this.userForm.get('pharmacieId');
+    const structureCtrl = this.userForm.get('structureSanitaireId');
 
-    if (role === 'SERVICE_REGIONAL') {
-      regionCtrl?.setValidators([Validators.required]);
+    const nomCtrl = this.userForm.get('nom');
+    const prenomCtrl = this.userForm.get('prenom');
+
+    // Réinitialise les validateurs conditionnels avant de les réappliquer.
+    if (role !== 'BCSU') {
+      structureCtrl?.clearValidators();
+      structureCtrl?.setValue('');
+    }
+    nomCtrl?.setValidators([Validators.required]);
+    prenomCtrl?.setValidators([Validators.required]);
+
+    if (role === 'SERVICE_REGIONAL' || role === 'BCSU') {
+      // L'agent BCSU est rattaché à une région : indispensable pour que le
+      // Service Régional visualise ses lettres de garantie et bons de commande.
+      if (this.isRegional) {
+        regionCtrl?.clearValidators();
+        regionCtrl?.setValue(this.authService.getCurrentUser()?.regionId || '');
+      } else {
+        regionCtrl?.setValidators([Validators.required]);
+      }
+      if (role === 'SERVICE_REGIONAL') {
+        nomCtrl?.clearValidators();
+        nomCtrl?.setValue('');
+        prenomCtrl?.clearValidators();
+        prenomCtrl?.setValue('');
+        structureCtrl?.clearValidators();
+        structureCtrl?.setValue('');
+      }
+      // Pour BCSU : le champ structure reste disponible (optionnel)
       pharmacieCtrl?.clearValidators();
       pharmacieCtrl?.setValue('');
     } else if (role === 'PHARMACIEN') {
       regionCtrl?.setValidators([Validators.required]);
       pharmacieCtrl?.setValidators([Validators.required]);
+    } else if (role === 'STRUCTURE_SANITAIRE') {
+      regionCtrl?.clearValidators();
+      regionCtrl?.setValue('');
+      pharmacieCtrl?.clearValidators();
+      pharmacieCtrl?.setValue('');
+      structureCtrl?.setValidators([Validators.required]);
     } else {
       regionCtrl?.clearValidators();
       regionCtrl?.setValue('');
@@ -129,15 +200,19 @@ export class UtilisateursComponent implements OnInit {
     }
     regionCtrl?.updateValueAndValidity();
     pharmacieCtrl?.updateValueAndValidity();
+    structureCtrl?.updateValueAndValidity();
+    nomCtrl?.updateValueAndValidity();
+    prenomCtrl?.updateValueAndValidity();
   }
 
   openAddModal() {
+    const defaultRole = this.isRegional ? Role.BCSU : Role.PHARMACIEN;
     this.isEditMode = false;
     this.editingUserId = null;
-    this.userForm.reset({ role: Role.PHARMACIEN });
+    this.userForm.reset({ role: defaultRole });
     this.userForm.get('password')?.setValidators([Validators.required]);
     this.userForm.get('password')?.updateValueAndValidity();
-    this.onRoleChange(Role.PHARMACIEN);
+    this.onRoleChange(defaultRole);
     this.showModal = true;
   }
 
@@ -151,11 +226,15 @@ export class UtilisateursComponent implements OnInit {
       password: '',
       role: user.role,
       regionId: user.regionId || '',
-      pharmacieId: user.pharmacieId || ''
+      pharmacieId: user.pharmacieId || '',
+      structureSanitaireId: user.structureSanitaireId || ''
     });
     this.userForm.get('password')?.clearValidators();
     this.userForm.get('password')?.updateValueAndValidity();
     this.onRoleChange(user.role);
+    // onRoleChange vide le champ structure (réinitialisation des validateurs) :
+    // on repose la valeur de l'utilisateur édité après coup.
+    this.userForm.get('structureSanitaireId')?.setValue(user.structureSanitaireId || '');
     this.showModal = true;
   }
 
@@ -166,7 +245,14 @@ export class UtilisateursComponent implements OnInit {
   onSubmit() {
     if (this.userForm.invalid) return;
 
-    const val = this.userForm.value;
+    const val = { ...this.userForm.value };
+    if (this.isRegional) {
+      val.role = Role.BCSU;
+      val.regionId = this.authService.getCurrentUser()?.regionId || '';
+      val.pharmacieId = '';
+      // We do NOT clear structureSanitaireId because a BCSU can be attached to a structure
+    }
+
     if (this.isEditMode && this.editingUserId) {
       // update
       const updateData = { ...val };

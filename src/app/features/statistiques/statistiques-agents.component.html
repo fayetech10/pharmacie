@@ -1,0 +1,94 @@
+<div class="fade-in stats-page">
+  <div class="page-head">
+    <div>
+      <h1>Statistiques & Performances</h1>
+      <p>Suivi détaillé des performances des agents par rapport à leur structure de rattachement</p>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <mat-card class="kpi-card">
+      <div class="kpi-icon total-dossiers">
+        <mat-icon>folder_open</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Dossiers Traités</span>
+        <span class="kpi-value">{{ totalDossiers }}</span>
+      </div>
+    </mat-card>
+
+    <mat-card class="kpi-card">
+      <div class="kpi-icon total-lettres">
+        <mat-icon>mark_email_read</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Lettres Émises</span>
+        <span class="kpi-value">{{ totalLettres }}</span>
+      </div>
+    </mat-card>
+
+    <mat-card class="kpi-card">
+      <div class="kpi-icon total-feuilles" style="background: #E0E7FF; color: #4F46E5;">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Feuilles de Soins</span>
+        <span class="kpi-value">{{ totalFeuilles }}</span>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- Charts & Table Section -->
+  <div class="stats-content-grid">
+    
+    <!-- Chart -->
+    <mat-card class="chart-card">
+      <h3 class="card-title">Volumes par Agent</h3>
+      <div class="chart-container">
+        <canvas baseChart
+          [data]="barChartData"
+          [options]="barChartOptions"
+          [type]="barChartType">
+        </canvas>
+      </div>
+    </mat-card>
+
+    <!-- Detailed Table -->
+    <mat-card class="table-card">
+      <h3 class="card-title">Détails des performances</h3>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Structure</th>
+              <th class="text-center">Enregistrements</th>
+              <th class="text-center">Lettres</th>
+              <th class="text-center">Feuilles Soins</th>
+              <th class="text-center">Heures / Semaine</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let agent of agentsStats" class="stats-row clickable-row" (click)="openAgentDetail(agent)">
+              <td>
+                <div class="agent-identity">
+                  <div class="agent-avatar">{{ agent.nom.charAt(0) }}</div>
+                  <span class="agent-name">{{ agent.nom }}</span>
+                </div>
+              </td>
+              <td><span class="structure-badge">{{ agent.structure }}</span></td>
+              <td class="text-center font-bold text-ink">{{ agent.dossiersTraites }}</td>
+              <td class="text-center font-bold text-primary">{{ agent.lettresEmises }}</td>
+              <td class="text-center font-bold" style="color: #4F46E5;">{{ agent.feuillesSoins }}</td>
+              <td class="text-center">
+                <span class="time-badge">{{ agent.heuresTravailleesSemaine }} h</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-card>
+
+  </div>
+</div>

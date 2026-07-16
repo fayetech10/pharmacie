@@ -13,6 +13,11 @@ export class UserService {
     return this.api.get<User[]>('/users');
   }
 
+  /** Agents BCSU (formulaire structures) : accessible au SR, contrairement à getAll() (Admin). */
+  getBcsu(): Observable<User[]> {
+    return this.api.get<User[]>('/users/bcsu');
+  }
+
   getById(id: string): Observable<User> {
     return this.api.get<User>(`/users/${id}`);
   }

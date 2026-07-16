@@ -1,0 +1,178 @@
+<div class="fade-in fds-page" *ngIf="!loading && feuille">
+
+  <!-- Barre d'actions (hors impression) -->
+  <div class="fds-actions">
+    <div class="fds-actions-left">
+      <a routerLink="/dashboard/feuilles-soins" class="fds-back" aria-label="Retour à la liste des feuilles de soins">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <div>
+        <h1 class="fds-h1">Feuille de soins {{ feuille.numero }}</h1>
+        <span class="fds-status-badge" [ngClass]="'fds-status-badge--' + statutTone(feuille.statut)">
+          {{ statutLabels[feuille.statut] }}
+        </span>
+        <span *ngIf="feuille.factureStructureNumero" class="fds-facture-ref">
+          Facture : <strong>{{ feuille.factureStructureNumero }}</strong>
+        </span>
+      </div>
+    </div>
+    <div class="fds-actions-right">
+      <button mat-stroked-button color="primary" (click)="imprimerPdf()">
+        <mat-icon>print</mat-icon> Imprimer (PDF)
+      </button>
+      <button *ngIf="peutRemplirPriseEnCharge && !editionPriseEnCharge" mat-flat-button color="primary" (click)="ouvrirPriseEnCharge()">
+        <mat-icon>edit_note</mat-icon> Remplir la prise en charge
+      </button>
+      <button *ngIf="peutFacturer" mat-flat-button color="accent" (click)="facturer()">
+        <mat-icon>receipt_long</mat-icon> Facturer cette feuille
+      </button>
+      <button *ngIf="peutAnnuler" mat-stroked-button color="warn" (click)="annuler()">
+        <mat-icon>cancel</mat-icon> Annuler
+      </button>
+    </div>
+  </div>
+
+  <!-- Saisie de la prise en charge (structure sanitaire) -->
+  <mat-card *ngIf="editionPriseEnCharge" class="fds-pec-card">
+    <h3 class="fds-pec-title">
+      <mat-icon>edit_note</mat-icon> Prise en charge — remplie par la structure sanitaire
+    </h3>
+    <mat-form-field appearance="outline" class="fds-pec-diag">
+      <mat-label>Diagnostic</mat-label>
+      <input matInput [(ngModel)]="diagnosticStructure">
+    </mat-form-field>
+    <div *ngFor="let l of lignes; let i = index" class="fds-pec-line">
+      <mat-form-field appearance="outline" class="fds-pec-date">
+        <mat-label>Date</mat-label>
+        <input matInput type="date" [(ngModel)]="l.date">
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="fds-pec-desig">
+        <mat-label>Désignation de la prestation</mat-label>
+        <input matInput [(ngModel)]="l.designation">
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="fds-pec-montant">
+        <mat-label>Montant (FCFA)</mat-label>
+        <input matInput type="number" min="0" [(ngModel)]="l.montant">
+      </mat-form-field>
+      <button mat-icon-button color="warn" (click)="retirerLigne(i)" [disabled]="lignes.length === 1" title="Retirer la ligne">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+    <div class="fds-pec-foot">
+      <button mat-stroked-button (click)="ajouterLigne()">
+        <mat-icon>add</mat-icon> Ajouter une prestation
+      </button>
+      <div class="fds-pec-total">
+        Total saisi : <strong>{{ totalSaisi | number:'1.0-0':'fr' }} FCFA</strong>
+        <span class="fds-pec-hint"> (les parts assuré/assureur sont calculées selon le régime)</span>
+      </div>
+    </div>
+    <div class="fds-pec-actions">
+      <button mat-stroked-button (click)="editionPriseEnCharge = false">Fermer</button>
+      <button mat-flat-button color="primary" (click)="enregistrerPriseEnCharge()" [disabled]="!lignesValides || busy">
+        {{ busy ? 'Enregistrement…' : 'Enregistrer la prise en charge' }}
+      </button>
+    </div>
+  </mat-card>
+
+  <!-- ============ FEUILLE DE SOINS (aspect du formulaire papier) ============ -->
+  <div class="fds-paper">
+    <!-- En-tête -->
+    <div class="fds-header">
+      <div class="fds-agency">
+        <img src="assets/logo-csu.png" alt="Logo ASCSU" onerror="this.style.display='none'">
+        <div>AGENCE SENEGALAISE<br>DE LA COUVERTURE<br>SANITAIRE UNIVERSELLE</div>
+      </div>
+      <div class="fds-title-box">FEUILLE DE SOINS</div>
+    </div>
+
+    <!-- Date / Structure / N° -->
+    <div class="fds-info-line">
+      <div><span class="fds-label">Date :</span> {{ feuille.createdAt | date:'dd/MM/yyyy' }}</div>
+      <div><span class="fds-label">Structure :</span> {{ feuille.structureNom || '........................' }}</div>
+      <div><span class="fds-label">N° :</span> {{ feuille.numero }}</div>
+    </div>
+
+    <!-- Tableau des régimes -->
+    <table class="fds-regimes">
+      <tr>
+        <th colspan="3">REGIME CONTRIBUTIF</th>
+        <th colspan="5">REGIME NON CONTRIBUTIF</th>
+      </tr>
+      <tr>
+        <th *ngFor="let c of colonnesRegime">{{ c }}</th>
+      </tr>
+      <tr>
+        <td *ngFor="let c of colonnesRegime; let i = index" class="fds-check">
+          {{ i === colonneRegimeCochee ? 'X' : '' }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- Encadrés code assuré / lettre de garantie -->
+    <div class="fds-boxes">
+      <div class="fds-box"><span class="fds-label">Code assuré / Num Immatriculation :</span> {{ feuille.codeAssure || '........................' }}</div>
+      <div class="fds-box"><span class="fds-label">N° Lettre de Garantie :</span> {{ feuille.lettreGarantieNumero || '....................' }}</div>
+    </div>
+
+    <!-- Identité -->
+    <div class="fds-field"><span class="fds-label">Prénom(s) et Nom :</span> {{ feuille.patientPrenom }} {{ feuille.patientNom }}</div>
+    <div class="fds-ident-line">
+      <div>
+        <span class="fds-label">Sexe :</span>
+        M <span class="fds-checkbox">{{ feuille.sexe === 'M' || feuille.sexe === 'H' ? 'X' : '' }}</span>
+        &nbsp;F <span class="fds-checkbox">{{ feuille.sexe === 'F' ? 'X' : '' }}</span>
+      </div>
+      <div><span class="fds-label">AGE :</span> {{ feuille.age != null ? feuille.age + ' ans' : '......................' }}</div>
+      <div><span class="fds-label">Diagnostic :</span> {{ feuille.diagnostic || '............................................' }}</div>
+    </div>
+
+    <!-- Accompagnant -->
+    <div class="fds-section-title">ACCOMPAGNANT</div>
+    <div class="fds-ident-line">
+      <div style="flex: 2;"><span class="fds-label">Prénom(s) et Nom :</span> {{ feuille.accompagnantPrenomNom || '................................................................' }}</div>
+      <div><span class="fds-label">Téléphone :</span> {{ feuille.patientTelephone || '................................' }}</div>
+    </div>
+
+    <!-- Prise en charge -->
+    <div class="fds-section-title">PRISE EN CHARGE</div>
+    <table class="fds-pec">
+      <tr>
+        <th style="width: 12%;">Date</th>
+        <th style="width: 48%;">Désignation des prestations</th>
+        <th style="width: 13%;">Montant</th>
+        <th style="width: 13%;">Part Assuré</th>
+        <th style="width: 14%;">Part Assureur</th>
+      </tr>
+      <tr *ngFor="let p of feuille.prestations">
+        <td style="text-align: center;">{{ p.date | date:'dd/MM/yyyy' }}</td>
+        <td>{{ p.designation }}</td>
+        <td style="text-align: right;">{{ p.montant | number:'1.0-0':'fr' }}</td>
+        <td style="text-align: right;">{{ p.partAssure | number:'1.0-0':'fr' }}</td>
+        <td style="text-align: right;">{{ p.partAssureur | number:'1.0-0':'fr' }}</td>
+      </tr>
+      <tr *ngIf="feuille.prestations.length === 0">
+        <td colspan="5" style="text-align:center; color:#999; font-style:italic; padding: 12px;">
+          Aucune prestation enregistrée
+        </td>
+      </tr>
+      <tr *ngIf="feuille.prestations.length > 0" class="fds-total">
+        <td colspan="2" style="text-align: right; font-weight: 700;">TOTAL</td>
+        <td style="text-align: right; font-weight: 700;">{{ feuille.montantTotal | number:'1.0-0':'fr' }}</td>
+        <td style="text-align: right; font-weight: 700;">{{ feuille.montantTotalAssure | number:'1.0-0':'fr' }}</td>
+        <td style="text-align: right; font-weight: 700;">{{ feuille.montantTotalAssureur | number:'1.0-0':'fr' }}</td>
+      </tr>
+    </table>
+
+    <!-- Signatures -->
+    <div class="fds-signatures">
+      <div>Signature de l'assureur</div>
+      <div>Signature du prestataire</div>
+      <div>Signature de l'assuré(e)</div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="loading" class="fds-loading">
+  Chargement de la feuille de soins…
+</div>

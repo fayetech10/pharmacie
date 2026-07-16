@@ -1,283 +1,329 @@
-    <!-- Sélecteur de fichier pour l'import facture corrigée (SR uniquement) -->
-    <input type="file" #importFileInput style="display: none" (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
+<!-- Sélecteur de fichier pour l'import facture corrigée (SR uniquement) -->
+<input type="file" #importFileInput style="display: none" (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
 
-    <!-- Chargement : évite la page blanche -->
-    <div class="empty-state big" *ngIf="loading">
-      <mat-icon class="spin-animation">autorenew</mat-icon>
-      <p>Chargement de la facture…</p>
+<!-- Chargement -->
+<div class="fd-loading" *ngIf="loading">
+  <div class="fd-spinner"></div>
+  <p>Chargement de la facture…</p>
+</div>
+
+<!-- Erreur de chargement -->
+<div class="fd-loading" *ngIf="loadError && !loading">
+  <mat-icon class="fd-error-icon">error_outline</mat-icon>
+  <p>Impossible de charger la facture.</p>
+</div>
+
+<div class="fd-page" *ngIf="facture && !loading">
+
+  <!-- ═══════ HEADER ═══════ -->
+  <header class="fd-header">
+    <div class="fd-header-left">
+      <button class="fd-back" (click)="goBack()" type="button" aria-label="Retour">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="fd-header-info">
+        <h1>Facture #{{ facture.id | slice:0:8 }}</h1>
+        <span class="fd-header-sub">{{ getMonthName(facture.mois) }} {{ facture.annee }} · {{ facture.createdAt | date:'dd/MM/yyyy' }}</span>
+      </div>
+      <app-status-badge [statut]="facture.statut"></app-status-badge>
     </div>
+    <div class="fd-header-actions">
+      <button class="fd-btn fd-btn--outline" (click)="exportPdf()">
+        <mat-icon>picture_as_pdf</mat-icon> PDF
+      </button>
 
-    <!-- Erreur de chargement -->
-    <div class="empty-state big" *ngIf="loadError && !loading">
-      <mat-icon>error_outline</mat-icon>
-      <p>Impossible de charger la facture.</p>
-    </div>
+      <button class="fd-btn fd-btn--danger" *ngIf="authService.isAdmin()" (click)="supprimerFacture()">
+        <mat-icon>delete</mat-icon> Supprimer
+      </button>
 
-    <div class="detail-page" *ngIf="facture && !loading">
-      <!-- Header -->
-      <div class="detail-header">
-        <div class="header-left">
-          <button class="back-btn" (click)="goBack()" type="button" aria-label="Retour">
-            <mat-icon>arrow_back</mat-icon>
+      <button class="fd-btn fd-btn--outline" *ngIf="authService.isServiceRegional()" (click)="importFileInput.click()">
+        <mat-icon>upload_file</mat-icon> Importer
+      </button>
+
+      <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')">
+        <a class="fd-btn fd-btn--outline" [routerLink]="['edit']">
+          <mat-icon>edit</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Corriger' : 'Modifier' }}
+        </a>
+        <button class="fd-btn fd-btn--primary" (click)="envoyer()">
+          <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
+        </button>
+      </ng-container>
+
+      <ng-container *ngIf="authService.isServiceRegional()">
+        <ng-container *ngIf="facture.statut === 'ENVOYEE'">
+          <button class="fd-btn fd-btn--danger" (click)="rejeter()">
+            <mat-icon>cancel</mat-icon> Rejeter
           </button>
-          <div>
-            <h1>Facture #{{ facture.id | slice:0:8 }}</h1>
-            <p>{{ getMonthName(facture.mois) }} {{ facture.annee }} · Soumise le {{ facture.createdAt | date:'dd/MM/yyyy' }}</p>
+          <button class="fd-btn fd-btn--primary" (click)="valider()">
+            <mat-icon>check_circle</mat-icon> Valider
+          </button>
+        </ng-container>
+        <ng-container *ngIf="facture.statut === 'REJETEE_NC'">
+          <button class="fd-btn fd-btn--warning" (click)="renvoyerAPharmacie()">
+            <mat-icon>undo</mat-icon> Renvoyer pharmacie
+          </button>
+          <button class="fd-btn fd-btn--primary" (click)="renvoyerAuCentral()">
+            <mat-icon>send</mat-icon> Renvoyer Centrale
+          </button>
+        </ng-container>
+      </ng-container>
+
+      <ng-container *ngIf="authService.isServiceCentral()">
+        <ng-container *ngIf="facture.statut === 'VALIDEE_SR'">
+          <button class="fd-btn fd-btn--danger" (click)="rejeter()">
+            <mat-icon>cancel</mat-icon> Rejeter
+          </button>
+          <button class="fd-btn fd-btn--primary" (click)="valider()">
+            <mat-icon>check_circle</mat-icon> Valider
+          </button>
+        </ng-container>
+        <ng-container *ngIf="facture.statut === 'VALIDEE_NC'">
+          <button class="fd-btn fd-btn--accent" (click)="payer()">
+            <mat-icon>payment</mat-icon> Enregistrer Paiement
+          </button>
+        </ng-container>
+      </ng-container>
+    </div>
+  </header>
+
+  <!-- ═══════ STATS CARDS ═══════ -->
+  <div class="fd-stats">
+    <div class="fd-stat">
+      <mat-icon class="fd-stat-icon">storefront</mat-icon>
+      <div class="fd-stat-body">
+        <span class="fd-stat-label">Pharmacie</span>
+        <span class="fd-stat-value">{{ facture.pharmacieNom }}</span>
+      </div>
+    </div>
+    <div class="fd-stat">
+      <mat-icon class="fd-stat-icon">calendar_month</mat-icon>
+      <div class="fd-stat-body">
+        <span class="fd-stat-label">Période</span>
+        <span class="fd-stat-value">{{ getMonthName(facture.mois) }} {{ facture.annee }}</span>
+      </div>
+    </div>
+    <div class="fd-stat">
+      <mat-icon class="fd-stat-icon">people</mat-icon>
+      <div class="fd-stat-body">
+        <span class="fd-stat-label">Patients</span>
+        <span class="fd-stat-value">{{ patientGroups.length }}</span>
+      </div>
+    </div>
+    <div class="fd-stat">
+      <mat-icon class="fd-stat-icon">medication</mat-icon>
+      <div class="fd-stat-body">
+        <span class="fd-stat-label">Lignes</span>
+        <span class="fd-stat-value">{{ facture.lignes.length }}</span>
+      </div>
+    </div>
+    <div class="fd-stat fd-stat--highlight">
+      <mat-icon class="fd-stat-icon">payments</mat-icon>
+      <div class="fd-stat-body">
+        <span class="fd-stat-label">Montant Total</span>
+        <span class="fd-stat-value fd-stat-value--amount">{{ facture.montantTotal | number:'1.0-0':'fr' }} F</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ ALERTES (REJET / CORRECTION) ═══════ -->
+  <div class="fd-alert fd-alert--error" *ngIf="(facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC') && facture.commentaireRejet">
+    <mat-icon>error</mat-icon>
+    <div>
+      <strong>Motif du rejet</strong>
+      <p>{{ facture.commentaireRejet }}</p>
+    </div>
+  </div>
+
+  <div class="fd-alert fd-alert--warning" *ngIf="facture.statut === 'REJETEE_SR'">
+    <mat-icon>build</mat-icon>
+    <div>
+      <strong>Facture à corriger</strong>
+      <p>
+        <ng-container *ngIf="authService.isPharmacien()">Cliquez sur <em>Corriger</em> puis <em>Renvoyer</em>.</ng-container>
+        <ng-container *ngIf="!authService.isPharmacien()">En attente de correction par la pharmacie.</ng-container>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════ PATIENTS (ACCORDION) ═══════ -->
+  <section class="fd-patients">
+    <div class="fd-section-head">
+      <h2>Détail par patient</h2>
+      <span class="fd-section-count">{{ filteredGroups.length }}<span *ngIf="searchPatient"> / {{ patientGroups.length }}</span> patient(s)</span>
+    </div>
+
+    <!-- Toolbar: search + actions -->
+    <div class="fd-toolbar" *ngIf="patientGroups.length > 3">
+      <div class="fd-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Rechercher un patient…"
+               [(ngModel)]="searchPatient" (ngModelChange)="onSearchChange()">
+        <button *ngIf="searchPatient" class="fd-search-clear" (click)="searchPatient = ''; onSearchChange()" type="button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="fd-toolbar-actions">
+        <button class="fd-btn fd-btn--outline fd-btn--sm" (click)="expandAll()">
+          <mat-icon>unfold_more</mat-icon> Tout ouvrir
+        </button>
+        <button class="fd-btn fd-btn--outline fd-btn--sm" (click)="collapseAll()">
+          <mat-icon>unfold_less</mat-icon> Tout fermer
+        </button>
+      </div>
+    </div>
+
+    <div class="fd-accordion" *ngFor="let g of paginatedGroups; trackBy: trackGroup">
+      <!-- Accordion header -->
+      <div class="fd-acc-header" (click)="toggleGroup(g)" [class.is-open]="g.expanded">
+        <div class="fd-acc-left">
+          <div class="fd-avatar">{{ (g.nom || '?')[0] | uppercase }}</div>
+          <div class="fd-acc-info">
+            <span class="fd-acc-name">{{ g.nom || 'Patient sans nom' }}</span>
+            <span class="fd-acc-meta">{{ g.matricule || '—' }} · {{ g.lignes.length }} médicament(s)</span>
           </div>
         </div>
-        <div class="header-actions">
-          <app-status-badge [statut]="facture.statut"></app-status-badge>
-
-          <button class="btn btn-outline" (click)="exportPdf()">
-            <mat-icon>picture_as_pdf</mat-icon> PDF
+        <div class="fd-acc-right">
+          <span class="fd-acc-total">{{ groupTotal(g) | number:'1.0-0':'fr' }} F</span>
+          <button class="fd-doc-btn" *ngIf="dossierCount(g) > 0" (click)="openDossier(g); $event.stopPropagation()" type="button">
+            <mat-icon>folder_open</mat-icon>
+            {{ dossierCount(g) }} pièce(s)
           </button>
-
-          <!-- Suppression réservée au Super Admin -->
-          <button class="btn btn-danger" *ngIf="authService.isAdmin()" (click)="supprimerFacture()">
-            <mat-icon>delete</mat-icon> Supprimer
-          </button>
-
-          <!-- Import : visible uniquement pour le Service Régional -->
-          <button class="btn btn-outline" *ngIf="authService.isServiceRegional()" (click)="importFileInput.click()">
-            <mat-icon>upload_file</mat-icon> Importer
-          </button>
-
-          <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')">
-            <a class="btn btn-outline" [routerLink]="['edit']">
-              <mat-icon>edit</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Corriger' : 'Modifier' }}
-            </a>
-            <button class="btn btn-primary" (click)="envoyer()">
-              <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
-            </button>
-          </ng-container>
-
-          <ng-container *ngIf="authService.isServiceRegional()">
-            <ng-container *ngIf="facture.statut === 'ENVOYEE'">
-              <button class="btn btn-danger" (click)="rejeter()">
-                <mat-icon>cancel</mat-icon> Rejeter
-              </button>
-              <button class="btn btn-primary" (click)="valider()">
-                <mat-icon>check_circle</mat-icon> Valider et Transmettre
-              </button>
-            </ng-container>
-            <ng-container *ngIf="facture.statut === 'REJETEE_NC'">
-              <button class="btn btn-warning" (click)="renvoyerAPharmacie()">
-                <mat-icon>undo</mat-icon> Renvoyer à la pharmacie
-              </button>
-              <button class="btn btn-primary" (click)="renvoyerAuCentral()">
-                <mat-icon>send</mat-icon> Renvoyer Centrale
-              </button>
-            </ng-container>
-          </ng-container>
-
-          <ng-container *ngIf="authService.isServiceCentral()">
-            <ng-container *ngIf="facture.statut === 'VALIDEE_SR'">
-              <button class="btn btn-danger" (click)="rejeter()">
-                <mat-icon>cancel</mat-icon> Rejeter
-              </button>
-              <button class="btn btn-primary" (click)="valider()">
-                <mat-icon>check_circle</mat-icon> Valider
-              </button>
-            </ng-container>
-            <ng-container *ngIf="facture.statut === 'VALIDEE_NC'">
-              <button class="btn btn-teal" (click)="payer()">
-                <mat-icon>payment</mat-icon> Enregistrer Paiement
-              </button>
-            </ng-container>
-          </ng-container>
+          <mat-icon class="fd-chevron" [class.rotated]="g.expanded">expand_more</mat-icon>
         </div>
       </div>
 
-      <!-- Info Summary -->
-      <div class="info-strip">
-        <div class="info-block">
-          <span class="info-label">Pharmacie</span>
-          <span class="info-value">{{ facture.pharmacieNom }}</span>
-        </div>
-        <div class="info-divider"></div>
-        <div class="info-block">
-          <span class="info-label">Période</span>
-          <span class="info-value">{{ getMonthName(facture.mois) }} {{ facture.annee }}</span>
-        </div>
-        <div class="info-divider"></div>
-        <div class="info-block">
-          <span class="info-label">Lignes</span>
-          <span class="info-value">{{ facture.lignes.length || 0 }}</span>
-        </div>
-        <div class="info-divider"></div>
-        <div class="info-block">
-          <span class="info-label">Montant Total</span>
-          <span class="info-value montant">{{ facture.montantTotal | number }} CFA</span>
+      <!-- Accordion body -->
+      <div class="fd-acc-body" *ngIf="g.expanded">
+        <table class="fd-table">
+          <thead>
+            <tr>
+              <th>Médicament</th>
+              <th>Qté</th>
+              <th>P.U.</th>
+              <th>Montant</th>
+              <th class="th-csu">Part CSU</th>
+              <th class="th-benef">Part Bénéf.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of g.lignes; trackBy: trackLigne">
+              <td class="fd-med-name">{{ item.ligne.medicament }}</td>
+              <td>{{ item.ligne.quantite }}</td>
+              <td>{{ item.ligne.prixUnitaire | number:'1.0-0':'fr' }}</td>
+              <td><strong>{{ item.ligne.montant | number:'1.0-0':'fr' }}</strong></td>
+              <td class="td-csu">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }}</td>
+              <td class="td-benef">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3"><strong>Total patient</strong></td>
+              <td><strong>{{ groupTotal(g) | number:'1.0-0':'fr' }} F</strong></td>
+              <td class="td-csu"><strong>{{ groupTotal(g) / 2 | number:'1.0-0':'fr' }} F</strong></td>
+              <td class="td-benef"><strong>{{ groupTotal(g) / 2 | number:'1.0-0':'fr' }} F</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Mobile cards -->
+        <div class="fd-med-cards">
+          <div class="fd-med-card" *ngFor="let item of g.lignes; trackBy: trackLigne">
+            <div class="fd-med-card-head">
+              <span class="fd-med-card-name">{{ item.ligne.medicament }}</span>
+              <span class="fd-med-card-amount">{{ item.ligne.montant | number:'1.0-0':'fr' }} F</span>
+            </div>
+            <div class="fd-med-card-meta">
+              {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number:'1.0-0':'fr' }} F
+            </div>
+            <div class="fd-med-card-parts">
+              <span class="fd-part-csu">CSU {{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} F</span>
+              <span class="fd-part-benef">Bénéf. {{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} F</span>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Rejection notice -->
-      <div class="reject-card" *ngIf="(facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC') && facture.commentaireRejet">
-        <mat-icon>error</mat-icon>
+    <!-- Pagination -->
+    <div class="fd-pagination" *ngIf="filteredGroups.length > pageSize">
+      <span class="fd-pagination-info">
+        {{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, filteredGroups.length) }} sur {{ filteredGroups.length }}
+      </span>
+      <div class="fd-pagination-btns">
+        <button class="fd-page-btn" [disabled]="currentPage <= 1" (click)="goToPage(currentPage - 1)">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <ng-container *ngFor="let p of pageNumbers">
+          <button class="fd-page-btn" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p }}</button>
+        </ng-container>
+        <button class="fd-page-btn" [disabled]="currentPage >= totalPages" (click)="goToPage(currentPage + 1)">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- No results -->
+    <div class="fd-empty" *ngIf="filteredGroups.length === 0 && searchPatient">
+      <mat-icon>search_off</mat-icon>
+      <p>Aucun patient ne correspond à « {{ searchPatient }} »</p>
+    </div>
+
+    <div class="fd-empty" *ngIf="patientGroups.length === 0">
+      <mat-icon>medication</mat-icon>
+      <p>Aucune ligne dans cette facture</p>
+    </div>
+  </section>
+
+  <!-- ═══════ MODAL DOSSIER ═══════ -->
+  <div class="fd-overlay" *ngIf="dossierPatient" (click)="closeDossier()">
+    <div class="fd-modal" (click)="$event.stopPropagation()">
+      <div class="fd-modal-head">
         <div>
-          <strong>Motif du rejet</strong>
-          <p>{{ facture.commentaireRejet }}</p>
+          <h3>Dossier patient</h3>
+          <span class="fd-modal-sub">{{ dossierPatient.nom || '-' }} · {{ dossierPatient.matricule || '-' }}</span>
         </div>
+        <button class="fd-modal-close" (click)="closeDossier()" type="button" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
-
-      <!-- Correction notice (pharmacien) -->
-      <div class="correction-card" *ngIf="facture.statut === 'REJETEE_SR'">
-        <mat-icon>build</mat-icon>
-        <div>
-          <strong>Facture à corriger</strong>
-          <p>Le motif du rejet est indiqué ci-dessus.
-            <ng-container *ngIf="authService.isPharmacien()">Cliquez sur <em>Corriger</em> pour modifier la facture, puis <em>Renvoyer</em>.</ng-container>
-          </p>
+      <div class="fd-modal-body">
+        <ng-container *ngFor="let p of photoFields">
+          <div class="fd-doc-card" *ngIf="dossierPatient[p.key]">
+            <div class="fd-doc-card-label">
+              <mat-icon>{{ p.icon }}</mat-icon>
+              {{ p.label }}
+            </div>
+            <div class="fd-doc-card-preview" (click)="openViewer(dossierPatient[p.key]!)">
+              <img [src]="dossierPatient[p.key]" [alt]="p.label">
+              <div class="fd-doc-card-zoom">
+                <mat-icon>fullscreen</mat-icon>
+                <span>Plein écran</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+        <div class="fd-no-docs" *ngIf="dossierCount(dossierPatient) === 0">
+          <mat-icon>folder_off</mat-icon>
+          <p>Aucune pièce justificative</p>
         </div>
-      </div>
-
-
-
-      <!-- Détail mobile : une carte par patient -->
-      <div class="m-cards">
-        <div class="m-card" *ngFor="let g of patientGroups; trackBy: trackGroup" [class.is-expanded]="g.expanded">
-          <div class="m-card-top" (click)="toggleGroup(g)">
-            <span class="m-title">{{ g.nom || 'Patient sans nom' }}</span>
-            <div class="m-header-right">
-              <span class="m-badge" *ngIf="!g.expanded">{{ g.lignes.length }} ligne(s)</span>
-              <mat-icon class="expand-icon" [class.rotated]="g.expanded">expand_more</mat-icon>
-            </div>
-          </div>
-          
-          <!-- Collapsible content (Patient Info + Medicines) -->
-          <div class="m-card-expanded-content" *ngIf="g.expanded">
-            <!-- Collapsible patient details (Matricule & Dossier) -->
-            <div class="m-patient-details-box">
-              <div class="m-detail-row">
-                <mat-icon>badge</mat-icon>
-                <span>Matricule : <strong>{{ g.matricule || '—' }}</strong></span>
-              </div>
-              <div class="m-detail-row" *ngIf="dossierCount(g) > 0">
-                <mat-icon>folder_shared</mat-icon>
-                <span>Dossier : </span>
-                <button class="dossier-mini-btn" (click)="openDossier(g); $event.stopPropagation()">
-                  <mat-icon>visibility</mat-icon>
-                  Voir {{ dossierCount(g) }} pièces
-                </button>
-              </div>
-              <div class="m-detail-row no-docs" *ngIf="dossierCount(g) === 0">
-                <mat-icon>folder_off</mat-icon>
-                <span>Dossier : <span class="text-text-muted">Aucune pièce</span></span>
-              </div>
-            </div>
-            
-            <div class="med-line" *ngFor="let item of g.lignes; trackBy: trackLigne">
-              <div class="med-head">
-                <span class="med-name">{{ item.ligne.medicament }}</span>
-              </div>
-              <div class="med-calc">
-                {{ item.ligne.quantite }} × {{ item.ligne.prixUnitaire | number }} =
-                <strong>{{ item.ligne.montant | number }} CFA</strong>
-              </div>
-              <div class="med-parts">
-                <span class="part-csu"><mat-icon>volunteer_activism</mat-icon> CSU : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
-                <span class="part-benef"><mat-icon>person</mat-icon> Bénéf. : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} CFA</strong></span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="empty-state" *ngIf="patientGroups.length === 0">
-          <mat-icon>medication</mat-icon>
-          <p>Aucune ligne dans cette facture</p>
-        </div>
-      </div>
-
-      <!-- Medications Accordions (desktop) -->
-      <div class="desktop-only patient-accordions-container">
-        <div class="patient-acc-card" *ngFor="let g of patientGroups; trackBy: trackGroup" [class.is-expanded]="g.expanded">
-          <!-- Accordion Header -->
-          <div class="patient-acc-header" (click)="toggleGroup(g)">
-            <div class="patient-acc-title">
-              <mat-icon class="patient-icon">person</mat-icon>
-              <span class="patient-name">{{ g.nom || 'Patient sans nom' }}</span>
-              <span class="patient-lines-badge">{{ g.lignes.length }} médicament(s)</span>
-            </div>
-            <div class="patient-acc-actions">
-              <mat-icon class="expand-icon" [class.rotated]="g.expanded">expand_more</mat-icon>
-            </div>
-          </div>
-
-          <!-- Accordion Content -->
-          <div class="patient-acc-content" *ngIf="g.expanded">
-            <!-- Patient Info strip inside -->
-            <div class="patient-info-strip">
-              <div class="info-item">
-                <mat-icon>badge</mat-icon>
-                <span>Matricule : <strong>{{ g.matricule || '—' }}</strong></span>
-              </div>
-              <div class="info-item" *ngIf="dossierCount(g) > 0">
-                <mat-icon>folder_shared</mat-icon>
-                <span>Dossier : </span>
-                <button class="dossier-mini-btn" (click)="openDossier(g); $event.stopPropagation()">
-                  <mat-icon>visibility</mat-icon>
-                  Voir {{ dossierCount(g) }} pièces
-                </button>
-              </div>
-              <div class="info-item no-docs" *ngIf="dossierCount(g) === 0">
-                <mat-icon>folder_off</mat-icon>
-                <span>Dossier : <span class="text-text-muted">Aucune pièce</span></span>
-              </div>
-            </div>
-
-            <!-- Medicines Table -->
-            <table class="acc-medicines-table">
-              <thead>
-                <tr>
-                  <th>Médicament</th>
-                  <th>Quantité</th>
-                  <th>Prix Unitaire</th>
-                  <th>Montant</th>
-                  <th class="th-csu">Part CSU (50%)</th>
-                  <th class="th-benef">Part bénéf. (50%)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of g.lignes; trackBy: trackLigne">
-                  <td class="med-name">{{ item.ligne.medicament }}</td>
-                  <td>{{ item.ligne.quantite }}</td>
-                  <td>{{ item.ligne.prixUnitaire | number }}</td>
-                  <td>
-                    <strong>{{ item.ligne.montant | number }}</strong>
-                  </td>
-                  <td class="td-csu">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
-                  <td class="td-benef">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} <small>CFA</small></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal Dossier : pièces justificatives du patient -->
-      <div class="dossier-overlay" *ngIf="dossierPatient" (click)="dossierPatient = null">
-        <div class="dossier-modal" (click)="$event.stopPropagation()">
-          <div class="dossier-modal-head">
-            <div>
-              <h3>Dossier — {{ dossierPatient.nom || '-' }}</h3>
-              <span class="dossier-modal-mat">{{ dossierPatient.matricule || '-' }}</span>
-            </div>
-            <button class="dossier-modal-close" (click)="dossierPatient = null" type="button" aria-label="Fermer le dossier"><mat-icon>close</mat-icon></button>
-          </div>
-          <div class="dossier-modal-body">
-            <ng-container *ngFor="let p of photoFields">
-              <div class="dossier-piece" *ngIf="dossierPatient[p.key]">
-                <span class="dossier-piece-label">{{ p.label }}</span>
-                <img [src]="dossierPatient[p.key]" [alt]="p.label" (click)="viewerImage = dossierPatient[p.key]!">
-              </div>
-            </ng-container>
-          </div>
-        </div>
-      </div>
-
-      <!-- Visionneuse plein écran -->
-      <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
-        <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
-        <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
       </div>
     </div>
-  
+  </div>
+
+  <!-- ═══════ VISIONNEUSE PLEIN ÉCRAN ═══════ -->
+  <div class="fd-viewer" *ngIf="viewerImage" (click)="closeViewer()">
+    <button class="fd-viewer-close" type="button" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+    <div class="fd-viewer-controls">
+      <button type="button" (click)="zoomOut(); $event.stopPropagation()"><mat-icon>remove</mat-icon></button>
+      <span>{{ Math.round(zoomLevel * 100) }}%</span>
+      <button type="button" (click)="zoomIn(); $event.stopPropagation()"><mat-icon>add</mat-icon></button>
+      <button type="button" (click)="resetZoom(); $event.stopPropagation()"><mat-icon>fit_screen</mat-icon></button>
+    </div>
+    <img [src]="viewerImage" alt="Document plein écran"
+         [style.transform]="'scale(' + zoomLevel + ')'"
+         (click)="$event.stopPropagation()">
+  </div>
+
+</div>

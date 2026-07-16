@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, forkJoin } from 'rxjs';
 import { FactureService } from './facture.service';
+import { StructureService } from './structure.service';
 import { AuthService } from './auth.service';
 
 /** Nombre de factures par statut (clé = StatutFacture). */
@@ -38,7 +39,11 @@ export class FactureCountService {
   /** IDs des factures présentes au dernier refresh, par statut. */
   private currentIds: Record<string, string[]> = {};
 
-  constructor(private factureService: FactureService, private auth: AuthService) {
+  constructor(
+    private factureService: FactureService,
+    private structureService: StructureService,
+    private auth: AuthService
+  ) {
     // Purge l'ancien état « vu » global (partagé entre comptes) au profit des clés par utilisateur.
     try { localStorage.removeItem(this.LEGACY_STORAGE_KEY); } catch { /* mode privé : on ignore */ }
     this.loadSeenForCurrentUser();
@@ -54,10 +59,16 @@ export class FactureCountService {
     this.syncUserScope();
     if (this.loading) return;
     this.loading = true;
-    this.factureService.getAll().subscribe({
-      next: (factures) => {
+    
+    forkJoin({
+      pharmacieFactures: this.factureService.getAll(),
+      structureFactures: this.structureService.getFactures()
+    }).subscribe({
+      next: ({ pharmacieFactures, structureFactures }) => {
         const current: Record<string, string[]> = {};
-        for (const f of factures) {
+        const allFactures = [...pharmacieFactures, ...structureFactures];
+        
+        for (const f of allFactures) {
           const s = String(f.statut);
           (current[s] = current[s] || []).push(String(f.id));
         }

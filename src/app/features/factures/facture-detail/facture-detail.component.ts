@@ -51,20 +51,20 @@ export class FactureDetailComponent implements OnInit {
   loading = true;
   loadError = false;
 
+  // Expose Math to template
+  Math = Math;
+
   // Pièces justificatives affichées dans le dossier patient
-  readonly photoFields: { key: 'ticketCaisse' | 'bonCommande' | 'ordonnance'; label: string }[] = [
-    { key: 'ticketCaisse', label: 'Ticket de caisse' },
-    { key: 'bonCommande', label: 'Bon de commande' },
-    { key: 'ordonnance', label: 'Ordonnance' }
+  readonly photoFields: { key: 'ticketCaisse' | 'bonCommande' | 'ordonnance'; label: string; icon: string }[] = [
+    { key: 'ticketCaisse', label: 'Ticket de caisse', icon: 'receipt_long' },
+    { key: 'bonCommande', label: 'Bon de commande', icon: 'description' },
+    { key: 'ordonnance', label: 'Ordonnance', icon: 'clinical_notes' }
   ];
   dossierPatient: PatientGroup | null = null;
   viewerImage: string | null = null;
+  zoomLevel = 1;
 
   @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
-
-
-
-
 
   /**
    * Lignes regroupées par patient (le nom n'apparaît qu'une fois — rowspan).
@@ -88,15 +88,19 @@ export class FactureDetailComponent implements OnInit {
         g = {
           nom: ligne.patientNomPrenom,
           matricule: ligne.patientMatricule,
-          ticketCaisse: ligne.ticketCaisse,
-          bonCommande: ligne.bonCommande,
-          ordonnance: ligne.ordonnance,
           lignes: [],
           expanded: false
         };
         byKey.set(key, g);
         groups.push(g);
       }
+      // Les pièces sont dupliquées sur les lignes du patient, mais PAS forcément sur
+      // la première : quand les médicaments d'un même patient sont ajoutés en
+      // plusieurs fois, seules certaines lignes portent les photos. On récupère donc
+      // chaque pièce depuis la première ligne qui la possède.
+      if (!g.ticketCaisse && ligne.ticketCaisse) g.ticketCaisse = ligne.ticketCaisse;
+      if (!g.bonCommande && ligne.bonCommande) g.bonCommande = ligne.bonCommande;
+      if (!g.ordonnance && ligne.ordonnance) g.ordonnance = ligne.ordonnance;
       g.lignes.push({ ligne, index });
     });
     return groups;
@@ -114,17 +118,103 @@ export class FactureDetailComponent implements OnInit {
     return [g.ticketCaisse, g.bonCommande, g.ordonnance].filter(p => !!p).length;
   }
 
+  groupTotal(g: PatientGroup): number {
+    return g.lignes.reduce((sum, item) => sum + (item.ligne.montant || 0), 0);
+  }
+
   openDossier(g: PatientGroup) {
     this.dossierPatient = g;
+  }
+
+  closeDossier() {
+    this.dossierPatient = null;
+  }
+
+  openViewer(src: string) {
+    this.viewerImage = src;
+    this.zoomLevel = 1;
+  }
+
+  closeViewer() {
+    this.viewerImage = null;
+    this.zoomLevel = 1;
+  }
+
+  zoomIn() {
+    this.zoomLevel = Math.min(this.zoomLevel + 0.25, 3);
+  }
+
+  zoomOut() {
+    this.zoomLevel = Math.max(this.zoomLevel - 0.25, 0.25);
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1;
   }
 
   toggleGroup(g: PatientGroup) {
     g.expanded = !g.expanded;
   }
 
+  // --- Pagination & Search ---
+  searchPatient: string = '';
+  filteredGroups: PatientGroup[] = [];
+  paginatedGroups: PatientGroup[] = [];
+  currentPage: number = 1;
+  pageSize: number = 10;
 
+  get totalPages(): number {
+    return Math.ceil(this.filteredGroups.length / this.pageSize);
+  }
 
+  get pageNumbers(): number[] {
+    const pages = [];
+    for (let i = 1; i <= this.totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
 
+  onSearchChange() {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePagination();
+      // Scroll smoothly to top of patients section
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+    }
+  }
+
+  private updatePagination() {
+    // 1. Filter
+    const term = this.searchPatient.toLowerCase().trim();
+    if (term) {
+      this.filteredGroups = this.patientGroups.filter(g => 
+        (g.nom && g.nom.toLowerCase().includes(term)) ||
+        (g.matricule && g.matricule.toLowerCase().includes(term)) ||
+        // Search by medication name as well
+        g.lignes.some(l => l.ligne.medicament.toLowerCase().includes(term))
+      );
+    } else {
+      this.filteredGroups = [...this.patientGroups];
+    }
+
+    // 2. Paginate
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    this.paginatedGroups = this.filteredGroups.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  expandAll() {
+    this.filteredGroups.forEach(g => g.expanded = true);
+  }
+
+  collapseAll() {
+    this.filteredGroups.forEach(g => g.expanded = false);
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -150,6 +240,7 @@ export class FactureDetailComponent implements OnInit {
   private setFacture(f: Facture) {
     this.facture = f;
     this.patientGroups = this.buildPatientGroups();
+    this.updatePagination();
   }
 
   loadFacture(id: string) {
@@ -335,8 +426,6 @@ export class FactureDetailComponent implements OnInit {
       }
     );
   }
-
-
 
   private openConfirm(title: string, message: string, onConfirm: () => void) {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {

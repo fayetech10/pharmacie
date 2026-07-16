@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 /* Tailwind CSS — base/components/utilities.
    (preflight désactivé dans tailwind.config.js : le reset reste maison.) */
@@ -90,7 +90,7 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
   font-size: 14px;
@@ -154,7 +154,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 }
 .card:hover,
 .section-card:hover {
-  box-shadow: var(--shadow);
+  /* No hover effect */
 }
 
 .section-header {
@@ -197,7 +197,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
     transition: all var(--transition);
   }
   .btn:disabled { @apply opacity-[0.55] cursor-not-allowed; }
-  .btn active { transform: scale(0.98); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
   .btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
   .btn-sm { @apply h-9 px-3 text-[13px] rounded-lg; }
   .btn-sm mat-icon { font-size: 16px; width: 16px; height: 16px; }
@@ -285,7 +285,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   box-shadow: var(--shadow-sm);
   transition: all var(--transition);
 }
-.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.kpi-card:hover { /* Removed translate */ }
 .kpi-icon {
   width: 46px;
   height: 46px;
@@ -295,10 +295,10 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   justify-content: center;
   flex-shrink: 0;
 }
-.kpi-icon.blue  { background: #DBEAFE; color: #2563EB; }
-.kpi-icon.green { background: var(--primary-100); color: var(--primary); }
-.kpi-icon.amber { background: #FEF3C7; color: #D97706; }
-.kpi-icon.red   { background: #FEE2E2; color: #EF4444; }
+.kpi-icon.blue  { color: #2563EB; }
+.kpi-icon.green { color: var(--primary); }
+.kpi-icon.amber { color: #D97706; }
+.kpi-icon.red   { color: #EF4444; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
 .kpi-value small { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
@@ -504,9 +504,15 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
 .form-grid mat-form-field { width: 100%; }
 .span-2 { grid-column: span 2; }
+/* Rangée de deux champs côte à côte (modales). Partagé : utilisé par plusieurs
+   écrans (utilisateurs, structures) → défini globalement pour ne pas dépendre du
+   CSS scopé d'un composant. */
+.form-row { display: flex; gap: var(--sp-3); }
+.form-row > .flex-grow { flex: 1; min-width: 0; }
 @media (max-width: 560px) {
   .form-grid { grid-template-columns: 1fr; }
   .span-2 { grid-column: span 1; }
+  .form-row { flex-direction: column; gap: 0; }
   .modal-overlay { padding: var(--sp-2); align-items: flex-end; }
   .modal-card { max-height: 94vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
   .modal-footer .btn { flex: 1; }
@@ -594,6 +600,20 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 }
 .m-chip.danger { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .m-chip.neutral { background: var(--border-light); color: var(--text-secondary); border-color: var(--border); }
+
+/* Ligne d'icône + texte dans les cartes mobiles (partagé) */
+.m-row span { display: inline-flex; align-items: center; gap: 4px; }
+}
+
+/* Petite icône en ligne (cartes mobiles). Non « layered » + sélecteur d'élément
+   pour passer devant le style Material .mat-icon (24px) sans !important. */
+mat-icon.inline-ic {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+  color: var(--text-muted);
+  margin-right: 2px;
 }
 
 /* ============================================================
@@ -787,8 +807,8 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
    ============================================================ */
 .fade-in { animation: fadeIn 0.3s ease; }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -811,11 +831,11 @@ button, a { transition: all var(--transition); }
 }
 .sum-ic { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sum-ic mat-icon { font-size: 20px; width: 20px; height: 20px; }
-.sum-ic.blue   { background: #DBEAFE; color: #2563EB; }
-.sum-ic.green  { background: var(--primary-100); color: var(--primary); }
-.sum-ic.violet { background: #EDE9FE; color: #7C3AED; }
-.sum-ic.amber  { background: #FEF3C7; color: #D97706; }
-.sum-ic.red    { background: var(--warn-light); color: var(--warn); }
+.sum-ic.blue   { color: #2563EB; }
+.sum-ic.green  { color: var(--primary); }
+.sum-ic.violet { color: #7C3AED; }
+.sum-ic.amber  { color: #D97706; }
+.sum-ic.red    { color: var(--warn); }
 .sum-body { display: flex; flex-direction: column; min-width: 0; }
 .sum-val { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sum-val small { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
@@ -842,3 +862,102 @@ button, a { transition: all var(--transition); }
 }
 
 
+/* ============================================================
+   TABLES UNIFIÉES (.glass-table-container / .premium-table)
+   Surface pleine (le backdrop-filter dégradait le scroll et
+   détonnait avec le style sobre des cartes).
+   ============================================================ */
+.glass-table-container {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-top: var(--sp-4);
+  transition: box-shadow var(--transition);
+}
+
+.glass-table-container:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Défilement horizontal contenu : la page ne scrolle jamais latéralement. */
+.glass-table-container .table-scroll,
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.premium-table {
+  width: 100%;
+  background: transparent !important;
+}
+
+.premium-table thead tr {
+  background: #F8FAFC !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.premium-table th.mat-header-cell {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 14px 20px;
+  border-bottom: none;
+}
+
+.premium-table td.mat-cell {
+  padding: 14px 20px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color var(--transition);
+}
+
+.premium-table tbody tr {
+  transition: background-color var(--transition);
+  background: transparent !important;
+}
+
+.premium-table tbody tr:hover {
+  background-color: var(--primary-light) !important;
+}
+
+.premium-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================================
+   SQUELETTES DE CHARGEMENT (remplacent les spinners bloquants
+   pour les chargements > 300 ms : la structure reste stable, CLS ≈ 0)
+   ============================================================ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+  min-height: 12px;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+@keyframes skeletonShimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ============================================================
+   MOBILE : lisibilité & anti-zoom iOS
+   Un input < 16px déclenche le zoom automatique d'iOS Safari :
+   on force 16px sur les champs au doigt.
+   ============================================================ */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px; }
+  .search-box input { font-size: 16px; }
+  .mat-mdc-form-field { font-size: 16px !important; }
+}

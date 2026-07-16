@@ -3,6 +3,7 @@ import { ApiService } from './api.service';
 import { FactureEventsService } from './facture-events.service';
 import { Facture, FactureRequest, ValidationRequest, LigneDecisionRequest } from '../models/facture.model';
 import { Observable, tap } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -16,8 +17,14 @@ export class FactureService {
     return tap<T>(() => this.events.notifyChanged());
   }
 
-  getAll(): Observable<Facture[]> {
-    return this.api.get<Facture[]>('/factures');
+  getAll(params?: { mois?: number; annee?: number; regime?: string }): Observable<Facture[]> {
+    let queryParams = new HttpParams();
+    if (params) {
+      if (params.mois) queryParams = queryParams.set('mois', params.mois.toString());
+      if (params.annee) queryParams = queryParams.set('annee', params.annee.toString());
+      if (params.regime) queryParams = queryParams.set('regime', params.regime); // Backend for Facture controller might not use regime, but we'll send it if present
+    }
+    return this.api.get<Facture[]>('/factures', { params: queryParams });
   }
 
   getById(id: string): Observable<Facture> {
@@ -78,6 +85,10 @@ export class FactureService {
 
   exportExcel(): Observable<Blob> {
     return this.api.getBlob('/factures/export/excel');
+  }
+
+  exportGlobalRegionExcel(): Observable<Blob> {
+    return this.api.getBlob('/export/region-global/excel');
   }
 
   exportFactureExcel(id: string): Observable<Blob> {

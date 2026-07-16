@@ -1,0 +1,197 @@
+/* Liste des factures « Structure sanitaire ».
+   Hiérarchie : Mois > Régime > Tableau des factures > détail des prestations (ligne dépliable). */
+
+.fsl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8, 32px);
+}
+
+.fsl-loading,
+.fsl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--sp-8, 48px) var(--sp-4, 16px);
+  color: var(--text-secondary);
+  text-align: center;
+}
+.fsl-loading mat-icon,
+.fsl-empty mat-icon { font-size: 32px; width: 32px; height: 32px; opacity: 0.5; }
+.fsl-empty p { margin: 0; font-size: 14px; }
+
+/* ===================== Niveau 1 : Mois ===================== */
+.fsl-month { display: flex; flex-direction: column; gap: var(--sp-4, 16px); }
+
+.fsl-month-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: var(--sp-2, 8px);
+  border-bottom: 2px solid var(--primary-200, #C2DACB);
+}
+.fsl-month-head mat-icon { color: var(--primary); font-size: 22px; width: 22px; height: 22px; }
+.fsl-month-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #0F172A);
+  text-transform: capitalize;
+}
+
+/* ===================== Niveau 2 : Régime ===================== */
+.fsl-regime {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2, 8px);
+  margin-left: var(--sp-2, 8px);
+}
+
+.fsl-regime-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fsl-regime-badge {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-full, 999px);
+  padding: 4px 12px;
+}
+.fsl-regime-count {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.fsl-regime-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.fsl-regime-actions mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
+/* ===================== Niveau 3 : Tableau des factures ===================== */
+.fsl-table-wrap {
+  border: 1px solid var(--border, #E2EAE4);
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  background: #fff;
+  overflow-x: auto;
+}
+
+.fsl-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.fsl-table thead tr {
+  background: var(--bg-subtle, #F8FAFC);
+  border-bottom: 1px solid var(--border, #E2EAE4);
+}
+.fsl-table th {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.fsl-row {
+  border-bottom: 1px solid var(--border, #F1F5F9);
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.fsl-row:hover,
+.fsl-row:focus-visible { background: var(--primary-light, #F0F6F2); }
+.fsl-table td { padding: 12px 16px; vertical-align: middle; }
+
+.fsl-numero { font-weight: 700; color: var(--text-primary, #0F172A); }
+
+.fsl-col-montant { text-align: right; }
+.fsl-montant { font-weight: 700; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Badge de statut, avec icône (ne repose pas sur la couleur seule) */
+.fsl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fsl-status-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
+.fsl-status-badge.status-BROUILLON  { background: #F1F5F9; color: #64748B; }
+.fsl-status-badge.status-ENVOYEE    { background: #E6F4EA; color: #137333; }
+.fsl-status-badge.status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); }
+.fsl-status-badge.status-REJETEE_SR { background: #FFF7ED; color: #EA580C; }
+.fsl-status-badge.status-VALIDEE_NC { background: var(--primary-100); color: var(--primary-hover); }
+.fsl-status-badge.status-REJETEE_NC { background: #FEF2F2; color: #DC2626; }
+.fsl-status-badge.status-PAYEE      { background: #FEFCE8; color: #A16207; }
+
+/* ===================== Niveau 4 : Détail des prestations ===================== */
+.fsl-detail-patient { display: flex; flex-direction: column; gap: 6px; }
+.fsl-detail-patient-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text-primary, #0F172A);
+}
+.fsl-detail-patient-name mat-icon { font-size: 17px; width: 17px; height: 17px; color: var(--primary); }
+
+.fsl-presta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  background: #fff;
+  border: 1px solid var(--border, #E2EAE4);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+}
+.fsl-presta-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--bg-subtle, #F8FAFC);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--border, #E2EAE4);
+}
+.fsl-presta-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+}
+.fsl-presta-table tr:last-child td { border-bottom: none; }
+
+.fsl-detail-actions { padding-top: 2px; }
+.fsl-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+}
+.fsl-link:hover { text-decoration: underline; }
+.fsl-link mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+/* ===================== Responsive ===================== */
+@media (max-width: 768px) {
+  .fsl-regime { margin-left: 0; }
+  .fsl-regime-actions { margin-left: 0; width: 100%; }
+  .fsl-detail { padding-left: 16px; }
+}

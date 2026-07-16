@@ -1,0 +1,138 @@
+<div class="sf">
+  <!-- En-tête + filtres -->
+  <div class="sf-head">
+    <div class="sf-head-left">
+      <button *ngIf="level === 'factures'" class="sf-back" (click)="back()" type="button" aria-label="Retour">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div [ngSwitch]="level">
+        <ng-container *ngSwitchCase="'structures'">
+          <h2 class="sf-title">Factures par structure</h2>
+          <p class="sf-sub" *ngIf="!loading">
+            {{ structureSummaries.length }} structure(s) · {{ totalGlobal | number:'1.0-0':'fr' }} FCFA (part SEN-CSU)
+          </p>
+          <p class="sf-sub" *ngIf="loading">Chargement…</p>
+        </ng-container>
+        <ng-container *ngSwitchCase="'factures'">
+          <h2 class="sf-title">{{ selected?.structureNom }}</h2>
+          <p class="sf-sub">
+            {{ selected?.regionNom }} · {{ selectedFactures.length }} facture(s) · {{ selectedTotal | number:'1.0-0':'fr' }} FCFA (part SEN-CSU)
+          </p>
+        </ng-container>
+      </div>
+    </div>
+    <div class="sf-filters">
+      <select class="sf-select" [(ngModel)]="filterYear">
+        <option [ngValue]="0">Toutes les années</option>
+        <option *ngFor="let y of anneesDispo" [ngValue]="y">{{ y }}</option>
+      </select>
+      <select class="sf-select" [(ngModel)]="filterStatut">
+        <option value="">Tous les statuts</option>
+        <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Chargement -->
+  <div class="sf-empty" *ngIf="loading">
+    <mat-icon class="spin">autorenew</mat-icon>
+    <p>Chargement des factures des structures…</p>
+  </div>
+
+  <!-- ===================== NIVEAU 1 : STRUCTURES ===================== -->
+  <ng-container *ngIf="!loading && level === 'structures'">
+    <div class="sf-empty" *ngIf="structureSummaries.length === 0">
+      <mat-icon>local_hospital</mat-icon>
+      <h3>Aucune facture de structure</h3>
+      <p>Aucune facture ne correspond aux filtres sélectionnés.</p>
+    </div>
+
+    <div class="sf-table" *ngIf="structureSummaries.length > 0">
+      <div class="sf-row sf-row--head sf-row--struct">
+        <span>Structure</span>
+        <span>Région</span>
+        <span class="sf-center">Factures</span>
+        <span class="sf-amount">Part SEN-CSU</span>
+        <span></span>
+      </div>
+      <div class="sf-row sf-row--struct sf-row--clickable" *ngFor="let s of structureSummaries" (click)="selectStructure(s)">
+        <span class="sf-structure">
+          <mat-icon>local_hospital</mat-icon>
+          <strong>{{ s.structureNom }}</strong>
+        </span>
+        <span>{{ s.regionNom }}</span>
+        <span class="sf-center"><span class="sf-count">{{ s.nbFactures }}</span></span>
+        <span class="sf-amount"><strong>{{ s.total | number:'1.0-0':'fr' }} F</strong></span>
+        <span class="sf-chevron"><mat-icon>chevron_right</mat-icon></span>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ============ NIVEAU 2 : FACTURES SÉPARÉES PAR RÉGIME, PUIS PAR MOIS ============ -->
+  <ng-container *ngIf="!loading && level === 'factures'">
+    <div class="sf-empty" *ngIf="regimeGroups.length === 0">
+      <mat-icon>receipt_long</mat-icon>
+      <h3>Aucune facture</h3>
+      <p>Cette structure n'a aucune facture pour les filtres sélectionnés.</p>
+    </div>
+
+    <!-- Une section par régime -->
+    <div class="sf-regime-block" *ngFor="let rg of regimeGroups">
+      <div class="sf-regime-head">
+        <div class="sf-regime-title">
+          <mat-icon>category</mat-icon>
+          <span>{{ rg.regimeLabel }}</span>
+        </div>
+        <div class="sf-regime-meta">
+          {{ rg.nbFactures }} facture(s) · <strong>{{ rg.total | number:'1.0-0':'fr' }} F</strong>
+        </div>
+      </div>
+
+      <!-- Puis un bloc par mois -->
+      <div class="sf-month" *ngFor="let g of rg.months">
+        <div class="sf-month-head">
+          <div class="sf-month-title">
+            <mat-icon>calendar_month</mat-icon>
+            <span>{{ g.label }}</span>
+          </div>
+          <div class="sf-month-meta">
+            {{ g.factures.length }} facture(s) · <strong>{{ g.total | number:'1.0-0':'fr' }} F</strong>
+          </div>
+        </div>
+
+        <div class="sf-table">
+          <div class="sf-row sf-row--head sf-row--fact2">
+            <span>N° Facture</span>
+            <span>Bénéficiaires</span>
+            <span class="sf-amount">Part SEN-CSU</span>
+            <span>Statut</span>
+          </div>
+          <div class="sf-row sf-row--fact2 sf-row--clickable" *ngFor="let f of getPaginatedFactures(g)" (click)="openDetail(f)">
+            <span class="sf-num"><strong>{{ f.numero }}</strong></span>
+            <span>{{ nbBeneficiaires(f) }} bénéficiaire(s)</span>
+            <span class="sf-amount"><strong>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong></span>
+            <span><span class="sf-badge" [ngClass]="'st-' + f.statut">{{ statutLabel(f.statut) }}</span></span>
+          </div>
+        </div>
+
+        <!-- Pagination for MonthGroup -->
+        <div class="sf-pagination" *ngIf="g.factures.length > (g.pageSize || 10)">
+          <span class="sf-pagination-info">
+            {{ ((g.currentPage || 1) - 1) * (g.pageSize || 10) + 1 }}–{{ Math.min((g.currentPage || 1) * (g.pageSize || 10), g.factures.length) }} sur {{ g.factures.length }}
+          </span>
+          <div class="sf-pagination-btns">
+            <button class="sf-page-btn" [disabled]="(g.currentPage || 1) <= 1" (click)="goToPage(g, (g.currentPage || 1) - 1)">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <ng-container *ngFor="let p of getPageNumbers(g)">
+              <button class="sf-page-btn" [class.active]="p === g.currentPage" (click)="goToPage(g, p)">{{ p }}</button>
+            </ng-container>
+            <button class="sf-page-btn" [disabled]="(g.currentPage || 1) >= getTotalPages(g)" (click)="goToPage(g, (g.currentPage || 1) + 1)">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -23,7 +23,7 @@
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
               <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
-              <app-factures-list [monthlyView]="true" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
+              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
             </div>
           </ng-template>
         </mat-tab>
@@ -35,7 +35,7 @@
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
               <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
-              <app-factures-list [monthlyView]="true" [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
+              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
             </div>
           </ng-template>
         </mat-tab>
@@ -46,7 +46,7 @@
           </ng-template>
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
-              <app-factures-list [monthlyView]="true" [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
+              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
             </div>
           </ng-template>
         </mat-tab>
@@ -58,7 +58,7 @@
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
               <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
-              <app-factures-list [monthlyView]="true" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
+              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
             </div>
           </ng-template>
         </mat-tab>

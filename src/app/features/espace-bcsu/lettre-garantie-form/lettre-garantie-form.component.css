@@ -1,0 +1,292 @@
+/* Formulaire « Lettre de garantie » (BCSU) — parcours guidé en 3 étapes.
+   CSS complet (les anciennes règles @apply tronquées cassaient le layout). */
+
+.lg-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* --- Stepper (barre de progression) --- */
+.lg-stepper-progress {
+  color: var(--text-secondary);
+}
+.lg-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  transition: background var(--transition);
+}
+.lg-dot.active { background: var(--primary); }
+
+/* --- Cartes --- */
+.lg-card { padding: var(--sp-5); }
+.lg-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--sp-3);
+}
+
+/* --- Choix du régime (avant les photos : détermine les pièces demandées) --- */
+.lg-regime-field {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+}
+.lg-regime-hint {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin: 0 0 var(--sp-3);
+}
+
+/* --- Grille de champs --- */
+.lg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 var(--sp-3);
+}
+@media (max-width: 640px) { .lg-grid { grid-template-columns: 1fr; } }
+
+/* --- Champs sans bordure (demande : « supprime les bordures ») ---
+   Les champs Material sont en appearance="outline" : on masque les trois
+   segments de la bordure MDC et on donne un fond doux arrondi à la place. */
+.lg-card ::ng-deep .mat-mdc-form-field { width: 100%; }
+.lg-card ::ng-deep .mat-mdc-text-field-wrapper {
+  background: var(--field-bg, #f1f5f9);
+  border-radius: var(--radius-sm);
+}
+.lg-card ::ng-deep .mdc-notched-outline__leading,
+.lg-card ::ng-deep .mdc-notched-outline__notch,
+.lg-card ::ng-deep .mdc-notched-outline__trailing {
+  border-color: transparent !important;
+}
+/* Anneau discret au focus (aucune bordure dure) */
+.lg-card ::ng-deep .mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
+  background: var(--field-bg, #f1f5f9);
+  box-shadow: 0 0 0 2px rgba(47, 110, 84, 0.25);
+}
+
+/* --- Recherche patient --- */
+.lg-search { position: relative; margin-bottom: var(--sp-4); }
+.lg-input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  padding: 0 var(--sp-3);
+  font-family: inherit;
+  background: var(--field-bg, #f1f5f9);
+  color: var(--text-primary);
+}
+.lg-input:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(47, 110, 84, 0.25);
+}
+.lg-search-results {
+  position: absolute;
+  z-index: 10;
+  top: 48px;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+.lg-search-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+}
+.lg-search-item:hover { background: var(--primary-light); }
+.lg-search-item span { font-size: 12.5px; color: var(--text-secondary); }
+
+.lg-selected-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.lg-selected-banner button {
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* --- Summary (Etape 2) --- */
+.lg-summary-box {
+  background: var(--field-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.lg-summary-row {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  border-bottom: 1px dashed var(--border-light);
+  padding-bottom: 4px;
+}
+.lg-summary-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.lg-summary-row strong {
+  color: var(--text-secondary);
+}
+.lg-summary-row span {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* --- Actions (boutons de navigation d'étape) --- */
+.lg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+
+/* --- Lignes de prestations --- */
+.lg-lines { margin-top: var(--sp-4); }
+.lg-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.lg-line-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.lg-line-name { font-weight: 600; color: var(--text-primary); }
+.lg-line-meta { font-size: 12.5px; color: var(--text-secondary); }
+.lg-line-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.lg-line-amounts strong { font-weight: 700; color: var(--text-primary); }
+.lg-line-amounts span { font-size: 12px; color: var(--text-secondary); }
+.lg-del {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.lg-del:hover { background: var(--warn-light); color: var(--warn); }
+.lg-line-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  font-weight: 700;
+  padding: var(--sp-3) 0 0;
+}
+.lg-line-foot-amounts { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.lg-line-foot-amounts span { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+
+/* --- Photos / OCR --- */
+.lg-photos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-3);
+}
+@media (max-width: 640px) { .lg-photos { grid-template-columns: 1fr; } }
+.lg-photo { display: flex; flex-direction: column; gap: var(--sp-2); }
+.lg-photo-label { font-weight: 600; font-size: 13px; color: var(--text-secondary); }
+.lg-photo-drop {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  background: var(--field-bg);
+}
+.lg-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+}
+.lg-photo-preview {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.lg-photo-preview img { display: block; width: 100%; max-height: 200px; object-fit: cover; }
+.lg-photo-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.lg-photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+.lg-photo-ocr {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+.lg-ocr-spin { animation: lg-ocr-rotation 1s linear infinite; }
+@keyframes lg-ocr-rotation {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

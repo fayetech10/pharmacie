@@ -2,15 +2,12 @@
    Portée sur Tailwind (@apply) ; l'animation/ombre reste en brut. */
 .top-progress {
   @apply fixed top-0 left-0 right-0 h-[3px] z-[9999] pointer-events-none overflow-hidden bg-transparent;
-}
 
-.top-progress-bar {
+}.top-progress-bar {
   @apply absolute top-0 h-full w-[35%] rounded-[3px] bg-primary;
   box-shadow: 0 0 8px rgba(0, 150, 136, 0.5);
   animation: top-progress-slide 1.2s ease-in-out infinite;
-}
-
-@keyframes top-progress-slide {
+}@keyframes top-progress-slide{
   0%   { left: -35%; }
   60%  { left: 100%; }
   100% { left: 100%; }

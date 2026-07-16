@@ -1,0 +1,430 @@
+.sf {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* En-tête + filtres */
+.sf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sf-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sf-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg, #fff);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.sf-back:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.sf-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sf-sub {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+.sf-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sf-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+}
+
+.sf-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+}
+
+/* États vides / chargement */
+.sf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 52px 24px;
+  color: var(--text-secondary);
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.sf-empty h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.sf-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.sf-empty mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+}
+
+.spin {
+  animation: sf-spin 1.2s linear infinite;
+}
+
+@keyframes sf-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}
+
+/* Table générique */
+.sf-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+}
+
+.sf-row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  font-size: 13.5px;
+  color: #334155;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.sf-row:last-child {
+  border-bottom: none;
+}
+
+/* Niveau 1 : structures */
+.sf-row--struct {
+  grid-template-columns: 2.6fr 1.6fr 1fr 1.4fr 40px;
+}
+
+/* Niveau 2 : factures */
+.sf-row--fact {
+  grid-template-columns: 1.8fr 1.6fr 1.4fr 1.3fr 1.2fr;
+}
+
+/* Niveau 2 (par régime) : factures sans colonne régime */
+.sf-row--fact2 {
+  grid-template-columns: 1.8fr 1.8fr 1.4fr 1.2fr;
+}
+
+.sf-row--head {
+  background: var(--field-bg, #F8FAF9);
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sf-row--clickable {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.sf-row--clickable:hover {
+  background: var(--primary-light);
+}
+
+.sf-structure {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sf-structure mat-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.sf-structure strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.sf-center {
+  text-align: center;
+}
+
+.sf-count {
+  display: inline-block;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.sf-amount {
+  text-align: right;
+}
+
+.sf-amount strong {
+  color: var(--primary);
+}
+
+.sf-chevron {
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.sf-num strong {
+  color: var(--primary);
+}
+
+.sf-regime {
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.sf-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--field-bg, #F1F5F9);
+  color: var(--text-secondary);
+}
+
+/* Alignées sur la palette globale .status-* : même statut = même couleur
+   dans toute l'application (factures pharmacie et structures). */
+.st-ENVOYEE { background: #E6F4EA; color: #137333; }
+.st-VALIDEE_SR { background: var(--primary-light); color: var(--primary); }
+.st-VALIDEE_NC { background: var(--primary-100); color: var(--primary-hover); }
+.st-REJETEE_SR { background: #FFF7ED; color: #EA580C; }
+.st-REJETEE_NC { background: #FEF2F2; color: #DC2626; }
+.st-PAYEE { background: #FEFCE8; color: #A16207; }
+
+/* Bloc régime (niveau 2) */
+.sf-regime-block {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+.sf-regime-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--primary-light);
+  border-bottom: 1px solid var(--primary-200);
+}
+
+.sf-regime-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sf-regime-title mat-icon {
+  color: var(--primary);
+}
+
+.sf-regime-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sf-regime-meta strong {
+  color: var(--primary);
+}
+
+/* Blocs mensuels imbriqués dans un bloc régime */
+.sf-regime-block .sf-month {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.sf-regime-block .sf-month-head {
+  background: var(--field-bg, #F8FAF9);
+}
+
+/* Groupe mensuel */
+.sf-month {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.sf-month .sf-table {
+  border: none;
+  border-radius: 0;
+}
+
+.sf-month-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 13px 18px;
+  background: var(--field-bg, #F8FAF9);
+  border-bottom: 1px solid var(--border);
+}
+
+.sf-month-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.sf-month-title mat-icon {
+  color: var(--primary);
+}
+
+.sf-month-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sf-month-meta strong {
+  color: var(--primary);
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .sf-row--head {
+    display: none;
+  }
+  .sf-row--struct,
+  .sf-row--fact {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+  }
+  .sf-structure,
+  .sf-num {
+    grid-column: 1 / -1;
+  }
+  .sf-amount,
+  .sf-center {
+    text-align: left;
+  }
+  .sf-chevron {
+    display: none;
+  }
+}
+
+/* ─── NOUVEAU: Pagination ─── */
+.sf-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid var(--border-light);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.sf-pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sf-pagination-btns {
+  display: flex;
+  gap: 4px;
+}
+.sf-page-btn {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.sf-page-btn:hover:not(:disabled) {
+  background: var(--border-light);
+}
+.sf-page-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.sf-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #F8FAFC;
+}
+.sf-page-btn mat-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+}

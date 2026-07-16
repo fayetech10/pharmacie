@@ -1,0 +1,120 @@
+<div class="fade-in patients-page">
+  <div class="page-head">
+    <div>
+      <h1>Bénéficiaires (Patients)</h1>
+      <p>Recherchez un bénéficiaire, consultez son dossier consolidé (Lettres, Bons, Factures) et délivrez-lui un bon de commande</p>
+    </div>
+    <span class="patients-count">
+      {{ patients.length }} patient{{ patients.length > 1 ? 's' : '' }}
+    </span>
+  </div>
+
+  <!-- Barre de recherche + filtres -->
+  <mat-card class="patients-filters">
+    <div class="patients-filters-row">
+      <!-- Recherche -->
+      <mat-form-field appearance="outline" class="patients-search-field">
+        <mat-label>Rechercher par nom, prénom, téléphone, CNI ou numéro d'assuré…</mat-label>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="resetPage()" placeholder="Ex: Ousmane Diop ou 176…">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <!-- Filtre par régime -->
+      <mat-form-field appearance="outline" class="patients-regime-field">
+        <mat-label>Régime</mat-label>
+        <mat-select [(ngModel)]="selectedRegime" (ngModelChange)="resetPage()">
+          <mat-option value="">Tous les régimes</mat-option>
+          <mat-option *ngFor="let r of regimeValues" [value]="r">
+            {{ regimeLabels[r] }} ({{ getRegimeCount(r) }})
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Bouton clear -->
+      <button *ngIf="hasActiveFilters"
+              mat-icon-button
+              class="patients-clear-btn"
+              (click)="clearFilters()"
+              aria-label="Réinitialiser les filtres"
+              title="Réinitialiser les filtres">
+        <mat-icon>filter_alt_off</mat-icon>
+      </button>
+    </div>
+  </mat-card>
+
+  <!-- Résumé filtré -->
+  <div *ngIf="!loading && hasActiveFilters" class="patients-filter-summary">
+    <mat-icon>filter_list</mat-icon>
+    {{ filteredPatients.length }} résultat{{ filteredPatients.length > 1 ? 's' : '' }} sur {{ patients.length }}
+  </div>
+
+  <div *ngIf="loading" class="patients-loading">
+    <mat-icon class="spin-icon">sync</mat-icon> Chargement des patients…
+  </div>
+
+  <div *ngIf="!loading && filteredPatients.length === 0" class="patients-empty">
+    <mat-icon>person_off</mat-icon>
+    <h3>Aucun bénéficiaire trouvé</h3>
+    <p>Ajustez vos termes de recherche ou vos filtres.</p>
+    <button *ngIf="hasActiveFilters" mat-stroked-button color="primary" (click)="clearFilters()">
+      <mat-icon>filter_alt_off</mat-icon> Réinitialiser les filtres
+    </button>
+  </div>
+
+  <div class="patients-table-wrap" *ngIf="!loading && filteredPatients.length > 0">
+    <table class="patients-table">
+      <thead>
+        <tr>
+          <th>Bénéficiaire</th>
+          <th>Téléphone</th>
+          <th>N° CNI/N° Assuré</th>
+          <th>Date de Naissance</th>
+          <th>Régime</th>
+          <th class="col-action">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="row-clickable" *ngFor="let p of pagedPatients" (click)="openPatientDossier(p.id!)"
+            tabindex="0" role="button" [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom"
+            (keydown.enter)="openPatientDossier(p.id!)">
+          <td>
+            <div class="patients-identity">
+              <div class="patients-avatar">{{ p.prenom.charAt(0) }}{{ p.nom.charAt(0) }}</div>
+              <span class="patients-name">{{ p.prenom }} {{ p.nom }}</span>
+            </div>
+          </td>
+          <td style="font-weight: 500; color: var(--text-secondary);">{{ p.telephone || '—' }}</td>
+          <td>
+            <ng-container *ngIf="p.numeroCni">{{ p.numeroCni }}</ng-container>
+            <ng-container *ngIf="p.numeroCni && p.numeroAssure"> / </ng-container>
+            <ng-container *ngIf="p.numeroAssure">{{ p.numeroAssure }}</ng-container>
+            <ng-container *ngIf="!p.numeroCni && !p.numeroAssure">—</ng-container>
+          </td>
+          <td>{{ p.dateNaissance ? (p.dateNaissance | date:'dd/MM/yyyy') : '—' }}</td>
+          <td>
+            <span class="patients-regime-badge" [ngStyle]="getRegimeBadgeStyle(p.regime)">
+              {{ regimeLabels[p.regime] }}
+            </span>
+          </td>
+          <td class="col-action">
+            <span class="patients-consulter">
+              Consulter <mat-icon>chevron_right</mat-icon>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="patients-paginator-wrapper">
+    <mat-paginator
+      [length]="filteredPatients.length"
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="pageSizeOptions"
+      showFirstLastButtons
+      (page)="onPageChange($event)"
+      aria-label="Pagination des patients">
+    </mat-paginator>
+  </div>
+</div>

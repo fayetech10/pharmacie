@@ -1,0 +1,214 @@
+/* Formulaire de facturation « Structure sanitaire ».
+   CSS complet (les anciennes règles @apply tronquées cassaient le layout). */
+
+/* Bannière d'information « feuille de soins rattachée » (marque verte) */
+.fs-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-200);
+  color: var(--primary-hover);
+  font-size: 13.5px;
+}
+.fs-info-banner mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+.fs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.fs-card { padding: var(--sp-5); }
+.fs-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.fs-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--sp-3);
+}
+.fs-card-head .fs-title { margin: 0; }
+.fs-hint { margin: 0 0 var(--sp-3); font-size: 13px; color: var(--text-secondary); }
+
+/* --- Recherche / ajout de document : input + bouton --- */
+.fs-search,
+.fs-doc-add {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.fs-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  padding: 0 var(--sp-3);
+  font-family: inherit;
+  background: var(--field-bg, #fff);
+  color: var(--text-primary);
+}
+.fs-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+}
+
+/* --- Grille d'infos (libellé au-dessus de la valeur) --- */
+.fs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+}
+@media (max-width: 640px) { .fs-grid { grid-template-columns: 1fr; } }
+.fs-grid div { display: flex; flex-direction: column; gap: 2px; }
+.fs-grid span { font-size: 12px; color: var(--text-secondary); }
+.fs-grid strong { font-weight: 600; color: var(--text-primary); }
+
+/* --- Grille de saisie des prestations --- */
+.fs-prest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 var(--sp-3);
+}
+@media (max-width: 640px) { .fs-prest-grid { grid-template-columns: 1fr; } }
+
+/* Complément d'identité du bénéficiaire (sous les infos de la lettre) */
+.fs-complement {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border-light);
+}
+
+/* --- Lignes de prestations --- */
+.fs-lines { margin-top: var(--sp-4); }
+.fs-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.fs-line-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.fs-line-name { font-weight: 600; color: var(--text-primary); }
+.fs-line-meta { font-size: 12.5px; color: var(--text-secondary); }
+.fs-line-amounts { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.fs-line-amounts strong { font-weight: 700; color: var(--text-primary); }
+.fs-line-amounts span { font-size: 12px; color: var(--text-secondary); }
+.fs-del {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.fs-del:hover { background: var(--warn-light); color: var(--warn); }
+.fs-line-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  font-weight: 700;
+  padding: var(--sp-3) 0 0;
+}
+.fs-line-foot-amounts { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.fs-line-foot-amounts span { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+
+/* --- Pièces jointes (photo unique) --- */
+.fs-photo-block { margin-bottom: var(--sp-4); }
+.fs-photo-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-2);
+}
+.fs-photo-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-5);
+  min-height: 96px;
+  background: var(--field-bg);
+}
+.fs-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+}
+.fs-photo-preview {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  max-width: 320px;
+}
+.fs-photo-preview img { display: block; width: 100%; max-height: 220px; object-fit: cover; }
+.fs-photo-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.fs-photo-remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+/* --- Documents complémentaires --- */
+.fs-docs { margin-top: var(--sp-3); }
+.fs-doc-add { margin-bottom: var(--sp-3); }
+.fs-doc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.fs-doc-item img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.fs-doc-item span { flex: 1; min-width: 0; font-size: 14px; color: var(--text-primary); }
+
+/* --- Action finale --- */
+.fs-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}

@@ -40,8 +40,11 @@ export class ApiService {
    * @param opts.cacheFirst sert la valeur en cache SANS revalider (idéal pour les données
    *   de référence quasi-statiques comme les médicaments → vraiment « chargé une seule fois »).
    */
-  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean }): Observable<T> {
-    const url = `${this.baseUrl}${path}`;
+  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean; params?: any }): Observable<T> {
+    let url = `${this.baseUrl}${path}`;
+    if (opts?.params) {
+      url += (url.includes('?') ? '&' : '?') + opts.params.toString();
+    }
     const hasCache = this.cache.has(url);
 
     // Cache-first : on renvoie le cache tel quel, aucune requête de revalidation.

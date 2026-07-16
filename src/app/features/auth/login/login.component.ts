@@ -53,10 +53,17 @@ export class LoginComponent {
     this.authService.login(this.loginForm.value).subscribe({
       next: () => {
         if (this.authService.isPharmacien()) {
-          this.router.navigate(['/dashboard']);
-        } else if (this.authService.isServiceCentral() || this.authService.isAdmin()) {
-          // Central et Admin voient « Factures (Par Région) » en première vue
+          this.router.navigate(['/dashboard/espace-pharmacie']);
+        } else if (this.authService.isServiceCentral()) {
+          this.router.navigate(['/dashboard/espace-central']);
+        } else if (this.authService.isServiceRegional()) {
+          this.router.navigate(['/dashboard/espace-region']);
+        } else if (this.authService.isAdmin()) {
           this.router.navigate(['/dashboard/regions']);
+        } else if (this.authService.isBcsu()) {
+          this.router.navigate(['/dashboard/espace-bcsu']);
+        } else if (this.authService.isStructureSanitaire()) {
+          this.router.navigate(['/dashboard/espace-structure']);
         } else {
           this.router.navigate(['/dashboard']);
         }

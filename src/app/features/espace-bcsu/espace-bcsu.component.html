@@ -1,0 +1,26 @@
+<div class="fade-in">
+
+
+  <!-- ========== BANNER POINTAGE ========== -->
+  <div class="pointage-banner" *ngIf="currentUser?.pointageHeure">
+    <div class="pointage-banner-content">
+      <div class="pointage-icon-container">
+        <mat-icon>verified</mat-icon>
+      </div>
+      <div class="pointage-details">
+        <h3>Pointage de présence validé</h3>
+        <p>
+          Arrivée enregistrée à <strong>{{ currentUser.pointageHeure }}</strong>.
+          <span *ngIf="currentUser.pointageDepartHeure"> · Départ enregistré à <strong>{{ currentUser.pointageDepartHeure }}</strong>.</span>
+        </p>
+      </div>
+      <button class="btn-depart-banner" *ngIf="!currentUser.pointageDepartHeure" (click)="ouvrirDepartModal()">
+        <mat-icon>logout</mat-icon> Pointer mon départ
+      </button>
+    </div>
+  </div>
+
+  <div class="pt-2 md:pt-4">
+    <app-lettre-garantie-form></app-lettre-garantie-form>
+  </div>
+</div>

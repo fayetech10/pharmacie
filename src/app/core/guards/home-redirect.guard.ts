@@ -18,7 +18,11 @@ export const homeRedirectGuard = (): UrlTree => {
   if (auth.isServiceRegional()) return router.parseUrl('/dashboard/espace-region');
   if (auth.isServiceCentral()) return router.parseUrl('/dashboard/espace-central');
   if (auth.isAdmin()) return router.parseUrl('/dashboard/regions');
+  if (auth.isBcsu()) return router.parseUrl('/dashboard/espace-bcsu');
+  if (auth.isStructureSanitaire()) return router.parseUrl('/dashboard/espace-structure');
 
-  // Session invalide ou rôle inconnu : retour à la connexion.
+  // Session invalide ou rôle inconnu : déconnexion propre pour éviter les boucles de redirection.
+  console.warn('Session invalide ou rôle inconnu dans homeRedirectGuard, déconnexion...');
+  auth.logout();
   return router.parseUrl('/auth/login');
 };

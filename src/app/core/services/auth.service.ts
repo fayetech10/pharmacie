@@ -111,6 +111,8 @@ export class AuthService {
   isServiceRegional(): boolean { return this.hasRole(Role.SERVICE_REGIONAL); }
   isServiceCentral(): boolean { return this.hasRole(Role.SERVICE_CENTRAL); }
   isAdmin(): boolean { return this.hasRole(Role.ADMIN); }
+  isBcsu(): boolean { return this.hasRole(Role.BCSU); }
+  isStructureSanitaire(): boolean { return this.hasRole(Role.STRUCTURE_SANITAIRE); }
 
   /** Gestion des pharmacies : Service Régional uniquement (Central et Admin exclus). */
   canManagePharmacies(): boolean {
@@ -144,8 +146,14 @@ export class AuthService {
     try {
       const payload = token.split('.')[1];
       if (!payload) return 0;
-      // base64url -> base64, puis décodage UTF-8 robuste.
-      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      // base64url -> base64, avec ajout du padding nécessaire pour atob()
+      let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad === 2) {
+        base64 += '==';
+      } else if (pad === 3) {
+        base64 += '=';
+      }
       const json = decodeURIComponent(
         atob(base64)
           .split('')

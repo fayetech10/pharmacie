@@ -1,0 +1,136 @@
+<div class="lgl">
+  <!-- Barre de recherche et filtres -->
+  <div class="lgl-filter-bar">
+    <div class="lgl-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Rechercher un dossier par numéro (LG-...)"
+             [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()" class="lgl-input" />
+      <button class="lgl-search-btn" [disabled]="searching" (click)="rechercherParNumero()">
+        {{ searching ? 'Recherche...' : 'Rechercher' }}
+      </button>
+    </div>
+    
+    <div class="lgl-filters">
+      <select class="lgl-select" [(ngModel)]="filterMois" (ngModelChange)="load()">
+        <option [ngValue]="0">Tous les mois</option>
+        <option [ngValue]="1">Janvier</option>
+        <option [ngValue]="2">Février</option>
+        <option [ngValue]="3">Mars</option>
+        <option [ngValue]="4">Avril</option>
+        <option [ngValue]="5">Mai</option>
+        <option [ngValue]="6">Juin</option>
+        <option [ngValue]="7">Juillet</option>
+        <option [ngValue]="8">Août</option>
+        <option [ngValue]="9">Septembre</option>
+        <option [ngValue]="10">Octobre</option>
+        <option [ngValue]="11">Novembre</option>
+        <option [ngValue]="12">Décembre</option>
+      </select>
+      <select class="lgl-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
+        <option [ngValue]="0">Toutes les années</option>
+        <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+      </select>
+      <select class="lgl-select" [(ngModel)]="filterRegime" (ngModelChange)="load()">
+        <option value="">Tous les régimes</option>
+        <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="lgl-loading">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement des dossiers…
+  </div>
+  <div *ngIf="!loading && filteredLettres.length === 0" class="lgl-empty">
+    <mat-icon>folder_off</mat-icon>
+    <p>Aucun dossier trouvé.</p>
+  </div>
+
+  <div class="lgl-table-wrap desktop-only" *ngIf="!loading && filteredLettres.length > 0">
+    <table class="lgl-table">
+      <thead>
+        <tr>
+          <th class="lgl-col-expand"></th>
+          <th>N° Lettre</th>
+          <th>Patient</th>
+          <th>Régime</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th class="lgl-col-montant">Montant CSU</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let l of filteredLettres">
+          <tr class="lgl-row" [class.lgl-row--expanded]="isExpanded(l.id)" (click)="toggleExpand(l.id, $event)">
+            <td class="lgl-col-expand">
+              <mat-icon class="lgl-chevron">{{ isExpanded(l.id) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+            </td>
+            <td class="lgl-numero">{{ l.numero }}</td>
+            <td>
+              <div class="lgl-patient">
+                <mat-icon>person</mat-icon>
+                <span>{{ l.patientPrenom }} {{ l.patientNom }}</span>
+              </div>
+            </td>
+            <td><span class="lgl-regime-chip">{{ regimeLabels[l.regime] }}</span></td>
+            <td class="lgl-meta">{{ l.createdAt | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <span class="lgl-badge" [ngClass]="l.statut">
+                <mat-icon>{{ statutIcon(l.statut) }}</mat-icon>
+                {{ statutLabel(l.statut) }}
+              </span>
+            </td>
+            <td class="lgl-col-montant lgl-montant">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+          </tr>
+
+          <!-- Détail des prestations du dossier -->
+          <tr class="lgl-detail-row" *ngIf="isExpanded(l.id)">
+            <td [attr.colspan]="7">
+              <div class="lgl-detail">
+                <table class="lgl-presta-table">
+                  <thead>
+                    <tr>
+                      <th>Désignation</th>
+                      <th>Date de prise en charge</th>
+                      <th>Montant</th>
+                      <th>Montant CSU</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let p of l.prestations">
+                      <td>{{ p.designation }}</td>
+                      <td>{{ p.datePriseEnCharge | date:'dd/MM/yyyy' }}</td>
+                      <td>{{ p.montant | number:'1.0-0':'fr' }} F</td>
+                      <td class="lgl-montant">{{ (p.montantSencsu ?? p.montant) | number:'1.0-0':'fr' }} F</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="lgl-detail-actions" (click)="$event.stopPropagation()">
+                  <a class="lgl-link" (click)="openDetail(l.id)">
+                    <mat-icon>visibility</mat-icon> Voir le dossier complet
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile List (m-cards) -->
+  <div class="m-cards md:hidden" *ngIf="!loading && filteredLettres.length > 0">
+    <a *ngFor="let l of filteredLettres" class="m-card clickable" (click)="openDetail(l.id)">
+      <div class="m-card-top">
+        <h3 class="m-title">{{ l.patientPrenom }} {{ l.patientNom }}</h3>
+        <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">{{ statutLabel(l.statut) }}</span>
+      </div>
+      <div class="m-sub">{{ l.numero }} • {{ l.createdAt | date:'dd/MM/yyyy' }}</div>
+      <div class="m-foot">
+        <span class="m-amount">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} CFA</span>
+        <mat-icon class="m-chevron">chevron_right</mat-icon>
+      </div>
+    </a>
+  </div>
+</div>
