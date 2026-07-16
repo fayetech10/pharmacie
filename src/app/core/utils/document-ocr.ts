@@ -26,7 +26,13 @@ export interface OcrCarteAssureResult {
 /** Lance l'OCR (français) sur une image (File ou data URL) et renvoie le texte brut. */
 async function extraireTexte(image: File | string): Promise<string> {
   const { createWorker } = await import('tesseract.js');
-  const worker = await createWorker('fra');
+  // En production (Vercel), les fichiers worker/WASM/langue ne sont pas bundlés.
+  // On force le chargement depuis le CDN jsDelivr pour que ça marche partout.
+  const worker = await createWorker('fra', 1, {
+    workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
+    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
+    langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+  });
   try {
     const { data } = await worker.recognize(image);
     return data.text || '';
