@@ -84,13 +84,13 @@ export const routes: Routes = [
       {
         path: 'patients',
         canActivate: [roleGuard],
-        data: { roles: [Role.ADMIN, Role.SERVICE_REGIONAL, Role.BCSU] },
+        data: { roles: [Role.ADMIN, Role.SERVICE_REGIONAL, Role.BCSU, Role.STRUCTURE_SANITAIRE] },
         loadComponent: () => import('./features/patients/patients.component').then(m => m.PatientsComponent)
       },
       {
         path: 'patients/:id',
         canActivate: [roleGuard],
-        data: { roles: [Role.ADMIN, Role.SERVICE_REGIONAL, Role.BCSU] },
+        data: { roles: [Role.ADMIN, Role.SERVICE_REGIONAL, Role.BCSU, Role.STRUCTURE_SANITAIRE] },
         loadComponent: () => import('./features/patients/patient-detail/patient-detail.component').then(m => m.PatientDetailComponent)
       },
       {

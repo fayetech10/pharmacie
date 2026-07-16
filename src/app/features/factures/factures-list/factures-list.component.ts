@@ -1,6 +1,7 @@
 import { Component, OnInit, OnChanges, SimpleChanges, ViewChild, Input, ElementRef, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { Router, RouterModule } from '@angular/router';
 import { FactureService } from '../../../core/services/facture.service';
 import { StructureService } from '../../../core/services/structure.service';
@@ -596,3 +597,4 @@ export class FacturesListComponent implements OnInit, OnChanges {
     return groupFactures.find(f => f.mois === month && f.annee === this.selectedYear) || null;
   }
 }
+
