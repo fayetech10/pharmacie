@@ -32,8 +32,8 @@ async function extraireTexte(image: File | string): Promise<string> {
     const worker = await createWorker('fra', 1, {
       workerPath: '/assets/tesseract/worker.min.js',
       corePath: '/assets/tesseract/tesseract-core-simd-lstm.wasm.js',
-      // Les données de langue (fra.traineddata) peuvent rester sur le CDN (elles ne sont pas soumises aux restrictions des Web Workers).
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      // Hébergement local du fichier de langue pour éviter toute erreur réseau/CORS en production
+      langPath: '/assets/tesseract',
     });
     
     const { data } = await worker.recognize(image);
