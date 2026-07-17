@@ -15,7 +15,7 @@ import { BonCommande, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models
 @Component({
   selector: 'app-bons-commande-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
   templateUrl: './bons-commande-list.component.html',
   styleUrls: ['./bons-commande-list.component.css']
 })

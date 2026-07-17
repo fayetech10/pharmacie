@@ -60,7 +60,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-factures-structure-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
   templateUrl: './factures-structure-list.component.html',
   styleUrls: ['./factures-structure-list.component.css']
 })
