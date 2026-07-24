@@ -1,0 +1,84 @@
+<div class="cb">
+
+  <!-- ========== FORMULAIRE DE SAISIE ========== -->
+  <mat-card class="cb-form-card">
+    <div class="cb-form-head">
+      <div class="cb-form-ic"><mat-icon>fact_check</mat-icon></div>
+      <div>
+        <h3>Nouveau constat</h3>
+        <p>Décrivez un constat rencontré pour un régime donné dans votre structure.</p>
+      </div>
+    </div>
+
+    <div class="cb-form-grid">
+      <label class="cb-field">
+        <span class="cb-label">Régime concerné <em>*</em></span>
+        <select class="cb-select" [(ngModel)]="regime">
+          <option [ngValue]="''" disabled>Choisir un régime…</option>
+          <option *ngFor="let r of regimeOptions" [ngValue]="r">{{ regimeLabels[r] }}</option>
+        </select>
+      </label>
+
+      <label class="cb-field cb-field--full">
+        <span class="cb-label">Description du constat <em>*</em></span>
+        <textarea class="cb-textarea" rows="4" [(ngModel)]="description"
+                  placeholder="Ex : rupture de médicament pour le régime Sésame, difficulté de prise en charge, dossier incomplet…"></textarea>
+      </label>
+    </div>
+
+    <div class="cb-form-actions">
+      <button type="button" class="cb-btn" [disabled]="saving" (click)="enregistrer()">
+        <mat-icon>{{ saving ? 'hourglass_empty' : 'save' }}</mat-icon>
+        {{ saving ? 'Enregistrement…' : 'Enregistrer le constat' }}
+      </button>
+    </div>
+  </mat-card>
+
+  <!-- ========== LISTE DES CONSTATS ENREGISTRÉS ========== -->
+  <mat-card class="cb-list-card">
+    <div class="cb-list-head">
+      <h3>Constats enregistrés <span class="cb-count">{{ filteredConstats.length }}</span></h3>
+      <select class="cb-select" [(ngModel)]="filterRegime">
+        <option [ngValue]="''">Tous les régimes</option>
+        <option *ngFor="let r of regimeOptions" [ngValue]="r">{{ regimeLabels[r] }}</option>
+      </select>
+    </div>
+
+    <div class="cb-loading" *ngIf="loading">Chargement des constats…</div>
+
+    <div class="cb-empty" *ngIf="!loading && filteredConstats.length === 0">
+      <mat-icon>fact_check</mat-icon>
+      <p>Aucun constat enregistré pour le moment.</p>
+    </div>
+
+    <!-- Les constats sont notés par régime : un bloc par régime concerné. -->
+    <div class="cb-groupes" *ngIf="!loading && filteredConstats.length > 0">
+      <section class="cb-groupe" *ngFor="let g of constatsParRegime">
+        <div class="cb-groupe-head">
+          <span class="cb-chip">{{ g.label }}</span>
+          <span class="cb-count">{{ g.constats.length }}</span>
+        </div>
+
+        <div class="cb-constats">
+          <div class="cb-constat" *ngFor="let c of g.constats">
+            <div class="cb-constat-body">
+              <p class="cb-constat-desc">{{ c.description }}</p>
+              <div class="cb-constat-meta">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                <ng-container *ngIf="c.agentPrenom || c.agentNom">
+                  <span class="cb-dot">·</span>
+                  <mat-icon>person</mat-icon>
+                  <span>{{ c.agentPrenom }} {{ c.agentNom }}</span>
+                </ng-container>
+              </div>
+            </div>
+            <button type="button" class="cb-del" title="Supprimer ce constat" (click)="supprimer(c)">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </mat-card>
+</div>

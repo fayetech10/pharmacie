@@ -29,12 +29,18 @@ export interface LoginResponse {
   token: string;
   userId: string;
   email: string;
+  /** Identifiant de connexion attribué à l'import (pharmacies, structures). */
+  username?: string;
+  /** Mot de passe générique non encore changé : l'application impose le changement. */
+  mustChangePassword?: boolean;
   nom: string;
   prenom: string;
   role: Role;
   pharmacieId?: string;
   regionId?: string;
   structureSanitaireId?: string;
+  structureType?: string;
+  structureNom?: string;
   /** Pointage à la connexion (rôle BCSU) : heure d'arrivée « HH:mm ». */
   pointageHeure?: string;
   /** Vrai si l'agent doit se pointer (n'a pas encore fait son arrivée). */

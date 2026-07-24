@@ -83,11 +83,19 @@ export class FacturesListComponent implements OnInit, OnChanges {
 
   @Input() displayMode: 'PHARMACIE' | 'STRUCTURE' | 'ALL' = 'PHARMACIE';
   @Input() allowedStatuses?: string[];
+  /** Restreint la liste à un seul prestataire (ciblage depuis le tableau de bord). */
+  @Input() providerId?: string | null;
   @Input() showPaymentButton = false;
   /** Affiche l'en-tête (titre + boutons Excel/PDF/Import). Masqué quand la liste est intégrée dans un espace. */
   @Input() showToolbar = true;
   /** Active la vue mensuelle (Janvier → Décembre) comme dans la photo de référence. */
   @Input() monthlyView = false;
+
+  /**
+   * Chargement en cours : évite d'afficher « aucune facture » avant la réponse du
+   * serveur (l'onglet resterait sinon vide sans explication).
+   */
+  loading = true;
 
   /** Année sélectionnée dans la vue mensuelle. */
   selectedYear = new Date().getFullYear();
@@ -141,7 +149,10 @@ export class FacturesListComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     const statutsChange = changes['allowedStatuses'];
     const modeChange = changes['displayMode'];
-    if ((statutsChange && !statutsChange.firstChange) || (modeChange && !modeChange.firstChange)) {
+    const providerChange = changes['providerId'];
+    if ((statutsChange && !statutsChange.firstChange)
+        || (modeChange && !modeChange.firstChange)
+        || (providerChange && !providerChange.firstChange)) {
       this.loadFactures();
     }
   }
@@ -180,6 +191,7 @@ export class FacturesListComponent implements OnInit, OnChanges {
   }
 
   loadFactures() {
+    this.loading = true;
     let obs$ = of({ pharmacies: [], structures: [] } as any);
     let params: any = {};
     if (this.filterMois > 0) params.mois = this.filterMois;
@@ -194,7 +206,8 @@ export class FacturesListComponent implements OnInit, OnChanges {
       obs$ = forkJoin({ pharmacies: this.factureService.getAll(params), structures: this.structureService.getFactures(params) });
     }
 
-    obs$.subscribe(({ pharmacies, structures }: any) => {
+    obs$.subscribe({
+      next: ({ pharmacies, structures }: any) => {
       let unified: UnifiedFacture[] = [
         ...pharmacies.map((f: any) => mapToUnifiedFacture(f, 'PHARMACIE')),
         ...structures.map((f: any) => mapToUnifiedFacture(f, 'STRUCTURE'))
@@ -203,6 +216,10 @@ export class FacturesListComponent implements OnInit, OnChanges {
       // Filter by authorized statuses if specified
       if (this.allowedStatuses && this.allowedStatuses.length > 0) {
         unified = unified.filter(f => this.allowedStatuses!.includes(f.statut.toString()));
+      }
+      // Ciblage d'un prestataire (arrivée depuis le classement du tableau de bord).
+      if (this.providerId) {
+        unified = unified.filter(f => f.providerId === this.providerId);
       }
       this.factures = unified;
 
@@ -223,7 +240,33 @@ export class FacturesListComponent implements OnInit, OnChanges {
 
       // Recalculer le cache des groupes (vue mensuelle)
       this.buildProviderGroups();
+      this.loading = false;
+      },
+      error: () => { this.loading = false; }
     });
+  }
+
+  /**
+   * Message affiché quand l'onglet ne contient aucune facture : adapté aux statuts
+   * qu'il présente, pour ne jamais laisser une zone vide sans explication.
+   */
+  get emptyStateMessage(): string {
+    const statuts = this.allowedStatuses ?? [];
+    if (statuts.length === 1) {
+      switch (statuts[0]) {
+        case 'VALIDEE_SR': return 'Aucune facture reçue pour le moment';
+        case 'VALIDEE_NC': return 'Aucune facture validée pour le moment';
+        case 'PAYEE':      return 'Aucune facture payée pour le moment';
+        case 'REJETEE_NC':
+        case 'REJETEE_SR': return 'Aucune facture rejetée pour le moment';
+        case 'ENVOYEE':    return 'Aucune facture envoyée pour le moment';
+        case 'BROUILLON':  return 'Aucune facture en brouillon';
+      }
+    }
+    if (statuts.length > 1) {
+      return 'Aucune facture ne correspond à cet onglet pour le moment';
+    }
+    return 'Aucune facture enregistrée pour le moment';
   }
 
   applyFilter(event: Event) {

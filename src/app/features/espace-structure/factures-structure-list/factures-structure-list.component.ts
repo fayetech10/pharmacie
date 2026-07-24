@@ -10,6 +10,7 @@ import { StructureService } from '../../../core/services/structure.service';
 import { FactureStructure, LigneFactureStructure } from '../../../core/models/structure.model';
 import { REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface FactureGroup {
   titre: string;
@@ -37,6 +38,8 @@ interface PatientPrestations {
 
 const STATUT_LABELS: Record<string, string> = {
   BROUILLON: 'Non envoyée',
+  SOUMISE_CS: 'Soumise CS',
+  REJETEE_CS: 'Rejetée CS',
   ENVOYEE: 'Envoyée',
   VALIDEE_SR: 'Validée SR',
   REJETEE_SR: 'Rejetée SR',
@@ -47,6 +50,8 @@ const STATUT_LABELS: Record<string, string> = {
 
 const STATUT_ICONS: Record<string, string> = {
   BROUILLON: 'edit_note',
+  SOUMISE_CS: 'hourglass_top',
+  REJETEE_CS: 'cancel',
   ENVOYEE: 'send',
   VALIDEE_SR: 'task_alt',
   REJETEE_SR: 'cancel',
@@ -85,7 +90,8 @@ export class FacturesStructureListComponent implements OnInit {
     private router: Router,
     private structureService: StructureService,
     private snackBar: MatSnackBar,
-    private confirm: ConfirmService
+    private confirm: ConfirmService,
+    public auth: AuthService
   ) {}
 
   ngOnInit() {
@@ -144,7 +150,7 @@ export class FacturesStructureListComponent implements OnInit {
         month.regimes.push(regimeGroup);
       }
       regimeGroup.factures.push(f);
-      if (f.statut === 'BROUILLON') regimeGroup.brouillons++;
+      if (f.statut === 'BROUILLON' || f.statut === 'REJETEE_SR' || f.statut === 'REJETEE_CS') regimeGroup.brouillons++;
     }
 
     // Tri : mois/année les plus récents d'abord.
@@ -170,9 +176,10 @@ export class FacturesStructureListComponent implements OnInit {
   envoyerGroupe(group: FactureGroup, event: Event) {
     event.stopPropagation();
     const key = this.cleGroupe(group);
+    const destination = this.auth.isPosteDeSante() ? 'au centre de santé rattaché' : 'au service régional';
     this.confirm.ask({
       title: 'Envoyer la facture mensuelle',
-      message: `Envoyer les ${group.brouillons} facture(s) en brouillon de « ${group.titre} » au service régional ? Vous ne pourrez plus les modifier.`,
+      message: `Envoyer les ${group.brouillons} facture(s) en brouillon de « ${group.titre} » ${destination} ? Vous ne pourrez plus les modifier.`,
       confirmText: 'Envoyer'
     }).subscribe(ok => {
       if (!ok) return;
@@ -180,7 +187,7 @@ export class FacturesStructureListComponent implements OnInit {
       this.structureService.envoyerGroupe(group.regime, group.mois, group.annee).subscribe({
         next: (envoyees) => {
           this.envoiEnCours = null;
-          this.snackBar.open(`${envoyees.length} facture(s) transmise(s) au service régional`, 'Fermer', { duration: 4000 });
+          this.snackBar.open(`${envoyees.length} facture(s) transmise(s) ${destination}`, 'Fermer', { duration: 4000 });
           this.load();
         },
         error: (err) => {

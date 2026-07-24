@@ -28,6 +28,10 @@
       <app-status-badge [statut]="facture.statut"></app-status-badge>
     </div>
     <div class="fd-header-actions">
+      <button class="fd-btn fd-btn--outline" (click)="exportExcel()">
+        <mat-icon>table_view</mat-icon> Excel
+      </button>
+
       <button class="fd-btn fd-btn--outline" (click)="exportPdf()">
         <mat-icon>picture_as_pdf</mat-icon> PDF
       </button>
@@ -203,6 +207,8 @@
               <th>Montant</th>
               <th class="th-csu">Part CSU</th>
               <th class="th-benef">Part Bénéf.</th>
+              <th>Observation</th>
+              <th class="th-actions" *ngIf="canEditLignes"></th>
             </tr>
           </thead>
           <tbody>
@@ -213,6 +219,21 @@
               <td><strong>{{ item.ligne.montant | number:'1.0-0':'fr' }}</strong></td>
               <td class="td-csu">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }}</td>
               <td class="td-benef">{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }}</td>
+              <td class="td-observation">
+                <span class="fd-tag-ajoute" *ngIf="item.ligne.ajouteParPharmacien">
+                  Ajouté par le pharmacien — à valider par la SEN-CSU
+                </span>
+              </td>
+              <td class="td-actions" *ngIf="canEditLignes">
+                <button type="button" class="fd-line-btn" (click)="modifierLigne(item)"
+                        matTooltip="Modifier cette ligne" aria-label="Modifier cette ligne">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button type="button" class="fd-line-btn fd-line-btn--danger" (click)="supprimerLigne(item)"
+                        matTooltip="Supprimer cette ligne" aria-label="Supprimer cette ligne">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
             </tr>
           </tbody>
           <tfoot>
@@ -221,6 +242,8 @@
               <td><strong>{{ groupTotal(g) | number:'1.0-0':'fr' }} F</strong></td>
               <td class="td-csu"><strong>{{ groupTotal(g) / 2 | number:'1.0-0':'fr' }} F</strong></td>
               <td class="td-benef"><strong>{{ groupTotal(g) / 2 | number:'1.0-0':'fr' }} F</strong></td>
+              <td></td>
+              <td *ngIf="canEditLignes"></td>
             </tr>
           </tfoot>
         </table>
@@ -238,6 +261,17 @@
             <div class="fd-med-card-parts">
               <span class="fd-part-csu">CSU {{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} F</span>
               <span class="fd-part-benef">Bénéf. {{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} F</span>
+            </div>
+            <span class="fd-tag-ajoute" *ngIf="item.ligne.ajouteParPharmacien">
+              Ajouté par le pharmacien — à valider par la SEN-CSU
+            </span>
+            <div class="fd-med-card-actions" *ngIf="canEditLignes">
+              <button type="button" class="fd-line-btn" (click)="modifierLigne(item)" aria-label="Modifier cette ligne">
+                <mat-icon>edit</mat-icon> Modifier
+              </button>
+              <button type="button" class="fd-line-btn fd-line-btn--danger" (click)="supprimerLigne(item)" aria-label="Supprimer cette ligne">
+                <mat-icon>delete</mat-icon> Supprimer
+              </button>
             </div>
           </div>
         </div>

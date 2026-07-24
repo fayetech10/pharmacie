@@ -16,8 +16,7 @@ import { BonCommande, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models
   selector: 'app-bons-commande-list',
   standalone: true,
   imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
-  templateUrl: './bons-commande-list.component.html',
-  styleUrls: ['./bons-commande-list.component.css']
+  templateUrl: './bons-commande-list.component.html'
 })
 export class BonsCommandeListComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;

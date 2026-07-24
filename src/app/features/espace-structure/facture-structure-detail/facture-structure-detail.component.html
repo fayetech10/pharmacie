@@ -34,7 +34,16 @@
 
       <ng-container *ngIf="auth.isStructureSanitaire() && canSend">
         <button class="fd-btn fd-btn--primary" (click)="envoyer()">
-          <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
+          <mat-icon>send</mat-icon> {{ (facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_CS') ? 'Renvoyer' : 'Envoyer' }}
+        </button>
+      </ng-container>
+
+      <ng-container *ngIf="canReviewPoste">
+        <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeterPoste()">
+          <mat-icon>cancel</mat-icon> Rejeter (vers Poste)
+        </button>
+        <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="validerPoste()">
+          <mat-icon>check_circle</mat-icon> Valider et Transmettre
         </button>
       </ng-container>
 
@@ -89,7 +98,7 @@
   </div>
 
   <!-- ═══════ ALERTES (REJET / CORRECTION) ═══════ -->
-  <div class="fd-alert fd-alert--error" *ngIf="(facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC') && facture.commentaireRejet">
+  <div class="fd-alert fd-alert--error" *ngIf="(facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC' || facture.statut === 'REJETEE_CS') && facture.commentaireRejet">
     <mat-icon>error</mat-icon>
     <div>
       <strong>Motif du rejet</strong>
@@ -97,7 +106,7 @@
     </div>
   </div>
 
-  <div class="fd-alert fd-alert--warning" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
+  <div class="fd-alert fd-alert--warning" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC' || facture.statut === 'REJETEE_CS'">
     <mat-icon>build</mat-icon>
     <div>
       <strong>Facture à corriger</strong>
@@ -146,7 +155,7 @@
         </div>
         <div class="fd-acc-right">
           <span class="fd-acc-total">{{ g.montantTotal | number:'1.0-0':'fr' }} F</span>
-          
+
           <button class="fd-doc-btn" *ngIf="dossierCount(g) > 0" (click)="openDossierDocs(g, $event)" type="button">
             <mat-icon>folder_open</mat-icon>
             {{ dossierCount(g) }} pièce(s)
@@ -157,12 +166,28 @@
             Dossier complet
           </button>
 
+          <button class="fd-doc-btn fd-doc-btn--danger" *ngIf="canEditLines && g.lettreNumero"
+                  (click)="supprimerPatient(g, $event)" type="button" title="Supprimer la ligne de ce patient">
+            <mat-icon>delete</mat-icon>
+            Supprimer
+          </button>
+
           <mat-icon class="fd-chevron" [class.rotated]="g.expanded">expand_more</mat-icon>
         </div>
       </div>
 
       <!-- Accordion body -->
       <div class="fd-acc-body" *ngIf="g.expanded">
+        <!-- Informations du dossier affichées UNE SEULE FOIS par patient (pas répétées par ligne) -->
+        <div class="fd-patient-meta" *ngIf="g.numeroRegistre || g.ircIra || g.indicationCbt || g.service || g.diagnostique"
+             style="display:flex; flex-wrap:wrap; gap:10px 22px; padding:8px 12px; margin-bottom:10px; background:#f8fafc; border-radius:8px; font-size:12px; color:#475569;">
+          <span *ngIf="g.service"><strong>Service :</strong> {{ g.service }}</span>
+          <span *ngIf="g.diagnostique"><strong>Diagnostic :</strong> {{ g.diagnostique }}</span>
+          <span *ngIf="g.numeroRegistre"><strong>N° Registre :</strong> {{ g.numeroRegistre }}</span>
+          <span *ngIf="g.ircIra"><strong>Dialyse :</strong> {{ g.ircIra }}</span>
+          <span *ngIf="g.indicationCbt"><strong>Césarienne :</strong> {{ g.indicationCbt }}</span>
+        </div>
+
         <table class="fd-table">
           <thead>
             <tr>
@@ -172,23 +197,25 @@
               <th>Montant</th>
               <th class="th-csu">Part CSU</th>
               <th class="th-benef">Part Bénéf.</th>
+              <th *ngIf="canEditLines"></th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let l of g.lignes">
-              <td class="fd-med-name">
-                {{ l.designation }}
-                <div style="font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;" *ngIf="l.numeroRegistre || l.ircIra || l.indicationCbt">
-                  <span *ngIf="l.numeroRegistre">N° Registre: {{ l.numeroRegistre }} </span>
-                  <span *ngIf="l.ircIra">Dialyse: {{ l.ircIra }} </span>
-                  <span *ngIf="l.indicationCbt">Césarienne: {{ l.indicationCbt }} </span>
-                </div>
-              </td>
+              <td class="fd-med-name">{{ l.designation }}</td>
               <td>{{ l.quantite }}</td>
               <td>{{ l.prixUnitaire | number:'1.0-0':'fr' }}</td>
               <td><strong>{{ l.montant | number:'1.0-0':'fr' }}</strong></td>
               <td class="td-csu">{{ l.montantSencsu | number:'1.0-0':'fr' }} F</td>
               <td class="td-benef">{{ l.montantBeneficiaire | number:'1.0-0':'fr' }} F</td>
+              <td *ngIf="canEditLines" style="white-space:nowrap;">
+                <button class="fd-line-btn" type="button" title="Modifier la prestation" (click)="ouvrirModificationLigne(l, $event)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="fd-line-btn fd-line-btn--danger" type="button" title="Supprimer la prestation" (click)="supprimerLigne(l, $event)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
             </tr>
           </tbody>
           <tfoot>
@@ -197,6 +224,7 @@
               <td><strong>{{ g.montantTotal | number:'1.0-0':'fr' }} F</strong></td>
               <td class="td-csu"><strong>{{ g.montantSencsu | number:'1.0-0':'fr' }} F</strong></td>
               <td class="td-benef"><strong>{{ g.montantBeneficiaire | number:'1.0-0':'fr' }} F</strong></td>
+              <td *ngIf="canEditLines"></td>
             </tr>
           </tfoot>
         </table>
@@ -205,14 +233,7 @@
         <div class="fd-med-cards">
           <div class="fd-med-card" *ngFor="let l of g.lignes">
             <div class="fd-med-card-head">
-              <span class="fd-med-card-name">
-                {{ l.designation }}
-                <div style="font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;" *ngIf="l.numeroRegistre || l.ircIra || l.indicationCbt">
-                  <span *ngIf="l.numeroRegistre">N° Registre: {{ l.numeroRegistre }} </span>
-                  <span *ngIf="l.ircIra">Dialyse: {{ l.ircIra }} </span>
-                  <span *ngIf="l.indicationCbt">Césarienne: {{ l.indicationCbt }} </span>
-                </div>
-              </span>
+              <span class="fd-med-card-name">{{ l.designation }}</span>
               <span class="fd-med-card-amount">{{ l.montant | number:'1.0-0':'fr' }} F</span>
             </div>
             <div class="fd-med-card-meta">
@@ -221,6 +242,14 @@
             <div class="fd-med-card-parts">
               <span class="fd-part-csu">CSU {{ l.montantSencsu | number:'1.0-0':'fr' }} F</span>
               <span class="fd-part-benef">Bénéf. {{ l.montantBeneficiaire | number:'1.0-0':'fr' }} F</span>
+            </div>
+            <div class="fd-med-card-parts" *ngIf="canEditLines" style="margin-top:6px;">
+              <button class="fd-line-btn" type="button" (click)="ouvrirModificationLigne(l, $event)">
+                <mat-icon>edit</mat-icon> Modifier
+              </button>
+              <button class="fd-line-btn fd-line-btn--danger" type="button" (click)="supprimerLigne(l, $event)">
+                <mat-icon>delete</mat-icon> Supprimer
+              </button>
             </div>
           </div>
         </div>
@@ -303,6 +332,47 @@
         <div class="fd-no-docs" *ngIf="dossierCount(dossierPatient) === 0">
           <mat-icon>folder_off</mat-icon>
           <p>Aucune pièce justificative</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ MODAL MODIFICATION PRESTATION ═══════ -->
+  <div class="fd-overlay" *ngIf="editingLigne" (click)="fermerModificationLigne()">
+    <div class="fd-modal fd-modal--edit" (click)="$event.stopPropagation()">
+      <div class="fd-modal-head">
+        <div>
+          <h3>Modifier la prestation</h3>
+          <span class="fd-modal-sub">La modification est possible tant que la facture n'est pas envoyée.</span>
+        </div>
+        <button class="fd-modal-close" (click)="fermerModificationLigne()" type="button" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="fd-modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <label class="fd-edit-field">
+          <span>Désignation</span>
+          <input type="text" [(ngModel)]="editModel.designation">
+        </label>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label class="fd-edit-field" style="flex:1; min-width:110px;">
+            <span>Quantité</span>
+            <input type="number" min="1" [(ngModel)]="editModel.quantite">
+          </label>
+          <label class="fd-edit-field" style="flex:1; min-width:140px;">
+            <span>Prix unitaire (F)</span>
+            <input type="number" min="0" [(ngModel)]="editModel.prixUnitaire">
+          </label>
+        </div>
+        <label class="fd-edit-field">
+          <span>Date de prise en charge</span>
+          <input type="date" [(ngModel)]="editModel.datePriseEnCharge">
+        </label>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">
+          <button class="fd-btn fd-btn--outline" type="button" (click)="fermerModificationLigne()">Annuler</button>
+          <button class="fd-btn fd-btn--primary" type="button" [disabled]="busy" (click)="enregistrerModificationLigne()">
+            <mat-icon>save</mat-icon> Enregistrer
+          </button>
         </div>
       </div>
     </div>

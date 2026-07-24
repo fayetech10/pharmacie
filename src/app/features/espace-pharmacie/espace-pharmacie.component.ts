@@ -11,8 +11,7 @@ import { FactureCountService } from '../../core/services/facture-count.service';
   selector: 'app-espace-pharmacie',
   standalone: true,
   imports: [CommonModule, FactureFormComponent, MatIconModule],
-  templateUrl: './espace-pharmacie.component.html',
-  styleUrls: ['./espace-pharmacie.component.css']
+  templateUrl: './espace-pharmacie.component.html'
 })
 export class EspacePharmacieComponent implements OnInit {
   currentLines: any[] = [];

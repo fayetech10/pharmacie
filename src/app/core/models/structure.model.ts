@@ -10,11 +10,18 @@ export interface StructureSanitaire {
   regionId: string;
   bcsuId?: string;
   responsableId?: string;
+  /** CS (centre de santé), EPS (hôpital), PS (poste de santé). */
+  typeStructure?: string;
+  /** Poste de santé : structure sanitaire (CS/EPS) de rattachement. */
+  structureRattachementId?: string;
   actif: boolean;
 }
 
 export interface StructureSanitaireRequest {
-  code: string;
+  /** Vide à la création : généré automatiquement par le backend ({REGION}{TYPE}{NN}, ex: DKCS01). */
+  code?: string;
+  /** Type d'établissement pour le code auto-généré : CS (centre de santé), EPS (hôpital), PS (poste de santé). */
+  typeStructure?: string;
   nom: string;
   adresse?: string;
   telephone?: string;
@@ -22,6 +29,24 @@ export interface StructureSanitaireRequest {
   regionId: string;
   bcsuId?: string;
   password?: string;
+  /** Poste de santé : structure sanitaire (CS/EPS) de rattachement. */
+  structureRattachementId?: string;
+}
+
+/** Résultat d'un import Excel (postes de santé). */
+export interface ImportResult {
+  importes: number;
+  echecs: number;
+  erreurs: string[];
+}
+
+/** Type effectif d'une structure : champ persistant, sinon déduit du code (DKPS01 → PS). */
+export function typeEffectifStructure(s: StructureSanitaire): string {
+  if (s.typeStructure) return s.typeStructure.toUpperCase();
+  const code = (s.code || '').toUpperCase();
+  if (/^[A-Z]{2}PS\d+$/.test(code)) return 'PS';
+  if (/^[A-Z]{2}EPS\d+$/.test(code)) return 'EPS';
+  return 'CS';
 }
 
 export interface LigneFactureStructure {
@@ -67,7 +92,7 @@ export interface DocumentComplementaire {
 
 /** Statut réutilisé de la facture pharmacie (chaîne côté JSON). */
 export type StatutFactureStructure =
-  | 'BROUILLON' | 'ENVOYEE' | 'VALIDEE_SR' | 'REJETEE_SR'
+  | 'BROUILLON' | 'SOUMISE_CS' | 'REJETEE_CS' | 'ENVOYEE' | 'VALIDEE_SR' | 'REJETEE_SR'
   | 'VALIDEE_NC' | 'REJETEE_NC' | 'PAYEE';
 
 export interface FactureStructure {
@@ -93,7 +118,11 @@ export interface FactureStructure {
 }
 
 export interface FactureStructureRequest {
-  lettreGarantieNumero: string;
+  lettreGarantieNumero?: string;
+  regime?: string;
+  patientNom?: string;
+  patientPrenom?: string;
+  patientTelephone?: string;
   /** Feuille de soins déposée par le patient à rattacher à cette facture (fin du circuit). */
   feuilleSoinsId?: string;
   service?: string;

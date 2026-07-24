@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { Medicament } from '../models/medicament.model';
+import { Medicament, StatutMedicament } from '../models/medicament.model';
 import { environment } from '../../../environments/environment';
 import { SKIP_LOADING } from '../interceptors/loading.interceptor';
 import { ApiService } from './api.service';
@@ -53,6 +53,17 @@ export class MedicamentService {
     );
   }
 
+  /**
+   * Équivalences d'un médicament (même DCI), du moins cher au plus cher.
+   * Appelé à la sélection d'un médicament, pas à chaque frappe.
+   */
+  getEquivalents(nom: string): Observable<Medicament[]> {
+    return this.api.get<Medicament[]>(`${this.path}/equivalents`, {
+      params: new HttpParams().set('nom', nom),
+      skipLoading: true
+    });
+  }
+
   create(medicament: Partial<Medicament>): Observable<Medicament> {
     return this.http.post<Medicament>(this.apiUrl, medicament, {
       context: new HttpContext().set(SKIP_LOADING, true)
@@ -66,6 +77,24 @@ export class MedicamentService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`)
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  /** Médicaments non répertoriés (ajoutés par des pharmaciens), à classer par la SEN-CSU. */
+  getNonRepertories(): Observable<Medicament[]> {
+    return this.http.get<Medicament[]>(`${this.apiUrl}/non-repertories`);
+  }
+
+  /**
+   * Classe un médicament non répertorié en ÉLIGIBLE ou EXCLU : incrémente la liste concernée.
+   * Invalide le cache pour que l'autocomplétion reflète le nouveau statut.
+   */
+  classer(id: string, statut: StatutMedicament.ELIGIBLE | StatutMedicament.EXCLU, motif?: string): Observable<Medicament> {
+    let params = new HttpParams().set('statut', statut);
+    if (motif) {
+      params = params.set('motif', motif);
+    }
+    return this.http.post<Medicament>(`${this.apiUrl}/${id}/classer`, null, { params })
       .pipe(tap(() => this.invalidateCache()));
   }
 

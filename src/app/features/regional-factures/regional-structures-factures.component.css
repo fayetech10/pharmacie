@@ -1,163 +1,71 @@
-/* Vue régionale des factures structures, consolidées par mois. Design system CSU (vert). */
+/* Onglet régional « Factures structures sanitaires » : présentation par structure
+   (EPS / CS), puis factures de la structure + de ses postes de santé rattachés. */
 
-.rsf { display: flex; flex-direction: column; gap: var(--sp-6, 24px); }
+.rsf { display: flex; flex-direction: column; gap: 16px; }
 
-.rsf-loading,
+.rsf-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+.rsf-select {
+  padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+  background: #fff; font-size: 13px; color: #0f172a;
+}
+
+.rsf-loading { padding: 32px; text-align: center; color: #64748b; }
+
 .rsf-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: var(--sp-8, 48px) var(--sp-4, 16px);
-  color: var(--text-secondary);
-  text-align: center;
+  padding: 48px 16px; text-align: center; color: #94a3b8;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
-.rsf-loading mat-icon,
-.rsf-empty mat-icon { font-size: 32px; width: 32px; height: 32px; opacity: 0.5; }
-.rsf-empty p { margin: 0; font-size: 14px; }
+.rsf-empty mat-icon { font-size: 40px; width: 40px; height: 40px; }
+.rsf-empty p { margin: 0; font-weight: 600; color: #64748b; }
 
-/* ===== Niveau 1 : structure ===== */
-.rsf-structure { display: flex; flex-direction: column; gap: var(--sp-3, 12px); }
-.rsf-structure-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding-bottom: var(--sp-2, 8px);
-  border-bottom: 2px solid var(--primary-200);
+.rsf-table-wrap {
+  overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
 }
-.rsf-structure-title { display: flex; align-items: center; gap: 8px; }
-.rsf-structure-title mat-icon { color: var(--primary); }
-.rsf-structure-title h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--text-primary); }
-.rsf-structure-total { font-size: 15px; font-weight: 800; color: var(--primary); }
-.rsf-structure-total small { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.rsf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rsf-table th {
+  text-align: left; padding: 10px 12px; background: #f8fafc; color: #475569;
+  font-weight: 600; border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+}
+.rsf-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; color: #0f172a; }
+.rsf-row { cursor: pointer; }
+.rsf-row:hover { background: #f8fafc; }
+.rsf-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+.rsf-numero { font-weight: 600; white-space: nowrap; }
+.rsf-num { text-align: right; white-space: nowrap; }
+.rsf-table th.rsf-num { text-align: right; }
+.rsf-csu { color: #0e7490; font-weight: 600; }
+.rsf-chevron { color: #94a3b8; }
 
-/* ===== Niveau 2 : facture mensuelle consolidée ===== */
-.rsf-invoice {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 16px);
-  overflow: hidden;
-  background: var(--card-bg, #fff);
-  box-shadow: var(--shadow-sm);
+.rsf-chip {
+  display: inline-block; padding: 3px 10px; background: #ecfeff; color: #0e7490;
+  border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
 }
-.rsf-invoice-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: var(--sp-4, 16px);
-  background: var(--field-bg, #F8FAF9);
-  border-bottom: 1px solid var(--border);
-}
-.rsf-invoice-id { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.rsf-invoice-month {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 800;
-  font-size: 15px;
-  color: var(--text-primary);
-  text-transform: capitalize;
-}
-.rsf-invoice-month mat-icon { font-size: 19px; width: 19px; height: 19px; color: var(--primary); }
-.rsf-invoice-regime {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
-  background: var(--primary-light);
-  border: 1px solid var(--primary-200);
-  border-radius: var(--radius-full, 999px);
-  padding: 3px 10px;
-}
-.rsf-invoice-meta { display: flex; align-items: center; gap: 14px; }
-.rsf-invoice-count { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-secondary); }
-.rsf-invoice-count mat-icon { font-size: 16px; width: 16px; height: 16px; }
-.rsf-invoice-amount { font-size: 17px; font-weight: 800; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rsf-invoice-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.rsf-invoice-actions mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+.rsf-chip--eps { background: #ede9fe; color: #6d28d9; }
+.rsf-chip--ps { background: #fef9c3; color: #a16207; }
 
-/* ===== Niveau 3 : patients ===== */
-.rsf-patients { display: flex; flex-direction: column; }
-.rsf-patient { border-bottom: 1px solid var(--border-light); }
-.rsf-patient:last-child { border-bottom: none; }
-
-.rsf-patient-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px var(--sp-4, 16px);
-  cursor: pointer;
-  transition: background var(--transition);
+.rsf-statut {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: #f1f5f9; color: #475569;
 }
-.rsf-patient-head:hover,
-.rsf-patient-head:focus-visible { background: var(--primary-light); outline: none; }
-.rsf-patient--open > .rsf-patient-head { background: var(--primary-light); }
+.rsf-statut--ENVOYEE { background: #eff6ff; color: #1d4ed8; }
+.rsf-statut--VALIDEE_SR, .rsf-statut--VALIDEE_NC { background: #ecfdf5; color: #047857; }
+.rsf-statut--REJETEE_SR, .rsf-statut--REJETEE_NC { background: #fef2f2; color: #b91c1c; }
+.rsf-statut--PAYEE { background: #f5f3ff; color: #6d28d9; }
 
-.rsf-patient-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.rsf-chevron { font-size: 20px; width: 20px; height: 20px; color: var(--text-secondary); flex-shrink: 0; }
-.rsf-person { font-size: 18px; width: 18px; height: 18px; color: var(--text-secondary); flex-shrink: 0; }
-.rsf-patient-name { display: block; font-weight: 700; color: var(--text-primary); font-size: 14px; }
-.rsf-patient-sub { display: block; font-size: 12px; color: var(--text-secondary); }
-.rsf-patient-right { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
-.rsf-patient-nb { font-size: 12px; color: var(--text-secondary); }
-.rsf-patient-amount { font-size: 14px; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+.rsf-detail-head { display: flex; align-items: center; gap: 12px; }
+.rsf-back {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e8f0;
+  background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #0f172a;
+}
+.rsf-back:hover { background: #f8fafc; }
+.rsf-detail-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
+.rsf-detail-head p { margin: 2px 0 0; font-size: 12.5px; color: #64748b; }
 
-/* Détail patient */
-.rsf-patient-detail { padding: 0 var(--sp-4, 16px) var(--sp-4, 16px) 44px; background: #FAFBFC; }
-.rsf-presta {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm, 8px);
-  overflow: hidden;
-  margin-top: var(--sp-3, 12px);
+.rsf-mini-btn {
+  border: 1px solid #e2e8f0; background: #fff; border-radius: 8px;
+  padding: 4px 8px; margin-right: 4px; cursor: pointer; color: #0f172a; font-size: 12px;
 }
-.rsf-presta th {
-  text-align: left;
-  padding: 8px 12px;
-  background: var(--field-bg, #F8FAF9);
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-bottom: 1px solid var(--border);
-}
-.rsf-presta td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); color: #334155; }
-.rsf-presta tr:last-child td { border-bottom: none; }
-.rsf-amount { text-align: right; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
-
-/* Dossier patient */
-.rsf-dossier { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-3, 12px); }
-.rsf-doc {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: var(--radius-sm, 8px);
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
-}
-.rsf-doc:hover { background: var(--field-bg, #F8FAF9); }
-.rsf-doc mat-icon { font-size: 17px; width: 17px; height: 17px; }
-.rsf-doc--primary { border-color: var(--primary-200); color: var(--primary); background: var(--primary-light); }
-.rsf-doc--primary:hover { background: var(--primary-100); }
-.rsf-doc-hint { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
-
-@media (max-width: 768px) {
-  .rsf-invoice-head { flex-direction: column; align-items: flex-start; }
-  .rsf-invoice-actions { width: 100%; }
-  .rsf-patient-detail { padding-left: var(--sp-4, 16px); }
-  .rsf-doc-hint { display: none; }
-}
+.rsf-mini-btn:hover { background: #f0f9ff; }
+.rsf-mini-btn:disabled { opacity: .5; cursor: default; }

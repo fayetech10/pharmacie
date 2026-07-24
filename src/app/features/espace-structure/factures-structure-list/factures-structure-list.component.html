@@ -44,6 +44,14 @@
         <span class="fsl-regime-badge">{{ g.titre }}</span>
         <span class="fsl-regime-count">{{ g.factures.length }} facture{{ g.factures.length > 1 ? 's' : '' }}</span>
         <div class="fsl-regime-actions">
+          <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
+          <button mat-flat-button color="primary"
+                  *ngIf="g.brouillons > 0"
+                  [disabled]="envoiEnCours === cleGroupe(g)"
+                  (click)="envoyerGroupe(g, $event)">
+            <mat-icon>send</mat-icon>
+            {{ envoiEnCours === cleGroupe(g) ? 'Envoi...' : 'Envoyer (' + g.brouillons + ')' }}
+          </button>
           <button mat-stroked-button color="primary"
                   [disabled]="exporting === cleGroupe(g)"
                   (click)="exporterGroupe(g, $event)">

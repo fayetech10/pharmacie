@@ -79,11 +79,6 @@ export class StatsComponent implements OnInit, OnChanges {
   statusBreakdown: { statut: string; label: string; count: number; color: string }[] = [];
   hasStatusData = false;
 
-  // Répartition par régime
-  regimeBreakdown: { regime: string; label: string; count: number; montant: number; color: string }[] = [];
-  hasRegimeData = false;
-  totalMontantRegime = 0;
-
   // Funnel
   funnel: FunnelStage[] = [];
 
@@ -94,28 +89,30 @@ export class StatsComponent implements OnInit, OnChanges {
 
   private activeScope: StatsScope = { type: 'national', label: 'National' };
 
+  /**
+   * Couleurs de statut — mesurées, pas choisies à l'œil.
+   *
+   * L'ancienne palette échouait à trois contrôles : « Payée » (#A16207) et
+   * « Rejetée SR » (#EA580C) s'effondraient sous protanopie (ΔE 4,0), et les
+   * deux verts « Validée SR / NC » étaient indiscernables même en vision
+   * normale (ΔE 7,9 pour un plancher de 15).
+   *
+   * Structure retenue : CINQ familles catégorielles distinctes (gris, ambre,
+   * vert, bleu, rouge) — validées ΔE 9,3 CVD / 17,5 vision normale, toutes
+   * ≥ 3:1 — et, À L'INTÉRIEUR d'une famille, le niveau SR → NC est un
+   * dégradé ORDINAL d'une seule teinte (clair → foncé), validé séparément.
+   * Le niveau se lit donc à la clarté, la nature du statut à la teinte.
+   */
   private readonly statusMeta: Record<string, { label: string; color: string }> = {
-    BROUILLON:  { label: 'Non envoyée', color: '#64748B' },
-    ENVOYEE:    { label: 'Envoyée',     color: '#2563EB' },
-    VALIDEE_SR: { label: 'Validée SR',  color: '#2F6E54' },
-    VALIDEE_NC: { label: 'Validée NC',  color: '#1F5038' },
-    PAYEE:      { label: 'Payée',       color: '#A16207' },
-    REJETEE_SR: { label: 'Rejetée SR',  color: '#EA580C' },
-    REJETEE_NC: { label: 'Rejetée NC',  color: '#DC2626' }
+    BROUILLON:  { label: 'Non envoyée', color: '#667085' }, // neutre : pas encore dans le circuit
+    ENVOYEE:    { label: 'Envoyée',     color: '#B45309' }, // ambre : en attente d'action
+    VALIDEE_SR: { label: 'Validée SR',  color: '#10B981' }, // vert clair  ─┐ rampe ordinale
+    VALIDEE_NC: { label: 'Validée NC',  color: '#047857' }, // vert foncé  ─┘
+    PAYEE:      { label: 'Payée',       color: '#1D4ED8' }, // bleu : soldé
+    REJETEE_SR: { label: 'Rejetée SR',  color: '#EF4444' }, // rouge clair ─┐ rampe ordinale
+    REJETEE_NC: { label: 'Rejetée NC',  color: '#B91C1C' }  // rouge foncé ─┘
   };
   private readonly statusOrder = ['ENVOYEE', 'VALIDEE_SR', 'VALIDEE_NC', 'PAYEE', 'REJETEE_SR', 'REJETEE_NC', 'BROUILLON'];
-
-  private readonly regimeMeta: Record<string, { label: string; color: string }> = {
-    CONTRIBUTIF:         { label: 'Contributif (Classique)', color: '#2563EB' },
-    SESAME:              { label: 'Sésame',                 color: '#7C3AED' },
-    CESARIENNE:          { label: 'Césarienne',             color: '#EC4899' },
-    ZERO_CINQ_ANS:       { label: 'Enfants 0-5 ans',        color: '#10B981' },
-    DIALYSE_PERITONEALE: { label: 'Dialyse péritonéale',    color: '#F59E0B' },
-    HEMODIALYSE:         { label: 'Hémodialyse',            color: '#EF4444' },
-    BSF:                 { label: 'BSF (Bourses Familiales)',color: '#6366F1' },
-    CEC:                 { label: 'CEC (Cartes Égalité)',   color: '#06B6D4' },
-    NDONGO_DARA:         { label: 'Ndongo Dara',            color: '#8B5CF6' }
-  };
 
   // ----- Chart.js : doughnut statuts -----
   public pieChartOptions: ChartOptions<'doughnut'> = {
@@ -135,25 +132,6 @@ export class StatsComponent implements OnInit, OnChanges {
     }
   };
   public pieChartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [] };
-
-  // ----- Chart.js : doughnut régimes -----
-  public regimeChartOptions: ChartOptions<'doughnut'> = {
-    responsive: true, maintainAspectRatio: false, cutout: '68%',
-    animation: this.prefersReducedMotion ? false : undefined,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        padding: 10,
-        callbacks: {
-          label: (ctx: any) => {
-            const total = (ctx.dataset.data as number[]).reduce((a, n) => a + n, 0) || 1;
-            return `  ${ctx.label} : ${Number(ctx.parsed).toLocaleString('fr-FR')} CFA (${Math.round((ctx.parsed / total) * 100)}%)`;
-          }
-        }
-      }
-    }
-  };
-  public regimeChartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [] };
 
   // ----- Chart.js : évolution N vs N-1 -----
   chartMode: 'montant' | 'nombre' = 'montant';
@@ -175,7 +153,7 @@ export class StatsComponent implements OnInit, OnChanges {
       }
     },
     scales: {
-      y: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: (v: any) => this.chartMode === 'montant' ? this.shortNum(+v) : v } },
+      y: { beginAtZero: true, grid: { color: '#E4E7EC' }, ticks: { callback: (v: any) => this.chartMode === 'montant' ? this.shortNum(+v) : v } },
       x: { grid: { display: false } }
     }
   };
@@ -191,7 +169,7 @@ export class StatsComponent implements OnInit, OnChanges {
       tooltip: { padding: 10, callbacks: { label: (ctx: any) => `  ${Number(ctx.parsed.x).toLocaleString('fr-FR')} CFA` } }
     },
     scales: {
-      x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: (v: any) => this.shortNum(+v) } },
+      x: { beginAtZero: true, grid: { color: '#E4E7EC' }, ticks: { callback: (v: any) => this.shortNum(+v) } },
       y: { grid: { display: false }, ticks: { font: { size: 11 } } }
     }
   };
@@ -298,35 +276,6 @@ export class StatsComponent implements OnInit, OnChanges {
           }]
         };
 
-        // Répartition par régime (doughnut + légende)
-        const parRegimeLignes = data.lignesParRegime || {};
-        const parRegimeMontants = data.montantParRegime || {};
-        this.regimeBreakdown = Object.keys(parRegimeMontants)
-          .map(r => {
-            const meta = this.regimeMeta[r] || { label: r, color: '#94A3B8' };
-            return {
-              regime: r,
-              label: meta.label,
-              count: parRegimeLignes[r] || 0,
-              montant: parRegimeMontants[r] || 0,
-              color: meta.color
-            };
-          })
-          .sort((a, b) => b.montant - a.montant)
-          .filter(r => r.montant > 0 || r.count > 0);
-
-        this.hasRegimeData = this.regimeBreakdown.length > 0;
-        this.totalMontantRegime = this.regimeBreakdown.reduce((sum, r) => sum + r.montant, 0);
-
-        this.regimeChartData = {
-          labels: this.regimeBreakdown.map(r => r.label),
-          datasets: [{
-            data: this.regimeBreakdown.map(r => r.montant),
-            backgroundColor: this.regimeBreakdown.map(r => r.color),
-            borderColor: '#fff', borderWidth: 2, hoverOffset: 6
-          }]
-        };
-
         this.buildPerformance(data);
         this.buildFunnel(parStatut);
         this.buildTopMedicaments(data.topMedicaments || []);
@@ -392,11 +341,15 @@ export class StatsComponent implements OnInit, OnChanges {
     const valNC = n('VALIDEE_NC') + n('PAYEE');
     const payees = n('PAYEE');
 
+    // Étapes d'un tunnel : l'ordre PORTE le sens, donc dégradé ordinal d'une
+    // seule teinte (clair → foncé = progression), et non quatre teintes
+    // catégorielles qui laisseraient croire à quatre natures différentes.
+    // Rampe validée : monotone, écarts de clarté ≥ 0,06, extrémité claire à 2,54:1.
     const stages = [
-      { label: 'Soumises', count: soumises, color: '#2563EB' },
-      { label: 'Validées (SR)', count: valSR, color: '#2F6E54' },
-      { label: 'Validées (Central)', count: valNC, color: '#1F5038' },
-      { label: 'Payées', count: payees, color: '#A16207' }
+      { label: 'Soumises', count: soumises, color: '#10B981' },
+      { label: 'Validées (SR)', count: valSR, color: '#059669' },
+      { label: 'Validées (Central)', count: valNC, color: '#047857' },
+      { label: 'Payées', count: payees, color: '#065F46' }
     ];
     const base = soumises || 1;
     this.funnel = stages.map((st, i) => ({
@@ -423,7 +376,7 @@ export class StatsComponent implements OnInit, OnChanges {
       labels: top.map(m => this.truncate(m.nom, 22)),
       datasets: [{
         data: top.map(m => Math.round(m.montant)),
-        backgroundColor: '#2F6E54', hoverBackgroundColor: '#1F5038',
+        backgroundColor: '#047857', hoverBackgroundColor: '#065F46',
         borderRadius: 5, barThickness: 'flex', maxBarThickness: 26
       }]
     };
@@ -493,13 +446,13 @@ export class StatsComponent implements OnInit, OnChanges {
         {
           data: this.evoCur.map(pick), label: `${this.chartYear}`,
           fill: true, tension: 0.4,
-          borderColor: '#2F6E54', backgroundColor: 'rgba(47,110,84,0.12)',
-          pointBackgroundColor: '#2F6E54', pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5
+          borderColor: '#047857', backgroundColor: 'rgba(4, 120, 87, 0.10)',
+          pointBackgroundColor: '#047857', pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5
         },
         {
           data: this.evoPrev.map(pick), label: `${this.prevYear}`,
           fill: false, tension: 0.4,
-          borderColor: '#94A3B8', backgroundColor: 'transparent',
+          borderColor: '#667085', backgroundColor: 'transparent',
           borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
         }
       ]

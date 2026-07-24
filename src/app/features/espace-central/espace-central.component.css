@@ -1,18 +1,7 @@
-/* Badge de notification (compteur) sur les onglets — label projeté par Material */
-:host ::ng-deep .tab-count {
-  @apply inline-flex items-center justify-center text-[11px] font-bold;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  margin-left: 6px;
-  border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
-  line-height: 1;
-}:host ::ng-deep .tab-count.danger {
- background: var(--warn); 
-}@media (max-width: 768px){
-  /* Mobile : navigation via la barre du bas → en-tête + onglets redondants masqués. */
+/* En-tête + barre d'onglets Material masqués sur mobile : la navigation passe par
+   la barre du bas. Cible interne à Material → ::ng-deep conservé (non exprimable
+   en utilitaire Tailwind). Le reste du style (badge .tab-count, en-tête) est porté
+   par des classes Tailwind dans le template. */
+@media (max-width: 768px) {
   :host ::ng-deep .mat-mdc-tab-header { display: none; }
-  .page-head { display: none; }
 }

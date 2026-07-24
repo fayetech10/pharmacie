@@ -40,4 +40,9 @@ export class PharmacieService {
   downloadTemplate(): Observable<Blob> {
     return this.api.getBlob('/pharmacies/import-template');
   }
+
+  /** Export Excel des pharmacies créées avec leurs identifiants de connexion. */
+  exportPharmacies(): Observable<Blob> {
+    return this.api.getBlob('/pharmacies/export');
+  }
 }

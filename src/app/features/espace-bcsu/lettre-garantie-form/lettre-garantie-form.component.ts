@@ -214,6 +214,43 @@ export class LettreGarantieFormComponent implements OnInit {
     return this.regime === Regime.CESARIENNE;
   }
 
+  /** Âge (années entières) calculé à partir de la date de naissance saisie, ou null. */
+  private get ageEnAnnees(): number | null {
+    const dob = this.patientForm?.get('dateNaissance')?.value;
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age < 0 ? null : age;
+  }
+
+  /**
+   * Contrôles d'éligibilité par régime (cahier des charges) :
+   *  - Enfants 0-5 ans : âge entre 0 et 5 ans (date de naissance obligatoire) ;
+   *  - Sésame : 60 ans ou plus (date de naissance obligatoire) ;
+   *  - Césarienne : bénéficiaire de sexe féminin.
+   * Renvoie le message d'erreur à afficher, ou null si le dossier est conforme.
+   */
+  get erreurRegime(): string | null {
+    const age = this.ageEnAnnees;
+    if (this.regime === Regime.ZERO_CINQ_ANS) {
+      if (age === null) return "Régime Enfants 0-5 ans : la date de naissance est obligatoire pour contrôler l'âge.";
+      if (age >= 6) return `Régime Enfants 0-5 ans : l'âge du bénéficiaire (${age} ans) doit être compris entre 0 et 5 ans.`;
+    }
+    if (this.regime === Regime.SESAME) {
+      if (age === null) return "Régime Sésame : la date de naissance est obligatoire pour contrôler l'âge.";
+      if (age < 60) return `Régime Sésame : le bénéficiaire doit avoir au moins 60 ans (âge calculé : ${age} ans).`;
+    }
+    if (this.regime === Regime.CESARIENNE) {
+      const sexe = this.patientForm?.get('sexe')?.value;
+      if (sexe && sexe !== 'F') return 'Régime Césarienne : le bénéficiaire doit être de sexe féminin.';
+    }
+    return null;
+  }
+
   nextStep() {
     if (this.currentStep < 2 && this.canGoNext()) {
       this.currentStep++;
@@ -225,7 +262,7 @@ export class LettreGarantieFormComponent implements OnInit {
   }
 
   canGoNext(): boolean {
-    if (this.currentStep === 1) return this.patientForm.valid;
+    if (this.currentStep === 1) return this.patientForm.valid && !this.erreurRegime;
     return true;
   }
 
@@ -447,6 +484,11 @@ export class LettreGarantieFormComponent implements OnInit {
   // ===== Enregistrement =====
   enregistrer() {
     if (this.patientForm.invalid) return;
+    const erreur = this.erreurRegime;
+    if (erreur) {
+      this.snackBar.open(erreur, 'Fermer', { duration: 6000, panelClass: 'error-snackbar' });
+      return;
+    }
     this.isSubmitting = true;
     const val = this.patientForm.value;
 
@@ -475,7 +517,7 @@ export class LettreGarantieFormComponent implements OnInit {
     obs.subscribe({
       next: (lettre) => {
         this.isSubmitting = false;
-        this.snackBar.open(this.isEditMode ? 'Dossier modifié' : 'Dossier créé : ' + lettre.numero, 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.isEditMode ? 'Dossier modifié' : 'Dossier enregistré et LG générée : ' + lettre.numero, 'Fermer', { duration: 3000 });
         this.router.navigate(['/dashboard/lettres-garantie', lettre.id]);
       },
       error: (err) => {

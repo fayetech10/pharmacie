@@ -10,11 +10,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { StructureService } from '../../../core/services/structure.service';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
-import { LettreGarantie, REGIME_LABELS, Regime, tauxBeneficiaire, tauxSencsu } from '../../../core/models/bcsu.model';
+import { LettreGarantie, REGIME_LABELS, Regime, tauxBeneficiaire, tauxSencsu, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 import { LigneFactureStructure, DocumentComplementaire, FactureStructureRequest } from '../../../core/models/structure.model';
 import { FeuilleSoins } from '../../../core/models/feuille-soins.model';
 import { compressImageToDataUrl } from '../../../core/utils/image-compression';
+import { QrScannerComponent } from '../../../shared/qr-scanner/qr-scanner.component';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { AuthService } from '../../../core/services/auth.service';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 
@@ -98,7 +100,7 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   },
   [Regime.NDONGO_DARA]: {
     ...CHAMPS_COMMUNS,
-    matriculeLabel: 'N° Matricule / Code bénéficiaire',
+    matriculeLabel: 'N° Matricule',
     service: true, codeActe: true
   },
   [Regime.BSF]: {
@@ -118,15 +120,13 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   },
   [Regime.ZERO_CINQ_ANS]: {
     ...CHAMPS_COMMUNS,
-    matriculeLabel: 'N° Matricule / N° Extrait de naissance / N° accompagnant',
-    service: true, diagnostic: true, numeroRegistre: true, forfait: true,
-    designationLabel: 'Prestations et médicaments',
-    puLabel: 'Forfait (FCFA)',
+    matriculeLabel: 'N° Extrait de naissance',
+    service: true, diagnostic: true, numeroRegistre: true, forfait: true, codeActe: true,
     sexeOptions: ['M', 'F']
   },
   [Regime.CESARIENNE]: {
     ...CHAMPS_COMMUNS,
-    matriculeLabel: 'N° Matricule / N° CNI patient / N° accompagnant',
+    matriculeLabel: 'N° CNI',
     cesarienne: true
   },
   [Regime.DIALYSE_PERITONEALE]: {
@@ -169,13 +169,15 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule
+    MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule,
+    QrScannerComponent
   ],
   templateUrl: './facture-structure-form.component.html',
   styleUrls: ['./facture-structure-form.component.css']
 })
 export class FactureStructureFormComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
+  readonly regimeOptions = REGIME_OPTIONS;
   
   readonly listDiagnostiques = LISTE_DIAGNOSTIQUES;
   readonly listPrestations = LISTE_PRESTATIONS;
@@ -183,11 +185,14 @@ export class FactureStructureFormComponent implements OnInit {
   searchNumero = 'LG-';
   searching = false;
   lettre: LettreGarantie | null = null;
+  
+  isPosteDeSante = false;
 
   /** Feuille de soins déposée par le patient, rattachée à la facture (circuit feuille de soins). */
   feuilleSoins: FeuilleSoins | null = null;
 
   factureForm!: FormGroup;
+  patientForm!: FormGroup;
   prestationForm!: FormGroup;
   lignes: LigneFactureStructure[] = [];
 
@@ -199,15 +204,30 @@ export class FactureStructureFormComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private authService: AuthService,
     private structureService: StructureService,
     private feuilleSoinsService: FeuilleSoinsService,
     private router: Router,
     private route: ActivatedRoute,
     private snackBar: MatSnackBar
   ) {
+    this.isPosteDeSante = this.authService.isPosteDeSante();
+    
     this.factureForm = this.fb.group({
       diagnostique: ['']
     });
+    
+    this.patientForm = this.fb.group({
+      nom: ['', this.isPosteDeSante ? Validators.required : null],
+      prenom: ['', this.isPosteDeSante ? Validators.required : null],
+      telephone: ['', this.isPosteDeSante ? Validators.required : null],
+      regime: [Regime.CONTRIBUTIF, this.isPosteDeSante ? Validators.required : null],
+      sexe: [''],
+      dateNaissance: [''],
+      matricule: [''],
+      numeroCni: ['']
+    });
+    
     this.prestationForm = this.fb.group({
       designation: ['', Validators.required],
       codeActe: [''],
@@ -219,16 +239,23 @@ export class FactureStructureFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Si l'utilisateur est un Poste de Santé, on écoute le changement de régime pour appliquer les règles
+    if (this.isPosteDeSante) {
+      this.patientForm.get('regime')?.valueChanges.subscribe(regime => {
+        this.appliquerReglesCategoriePourRegime(regime);
+      });
+      // Appliquer les règles initialement
+      this.appliquerReglesCategoriePourRegime(this.patientForm.get('regime')?.value);
+    }
+    
     // Arrivée depuis une feuille de soins (« Facturer cette feuille ») : préremplissage complet.
     const feuilleNumero = this.route.snapshot.queryParamMap.get('feuille');
-    if (feuilleNumero) {
+    if (feuilleNumero && !this.isPosteDeSante) {
       this.feuilleSoinsService.searchByNumero(feuilleNumero).subscribe({
         next: (feuille) => this.appliquerFeuilleSoins(feuille),
         error: (err) => this.snackBar.open(err.error?.message || 'Feuille de soins introuvable', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' })
       });
     }
-
-    // Pas de filtre nécessaire pour mat-select
   }
 
   /**
@@ -248,7 +275,7 @@ export class FactureStructureFormComponent implements OnInit {
         this.searching = false;
         this.lettre = lettre;
         this.lignes = [];
-        this.appliquerReglesCategorie(lettre);
+        this.appliquerReglesCategoriePourRegime(lettre.regime);
         // La structure reprend uniquement les prestations deja indiquees sur la feuille.
         this.lignes = (feuille.prestations || []).map(p => ({
           designation: p.designation,
@@ -283,18 +310,28 @@ export class FactureStructureFormComponent implements OnInit {
   }
 
   get regime(): Regime | null {
+    if (this.isPosteDeSante) {
+      return this.patientForm?.get('regime')?.value || null;
+    }
     return this.lettre?.regime ?? null;
   }
   get isCesarienne(): boolean {
     return this.regime === Regime.CESARIENNE;
   }
 
-  /** Configuration des champs pour la catégorie de la lettre rattachée. */
+  /** Configuration des champs pour la catégorie de la lettre rattachée ou du formulaire PS. */
   get champs(): CategorieChamps {
     return CHAMPS_PAR_REGIME[this.regime ?? Regime.CONTRIBUTIF] ?? CHAMPS_PAR_REGIME[Regime.CONTRIBUTIF];
   }
 
+  /** QR code scanné sur la lettre de garantie : lance directement la recherche. */
+  onQrScanne(code: string) {
+    this.searchNumero = code;
+    this.rechercher();
+  }
+
   rechercher() {
+    if (this.isPosteDeSante) return;
     if (!this.searchNumero.trim()) return;
     if (this.lignes.length > 0) {
       if (!window.confirm("Attention, vous avez des prestations non enregistrées pour ce patient. Si vous recherchez un nouveau patient, elles seront perdues. Voulez-vous vraiment continuer sans enregistrer ?")) {
@@ -307,7 +344,7 @@ export class FactureStructureFormComponent implements OnInit {
         this.searching = false;
         this.lettre = lettre;
         this.lignes = [];
-        this.appliquerReglesCategorie(lettre);
+        this.appliquerReglesCategoriePourRegime(lettre.regime);
       },
       error: (err) => {
         this.searching = false;
@@ -319,8 +356,9 @@ export class FactureStructureFormComponent implements OnInit {
   /**
    * Applique les règles de la catégorie.
    */
-  private appliquerReglesCategorie(lettre: LettreGarantie) {
-    const c = CHAMPS_PAR_REGIME[lettre.regime] ?? CHAMPS_PAR_REGIME[Regime.CONTRIBUTIF];
+  private appliquerReglesCategoriePourRegime(regime: string | undefined | null) {
+    if (!regime) return;
+    const c = CHAMPS_PAR_REGIME[regime] ?? CHAMPS_PAR_REGIME[Regime.CONTRIBUTIF];
 
     // Dialyses : la désignation de la prestation est déduite de la catégorie.
     this.prestationForm.reset({
@@ -340,11 +378,19 @@ export class FactureStructureFormComponent implements OnInit {
     this.ticketCaisse = null;
     this.documents = [];
     this.searchNumero = 'LG-';
+    if (this.isPosteDeSante) {
+      this.patientForm.reset({ regime: Regime.CONTRIBUTIF });
+      this.appliquerReglesCategoriePourRegime(Regime.CONTRIBUTIF);
+    }
   }
 
   // ----- Prestations -----
   ajouterLigne() {
     if (this.prestationForm.invalid || !this.regime) return;
+    if (this.isPosteDeSante && this.patientForm.invalid) {
+      this.snackBar.open('Veuillez remplir les informations obligatoires du patient.', 'Fermer', { duration: 3000 });
+      return;
+    }
     const c = this.champs;
     const v = this.prestationForm.value;
     const quantite = c.forfait ? 1 : (Number(v.quantite) || 1);
@@ -381,10 +427,14 @@ export class FactureStructureFormComponent implements OnInit {
     return this.lignes.reduce((s, l) => s + this.ligneMontant(l), 0);
   }
   get montantBeneficiaireTotal(): number {
-    return this.montantTotal * tauxBeneficiaire(this.regime);
+    const reg = this.regime;
+    if (!reg) return 0;
+    return this.montantTotal * tauxBeneficiaire(reg);
   }
   get montantSencsuTotal(): number {
-    return this.montantTotal * tauxSencsu(this.regime);
+    const reg = this.regime;
+    if (!reg) return 0;
+    return this.montantTotal * tauxSencsu(reg);
   }
 
   // ----- Pièces -----
@@ -419,24 +469,44 @@ export class FactureStructureFormComponent implements OnInit {
 
   // ----- Enregistrement -----
   enregistrer(ajouterUnAutre: boolean) {
-    if (!this.lettre || this.lignes.length === 0) return;
+    if ((!this.lettre && !this.isPosteDeSante) || this.lignes.length === 0) return;
+    
+    if (this.isPosteDeSante && this.patientForm.invalid) {
+      this.snackBar.open('Veuillez remplir les informations obligatoires du patient.', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
     this.isSubmitting = true;
+    
     const req: FactureStructureRequest = {
-      lettreGarantieNumero: this.lettre.numero,
+      lettreGarantieNumero: this.lettre?.numero,
       feuilleSoinsId: this.feuilleSoins?.id,
       diagnostique: this.factureForm.value.diagnostique || undefined,
       lignes: this.lignes,
       ticketCaisse: this.ticketCaisse || undefined,
       documentsComplementaires: this.documents.length ? this.documents : undefined
     };
+    
+    if (this.isPosteDeSante) {
+      const p = this.patientForm.value;
+      req.regime = p.regime;
+      req.patientNom = p.nom;
+      req.patientPrenom = p.prenom;
+      req.patientTelephone = p.telephone;
+      req.patientDateNaissance = p.dateNaissance || undefined;
+      req.patientSexe = p.sexe || undefined;
+      req.patientMatricule = p.matricule || undefined;
+      req.patientNumeroCni = p.numeroCni || undefined;
+    }
+    
     this.structureService.createFacture(req).subscribe({
       next: (facture) => {
         this.isSubmitting = false;
         if (ajouterUnAutre) {
-          this.snackBar.open('Prestations du patient ajoutées avec succès. Vous pouvez maintenant ajouter un autre patient.', 'Fermer', { duration: 4000 });
+          this.snackBar.open('Saisie ajoutée à la facture mensuelle (non envoyée). Vous pouvez ajouter un autre patient.', 'Fermer', { duration: 4000 });
           this.reset();
         } else {
-          this.snackBar.open('Prestations ajoutées à la facture mensuelle : ' + facture.numero, 'Fermer', { duration: 3000 });
+          this.snackBar.open('Saisie compilée dans la facture mensuelle ' + facture.numero + ' — pensez à l\'envoyer en fin de mois depuis « Mes factures ».', 'Fermer', { duration: 5000 });
           this.router.navigate(['/dashboard/factures-structure', facture.id]);
         }
       },

@@ -23,8 +23,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
     MatSortModule, MatIconModule, MatCardModule,
     MatInputModule, MatSelectModule, MatSnackBarModule
   ],
-  templateUrl: './pharmacies.component.html',
-  styleUrls: ['./pharmacies.component.css']
+  templateUrl: './pharmacies.component.html'
 })
 export class PharmaciesComponent implements OnInit {
   displayedColumns: string[] = ['nom', 'adresse', 'telephone', 'regionId', 'actions'];
@@ -213,6 +212,27 @@ export class PharmaciesComponent implements OnInit {
       },
       error: () => {
         this.snackBar.open('Impossible de télécharger le modèle.', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  /**
+   * Export Excel des pharmacies avec leurs identifiants (username + statut du mot de passe),
+   * à remettre aux officines après un import en masse.
+   */
+  exporterIdentifiants() {
+    this.pharmacieService.exportPharmacies().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pharmacies_identifiants.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export des identifiants lancé', 'Fermer', { duration: 2500 });
+      },
+      error: () => {
+        this.snackBar.open('Impossible d\'exporter les identifiants.', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
       }
     });
   }

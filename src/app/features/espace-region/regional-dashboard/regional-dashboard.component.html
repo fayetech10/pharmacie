@@ -1,0 +1,223 @@
+<div class="rd">
+
+  <!-- ============ BARRE DE FILTRES — une seule rangée, au-dessus de tout ============ -->
+  <div class="rd-toolbar">
+    <div class="rd-toolbar-left">
+      <label class="rd-field">
+        <span class="rd-field-label">Année</span>
+        <select class="rd-select" [(ngModel)]="annee" (ngModelChange)="onAnneeChange()">
+          <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+        </select>
+      </label>
+    </div>
+    <button type="button" class="rd-btn-ghost" (click)="exporter()">
+      <mat-icon>download</mat-icon> Exporter la région
+    </button>
+  </div>
+
+  <!-- ============ CHARGEMENT INITIAL ============ -->
+  <div class="rd-skeleton" *ngIf="loading">
+    <div class="rd-sk rd-sk-hero"></div>
+    <div class="rd-sk-row">
+      <div class="rd-sk rd-sk-tile"></div>
+      <div class="rd-sk rd-sk-tile"></div>
+      <div class="rd-sk rd-sk-tile"></div>
+      <div class="rd-sk rd-sk-tile"></div>
+    </div>
+    <div class="rd-sk rd-sk-chart"></div>
+  </div>
+
+  <!-- ============ ERREUR ============ -->
+  <div class="rd-empty" *ngIf="error && !loading">
+    <mat-icon>cloud_off</mat-icon>
+    <p>Impossible de charger les données de la région</p>
+    <button type="button" class="rd-btn" (click)="load()">Réessayer</button>
+  </div>
+
+  <!-- ============ CONTENU ============ -->
+  <div class="rd-body" *ngIf="stats && !loading && !error" [class.rd-body--refreshing]="refreshing">
+
+    <!-- ---------- Chiffre phare + indicateurs ---------- -->
+    <section class="rd-head-grid">
+
+      <button type="button" class="rd-hero-card" (click)="ouvrirFactures()"
+              [attr.aria-label]="'Part SEN-CSU à régler : ' + nombre(stats.montantCsu || 0)
+                                 + ' francs CFA. Voir toutes les factures de la région.'">
+        <span class="rd-hero-label">
+          Part SEN-CSU à régler
+          <mat-icon class="rd-go">arrow_forward</mat-icon>
+        </span>
+        <div class="rd-hero-figure">
+          {{ compact(stats.montantCsu || 0) }}<span class="rd-hero-unit">FCFA</span>
+        </div>
+        <span class="rd-hero-sub">
+          sur {{ compact(stats.montantTotal || 0) }} FCFA facturés dans la région
+        </span>
+
+        <div class="rd-hero-meter" aria-hidden="true">
+          <div class="rd-hero-meter-fill"
+               [style.width.%]="(stats.montantTotal || 0) > 0 ? (stats.montantCsu / stats.montantTotal) * 100 : 0"></div>
+        </div>
+      </button>
+
+      <div class="rd-kpis">
+        <button type="button" class="rd-kpi" *ngFor="let k of kpis"
+                (click)="k.go()" [matTooltip]="k.goLabel"
+                [attr.aria-label]="k.label + ' : ' + k.value + ' ' + (k.suffix || '') + '. ' + k.goLabel">
+          <div class="rd-kpi-top">
+            <mat-icon class="rd-kpi-ic">{{ k.icon }}</mat-icon>
+            <span class="rd-kpi-label">{{ k.label }}</span>
+            <mat-icon class="rd-go">arrow_forward</mat-icon>
+          </div>
+          <div class="rd-kpi-value">
+            {{ k.value }}<span class="rd-kpi-suffix" *ngIf="k.suffix">{{ k.suffix }}</span>
+          </div>
+          <div class="rd-kpi-delta" *ngIf="k.delta !== null && k.delta !== undefined"
+               [class.up]="k.delta > 0" [class.down]="k.delta < 0">
+            <mat-icon>{{ k.delta > 0 ? 'trending_up' : (k.delta < 0 ? 'trending_down' : 'trending_flat') }}</mat-icon>
+            {{ deltaTexte(k.delta) }} <span class="rd-kpi-delta-cap">{{ k.deltaLabel }}</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---------- Graphique + parcours ---------- -->
+    <section class="rd-grid">
+
+      <!-- Évolution mensuelle : emphase (année courante en accent, N-1 en contexte) -->
+      <article class="rd-card rd-card--chart">
+        <header class="rd-card-head">
+          <div>
+            <h2>Évolution mensuelle</h2>
+            <p>Montant facturé · {{ annee }} comparé à {{ annee - 1 }}</p>
+          </div>
+          <button type="button" class="rd-link" (click)="showTable = !showTable"
+                  [attr.aria-expanded]="showTable">
+            {{ showTable ? 'Voir le graphique' : 'Voir les données' }}
+          </button>
+        </header>
+
+        <div class="rd-chart-meta" *ngIf="aDesDonneesEvolution && !showTable">
+          <span class="rd-chart-total">{{ compact(totalAnnee) }} <small>FCFA en {{ annee }}</small></span>
+          <span class="rd-chart-peak" *ngIf="moisFort">
+            Pic en {{ moisFort.label }} · {{ compact(moisFort.montant) }} FCFA
+          </span>
+        </div>
+
+        <div class="rd-chart" *ngIf="aDesDonneesEvolution && !showTable">
+          <canvas baseChart role="img" [attr.aria-label]="lineAria"
+                  [data]="lineData" [options]="lineOptions" [type]="'line'"></canvas>
+        </div>
+
+        <!-- Jumelle tabulaire : toute valeur reste lisible sans le graphique -->
+        <div class="rd-table-wrap" *ngIf="aDesDonneesEvolution && showTable">
+          <table class="rd-table">
+            <caption class="rd-sr-only">Montant facturé par mois, {{ annee }} et {{ annee - 1 }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Mois</th>
+                <th scope="col" class="num">{{ annee }}</th>
+                <th scope="col" class="num">{{ annee - 1 }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of monthLabels; let i = index">
+                <th scope="row">{{ m }}</th>
+                <td class="num">{{ nombre(moisCourant[i]) }}</td>
+                <td class="num">{{ nombre(moisPrecedent[i]) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rd-empty rd-empty--inline" *ngIf="!aDesDonneesEvolution">
+          <mat-icon>show_chart</mat-icon>
+          <p>Aucune facturation enregistrée en {{ annee }}</p>
+        </div>
+      </article>
+
+      <!-- Parcours des factures : part-à-tout, statuts avec icône + libellé -->
+      <article class="rd-card">
+        <header class="rd-card-head">
+          <div>
+            <h2>Parcours des factures</h2>
+            <p>{{ nombre(pipelineTotal) }} facture(s) pharmacies dans le circuit régional</p>
+          </div>
+        </header>
+
+        <ng-container *ngIf="pipelineTotal > 0; else pipelineVide">
+          <!-- Barre empilée : les 2px d'écart en couleur de surface séparent les segments.
+               Affordance de clic secondaire — la version accessible au clavier est la
+               liste de statuts ci-dessous, d'où l'aria-hidden ici (pas de doublon). -->
+          <div class="rd-stack" aria-hidden="true">
+            <div class="rd-stack-seg" *ngFor="let seg of pipeline"
+                 [style.flex-grow]="seg.count"
+                 [style.background]="seg.color"
+                 [class.is-clickable]="seg.count > 0"
+                 [matTooltip]="seg.label + ' · ' + nombre(seg.count) + ' facture(s)'"
+                 (click)="ouvrirSegment(seg)"
+                 [hidden]="seg.count === 0"></div>
+          </div>
+
+          <!-- Chaque statut ouvre les factures correspondantes, filtre déjà positionné -->
+          <ul class="rd-legend">
+            <li *ngFor="let seg of pipeline">
+              <button type="button" class="rd-legend-item"
+                      [disabled]="seg.count === 0"
+                      (click)="ouvrirSegment(seg)"
+                      [attr.aria-label]="seg.count > 0
+                        ? ('Voir les ' + nombre(seg.count) + ' facture(s) ' + seg.label)
+                        : (seg.label + ' : aucune facture')">
+                <span class="rd-legend-dot" [style.background]="seg.color"></span>
+                <mat-icon class="rd-legend-ic">{{ seg.icon }}</mat-icon>
+                <span class="rd-legend-label">{{ seg.label }}</span>
+                <span class="rd-legend-count">{{ nombre(seg.count) }}</span>
+                <span class="rd-legend-share">{{ seg.share | number:'1.0-0' }} %</span>
+                <mat-icon class="rd-legend-go">chevron_right</mat-icon>
+              </button>
+            </li>
+          </ul>
+
+          <button type="button" class="rd-cta" (click)="ouvrirSegment(pipeline[0])"
+                  *ngIf="pipeline[0] && pipeline[0].count > 0">
+            <mat-icon>move_to_inbox</mat-icon>
+            Traiter les {{ nombre(pipeline[0].count) }} facture(s) en attente
+          </button>
+        </ng-container>
+
+        <ng-template #pipelineVide>
+          <div class="rd-empty rd-empty--inline">
+            <mat-icon>inbox</mat-icon>
+            <p>Aucune facture dans le circuit</p>
+          </div>
+        </ng-template>
+      </article>
+    </section>
+
+    <!-- ---------- Classement des prestataires ---------- -->
+    <section class="rd-card" *ngIf="topRows.length > 0">
+      <header class="rd-card-head">
+        <div>
+          <h2>Prestataires les plus facturants</h2>
+          <p>Montant facturé sur la période</p>
+        </div>
+      </header>
+
+      <ul class="rd-rank">
+        <li *ngFor="let r of topRows">
+          <button type="button" class="rd-rank-row" (click)="ouvrirPrestataire(r)"
+                  [attr.aria-label]="'Voir les factures de ' + r.nom">
+            <span class="rd-rank-name" [matTooltip]="r.nom">{{ r.nom }}</span>
+            <div class="rd-rank-track">
+              <div class="rd-rank-bar" [style.width.%]="r.share"></div>
+            </div>
+            <span class="rd-rank-value">{{ compact(r.montant) }} <small>FCFA</small></span>
+            <span class="rd-rank-count">{{ nombre(r.factures) }} fact.</span>
+            <mat-icon class="rd-rank-go">chevron_right</mat-icon>
+          </button>
+        </li>
+      </ul>
+    </section>
+
+  </div>
+</div>

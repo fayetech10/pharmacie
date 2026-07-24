@@ -1,9 +1,0 @@
-/* Carte mobile « médicament exclu » : le bloc motif est porté en utilitaires
-   Tailwind dans le template ; seul l'icône Material garde une règle dédiée. */
-.motif-row mat-icon {
-  @apply text-base shrink-0;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-  color: #EA580C;
-}

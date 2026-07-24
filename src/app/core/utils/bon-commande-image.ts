@@ -45,7 +45,7 @@ const COLS: Col[] = [
 const INK = '#1F2937';
 const MUTED = '#6B7280';
 const LINE = '#CBD5E1';
-const GREEN = '#2F6E54';
+const GREEN = '#047857';
 const HEAD_BG = '#F1F5F4';
 
 /** Tronque un texte pour qu'il tienne dans maxW (avec « … » si besoin). */

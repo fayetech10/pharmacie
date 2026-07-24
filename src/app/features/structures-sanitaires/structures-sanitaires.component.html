@@ -1,14 +1,39 @@
 <div class="fade-in">
   <div class="page-head">
     <div>
-      <h1>Structures Sanitaires</h1>
+      <h1>Paramétrage structures sanitaires</h1>
       <p>Créez et gérez les structures et leur agent, rattachées à un BCSU</p>
     </div>
     <div class="page-head-actions" *ngIf="selectedTab === 0">
+      <button class="btn btn-outline" (click)="telechargerModeleImport()" title="Modèle Excel à remplir pour l'import des structures (EPS, CS, PS)">
+        <mat-icon>download</mat-icon> Modèle
+      </button>
+      <input type="file" accept=".xlsx" hidden #importPostesInput (change)="onImportFileSelected($event)">
+      <button class="btn btn-outline" [disabled]="importing" (click)="importPostesInput.click()">
+        <mat-icon>upload_file</mat-icon> {{ importing ? 'Import en cours…' : 'Importer des structures (Excel)' }}
+      </button>
+      <button class="btn btn-outline" (click)="exporterIdentifiants()" title="Exporter les structures avec leurs identifiants de connexion">
+        <mat-icon>table_view</mat-icon> Exporter les identifiants
+      </button>
+      <button class="btn btn-outline" [disabled]="purging" (click)="purgerBrouillons()"
+              title="Supprimer les factures de structure restées en brouillon">
+        <mat-icon>delete_sweep</mat-icon> {{ purging ? 'Purge…' : 'Purger les brouillons' }}
+      </button>
       <button class="btn btn-primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Ajouter une structure
       </button>
     </div>
+  </div>
+
+  <!-- Résultat de l'import des postes de santé -->
+  <div *ngIf="importResult" class="mb-4 py-3.5 px-4 rounded-[10px] bg-[#f0fdf4] border border-[#bbf7d0]">
+    <div class="flex justify-between items-center gap-2.5">
+      <strong>Import des postes de santé : {{ importResult.importes }} importé(s), {{ importResult.echecs }} échec(s)</strong>
+      <button class="btn btn-outline" type="button" (click)="fermerImportResult()"><mat-icon>close</mat-icon></button>
+    </div>
+    <ul *ngIf="importResult.erreurs.length" class="mt-2 mb-0 pl-[18px] text-[#b91c1c] text-[13px]">
+      <li *ngFor="let e of importResult.erreurs">{{ e }}</li>
+    </ul>
   </div>
 
   <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
@@ -16,12 +41,24 @@
     <mat-tab label="Structures">
       <div class="pt-2 md:pt-6">
 
-  <div class="glass-table-container">
+  <!-- Tableau (desktop / tablette large) -->
+  <div class="glass-table-container desktop-only">
     <table mat-table [dataSource]="structures" class="premium-table">
       <ng-container matColumnDef="nom">
         <th mat-header-cell *matHeaderCellDef> Structure </th>
         <td mat-cell *matCellDef="let s">
           <div><strong>{{ s.nom }}</strong><br><small>{{ s.code }} · {{ s.email || '—' }}</small></div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef> Type </th>
+        <td mat-cell *matCellDef="let s">
+          <span class="inline-block py-[3px] px-2.5 rounded-full text-xs font-semibold" [ngClass]="typeBadgeClass(s)">
+            {{ typeDe(s) === 'PS' ? 'Poste de santé' : (typeDe(s) === 'EPS' ? 'Hôpital (EPS)' : 'Centre de santé') }}
+          </span>
+          <div *ngIf="typeDe(s) === 'PS'" class="text-[11px] text-[#64748b] mt-[3px]">
+            Rattaché à : {{ getStructureNom(s.structureRattachementId) }}
+          </div>
         </td>
       </ng-container>
       <ng-container matColumnDef="region">
@@ -41,13 +78,47 @@
           </div>
         </td>
       </ng-container>
-      <tr mat-header-row *matHeaderRowDef="['nom', 'region', 'bcsu', 'actions']"></tr>
-      <tr mat-row *matRowDef="let row; columns: ['nom', 'region', 'bcsu', 'actions'];"></tr>
+      <tr mat-header-row *matHeaderRowDef="['nom', 'type', 'region', 'bcsu', 'actions']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['nom', 'type', 'region', 'bcsu', 'actions'];"></tr>
     </table>
     <div class="empty-state" *ngIf="structures.length === 0">
       <mat-icon>local_hospital</mat-icon>
       <p>Aucune structure enregistrée</p>
     </div>
+  </div>
+
+  <!-- Cartes mobiles (≤ 768px) -->
+  <div class="m-cards" *ngIf="structures.length">
+    <div class="m-card" *ngFor="let s of structures">
+      <div class="m-card-top">
+        <div class="min-w-0">
+          <div class="m-title">{{ s.nom }}</div>
+          <div class="m-sub break-words">{{ s.code }} · {{ s.email || '—' }}</div>
+        </div>
+        <div class="m-actions">
+          <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
+          <button class="action-btn danger" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+        </div>
+      </div>
+      <div class="m-row">
+        <span class="inline-block py-[3px] px-2.5 rounded-full text-xs font-semibold" [ngClass]="typeBadgeClass(s)">
+          {{ typeDe(s) === 'PS' ? 'Poste de santé' : (typeDe(s) === 'EPS' ? 'Hôpital (EPS)' : 'Centre de santé') }}
+        </span>
+        <span *ngIf="getRegionNom(s.regionId) !== '-'"><mat-icon class="inline-ic">map</mat-icon>{{ getRegionNom(s.regionId) }}</span>
+      </div>
+      <div class="m-row" *ngIf="typeDe(s) === 'PS'">
+        <span class="text-[12px] text-text-muted">Rattaché à : {{ getStructureNom(s.structureRattachementId) }}</span>
+      </div>
+      <div class="m-row" *ngIf="getBcsuNom(s.bcsuId) !== '-'">
+        <span><mat-icon class="inline-ic">badge</mat-icon>{{ getBcsuNom(s.bcsuId) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- État vide (mobile) -->
+  <div class="empty-state md:!hidden" *ngIf="structures.length === 0">
+    <mat-icon>local_hospital</mat-icon>
+    <p>Aucune structure enregistrée</p>
   </div>
 
       </div>
@@ -73,9 +144,17 @@
       <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="modal-body">
           <div class="form-row">
-            <mat-form-field appearance="outline" class="flex-grow" *ngIf="!isServiceRegional">
+            <mat-form-field appearance="outline" class="flex-grow" *ngIf="!isEditMode">
+              <mat-label>Type de structure</mat-label>
+              <mat-select formControlName="typeStructure">
+                <mat-option *ngFor="let t of typesStructure" [value]="t.code">{{ t.label }} ({{ t.code }})</mat-option>
+              </mat-select>
+              <mat-hint>Code généré automatiquement (ex: DKCS01)</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="flex-grow" *ngIf="isEditMode">
               <mat-label>Code</mat-label>
-              <input matInput formControlName="code" placeholder="Ex: STR001">
+              <input matInput formControlName="code" readonly>
+              <mat-hint>Code d'identification — utilisé dans les numéros LG/BC</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="flex-grow">
               <mat-label>Nom</mat-label>
@@ -96,6 +175,15 @@
               <input matInput type="email" formControlName="email">
             </mat-form-field>
           </div>
+          <!-- Poste de santé : rattachement à un centre de santé / EPS obligatoire -->
+          <mat-form-field appearance="outline" class="w-100" *ngIf="isPosteSante">
+            <mat-label>Structure sanitaire de rattachement (CS / EPS)</mat-label>
+            <mat-select formControlName="structureRattachementId">
+              <mat-option *ngFor="let s of structuresRattachement" [value]="s.id">{{ s.nom }} ({{ s.code }})</mat-option>
+            </mat-select>
+            <mat-hint>Les factures envoyées par le poste seront visibles dans cette structure</mat-hint>
+          </mat-form-field>
+
           <mat-form-field appearance="outline" class="w-100" *ngIf="!isServiceRegional">
             <mat-label>Région</mat-label>
             <mat-select formControlName="regionId">

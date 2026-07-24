@@ -1,5 +1,5 @@
     <div class="fade-in">
-      <div class="page-head">
+      <div class="page-head max-md:hidden">
         <div>
           <h1>Espace Central</h1>
           <p>Supervisez au niveau national et effectuez les paiements</p>
@@ -18,7 +18,7 @@
         <mat-tab>
           <ng-template mat-tab-label>
             Factures reçues
-            <span class="tab-count" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
+            <span class="inline-flex items-center justify-center text-[11px] font-bold min-w-[18px] h-[18px] px-[5px] ml-1.5 rounded-full bg-primary text-white leading-none" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
           </ng-template>
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">

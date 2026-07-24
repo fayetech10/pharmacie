@@ -79,6 +79,8 @@ export interface Patient {
   /** Sexe du bénéficiaire ("M"/"F") — colonne obligatoire du classeur CS_EPS. */
   sexe?: string;
   actif?: boolean;
+  /** Date d'enregistrement (ISO) — sert au tri « dernier en haut » et au filtre par mois. */
+  createdAt?: string;
 }
 
 export interface PrestationGarantie {
@@ -172,6 +174,23 @@ export interface Pointage {
   heureArrivee: string;
   heureDepart?: string;
   derniereConnexion: string;
+}
+
+/** Constat d'activité décrit par un agent BCSU pour un régime donné. */
+export interface Constat {
+  id: string;
+  regime: Regime;
+  description: string;
+  agentNom?: string;
+  agentPrenom?: string;
+  structureNom?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface ConstatRequest {
+  regime: Regime;
+  description: string;
 }
 
 

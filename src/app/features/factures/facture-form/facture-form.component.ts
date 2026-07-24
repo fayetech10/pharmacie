@@ -19,6 +19,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { compressImageToDataUrl } from '../../../core/utils/image-compression';
 import { renderBonCommandeToDataUrl } from '../../../core/utils/bon-commande-image';
+import { QrScannerComponent } from '../../../shared/qr-scanner/qr-scanner.component';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
@@ -28,7 +31,8 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule,
     MatButtonModule, MatIconModule, MatSnackBarModule,
-    MatTableModule, MatTooltipModule, RouterModule, FormsModule
+    MatTableModule, MatTooltipModule, RouterModule, FormsModule,
+    QrScannerComponent
   ],
   templateUrl: './facture-form.component.html',
   styleUrls: ['./facture-form.component.css']
@@ -47,6 +51,16 @@ export class FactureFormComponent implements OnInit {
   /** Index de la suggestion surlignée pour la navigation clavier (-1 = aucune). */
   activeIndex = -1;
   excludedInfo: { nom: string; motif?: string; description?: string } | null = null;
+  /** Équivalences (même DCI) du médicament saisi, le moins cher en premier. */
+  equivalents: Medicament[] = [];
+
+  /**
+   * Nom du médicament saisi qui n'est ni éligible ni exclu : quand renseigné, l'écran
+   * propose de l'ajouter comme « non répertorié » (après avertissement + validation SEN-CSU).
+   */
+  medicamentNonRepertorie: string | null = null;
+  /** Classes thérapeutiques exclues (dérivées du référentiel) rappelées lors d'un ajout manuel. */
+  excludedClasses: string[] = [];
 
   // Dossier patient : pièces justificatives (data URL base64)
   readonly photoFields: { key: PhotoKey; label: string }[] = [
@@ -105,25 +119,8 @@ export class FactureFormComponent implements OnInit {
   }
 
   /**
-   * Lignes du bon de commande affichées comme sur le formulaire papier :
-   * autant de lignes que disponibles pour cette pharmacie, remplies au fur et
-   * à mesure que le pharmacien ajoute des médicaments (null = ligne vide).
+   * Circuit d'officine : prise en charge 50 % (cf. formulaire papier).
    */
-  get bonRows(): (any | null)[] {
-    // Sans bon rattaché, aucune ligne « papier » à afficher (le bloc est déjà masqué
-    // par *ngIf="rattacheBon"). Garde-fou indispensable : `lignesDisponibles` vaut
-    // Infinity tant qu'aucun bon n'est rattaché — sans ce retour anticipé, un appel
-    // à ce getter construirait `Array.from({ length: Infinity })`, ce qui fige puis
-    // fait planter l'onglet du navigateur.
-    if (!this.rattacheBon) return [];
-    const n = Math.max(this.lignesDisponibles, this.patientLignes.length);
-    // Borne défensive : un `nombreLignes` absent/aberrant renvoyé par le backend ne
-    // doit jamais provoquer la création d'un tableau démesuré.
-    const safeN = Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : this.patientLignes.length;
-    return Array.from({ length: safeN }, (_, i) => this.patientLignes[i] ?? null);
-  }
-
-  /** Circuit d'officine : prise en charge 50 % (cf. formulaire papier). */
   get bonMontantTiersPayant(): number { return this.patientCsu; }
   get bonMontantPatient(): number { return this.patientTotal - this.patientCsu; }
 
@@ -179,6 +176,12 @@ export class FactureFormComponent implements OnInit {
    * Recherche un bon de commande par numéro et l'affiche tel quel (lignes vides,
    * comme le formulaire papier) : les médicaments ajoutés viendront remplir ses lignes.
    */
+  /** QR code scanné sur le bon de commande : rattache directement le bon. */
+  onQrScanne(code: string) {
+    this.searchBcNumero = code;
+    this.rechercherEtPrefiltrerBon(code);
+  }
+
   rechercherEtPrefiltrerBon(numero: string) {
     if (!numero || !numero.trim()) {
       this.snackBar.open('Veuillez saisir un numéro de bon', 'Fermer', { duration: 3000 });
@@ -247,8 +250,16 @@ export class FactureFormComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
-    // Précharge le cache des médicaments pour une autocomplétion instantanée
-    this.medicamentService.getAllCached().subscribe();
+    // Précharge le cache des médicaments pour une autocomplétion instantanée, et en
+    // extrait les classes thérapeutiques exclues (rappelées lors d'un ajout manuel).
+    this.medicamentService.getAllCached().subscribe(list => {
+      this.excludedClasses = Array.from(new Set(
+        (list || [])
+          .filter(m => m.statut === StatutMedicament.EXCLU)
+          .map(m => (m.motif || m.classeTherapeutique || '').trim())
+          .filter(Boolean)
+      )).sort((a, b) => a.localeCompare(b, 'fr'));
+    });
     this.route.paramMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
@@ -310,6 +321,7 @@ export class FactureFormComponent implements OnInit {
 
   onMedicamentInput(event: Event) {
     const query = (event.target as HTMLInputElement).value;
+    this.medicamentNonRepertorie = null;
     if (query.length >= 2) {
       this.medicamentService.search(query).subscribe(res => {
         this.suggestions = res;
@@ -323,15 +335,25 @@ export class FactureFormComponent implements OnInit {
             this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
             this.excludedInfo = { nom: exactMatch.nom, motif: exactMatch.motif, description: exactMatch.description };
             this.snackBar.open("Attention: Le médicament saisi n'est pas éligible et ne peut être facturé.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+          } else if (exactMatch.statut === StatutMedicament.NON_REPERTORIE) {
+            // Déjà signalé par un pharmacien, pas encore validé : ajout via le bouton dédié.
+            this.medicamentForm.get('medicament')?.setErrors({ nonRepertorie: true });
+            this.excludedInfo = null;
+            this.medicamentNonRepertorie = exactMatch.nom;
           } else {
             this.medicamentForm.get('medicament')?.setErrors(null);
             this.excludedInfo = null;
+            this.chargerEquivalents(exactMatch.nom);
           }
         } else {
-          // Si pas de match exact, on vide le codeProduit et on force une erreur
+          // Aucun médicament répertorié ne correspond exactement : on vide le codeProduit et
+          // on force une erreur (bouton « Ajouter » standard désactivé). Le pharmacien peut
+          // toutefois l'ajouter comme « non répertorié » via le bouton dédié.
           this.medicamentForm.patchValue({ codeProduit: '' }, { emitEvent: false });
           this.medicamentForm.get('medicament')?.setErrors({ notFound: true });
           this.excludedInfo = null;
+          this.equivalents = [];
+          this.medicamentNonRepertorie = query.trim().toUpperCase();
         }
       });
     } else {
@@ -341,6 +363,7 @@ export class FactureFormComponent implements OnInit {
       this.medicamentForm.patchValue({ codeProduit: '' }, { emitEvent: false });
       this.medicamentForm.get('medicament')?.setErrors({ notFound: true });
       this.excludedInfo = null;
+      this.equivalents = [];
     }
   }
 
@@ -350,14 +373,37 @@ export class FactureFormComponent implements OnInit {
     this.isMedicamentSelected = true;
     this.showSuggestions = false;
     this.activeIndex = -1;
+    this.medicamentNonRepertorie = null;
     if (med.statut === StatutMedicament.EXCLU) {
       this.medicamentForm.get('medicament')?.setErrors({ exclu: true });
       this.excludedInfo = { nom: med.nom, motif: med.motif, description: med.description };
       this.snackBar.open("Attention: Ce médicament n'est pas éligible.", 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+    } else if (med.statut === StatutMedicament.NON_REPERTORIE) {
+      this.medicamentForm.get('medicament')?.setErrors({ nonRepertorie: true });
+      this.excludedInfo = null;
+      this.medicamentNonRepertorie = med.nom;
     } else {
       this.medicamentForm.get('medicament')?.setErrors(null);
       this.excludedInfo = null;
+      this.chargerEquivalents(med.nom);
     }
+  }
+
+  /**
+   * Charge les équivalences (même DCI) du médicament saisi, le moins cher en tête,
+   * pour que le pharmacien puisse proposer une alternative moins coûteuse.
+   */
+  private chargerEquivalents(nom: string) {
+    this.equivalents = [];
+    this.medicamentService.getEquivalents(nom).subscribe({
+      next: res => this.equivalents = res || [],
+      error: () => this.equivalents = []
+    });
+  }
+
+  /** Remplace le médicament en cours de saisie par l'équivalent choisi. */
+  choisirEquivalent(med: Medicament) {
+    this.selectMedicament(med);
   }
 
   /** Rouvre la liste si on revient dans le champ et que des suggestions sont disponibles. */
@@ -404,6 +450,7 @@ export class FactureFormComponent implements OnInit {
     this.showSuggestions = false;
     this.activeIndex = -1;
     this.excludedInfo = null;
+    this.medicamentNonRepertorie = null;
   }
 
   ajouterMedicamentLigne() {
@@ -420,6 +467,64 @@ export class FactureFormComponent implements OnInit {
     }
 
     const val = this.medicamentForm.value;
+    const nom = (val.medicament || '').toString().toUpperCase();
+
+    // Deux garde-fous successifs avant d'inscrire la ligne : le médicament a-t-il déjà
+    // été délivré ce mois-ci (toutes pharmacies), et la quantité demandée dépasse-t-elle
+    // le traitement mensuel ? Chacun peut annuler l'ajout.
+    this.controleDelivranceMensuelle(nom).pipe(
+      switchMap(ok => ok ? this.confirmerQuantiteMensuelle(val.quantite) : of(false))
+    ).subscribe(ok => {
+      if (!ok) return;
+      this.inscrireLigne(val);
+    });
+  }
+
+  /**
+   * Contrôle national « médicament déjà délivré durant le mois » : le bénéficiaire est
+   * identifié par son matricule et, à défaut, par son nom (bon de commande physique).
+   * En cas de doublon, la quantité déjà délivrée est précisée et le pharmacien
+   * confirme ou annule. Une erreur réseau ne bloque pas la facturation.
+   */
+  private controleDelivranceMensuelle(nom: string) {
+    const matricule = (this.patientForm.get('patientMatricule')?.value || '').toString().trim();
+    const nomPatient = (this.patientForm.get('patientNomPrenom')?.value || '').toString().trim();
+    if (!matricule && !nomPatient) return of(true);
+
+    return this.factureService.controlerDelivrance({ matricule, nom: nomPatient, medicament: nom }).pipe(
+      switchMap(res => {
+        if (!res || res.quantiteDejaDelivree <= 0) return of(true);
+        const detail = (res.delivrances || [])
+          .map(d => `${d.quantite} par ${d.pharmacieNom || 'une autre pharmacie'}`)
+          .join(', ');
+        return this.confirm.ask({
+          title: 'Médicament déjà délivré durant le mois',
+          message:
+            `« ${nom} » a déjà été délivré à ce bénéficiaire ce mois-ci : `
+            + `${res.quantiteDejaDelivree} unité(s) au total${detail ? ' (' + detail + ')' : ''}. `
+            + `Vérifiez le respect du traitement mensuel avant de poursuivre.`,
+          confirmText: 'Confirmer',
+          cancelText: 'Annuler',
+          danger: true
+        });
+      }),
+      catchError(() => of(true))
+    );
+  }
+
+  /** Quantité ≥ 2 : confirmation explicite que la prescription reste dans le traitement mensuel. */
+  private confirmerQuantiteMensuelle(quantite: number) {
+    if (!quantite || quantite < 2) return of(true);
+    return this.confirm.ask({
+      title: 'Quantité supérieure ou égale à 2',
+      message: `Confirmer si la prescription n'excède pas le traitement mensuel (quantité saisie : ${quantite}).`,
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler'
+    });
+  }
+
+  /** Inscrit la ligne validée dans la saisie en cours et réarme le formulaire. */
+  private inscrireLigne(val: any) {
     this.patientLignes.push({
       medicament: (val.medicament || '').toString().toUpperCase(),
       codeProduit: val.codeProduit,
@@ -431,20 +536,91 @@ export class FactureFormComponent implements OnInit {
     if (this.rattacheBon) this.refreshBonCommandePhoto();
     this.currentLinesChange.emit([...this.patientLignes]);
 
-    const quantiteAjoutee = val.quantite;
-
     this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
     this.isMedicamentSelected = false;
     this.suggestions = [];
     this.showSuggestions = false;
     this.activeIndex = -1;
     this.excludedInfo = null;
+    this.equivalents = [];
+    this.medicamentNonRepertorie = null;
 
-    if (quantiteAjoutee >= 2) {
-      this.snackBar.open('Avertissement : La quantité de ce médicament (' + quantiteAjoutee + ') atteint ou dépasse la limite mensuelle autorisée de 2 unités.', 'Fermer', { duration: 6000 });
-    } else {
-      this.snackBar.open('Médicament préparé pour le patient', 'Fermer', { duration: 2000 });
+    this.snackBar.open('Médicament préparé pour le patient', 'Fermer', { duration: 2000 });
+  }
+
+  /**
+   * Ajoute un médicament « non répertorié » (ni éligible ni exclu) saisi manuellement par le
+   * pharmacien. Un avertissement rappelle d'abord les classes thérapeutiques exclues et le fait
+   * que la SEN-CSU se réserve le droit de contrôler le médicament ajouté. La ligne est marquée
+   * « ajoutée par le pharmacien » (colonne Observation des factures).
+   */
+  ajouterMedicamentNonRepertorie() {
+    const nom = (this.medicamentForm.get('medicament')?.value || '').toString().trim();
+    if (!nom) return;
+
+    const quantiteCtrl = this.medicamentForm.get('quantite');
+    const prixCtrl = this.medicamentForm.get('prixUnitaire');
+    if (quantiteCtrl?.invalid || prixCtrl?.invalid) {
+      quantiteCtrl?.markAsTouched();
+      prixCtrl?.markAsTouched();
+      this.snackBar.open('Renseignez une quantité et un prix unitaire valides.', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });
+      return;
     }
+
+    if (this.bonLimitAtteinte) {
+      const dispo = this.lignesDisponibles;
+      this.snackBar.open(
+        `Ce bon de commande n'a que ${dispo} ligne(s) disponible(s). Le patient peut se rendre dans une autre pharmacie avec ce bon pour les médicaments restants.`,
+        'Fermer', { duration: 6000, panelClass: 'error-snackbar' }
+      );
+      return;
+    }
+
+    const classesExclues = this.excludedClasses.length
+      ? ` Classes thérapeutiques exclues : ${this.excludedClasses.join(', ')}.`
+      : '';
+    this.confirm.ask({
+      title: 'Médicament non répertorié',
+      message:
+        `« ${nom.toUpperCase()} » n'est pas répertorié : il ne figure ni dans les médicaments éligibles `
+        + `ni dans les exclusions. Vous pouvez l'ajouter, mais il ne doit appartenir à AUCUNE des classes `
+        + `thérapeutiques exclues.${classesExclues} Il sera ajouté puis signalé à la SEN-CSU, qui se réserve `
+        + `le droit de le contrôler et de valider son intégration ou de l'exclure définitivement.`,
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler',
+      danger: true
+    }).pipe(
+      // Les mêmes garde-fous que pour un médicament répertorié s'appliquent ensuite.
+      switchMap(ok => ok ? this.controleDelivranceMensuelle(nom.toUpperCase()) : of(false)),
+      switchMap(ok => ok ? this.confirmerQuantiteMensuelle(this.medicamentForm.get('quantite')?.value) : of(false))
+    ).subscribe(ok => {
+      if (!ok) return;
+
+      const val = this.medicamentForm.value;
+      // Aucun code officiel : code temporaire pour satisfaire la validation, le backend
+      // enregistre le médicament en « non répertorié » pour validation par la SEN-CSU.
+      const codeProduit = (val.codeProduit || '').toString().trim() || ('NR-' + Date.now());
+      this.patientLignes.push({
+        medicament: nom.toUpperCase(),
+        codeProduit,
+        quantite: val.quantite,
+        prixUnitaire: val.prixUnitaire,
+        ajouteParPharmacien: true
+      });
+
+      if (this.rattacheBon) this.refreshBonCommandePhoto();
+      this.currentLinesChange.emit([...this.patientLignes]);
+
+      this.medicamentForm.reset({ quantite: 1, prixUnitaire: 0 });
+      this.isMedicamentSelected = false;
+      this.suggestions = [];
+      this.showSuggestions = false;
+      this.activeIndex = -1;
+      this.excludedInfo = null;
+      this.medicamentNonRepertorie = null;
+
+      this.snackBar.open('Médicament non répertorié ajouté — à valider par la SEN-CSU.', 'Fermer', { duration: 4000 });
+    });
   }
 
   retirerMedicamentTemp(index: number) {
@@ -455,29 +631,57 @@ export class FactureFormComponent implements OnInit {
   }
 
   /**
+   * Remet une ligne préparée dans le formulaire de saisie pour correction :
+   * la ligne est retirée de la liste et ses valeurs rechargées. Le pharmacien
+   * la réajoute ensuite, ce qui rejoue les contrôles (délivrance, quantité).
+   */
+  modifierMedicamentTemp(index: number) {
+    const ligne = this.patientLignes[index];
+    if (!ligne) return;
+
+    this.medicamentForm.patchValue({
+      medicament: ligne.medicament,
+      codeProduit: ligne.codeProduit,
+      quantite: ligne.quantite,
+      prixUnitaire: ligne.prixUnitaire
+    });
+    this.isMedicamentSelected = true;
+    this.medicamentNonRepertorie = ligne.ajouteParPharmacien ? ligne.medicament : null;
+
+    this.retirerMedicamentTemp(index);
+    this.snackBar.open('Ligne rechargée dans le formulaire — corrigez puis réajoutez-la.', 'Fermer', { duration: 4000 });
+  }
+
+  /**
    * Déclenché quand le pharmacien quitte le champ « Numéro matricule ».
-   * Vérifie si le bénéficiaire a déjà reçu, ce mois-ci, un des médicaments en cours de saisie.
+   * Filet de sécurité pour le cas où le matricule est renseigné APRÈS l'ajout des
+   * médicaments : le contrôle bloquant à l'ajout n'avait alors pas de quoi identifier
+   * le bénéficiaire. Purement informatif ici — les lignes sont déjà saisies.
    */
   onMatriculeBlur() {
-    const matricule = (this.patientForm.get('patientMatricule')?.value || '').toString().trim().toLowerCase();
+    const matricule = (this.patientForm.get('patientMatricule')?.value || '').toString().trim();
     if (!matricule || this.patientLignes.length === 0) return;
 
-    const lignesExistantes = (this.facture?.lignes ?? []).filter(
-      l => (l.patientMatricule || '').toString().trim().toLowerCase() === matricule
+    const controles = this.patientLignes.map(l =>
+      this.factureService.controlerDelivrance({ matricule, medicament: l.medicament }).pipe(
+        map(res => ({ nom: l.medicament, quantite: res?.quantiteDejaDelivree ?? 0 })),
+        catchError(() => of({ nom: l.medicament, quantite: 0 }))
+      )
     );
-    if (lignesExistantes.length === 0) return;
 
-    const codesDejaDelivres = new Set(lignesExistantes.map(l => l.codeProduit));
-    const doublons = this.patientLignes.filter(pl => codesDejaDelivres.has(pl.codeProduit));
-    if (doublons.length === 0) return;
+    forkJoin(controles).subscribe(resultats => {
+      const doublons = resultats.filter(r => r.quantite > 0);
+      if (doublons.length === 0) return;
 
-    const noms = doublons.map(d => d.medicament).join(', ');
-    this.confirm.ask({
-      title: `Médicament déjà délivré : ${noms}`,
-      message: 'Médicament déjà délivré durant le mois. Vérifier le respect du traitement mensuel.',
-      confirmText: 'Continuer',
-      hideCancel: true
-    }).subscribe();
+      const detail = doublons.map(d => `${d.nom} (${d.quantite} déjà délivré(s))`).join(', ');
+      this.confirm.ask({
+        title: 'Médicament déjà délivré durant le mois',
+        message: `Ce bénéficiaire a déjà reçu ce mois-ci : ${detail}. `
+          + `Vérifiez le respect du traitement mensuel avant d'enregistrer.`,
+        confirmText: 'Continuer',
+        hideCancel: true
+      }).subscribe();
+    });
   }
 
   onPhotoSelected(key: PhotoKey, event: Event) {
@@ -561,6 +765,51 @@ export class FactureFormComponent implements OnInit {
     this.mettreAJourLignes(nouvellesLignes, false);
   }
 
+  /** Corrige la quantité puis le prix unitaire d'une ligne déjà enregistrée. */
+  modifierLigne(index: number) {
+    if (!this.facture) return;
+    const ligne = this.facture.lignes[index];
+    if (!ligne) return;
+
+    this.confirm.prompt({
+      title: `Modifier « ${ligne.medicament} »`,
+      label: 'Quantité',
+      initialValue: String(ligne.quantite ?? 1),
+      required: true,
+      confirmText: 'Suivant'
+    }).pipe(
+      switchMap(qte => {
+        if (qte === null) return of(null);
+        const quantite = Number(qte);
+        if (!Number.isFinite(quantite) || quantite <= 0) {
+          this.snackBar.open('Quantité invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
+          return of(null);
+        }
+        return this.confirm.prompt({
+          title: `Modifier « ${ligne.medicament} »`,
+          label: 'Prix unitaire (FCFA)',
+          initialValue: String(ligne.prixUnitaire ?? 0),
+          required: true,
+          confirmText: 'Enregistrer'
+        }).pipe(map(prix => prix === null ? null : { quantite, prix: Number(prix) }));
+      })
+    ).subscribe(res => {
+      if (!res) return;
+      if (!Number.isFinite(res.prix) || res.prix < 0) {
+        this.snackBar.open('Prix unitaire invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
+        return;
+      }
+      const lignes = [...this.facture!.lignes];
+      lignes[index] = {
+        ...lignes[index],
+        quantite: res.quantite,
+        prixUnitaire: res.prix,
+        montant: res.quantite * res.prix
+      };
+      this.mettreAJourLignes(lignes, false);
+    });
+  }
+
   private mettreAJourLignes(lignes: any[], clearForm: boolean) {
     if (!this.facture) return;
     
@@ -604,7 +853,7 @@ export class FactureFormComponent implements OnInit {
         next: () => {
           this.snackBar.open('Facture envoyée avec succès', 'Fermer', { duration: 3000 });
           // Retour vers « Mes Factures » (la route /dashboard/factures n'existe pas).
-          this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
+          this.router.navigate(['/dashboard/espace-pharmacie/factures']);
         },
         error: (err) => {
           this.snackBar.open('Erreur: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });

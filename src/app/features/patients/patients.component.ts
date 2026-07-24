@@ -11,6 +11,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PatientService } from '../../core/services/patient.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BcsuService } from '../../core/services/bcsu.service';
 import { Patient, Regime, REGIME_LABELS, REGIME_OPTIONS } from '../../core/models/bcsu.model';
 
 @Component({
@@ -28,8 +29,7 @@ import { Patient, Regime, REGIME_LABELS, REGIME_OPTIONS } from '../../core/model
     MatPaginatorModule,
     MatSnackBarModule
   ],
-  templateUrl: './patients.component.html',
-  styleUrls: ['./patients.component.css']
+  templateUrl: './patients.component.html'
 })
 export class PatientsComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
@@ -39,9 +39,16 @@ export class PatientsComponent implements OnInit {
   patients: Patient[] = [];
   loading = true;
   searchQuery = '';
+  exporting = false;
 
   /** Filtres */
   selectedRegime: Regime | '' = '';
+  /** 0 = tous. Le mois porte sur la date d'enregistrement du bénéficiaire. */
+  filterMois = 0;
+  filterAnnee = 0;
+
+  readonly moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
   /** Pagination (client-side, sur la liste déjà filtrée). */
   pageIndex = 0;
@@ -50,6 +57,7 @@ export class PatientsComponent implements OnInit {
 
   constructor(
     private patientService: PatientService,
+    private bcsuService: BcsuService,
     private router: Router,
     private snackBar: MatSnackBar,
     public authService: AuthService
@@ -63,7 +71,8 @@ export class PatientsComponent implements OnInit {
     this.loading = true;
     this.patientService.getAll().subscribe({
       next: (res) => {
-        this.patients = res;
+        // Le dernier enregistrement doit apparaître en haut de la liste.
+        this.patients = [...res].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         this.loading = false;
       },
       error: () => {
@@ -73,12 +82,39 @@ export class PatientsComponent implements OnInit {
     });
   }
 
+  /** Années présentes dans les enregistrements, la plus récente d'abord. */
+  get anneesDispo(): number[] {
+    const set = new Set<number>();
+    for (const p of this.patients) {
+      const a = this.anneeDe(p);
+      if (a) set.add(a);
+    }
+    set.add(new Date().getFullYear());
+    return Array.from(set).sort((a, b) => b - a);
+  }
+
+  private anneeDe(p: Patient): number | null {
+    return p.createdAt ? new Date(p.createdAt).getFullYear() : null;
+  }
+
+  private moisDe(p: Patient): number | null {
+    return p.createdAt ? new Date(p.createdAt).getMonth() + 1 : null;
+  }
+
   get filteredPatients(): Patient[] {
     let list = this.patients;
 
     // Filtre par régime
     if (this.selectedRegime) {
       list = list.filter(p => p.regime === this.selectedRegime);
+    }
+
+    // Filtres sur la date d'enregistrement
+    if (this.filterMois > 0) {
+      list = list.filter(p => this.moisDe(p) === this.filterMois);
+    }
+    if (this.filterAnnee > 0) {
+      list = list.filter(p => this.anneeDe(p) === this.filterAnnee);
     }
 
     // Filtre par recherche textuelle
@@ -120,11 +156,45 @@ export class PatientsComponent implements OnInit {
   clearFilters() {
     this.searchQuery = '';
     this.selectedRegime = '';
+    this.filterMois = 0;
+    this.filterAnnee = 0;
     this.resetPage();
   }
 
   get hasActiveFilters(): boolean {
-    return this.searchQuery.trim().length > 0 || this.selectedRegime !== '';
+    return this.searchQuery.trim().length > 0
+      || this.selectedRegime !== ''
+      || this.filterMois > 0
+      || this.filterAnnee > 0;
+  }
+
+  /**
+   * Export Excel des enregistrements, avec les filtres actifs de l'onglet.
+   * Le filtre plein texte n'est pas transmis : il n'a pas d'équivalent côté serveur.
+   */
+  exporter() {
+    this.exporting = true;
+    this.bcsuService.exportLettresGarantieExcel({
+      mois: this.filterMois || undefined,
+      annee: this.filterAnnee || undefined,
+      regime: this.selectedRegime || undefined
+    }).subscribe({
+      next: (blob: Blob) => {
+        this.exporting = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Patients_Enregistres.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Téléchargement lancé', 'Fermer', { duration: 2500 });
+      },
+      error: (err: any) => {
+        this.exporting = false;
+        this.snackBar.open('Erreur lors de l\'export : ' + (err.error?.message || err.message),
+          'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
   }
 
   getRegimeBadgeStyle(regime: Regime): Record<string, string> {

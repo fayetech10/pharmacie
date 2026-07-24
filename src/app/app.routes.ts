@@ -107,6 +107,9 @@ export const routes: Routes = [
       },
       {
         path: 'medicaments',
+        canActivate: [roleGuard],
+        // Référentiels éligibles / exclusions : administrés par la SEN-CSU (service central) et l'admin.
+        data: { roles: [Role.ADMIN, Role.SERVICE_CENTRAL] },
         loadComponent: () => import('./features/medicaments/medicaments.component').then(m => m.MedicamentsComponent)
       },
       {

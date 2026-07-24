@@ -47,7 +47,7 @@
   height: 42px;
   background: #ffffff;
   padding: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }.logo-circle img {
   @apply w-full h-full;
   object-fit: contain;
@@ -220,7 +220,7 @@
 }.input-wrapper.focused {
 
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+  box-shadow: var(--ring);
 
 }.input-wrapper.focused mat-icon {
 
@@ -275,12 +275,12 @@
   color: #ffffff;
   font-size: 14.5px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(47, 110, 84, 0.18);
+  /* Aplat franc : plus de lueur colorée sous le bouton (design v4). */
   transition: all 0.2s ease;
 }.btn-submit:not(:disabled):hover {
 
   background-color: var(--primary-hover);
-  box-shadow: 0 6px 18px rgba(47, 110, 84, 0.28);
+
   transform: translateY(-1px);
 
 }.btn-submit:not(:disabled):active {

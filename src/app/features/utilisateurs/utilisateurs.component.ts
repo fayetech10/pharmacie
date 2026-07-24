@@ -32,8 +32,7 @@ import { AuthService } from '../../core/services/auth.service';
     MatSelectModule,
     MatSnackBarModule
   ],
-  templateUrl: './utilisateurs.component.html',
-  styleUrls: ['./utilisateurs.component.css']
+  templateUrl: './utilisateurs.component.html'
 })
 export class UtilisateursComponent implements OnInit {
   users: User[] = [];
@@ -116,6 +115,19 @@ export class UtilisateursComponent implements OnInit {
       case 'BCSU': return 'Agent BCSU';
       case 'STRUCTURE_SANITAIRE': return 'Structure Sanitaire';
       default: return role;
+    }
+  }
+
+  /** Couleurs du badge de rôle (portées en classes Tailwind — le JIT scanne aussi les .ts). */
+  roleBadgeClass(role: string): string {
+    switch (role) {
+      case 'ADMIN': return 'bg-[#FEE2E2] text-[#EF4444]';
+      case 'SERVICE_CENTRAL': return 'bg-[#DBEAFE] text-[#2563EB]';
+      case 'SERVICE_REGIONAL': return 'bg-[#FEF3C7] text-[#D97706]';
+      case 'PHARMACIEN': return 'bg-primary-100 text-primary-hover';
+      case 'BCSU': return 'bg-accent-light text-accent';
+      case 'STRUCTURE_SANITAIRE': return 'bg-[#EDE9FE] text-[#7C3AED]';
+      default: return 'bg-border-light text-text-secondary';
     }
   }
 
@@ -210,7 +222,8 @@ export class UtilisateursComponent implements OnInit {
     this.isEditMode = false;
     this.editingUserId = null;
     this.userForm.reset({ role: defaultRole });
-    this.userForm.get('password')?.setValidators([Validators.required]);
+    // Aligné sur la règle serveur (@Size min 8) : erreur claire avant soumission.
+    this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
     this.userForm.get('password')?.updateValueAndValidity();
     this.onRoleChange(defaultRole);
     this.showModal = true;

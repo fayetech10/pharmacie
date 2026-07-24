@@ -76,7 +76,10 @@
                       <mat-icon>edit</mat-icon>
                     </button>
                     <button class="btn-action-icon" matTooltip="Exporter Excel" (click)="exportSingleExcel(f)">
-                      <mat-icon>download</mat-icon>
+                      <mat-icon>table_view</mat-icon>
+                    </button>
+                    <button class="btn-action-icon" matTooltip="Exporter PDF" (click)="exportSinglePdf(f)">
+                      <mat-icon>picture_as_pdf</mat-icon>
                     </button>
                     <button class="btn-action-icon" matTooltip="Voir les détails" (click)="openFacture(f)">
                       <mat-icon>visibility</mat-icon>
@@ -90,7 +93,21 @@
 
         <!-- Cas Régional / Central : regroupé par prestataire puis les 12 mois -->
         <ng-container *ngIf="!authService.isPharmacien()">
-          <div class="pharmacy-group-list">
+
+          <!-- Chargement : évite un écran vide pendant la requête -->
+          <div class="empty-state" *ngIf="loading">
+            <mat-icon class="spin-icon">autorenew</mat-icon>
+            <p>Chargement des factures…</p>
+          </div>
+
+          <!-- Onglet sans aucune facture : message explicite plutôt qu'une zone vide -->
+          <div class="empty-state" *ngIf="!loading && providerGroups.length === 0">
+            <mat-icon>receipt_long</mat-icon>
+            <p>{{ emptyStateMessage }}</p>
+            <span class="empty-hint">Les factures concernées s'afficheront ici automatiquement.</span>
+          </div>
+
+          <div class="pharmacy-group-list" *ngIf="!loading && providerGroups.length > 0">
             <div class="pharmacy-section-card" *ngFor="let g of providerGroups">
               <div class="pharmacy-section-header">
                 <div class="pharma-title-block">

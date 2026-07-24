@@ -1,0 +1,43 @@
+<div class="max-w-[760px]">
+  <mat-card class="!p-5 !rounded-xl">
+    <div class="flex gap-3 items-start mb-[18px]">
+      <mat-icon class="text-[#0e7490] mt-0.5">approval</mat-icon>
+      <div>
+        <h3 class="m-0 text-base font-bold text-[#0f172a]">Cachet et signature</h3>
+        <p class="mt-1 mb-0 text-[13px] text-[#64748b]">Ces images sont apposées automatiquement dans la zone « Signature et cachet » de vos lettres de garantie (aperçu et PDF).</p>
+      </div>
+    </div>
+
+    <div class="p-6 text-center text-[#64748b]" *ngIf="loading">Chargement…</div>
+
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4" *ngIf="!loading">
+      <div class="border border-[#e2e8f0] rounded-xl p-3.5" *ngFor="let s of slots">
+        <span class="font-bold text-sm text-[#0f172a]">{{ s.label }}</span>
+        <p class="mt-1 mb-3 text-xs text-[#64748b]">{{ s.hint }}</p>
+
+        <div class="border-2 border-dashed border-[#cbd5e1] rounded-[10px] p-[22px] flex justify-center" *ngIf="!s.image; else preview">
+          <input type="file" accept="image/*" hidden #fileInput (change)="onFileSelected(s, $event)">
+          <button type="button" class="flex flex-col items-center gap-1.5 bg-none border-0 cursor-pointer text-[#0e7490] text-[13px]" (click)="fileInput.click()">
+            <mat-icon>upload</mat-icon>
+            <span>Importer une image</span>
+          </button>
+        </div>
+
+        <ng-template #preview>
+          <div class="relative inline-block">
+            <img [src]="s.image" [alt]="s.label" class="max-w-full max-h-[120px] rounded-lg border border-[#e2e8f0] bg-white">
+            <button type="button" class="absolute -top-2 -right-2 w-[26px] h-[26px] rounded-full border-0 bg-[#ef4444] text-white flex items-center justify-center cursor-pointer" (click)="removeImage(s)" aria-label="Retirer">
+              <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
+    <div class="mt-[18px] flex justify-end" *ngIf="!loading">
+      <button mat-flat-button color="primary" [disabled]="saving" (click)="enregistrer()">
+        <mat-icon>save</mat-icon> {{ saving ? 'Enregistrement…' : 'Enregistrer le paramétrage' }}
+      </button>
+    </div>
+  </mat-card>
+</div>

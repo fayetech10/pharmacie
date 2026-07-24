@@ -1,19 +1,27 @@
+/**
+ * Normalise un numéro sénégalais en format international sans « + » (2217XXXXXXXX) :
+ * accepte « 77 762 63 29 », « 00221777626329 », « +221 77 762 63 29 », « 0777626329 »…
+ */
+export function normalizePhoneForWhatsApp(phone: string): string {
+  let digits = (phone || '').replace(/\D/g, '');
+  // Préfixe international saisi avec « 00 » (ex: 00221...)
+  if (digits.startsWith('00')) {
+    digits = digits.substring(2);
+  }
+  if (digits.startsWith('221')) {
+    return digits;
+  }
+  // Numéro local : retirer les zéros de tête puis ajouter l'indicatif Sénégal.
+  return `221${digits.replace(/^0+/, '')}`;
+}
+
 /** Construit un lien wa.me à partir d'un numéro sénégalais local (ex: 77 762 63 29) et d'un message. */
 export function buildWhatsAppLink(phone: string, message: string): string {
-  const digits = (phone || '').replace(/\D/g, '');
-  // Préfixe indicatif Sénégal (221) si absent d'un numéro local.
-  const withCountryCode = digits.startsWith('221') ? digits : `221${digits.replace(/^0+/, '')}`;
-  return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${normalizePhoneForWhatsApp(phone)}?text=${encodeURIComponent(message)}`;
 }
 
 export async function sharePdfOnWhatsApp(phone: string, message: string, blob: Blob, fileName: string): Promise<boolean> {
   const pdf = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
-  const file = new File([pdf], fileName, { type: 'application/pdf' });
-  const shareData: ShareData = {
-    title: fileName,
-    text: message,
-    files: [file]
-  };
 
   // Nous ignorons navigator.share car il empêche de pré-remplir le numéro de
   // téléphone du patient (obligeant l'utilisateur à enregistrer le contact).
@@ -25,6 +33,8 @@ export async function sharePdfOnWhatsApp(phone: string, message: string, blob: B
   a.download = fileName;
   a.click();
   setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-  window.open(buildWhatsAppLink(phone, `${message}\n\nVeuillez joindre le fichier PDF telecharge : ${fileName}`), '_blank');
+  // window.open AVANT toute navigation : certains navigateurs mobiles bloquent
+  // les popups différées ; le lien wa.me est ouvert dans un nouvel onglet.
+  window.open(buildWhatsAppLink(phone, `${message}\n\nVeuillez joindre le fichier PDF téléchargé : ${fileName}`), '_blank');
   return false;
 }

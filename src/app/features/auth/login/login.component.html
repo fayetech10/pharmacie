@@ -58,26 +58,23 @@
         </div>
 
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-          <!-- Email field -->
+          <!-- Identifiant : email OU username attribué à l'import -->
           <div class="form-group">
-            <label for="login-email">Adresse e-mail</label>
+            <label for="login-email">Adresse e-mail ou identifiant</label>
             <div class="input-wrapper" [class.focused]="emailFocused" [class.has-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
               <mat-icon>mail_outline</mat-icon>
-              <input 
-                id="login-email" 
-                formControlName="email" 
-                type="email" 
-                placeholder="Ex: pharmacien@csu.sn" 
-                autocomplete="email"
-                (focus)="emailFocused=true" 
-                (blur)="emailFocused=false" 
+              <input
+                id="login-email"
+                formControlName="email"
+                type="text"
+                placeholder="Ex: pharmacien@csu.sn ou dk.ph001"
+                autocomplete="username"
+                (focus)="emailFocused=true"
+                (blur)="emailFocused=false"
               />
             </div>
             <span class="field-error" *ngIf="loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched">
-              L'adresse email est requise
-            </span>
-            <span class="field-error" *ngIf="loginForm.get('email')?.hasError('email') && loginForm.get('email')?.touched">
-              Veuillez entrer une adresse valide
+              L'identifiant est requis
             </span>
           </div>
 

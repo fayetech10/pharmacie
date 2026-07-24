@@ -4,7 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4200",
+    "start:https": "ng serve --host 0.0.0.0 --port 4200 --ssl",
     "build": "ng build",
+    "build:lan": "ng build --configuration lan",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,
@@ -20,6 +22,7 @@
     "@angular/platform-browser-dynamic": "^17.0.0",
     "@angular/router": "^17.0.0",
     "chart.js": "^4.4.0",
+    "jsqr": "^1.4.0",
     "ng2-charts": "^6.0.0",
     "rxjs": "~7.8.0",
     "tesseract.js": "^7.0.0",

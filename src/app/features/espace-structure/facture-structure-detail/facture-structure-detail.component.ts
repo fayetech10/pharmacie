@@ -21,10 +21,13 @@ import { PatientDetailComponent } from '../../patients/patient-detail/patient-de
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatDialogModule, StatusBadgeComponent],
   templateUrl: './facture-structure-detail.component.html',
-  styleUrls: ['./facture-structure-detail.component.css']
+  styleUrls: [
+    '../../factures/facture-detail/facture-detail.shared.css',
+    './facture-structure-detail.component.css'
+  ]
 })
 export class FactureStructureDetailComponent implements OnInit {
-  // Pi�ces justificatives affich�es dans le dossier patient
+  // Pi�ces justificatives affich�es dans le dossier patient
   dossierPatient: any | null = null;
   viewerImage: string | null = null;
   zoomLevel = 1;
@@ -85,12 +88,22 @@ export class FactureStructureDetailComponent implements OnInit {
   }
 
   get canSend(): boolean {
-    return !!this.facture && (this.facture.statut === 'BROUILLON' || this.facture.statut === 'REJETEE_SR');
+    return !!this.facture && (this.facture.statut === 'BROUILLON' || this.facture.statut === 'REJETEE_SR' || this.facture.statut === 'REJETEE_CS');
+  }
+
+  /** La structure peut modifier/supprimer ses saisies AVANT l'envoi mensuel (ou après rejet). */
+  get canEditLines(): boolean {
+    return this.auth.isStructureSanitaire() && this.canSend;
   }
 
   /** Le Service Régional peut valider/rejeter une facture reçue (ENVOYEE). */
   get canReview(): boolean {
     return !!this.facture && this.facture.statut === 'ENVOYEE' && this.auth.isServiceRegional();
+  }
+
+  /** Le Centre de Santé peut valider/rejeter la facture d'un poste rattaché (SOUMISE_CS). */
+  get canReviewPoste(): boolean {
+    return !!this.facture && this.facture.statut === 'SOUMISE_CS' && this.auth.isStructureSanitaire() && !this.auth.isPosteDeSante();
   }
 
   valider() {
@@ -134,6 +147,53 @@ export class FactureStructureDetailComponent implements OnInit {
           this.buildPatientGroups();
           this.busy = false; 
           this.snackBar.open('Facture rejetée', 'Fermer', { duration: 3000 }); 
+        },
+        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
+      });
+    });
+  }
+
+  validerPoste() {
+    if (!this.facture) return;
+    this.confirm.ask({
+      title: 'Valider la facture du poste',
+      message: 'Confirmez la validation de cette facture. Elle sera transmise au Service Régional.',
+      confirmText: 'Valider'
+    }).subscribe(ok => {
+      if (!ok || !this.facture) return;
+      this.busy = true;
+      this.structureService.validerFacturePoste(this.facture.id).subscribe({
+        next: (f) => { 
+          this.facture = f; 
+          this.buildPatientGroups();
+          this.busy = false; 
+          this.snackBar.open('Facture validée et transmise', 'Fermer', { duration: 3000 }); 
+        },
+        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
+      });
+    });
+  }
+
+  rejeterPoste() {
+    if (!this.facture) return;
+    this.confirm.prompt({
+      title: 'Rejeter la facture du poste',
+      message: 'Indiquez le motif du rejet. La facture sera renvoyée au poste de santé pour correction.',
+      label: 'Motif du rejet',
+      placeholder: 'Ex : montants erronés…',
+      confirmText: 'Rejeter',
+      danger: true,
+      required: true,
+      maxLength: 500
+    }).subscribe(motif => {
+      if (!motif || !this.facture) return;
+      this.busy = true;
+      this.structureService.rejeterFacturePoste(this.facture.id, motif).subscribe({
+        next: (f) => { 
+          this.facture = f; 
+          this.buildPatientGroups();
+          this.busy = false; 
+          this.snackBar.open('Facture rejetée et renvoyée au poste', 'Fermer', { duration: 3000 }); 
         },
         error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
       });
@@ -207,9 +267,10 @@ export class FactureStructureDetailComponent implements OnInit {
 
   envoyer() {
     if (!this.facture) return;
+    const destination = this.auth.isPosteDeSante() ? 'au Centre de Santé rattaché' : 'au Service Régional';
     this.confirm.ask({
       title: 'Envoyer la facture',
-      message: 'La facture sera transmise au Service Régional. Continuer ?',
+      message: `La facture sera transmise ${destination}. Continuer ?`,
       confirmText: 'Envoyer'
     }).subscribe(ok => {
       if (!ok || !this.facture) return;
@@ -219,7 +280,7 @@ export class FactureStructureDetailComponent implements OnInit {
           this.facture = f; 
           this.buildPatientGroups();
           this.busy = false; 
-          this.snackBar.open('Facture envoyée au Service Régional', 'Fermer', { duration: 3000 }); 
+          this.snackBar.open(`Facture envoyée ${destination}`, 'Fermer', { duration: 3000 }); 
         },
         error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
       });
@@ -232,11 +293,14 @@ export class FactureStructureDetailComponent implements OnInit {
       this.feuillesSoinsUniques = [];
       return;
     }
-    
+
     const groupsMap = new Map<string, any>();
     const fdsMap = new Map<string, string>();
-    
-    for (const ligne of this.facture.lignes) {
+
+    for (let i = 0; i < this.facture.lignes.length; i++) {
+      const ligne: any = this.facture.lignes[i];
+      // Index de la ligne dans la facture (pour modifier / supprimer la prestation).
+      ligne._index = i;
       const key = ligne.lettreGarantieNumero || `${ligne.patientPrenom}-${ligne.patientNom}`;
       if (!groupsMap.has(key)) {
         groupsMap.set(key, {
@@ -247,6 +311,12 @@ export class FactureStructureDetailComponent implements OnInit {
           lettreNumero: ligne.lettreGarantieNumero,
           feuilleSoinsId: ligne.feuilleSoinsId,
           feuilleSoinsNumero: ligne.feuilleSoinsNumero,
+          // Informations médicales du dossier (une seule fois par patient, pas par ligne).
+          numeroRegistre: ligne.numeroRegistre,
+          ircIra: ligne.ircIra,
+          indicationCbt: ligne.indicationCbt,
+          service: ligne.service,
+          diagnostique: ligne.diagnostique,
           lignes: [],
           documents: [],
           montantTotal: 0,
@@ -255,13 +325,16 @@ export class FactureStructureDetailComponent implements OnInit {
           expanded: false
         });
       }
-      
+
       const group = groupsMap.get(key)!;
       if (ligne.feuilleSoinsId) {
         group.feuilleSoinsId = ligne.feuilleSoinsId;
         group.feuilleSoinsNumero = ligne.feuilleSoinsNumero;
         fdsMap.set(ligne.feuilleSoinsId, ligne.feuilleSoinsNumero || ligne.feuilleSoinsId);
       }
+      if (!group.numeroRegistre && ligne.numeroRegistre) group.numeroRegistre = ligne.numeroRegistre;
+      if (!group.ircIra && ligne.ircIra) group.ircIra = ligne.ircIra;
+      if (!group.indicationCbt && ligne.indicationCbt) group.indicationCbt = ligne.indicationCbt;
       group.lignes.push(ligne);
       group.montantTotal += ligne.montant || 0;
       group.montantBeneficiaire += ligne.montantBeneficiaire || 0;
@@ -278,10 +351,123 @@ export class FactureStructureDetailComponent implements OnInit {
         }
       }
     }
-    
+
+    // Ticket de caisse enregistré au niveau de la facture (anciennes données) :
+    // il doit apparaître dans le dossier (pièces) de chaque patient concerné.
+    if (this.facture.ticketCaisse) {
+      for (const group of groupsMap.values()) {
+        const dejaPresent = group.documents.some((d: any) => (d.titre || '').toLowerCase().includes('ticket'));
+        if (!dejaPresent) {
+          group.documents.push({ titre: 'Ticket de caisse', image: this.facture.ticketCaisse });
+        }
+      }
+    }
+
     this.patientGroups = Array.from(groupsMap.values());
     this.feuillesSoinsUniques = Array.from(fdsMap.entries()).map(([id, numero]) => ({ id, numero }));
     this.updatePagination();
+  }
+
+  // ===== Modification / suppression des saisies avant envoi =====
+
+  /** Ligne en cours de modification (modale) + valeurs éditées. */
+  editingLigne: any | null = null;
+  editModel = { designation: '', quantite: 1, prixUnitaire: 0, datePriseEnCharge: '', codeActe: '' };
+
+  ouvrirModificationLigne(ligne: any, event: Event) {
+    event.stopPropagation();
+    this.editingLigne = ligne;
+    this.editModel = {
+      designation: ligne.designation || '',
+      quantite: ligne.quantite || 1,
+      prixUnitaire: ligne.prixUnitaire || 0,
+      datePriseEnCharge: ligne.datePriseEnCharge || '',
+      codeActe: ligne.codeActe || ''
+    };
+  }
+
+  fermerModificationLigne() {
+    this.editingLigne = null;
+  }
+
+  enregistrerModificationLigne() {
+    if (!this.facture || !this.editingLigne) return;
+    if (!this.editModel.designation.trim() || this.editModel.quantite < 1 || this.editModel.prixUnitaire < 0) {
+      this.snackBar.open('Veuillez renseigner une désignation, une quantité (≥ 1) et un prix valide', 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.busy = true;
+    this.structureService.updateFactureLigne(this.facture.id, this.editingLigne._index, {
+      designation: this.editModel.designation.trim(),
+      quantite: this.editModel.quantite,
+      prixUnitaire: this.editModel.prixUnitaire,
+      datePriseEnCharge: this.editModel.datePriseEnCharge,
+      codeActe: this.editModel.codeActe || undefined
+    }).subscribe({
+      next: (f) => {
+        this.facture = f;
+        this.buildPatientGroups();
+        this.busy = false;
+        this.editingLigne = null;
+        this.snackBar.open('Prestation modifiée', 'Fermer', { duration: 3000 });
+      },
+      error: (err) => {
+        this.busy = false;
+        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  supprimerLigne(ligne: any, event: Event) {
+    event.stopPropagation();
+    if (!this.facture) return;
+    this.confirm.ask({
+      title: 'Supprimer la prestation',
+      message: `Supprimer « ${ligne.designation} » de la facture ? Cette action est possible tant que la facture n'est pas envoyée.`,
+      confirmText: 'Supprimer',
+      danger: true
+    }).subscribe(ok => {
+      if (!ok || !this.facture) return;
+      this.busy = true;
+      this.structureService.deleteFactureLigne(this.facture.id, ligne._index).subscribe({
+        next: (f) => {
+          this.facture = f;
+          this.buildPatientGroups();
+          this.busy = false;
+          this.snackBar.open('Prestation supprimée', 'Fermer', { duration: 3000 });
+        },
+        error: (err) => {
+          this.busy = false;
+          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
+  supprimerPatient(g: any, event: Event) {
+    event.stopPropagation();
+    if (!this.facture || !g.lettreNumero) return;
+    this.confirm.ask({
+      title: 'Supprimer la ligne du patient',
+      message: `Supprimer la saisie de ${g.patientPrenom} ${g.patientNom} (toutes ses prestations et pièces jointes) de la facture mensuelle ?`,
+      confirmText: 'Supprimer',
+      danger: true
+    }).subscribe(ok => {
+      if (!ok || !this.facture) return;
+      this.busy = true;
+      this.structureService.deleteFacturePatient(this.facture.id, g.lettreNumero).subscribe({
+        next: (f) => {
+          this.facture = f;
+          this.buildPatientGroups();
+          this.busy = false;
+          this.snackBar.open('Saisie du patient supprimée', 'Fermer', { duration: 3000 });
+        },
+        error: (err) => {
+          this.busy = false;
+          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
   }
 
   toggleGroup(group: any) {

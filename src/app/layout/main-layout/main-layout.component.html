@@ -20,7 +20,8 @@
         <div class="nav-group-spacer" *ngIf="group.name !== 'Général' && isSidebarCollapsed"></div>
         <a *ngFor="let item of group.items"
            [routerLink]="item.link"
-           routerLinkActive="active"
+           [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
+           [class.active]="isNavActive(item)"
            class="sidebar-nav-link">
           <span class="relative flex items-center justify-center shrink-0">
             <mat-icon>{{ item.icon }}</mat-icon>

@@ -19,6 +19,7 @@ import { DossierPatientDto } from '../../../core/models/patient.model';
 import { BonCommande, LettreGarantie, REGIME_LABELS, StatutLettreGarantie } from '../../../core/models/bcsu.model';
 import { FeuilleSoins, STATUT_FEUILLE_LABELS } from '../../../core/models/feuille-soins.model';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
+import { buildWhatsAppLink } from '../../../core/utils/whatsapp-share';
 
 export interface PatientDocument {
   titre: string;
@@ -519,9 +520,13 @@ export class PatientDetailComponent implements OnInit {
           this.exportPdf(); // reuse download
           
           setTimeout(() => {
-            const phone = currentDossier?.patient?.telephone ? currentDossier.patient.telephone.replace(/\s+/g, '') : '';
-            const msg = encodeURIComponent("Bonjour, voici votre dossier bénéficiaire consolidé en pièce jointe.");
-            const waUrl = phone ? `https://wa.me/221${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+            const phone = currentDossier?.patient?.telephone || '';
+            const msg = "Bonjour, voici votre dossier bénéficiaire consolidé en pièce jointe.";
+            // Normalisation partagée : gère 00221…, +221…, 0777… (une concaténation
+            // brute produisait des numéros invalides du type 2210777626329).
+            const waUrl = phone
+              ? buildWhatsAppLink(phone, msg)
+              : `https://wa.me/?text=${encodeURIComponent(msg)}`;
             window.open(waUrl, '_blank');
           }, 1500);
       },

@@ -1,24 +1,25 @@
 <div class="fs-form">
   <!-- Recherche lettre de garantie -->
-  <mat-card class="fs-card" *ngIf="!lettre">
+  <mat-card class="fs-card" *ngIf="!isPosteDeSante && !lettre">
     <h3 class="fs-title">Rechercher une lettre de garantie</h3>
-    <p class="fs-hint">Saisissez le numero de lettre de garantie remis par le BCSU (LG-...).</p>
+    <p class="fs-hint">Scannez le QR code de la lettre de garantie ou saisissez son numero (LG-...).</p>
     <div class="fs-search">
-      <input type="text" class="fs-input" placeholder="Ex : LG-260701-XXXXXX"
+      <input type="text" class="fs-input" placeholder="Ex : LG-DKCS01-001-26"
              [(ngModel)]="searchNumero" (keyup.enter)="rechercher()">
       <button mat-flat-button color="primary" [disabled]="searching" (click)="rechercher()">Rechercher</button>
+      <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
     </div>
   </mat-card>
 
-  <ng-container *ngIf="lettre">
+  <ng-container *ngIf="lettre || isPosteDeSante">
     <!-- Feuille de soins rattachee (circuit patient -> agent bureau -> facturation) -->
     <div *ngIf="feuilleSoins" class="fs-info-banner">
       <mat-icon>description</mat-icon>
       Feuille de soins <strong>&nbsp;{{ feuilleSoins.numero }}&nbsp;</strong> rattachee - elle passera au statut "Facturee" a l'enregistrement.
     </div>
 
-    <!-- Beneficiaire affiche en lecture seule -->
-    <mat-card class="fs-card">
+    <!-- Beneficiaire affiche en lecture seule pour CS/EPS -->
+    <mat-card class="fs-card" *ngIf="!isPosteDeSante && lettre">
       <div class="fs-card-head">
         <h3 class="fs-title">Beneficiaire - {{ lettre.numero }}</h3>
         <button mat-stroked-button (click)="reset()"><mat-icon>close</mat-icon> Changer</button>
@@ -28,6 +29,55 @@
         <div><span>Telephone</span><strong>{{ lettre.patientTelephone }}</strong></div>
         <div><span>Categorie</span><strong>{{ regimeLabels[lettre.regime] }}</strong></div>
       </div>
+    </mat-card>
+
+    <!-- Saisie Beneficiaire pour Poste de Santé -->
+    <mat-card class="fs-card" *ngIf="isPosteDeSante">
+      <div class="fs-card-head">
+        <h3 class="fs-title">Informations du Patient</h3>
+      </div>
+      <form [formGroup]="patientForm" class="fs-grid">
+        <mat-form-field appearance="outline" style="grid-column: 1 / -1;">
+          <mat-label>Catégorie / Régime</mat-label>
+          <mat-select formControlName="regime" required>
+            <mat-option *ngFor="let option of regimeOptions" [value]="option">
+              {{regimeLabels[option]}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Prénom</mat-label>
+          <input matInput formControlName="prenom" required>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nom</mat-label>
+          <input matInput formControlName="nom" required>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Téléphone</mat-label>
+          <input matInput formControlName="telephone" required>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date de naissance</mat-label>
+          <input matInput type="date" formControlName="dateNaissance">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Sexe</mat-label>
+          <mat-select formControlName="sexe">
+            <mat-option value="M">Masculin</mat-option>
+            <mat-option value="F">Féminin</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" *ngIf="champs.matriculeLabel">
+          <mat-label>{{ champs.matriculeLabel }}</mat-label>
+          <input matInput formControlName="matricule">
+        </mat-form-field>
+        <mat-form-field appearance="outline" *ngIf="champs.cniSeparee">
+          <mat-label>Numéro CNI</mat-label>
+          <input matInput formControlName="numeroCni">
+        </mat-form-field>
+      </form>
     </mat-card>
 
     <!-- Informations médicales -->
@@ -88,8 +138,8 @@
       </div>
     </mat-card>
 
-    <!-- Pieces jointes -->
-    <mat-card class="fs-card">
+    <!-- Pieces jointes (masquées pour les Postes de Santé) -->
+    <mat-card class="fs-card" *ngIf="!isPosteDeSante">
       <h3 class="fs-title">Pieces justificatives</h3>
 
       <div class="fs-photo-block">

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Patient, LettreGarantie, LettreGarantieRequest, BonCommande } from '../models/bcsu.model';
+import { Patient, LettreGarantie, LettreGarantieRequest, BonCommande, Constat, ConstatRequest } from '../models/bcsu.model';
 import { HttpParams } from '@angular/common/http';
 
 @Injectable({
@@ -57,6 +57,26 @@ export class BcsuService {
     return this.api.getBlob(`/lettres-garantie/${id}/export/pdf`);
   }
 
+  /** Export Excel des patients enregistrés (avec les filtres actifs de l'onglet). */
+  exportLettresGarantieExcel(params?: { mois?: number; annee?: number; regime?: string }): Observable<Blob> {
+    const q = new URLSearchParams();
+    if (params?.mois) q.set('mois', String(params.mois));
+    if (params?.annee) q.set('annee', String(params.annee));
+    if (params?.regime) q.set('regime', params.regime);
+    const qs = q.toString();
+    return this.api.getBlob(`/lettres-garantie/export/excel${qs ? '?' + qs : ''}`);
+  }
+
+  /** Paramétrage cachet/signature d'un agent (affiché sur ses lettres de garantie). */
+  getParametrage(userId: string): Observable<{ cachetImage?: string; signatureImage?: string }> {
+    return this.api.get<{ cachetImage?: string; signatureImage?: string }>(`/users/${userId}/parametrage`, { skipLoading: true });
+  }
+
+  /** Met à jour le cachet et la signature de l'agent connecté (paramétrage BCSU). */
+  updateParametrage(req: { cachetImage?: string | null; signatureImage?: string | null }): Observable<{ cachetImage?: string; signatureImage?: string }> {
+    return this.api.put<{ cachetImage?: string; signatureImage?: string }>('/users/parametrage', req);
+  }
+
   /** Liste des bons visibles par l'utilisateur (BCSU : les siens, SR : ceux de sa région). */
   getBonsCommande(params?: { mois?: number; annee?: number; regime?: string }): Observable<BonCommande[]> {
     let queryParams = new HttpParams();
@@ -87,5 +107,18 @@ export class BcsuService {
 
   exportBonCommandePdf(id: string): Observable<Blob> {
     return this.api.getBlob(`/bons-commande/${id}/export/pdf`);
+  }
+
+  /** Constats d'activité de l'agent connecté (l'ADMIN voit l'ensemble). */
+  getConstats(): Observable<Constat[]> {
+    return this.api.get<Constat[]>('/constats');
+  }
+
+  createConstat(req: ConstatRequest): Observable<Constat> {
+    return this.api.post<Constat>('/constats', req);
+  }
+
+  deleteConstat(id: string): Observable<void> {
+    return this.api.delete<void>(`/constats/${id}`);
   }
 }

@@ -31,6 +31,12 @@ export class FactureCountService {
   /** Émet le nombre de factures NON vues par statut ; mis à jour par refresh()/markSeen(). */
   readonly counts$ = this.countsSubject.asObservable();
   private loading = false;
+  /** Demande de rafraîchissement reçue pendant un chargement : rejouée à la fin (jamais perdue). */
+  private pendingRefresh = false;
+  /** Statuts à marquer « vus » dès l'arrivée des données (onglet ouvert avant le 1er chargement). */
+  private pendingSeen = new Set<string>();
+  /** Vrai dès qu'un chargement a abouti : avant, currentIds n'est pas exploitable. */
+  private loaded = false;
 
   /** IDs des factures déjà vues, par statut (persistées), pour l'utilisateur chargé. */
   private seenIds: Record<string, Set<string>> = {};
@@ -54,39 +60,77 @@ export class FactureCountService {
     return this.countsSubject.value;
   }
 
-  /** Recharge les factures, purge les IDs disparus et recalcule les non-vues. */
+  /**
+   * Recharge les identifiants + statuts, purge les IDs disparus et recalcule les non-vues.
+   * N'utilise que la projection allégée `/statuts` : aucune ligne de facture n'est
+   * transférée, alors que ce rafraîchissement a lieu à chaque navigation.
+   */
   refresh(): void {
     this.syncUserScope();
-    if (this.loading) return;
+    if (this.loading) {
+      // Une demande arrivée pendant un chargement n'est jamais perdue : on la rejoue.
+      // Sans cela, une modification concurrente laissait les badges périmés.
+      this.pendingRefresh = true;
+      return;
+    }
     this.loading = true;
-    
+
     forkJoin({
-      pharmacieFactures: this.factureService.getAll(),
-      structureFactures: this.structureService.getFactures()
+      pharmacieFactures: this.factureService.getStatuts(),
+      structureFactures: this.structureService.getFacturesStatuts()
     }).subscribe({
       next: ({ pharmacieFactures, structureFactures }) => {
         const current: Record<string, string[]> = {};
-        const allFactures = [...pharmacieFactures, ...structureFactures];
-        
-        for (const f of allFactures) {
+        for (const f of [...pharmacieFactures, ...structureFactures]) {
           const s = String(f.statut);
           (current[s] = current[s] || []).push(String(f.id));
         }
         this.currentIds = current;
+        this.loaded = true;
         this.pruneSeen(current);
+
+        // Onglets ouverts avant l'arrivée des données : on applique leur marquage ici.
+        if (this.pendingSeen.size > 0) {
+          const statuts = [...this.pendingSeen];
+          this.pendingSeen.clear();
+          this.appliquerVu(statuts);
+        }
         this.emitUnseen();
-        this.loading = false;
+        this.finishLoading();
       },
-      error: () => { this.loading = false; }
+      error: () => this.finishLoading()
     });
+  }
+
+  /** Libère le verrou de chargement et rejoue une demande reçue entre-temps. */
+  private finishLoading(): void {
+    this.loading = false;
+    if (this.pendingRefresh) {
+      this.pendingRefresh = false;
+      this.refresh();
+    }
   }
 
   /**
    * Marque comme vues toutes les factures actuellement dans ces statuts : leur badge
    * tombe à zéro. Appelé quand l'utilisateur ouvre l'onglet correspondant.
+   *
+   * Si les données ne sont pas encore chargées, la demande est mémorisée puis appliquée
+   * au premier chargement — sinon le badge restait allumé sur l'onglet déjà consulté.
    */
   markSeen(statuses: string[]): void {
     this.syncUserScope();
+    if (!this.loaded) {
+      for (const s of statuses) this.pendingSeen.add(s);
+      return;
+    }
+    if (this.appliquerVu(statuses)) {
+      this.emitUnseen();
+    }
+  }
+
+  /** Ajoute aux « vues » les factures présentes dans ces statuts. Retourne true si modifié. */
+  private appliquerVu(statuses: string[]): boolean {
     let changed = false;
     for (const s of statuses) {
       const ids = this.currentIds[s] || [];
@@ -95,10 +139,8 @@ export class FactureCountService {
         if (!seen.has(id)) { seen.add(id); changed = true; }
       }
     }
-    if (changed) {
-      this.persistSeen();
-      this.emitUnseen();
-    }
+    if (changed) this.persistSeen();
+    return changed;
   }
 
   /** Recalcule et émet le nombre de factures NON vues par statut. */
@@ -148,6 +190,8 @@ export class FactureCountService {
     if (uid !== this.seenUserId) {
       this.loadSeenForCurrentUser();
       this.currentIds = {};
+      this.loaded = false;
+      this.pendingSeen.clear();
     }
   }
 

@@ -1,0 +1,66 @@
+<div class="pf">
+  <!-- Filtres régime / mois / année -->
+  <div class="pf-filters">
+    <select class="pf-select" [(ngModel)]="filterRegime" (ngModelChange)="load()">
+      <option value="">Tous les régimes</option>
+      <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+    </select>
+    <select class="pf-select" [(ngModel)]="filterMois" (ngModelChange)="load()">
+      <option [ngValue]="0">Tous les mois</option>
+      <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
+    </select>
+    <select class="pf-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
+      <option [ngValue]="0">Toutes les années</option>
+      <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+    </select>
+  </div>
+
+  <div class="pf-loading" *ngIf="loading">Chargement des factures des postes de santé…</div>
+
+  <div class="pf-empty" *ngIf="!loading && postes.length === 0">
+    <mat-icon>medical_services</mat-icon>
+    <p>Aucune facture reçue des postes de santé rattachés.</p>
+    <small>Les factures envoyées par vos postes de santé polarisés apparaîtront ici.</small>
+  </div>
+
+  <!-- Un bloc par poste de santé -->
+  <mat-card class="pf-poste" *ngFor="let p of postes">
+    <div class="pf-poste-head">
+      <div class="pf-poste-title">
+        <mat-icon>medical_services</mat-icon>
+        <div>
+          <h3>{{ p.posteNom }}</h3>
+          <span>{{ p.factures.length }} facture(s) · Poste de santé rattaché</span>
+        </div>
+      </div>
+      <strong class="pf-poste-total">{{ p.totalSencsu | number:'1.0-0':'fr' }} F <small>SEN-CSU</small></strong>
+    </div>
+
+    <div class="pf-table-wrap">
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th>N° Facture</th>
+            <th>Période</th>
+            <th>Régime</th>
+            <th class="pf-num">Patients</th>
+            <th>Statut</th>
+            <th class="pf-num">Part SEN-CSU</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="pf-row" *ngFor="let f of p.factures" (click)="openDetail(f)">
+            <td class="pf-numero">{{ f.numero }}</td>
+            <td>{{ moisNoms[f.mois] }} {{ f.annee }}</td>
+            <td><span class="pf-chip">{{ regimeLabels[f.regime] || f.regime }}</span></td>
+            <td class="pf-num">{{ patientsCount(f) }}</td>
+            <td><span class="pf-statut" [ngClass]="'pf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span></td>
+            <td class="pf-num pf-csu">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+            <td><mat-icon class="pf-chevron">chevron_right</mat-icon></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+</div>

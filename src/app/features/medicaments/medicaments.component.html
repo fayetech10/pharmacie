@@ -14,14 +14,25 @@
             <mat-icon>block</mat-icon> Liste Exclusions
           </button>
           <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-primary" (click)="ouvrirCreation()">
+            <mat-icon>add</mat-icon> Ajouter
+          </button>
         </div>
       </div>
 
-      <!-- Recherche -->
+      <!-- Recherche + choix du référentiel (éligibles / exclusions) -->
       <div class="filter-strip">
         <div class="search-box">
           <mat-icon>search</mat-icon>
-          <input (keyup)="applyFilter($event)" placeholder="Rechercher par nom, DCI…">
+          <input (keyup)="applyFilter($event)" placeholder="Rechercher par nom, DCI, classe…">
+        </div>
+        <div class="inline-flex rounded-xl gap-1 p-1 bg-border-light max-sm:w-full">
+          <button type="button" class="border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap max-sm:flex-1"
+                  [ngClass]="filtreStatut === '' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'" (click)="choisirReferentiel('')">Tous</button>
+          <button type="button" class="border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap max-sm:flex-1"
+                  [ngClass]="filtreStatut === 'ELIGIBLE' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'" (click)="choisirReferentiel('ELIGIBLE')">Éligibles</button>
+          <button type="button" class="border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap max-sm:flex-1"
+                  [ngClass]="filtreStatut === 'EXCLU' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'" (click)="choisirReferentiel('EXCLU')">Exclusions</button>
         </div>
       </div>
 
@@ -41,8 +52,41 @@
         </div>
       </div>
 
-      <!-- Tableau -->
-      <div class="glass-table-container">
+      <!-- Médicaments non répertoriés : ajoutés par des pharmaciens, à classer par la SEN-CSU -->
+      <div class="mb-5 border border-[#FDE68A] bg-[#FFFBEB] rounded p-4" *ngIf="nonRepertories.length > 0">
+        <div class="flex gap-3 items-start mb-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-[9px] bg-[#FEF3C7] text-[#B45309] shrink-0"><mat-icon>rule</mat-icon></div>
+          <div>
+            <h2 class="flex items-center gap-2 m-0 text-base font-extrabold text-[#92400E]">Médicaments non répertoriés
+              <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-[7px] rounded-full bg-[#F59E0B] text-white text-xs font-bold">{{ nonRepertories.length }}</span>
+            </h2>
+            <p class="mt-0.5 mb-0 text-[12.5px] text-[#78350F]">Ajoutés par des pharmaciens sur leurs factures. Validez leur intégration dans les
+               éligibles, ou excluez-les définitivement. Un clic incrémente la liste concernée.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-3 flex-wrap bg-white border border-border rounded-sm py-2.5 px-3.5" *ngFor="let m of nonRepertories">
+            <div class="flex flex-col min-w-0 flex-[1_1_200px]">
+              <span class="font-bold text-sm text-text-primary uppercase break-words">{{ m.nom }}</span>
+              <span class="text-xs text-text-secondary" *ngIf="m.dci || m.classeTherapeutique">
+                {{ m.dci }}<span *ngIf="m.dci && m.classeTherapeutique"> · </span>{{ m.classeTherapeutique }}
+              </span>
+            </div>
+            <div class="flex gap-2 shrink-0 max-sm:w-full">
+              <button class="btn btn-sm btn-primary max-sm:flex-1" (click)="classerEligible(m)">
+                <mat-icon>check_circle</mat-icon> Éligible
+              </button>
+              <button class="btn btn-sm btn-warning max-sm:flex-1" (click)="classerExclu(m)">
+                <mat-icon>block</mat-icon> Exclure
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau (desktop / tablette large) -->
+      <div class="glass-table-container desktop-only">
         <table mat-table [dataSource]="dataSource" matSort class="premium-table">
           <ng-container matColumnDef="nom">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom Commercial </th>
@@ -62,6 +106,13 @@
           <ng-container matColumnDef="liste">
             <th mat-header-cell *matHeaderCellDef> Liste </th>
             <td mat-cell *matCellDef="let m"> {{ m.liste || '-' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="prixReference">
+            <th mat-header-cell *matHeaderCellDef> Prix de référence </th>
+            <td mat-cell *matCellDef="let m">
+              {{ m.prixReference != null ? (m.prixReference | number:'1.0-0':'fr') + ' F' : '—' }}
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="statut">
@@ -84,6 +135,20 @@
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let m" style="white-space: nowrap;">
+              <button mat-icon-button (click)="ouvrirEdition(m)" title="Modifier ce médicament"
+                      aria-label="Modifier ce médicament">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="supprimer(m)" title="Supprimer ce médicament"
+                      aria-label="Supprimer ce médicament">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
@@ -95,6 +160,104 @@
         </table>
       </div>
 
+      <!-- Cartes mobiles (≤ 768px) -->
+      <div class="m-cards" *ngIf="dataSource && dataSource.filteredData.length">
+        <div class="m-card" *ngFor="let m of pagedMedicaments">
+          <div class="m-card-top">
+            <div class="min-w-0">
+              <div class="m-title">{{ m.nom }}</div>
+              <div class="m-sub" *ngIf="m.dci || m.classeTherapeutique">
+                {{ m.dci }}<span *ngIf="m.dci && m.classeTherapeutique"> · </span>{{ m.classeTherapeutique }}
+              </div>
+            </div>
+            <div class="m-actions">
+              <button class="action-btn" (click)="ouvrirEdition(m)" title="Modifier"><mat-icon>edit</mat-icon></button>
+              <button class="action-btn danger" (click)="supprimer(m)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+            </div>
+          </div>
+          <div class="m-row">
+            <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">{{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}</span>
+            <span *ngIf="m.liste"><mat-icon class="inline-ic">list</mat-icon>{{ m.liste }}</span>
+            <span *ngIf="m.prixReference != null" class="m-amount">{{ m.prixReference | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <div class="flex items-start gap-1.5 mt-2 text-[13px] text-[#9A3412]" *ngIf="m.statut === 'EXCLU' && (m.motif || m.description)">
+            <mat-icon class="!text-base !w-4 !h-4 shrink-0 mt-0.5 text-[#EA580C]">block</mat-icon>
+            <span><strong>{{ m.motif || '-' }}</strong><span *ngIf="m.description"> — {{ m.description }}</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- État vide (mobile) -->
+      <div class="empty-state md:!hidden" *ngIf="dataSource && !dataSource.filteredData.length">
+        <mat-icon>search_off</mat-icon>
+        <p>Aucun médicament trouvé</p>
+      </div>
+
       <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des médicaments"></mat-paginator>
+
+      <!-- Ajout / modification d'un médicament du référentiel -->
+      <div class="modal-overlay" *ngIf="modalOuverte">
+        <div class="modal-card" role="dialog" aria-labelledby="med-modal-title">
+          <div class="modal-header">
+            <h2 id="med-modal-title">{{ medicamentEnEdition ? 'Modifier le médicament' : 'Ajouter un médicament' }}</h2>
+            <button type="button" class="close-btn" (click)="fermerModal()" aria-label="Fermer">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <form [formGroup]="form" (ngSubmit)="enregistrer()">
+            <div class="modal-body">
+              <div class="form-grid">
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Nom commercial</mat-label>
+                  <input matInput formControlName="nom" placeholder="Ex : DOLIPRANE 500 mg">
+                  <mat-error *ngIf="form.get('nom')?.hasError('required')">Nom obligatoire.</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>DCI / principe actif</mat-label>
+                  <input matInput formControlName="dci" placeholder="Ex : Paracétamol">
+                  <mat-hint>Base des équivalences</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Classe thérapeutique</mat-label>
+                  <input matInput formControlName="classeTherapeutique" placeholder="Ex : Antalgique">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Liste</mat-label>
+                  <input matInput formControlName="liste" placeholder="Ex : Liste I">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Prix de référence (FCFA)</mat-label>
+                  <input matInput type="number" min="0" formControlName="prixReference" placeholder="Ex : 1500">
+                  <mat-hint>Classe les équivalences du moins cher au plus cher</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Référentiel</mat-label>
+                  <mat-select formControlName="statut">
+                    <mat-option [value]="statuts[0]">Éligible</mat-option>
+                    <mat-option [value]="statuts[1]">Exclu</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="span-2" *ngIf="form.get('statut')?.value === 'EXCLU'">
+                  <mat-label>Motif d'exclusion</mat-label>
+                  <input matInput formControlName="motif" placeholder="Ex : Classe thérapeutique exclue">
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-ghost" (click)="fermerModal()">Annuler</button>
+              <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+                {{ medicamentEnEdition ? 'Enregistrer' : 'Ajouter' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-  

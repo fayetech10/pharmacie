@@ -65,6 +65,21 @@ export class AuthService {
     );
   }
 
+  /**
+   * Change le mot de passe de l'utilisateur connecté et lève le drapeau
+   * « mot de passe à changer » posé lors d'une création en masse.
+   */
+  changePassword(ancienMotDePasse: string, nouveauMotDePasse: string): Observable<void> {
+    return this.api.post<void>('/auth/change-password', { ancienMotDePasse, nouveauMotDePasse }).pipe(
+      tap(() => {
+        const user = this.getCurrentUser();
+        if (user) {
+          this.store.setItem(this.USER_KEY, JSON.stringify({ ...user, mustChangePassword: false }));
+        }
+      })
+    );
+  }
+
   logout(): void {
     this.clearSession();
     // Sécurité : on purge le cache des données pour ne pas exposer celles de la session précédente.
@@ -113,6 +128,14 @@ export class AuthService {
   isAdmin(): boolean { return this.hasRole(Role.ADMIN); }
   isBcsu(): boolean { return this.hasRole(Role.BCSU); }
   isStructureSanitaire(): boolean { return this.hasRole(Role.STRUCTURE_SANITAIRE); }
+  isPosteDeSante(): boolean { 
+    const user = this.getCurrentUser();
+    return this.isStructureSanitaire() && user?.structureType === 'PS';
+  }
+
+  getStructureNom(): string | undefined {
+    return this.getCurrentUser()?.structureNom;
+  }
 
   /** Gestion des pharmacies : Service Régional uniquement (Central et Admin exclus). */
   canManagePharmacies(): boolean {

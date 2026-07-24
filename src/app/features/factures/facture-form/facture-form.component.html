@@ -58,12 +58,13 @@
       <!-- Recherche de Bon de Commande : affiche le bon (lignes vides) comme le formulaire papier -->
       <div class="ff-grid-1 mb-6 border-b border-[var(--border-light)] pb-4">
         <div class="ff-field" *ngIf="!rattacheBon">
-          <label class="ff-label">Rechercher par numéro de Bon de Commande (BC)</label>
+          <label class="ff-label">Scanner le QR code du Bon de Commande ou saisir son numéro (BC)</label>
           <div class="flex gap-2">
-            <input type="text" class="ff-input" placeholder="Ex: BC-123456" [(ngModel)]="searchBcNumero" (keyup.enter)="rechercherEtPrefiltrerBon(searchBcNumero)">
+            <input type="text" class="ff-input" placeholder="Ex: BC-DKCS01-001-26" [(ngModel)]="searchBcNumero" (keyup.enter)="rechercherEtPrefiltrerBon(searchBcNumero)">
             <button type="button" class="btn btn-outline" (click)="rechercherEtPrefiltrerBon(searchBcNumero)">
               <mat-icon>search</mat-icon> Rechercher
             </button>
+            <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
           </div>
         </div>
 
@@ -94,6 +95,7 @@
                         (mousedown)="$event.preventDefault()" (click)="selectMedicament(med)">
                   <span class="ff-suggest-name">{{ med.nom }}</span>
                   <span *ngIf="med.statut === 'EXCLU'" class="ff-suggest-tag">Non éligible</span>
+                  <span *ngIf="med.statut === 'NON_REPERTORIE'" class="ff-suggest-tag ff-suggest-tag--nr">À valider</span>
                 </button>
               </li>
             </ul>
@@ -101,8 +103,8 @@
           <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
             Ce médicament n'est pas éligible.
           </div>
-          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('notFound')">
-            Sélectionnez un médicament de la liste.
+          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('notFound') && !medicamentNonRepertorie">
+            Saisissez au moins 2 caractères, puis sélectionnez un médicament de la liste.
           </div>
         </div>
 
@@ -134,6 +136,30 @@
         </button>
       </form>
 
+      <!-- Équivalences : mêmes DCI, le moins cher en premier -->
+      <div class="ff-equiv" *ngIf="equivalents.length > 0">
+        <div class="ff-equiv-head">
+          <mat-icon>swap_horiz</mat-icon>
+          <span class="ff-equiv-title">Équivalences</span>
+          <span class="ff-equiv-sub">même molécule — le moins cher en premier</span>
+        </div>
+        <ul class="ff-equiv-list">
+          <li *ngFor="let e of equivalents; let first = first">
+            <button type="button" class="ff-equiv-item" (click)="choisirEquivalent(e)"
+                    [attr.aria-label]="'Choisir ' + e.nom">
+              <span class="ff-equiv-name">
+                {{ e.nom }}
+                <span class="ff-equiv-badge" *ngIf="first && e.prixReference != null">le moins cher</span>
+              </span>
+              <span class="ff-equiv-dci" *ngIf="e.dci">{{ e.dci }}</span>
+              <span class="ff-equiv-prix">
+                {{ e.prixReference != null ? (e.prixReference | number:'1.0-0':'fr') + ' F' : 'Prix non renseigné' }}
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
       <!-- Alerte médicament exclu -->
       <div class="ff-alert ff-alert--danger" *ngIf="excludedInfo">
         <mat-icon>block</mat-icon>
@@ -142,6 +168,18 @@
           <span class="ff-alert-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
           <span class="ff-alert-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
         </div>
+      </div>
+
+      <!-- Médicament non répertorié : l'avertissement complet (contrôle SEN-CSU, classes
+           exclues) est présenté dans une MODALE de confirmation — le pharmacien clique sur
+           « Confirmer » pour l'ajouter. Ici, uniquement le bouton déclencheur. -->
+      <div class="ff-nr-prompt" *ngIf="medicamentNonRepertorie && !excludedInfo">
+        <button type="button" class="btn btn-primary ff-nr-add"
+                (click)="ajouterMedicamentNonRepertorie()"
+                [disabled]="medicamentForm.get('quantite')?.invalid || medicamentForm.get('prixUnitaire')?.invalid || bonLimitAtteinte">
+          <mat-icon>add_circle</mat-icon>
+          Ajouter « {{ medicamentNonRepertorie }} » (non répertorié)
+        </button>
       </div>
 
       <!-- Avertissement limite mensuelle quantité >= 2 -->
@@ -165,11 +203,16 @@
           <div class="ff-line-main">
             <span class="ff-line-name">{{ pl.medicament }}</span>
             <span class="ff-line-meta">{{ pl.quantite }} × {{ pl.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+            <span class="ligne-tag tag-nr" *ngIf="pl.ajouteParPharmacien">Non répertorié · à valider SEN-CSU</span>
           </div>
           <div class="ff-line-amounts">
             <strong class="ff-line-total">{{ pl.quantite * pl.prixUnitaire | number:'1.0-0':'fr' }} F</strong>
             <span class="ff-line-split">CSU {{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }} F</span>
           </div>
+          <button class="ff-edit" type="button" (click)="modifierMedicamentTemp(i)"
+                  matTooltip="Modifier ce médicament" aria-label="Modifier ce médicament">
+            <mat-icon>edit</mat-icon>
+          </button>
           <button class="ff-del" type="button" (click)="retirerMedicamentTemp(i)" aria-label="Retirer ce médicament">
             <mat-icon>delete</mat-icon>
           </button>
@@ -234,9 +277,6 @@
               <span class="ff-bc-auto-title">Bon de commande — constitué automatiquement</span>
               <span class="ff-bc-auto-sub">Depuis {{ rattacheBonNumero }} · aucune photo à prendre</span>
             </div>
-          </div>
-          <div class="ff-photo-preview ff-bc-auto-img">
-            <img [src]="photos.bonCommande" alt="Bon de commande" (click)="openViewer(photos.bonCommande!)">
           </div>
         </div>
 
@@ -316,10 +356,15 @@
           <span class="ff-line-meta">{{ l.patientNomPrenom || '—' }} · {{ l.quantite }} × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F</span>
           <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [title]="l.motifRejet || ''">Rejetée</span>
           <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
+          <span class="ligne-tag tag-nr" *ngIf="l.ajouteParPharmacien" title="Ajouté par le pharmacien — à valider par la SEN-CSU">Non répertorié</span>
         </div>
         <div class="ff-line-amounts">
           <strong class="ff-line-total">{{ l.montant | number:'1.0-0':'fr' }} F</strong>
         </div>
+        <button class="ff-edit" type="button" (click)="modifierLigne(i)"
+                matTooltip="Modifier cette ligne" aria-label="Modifier cette ligne">
+          <mat-icon>edit</mat-icon>
+        </button>
         <button class="ff-del" type="button" (click)="supprimerLigne(i)" aria-label="Supprimer cette ligne">
           <mat-icon>delete</mat-icon>
         </button>
@@ -362,44 +407,12 @@
           <div><span>Prise en charge CSU :</span> <strong style="color: var(--primary);">{{ rattacheBon.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</strong></div>
         </div>
 
-        <div class="bc-table-wrap">
-          <table class="bc-table">
-            <thead>
-              <tr>
-                <th class="bc-col-designation">Désignation</th>
-                <th>Qté</th>
-                <th>P.U.</th>
-                <th>Total</th>
-                <th>PEC</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of bonRows; let i = index" [class.bc-row-empty]="!row">
-                <td class="bc-col-designation">{{ row?.medicament || '' }}</td>
-                <td>{{ row ? row.quantite : '' }}</td>
-                <td>{{ row ? (row.prixUnitaire | number:'1.0-0':'fr') + ' F' : '' }}</td>
-                <td>{{ row ? (row.quantite * row.prixUnitaire | number:'1.0-0':'fr') + ' F' : '' }}</td>
-                <td>{{ row ? '50%' : '' }}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr class="bc-total">
-                <td colspan="3">TOTAL GENERAL</td>
-                <td>{{ patientTotal | number:'1.0-0':'fr' }} F</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td colspan="3">A payer (patient)</td>
-                <td>{{ bonMontantPatient | number:'1.0-0':'fr' }} F</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td colspan="3">A facturer (tiers payant)</td>
-                <td>{{ bonMontantTiersPayant | number:'1.0-0':'fr' }} F</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
+        <!-- L'aperçu du bon de commande n'est plus rendu : seuls les totaux utiles
+             au contrôle de la saisie sont rappelés (cahier des charges). -->
+        <div class="bc-totaux">
+          <div><span>Total général :</span> <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong></div>
+          <div><span>À payer (patient) :</span> <strong>{{ bonMontantPatient | number:'1.0-0':'fr' }} F</strong></div>
+          <div><span>À facturer (tiers payant) :</span> <strong>{{ bonMontantTiersPayant | number:'1.0-0':'fr' }} F</strong></div>
         </div>
         <p class="bc-hint" *ngIf="!bonLimitAtteinte">Ajoutez les médicaments ci-dessous : chaque ajout remplit une ligne du bon.</p>
 

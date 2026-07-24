@@ -1,47 +1,47 @@
-<div class="fade-in fdf">
-  <div class="fdf-head">
-    <a routerLink="/dashboard/feuilles-soins" class="fdf-back" aria-label="Retour à la liste des feuilles de soins">
+<div class="fade-in p-6 max-md:p-4 max-w-[860px] mx-auto">
+  <div class="flex items-center gap-4 mb-6">
+    <a routerLink="/dashboard/feuilles-soins" class="flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border text-text-secondary no-underline transition-colors hover:bg-primary-light hover:text-primary" aria-label="Retour à la liste des feuilles de soins">
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="fdf-h1">Délivrer une feuille de soins</h1>
-      <p class="fdf-sub">
+      <h1 class="text-2xl font-extrabold m-0 mb-1 text-text-primary">Délivrer une feuille de soins</h1>
+      <p class="text-sm text-text-secondary m-0">
         Recherchez le bénéficiaire, complétez les rubriques du formulaire, puis remettez-lui la feuille imprimée.
       </p>
     </div>
   </div>
 
   <!-- Recherche du patient -->
-  <mat-card class="fdf-card">
-    <h3 class="fdf-card-title"><mat-icon class="fdf-ic-primary">person_search</mat-icon> Bénéficiaire</h3>
-    <mat-form-field appearance="outline" class="fdf-search-field">
+  <mat-card class="mb-5 p-5 rounded border border-border">
+    <h3 class="text-[15px] font-bold text-text-primary m-0 mb-4 flex items-center gap-2"><mat-icon class="text-primary">person_search</mat-icon> Bénéficiaire</h3>
+    <mat-form-field appearance="outline" class="w-full -mb-2">
       <mat-label>Rechercher par nom, n° CNI ou n° d'assuré…</mat-label>
       <input matInput [value]="searchQuery" (input)="onSearchInput($event)" [disabled]="!!selectedPatientId">
       <mat-icon matSuffix>search</mat-icon>
     </mat-form-field>
 
-    <div *ngIf="searchResults.length > 0" class="fdf-results">
+    <div *ngIf="searchResults.length > 0" class="border border-border rounded-[10px] overflow-hidden mt-2">
       <div *ngFor="let p of searchResults" (click)="selectPatient(p)"
-           class="fdf-result-item"
+           class="py-2.5 px-3.5 cursor-pointer border-b border-border-light last:border-b-0 flex justify-between items-center gap-2 transition-colors hover:bg-primary-light focus-visible:bg-primary-light focus-visible:outline-none"
            tabindex="0" role="button"
            [attr.aria-label]="'Sélectionner ' + p.prenom + ' ' + p.nom"
            (keydown.enter)="selectPatient(p)">
-        <span class="fdf-result-name">{{ p.prenom }} {{ p.nom }}</span>
-        <span class="fdf-result-meta">{{ regimeLabels[p.regime] }} · {{ p.numeroAssure || p.numeroCni || p.telephone || '' }}</span>
+        <span class="font-semibold text-text-primary">{{ p.prenom }} {{ p.nom }}</span>
+        <span class="text-xs text-text-secondary">{{ regimeLabels[p.regime] }} · {{ p.numeroAssure || p.numeroCni || p.telephone || '' }}</span>
       </div>
     </div>
 
-    <div *ngIf="selectedPatientId" class="fdf-selected">
-      <mat-icon>check_circle</mat-icon>
+    <div *ngIf="selectedPatientId" class="flex items-center gap-2 mt-2.5 text-[13px] text-primary">
+      <mat-icon class="!text-lg !w-[18px] !h-[18px]">check_circle</mat-icon>
       Patient existant rattaché à la feuille
-      <button mat-button color="warn" class="fdf-change-btn" (click)="clearPatient()">Changer</button>
+      <button mat-button color="warn" class="!ml-auto" (click)="clearPatient()">Changer</button>
     </div>
   </mat-card>
 
   <!-- Rubriques du formulaire papier -->
-  <mat-card class="fdf-card">
-    <h3 class="fdf-card-title"><mat-icon class="fdf-ic-gold">assignment</mat-icon> Rubriques de la feuille de soins</h3>
-    <form [formGroup]="form" class="fdf-grid">
+  <mat-card class="mb-5 p-5 rounded border border-border">
+    <h3 class="text-[15px] font-bold text-text-primary m-0 mb-4 flex items-center gap-2"><mat-icon class="text-[#B7791F]">assignment</mat-icon> Rubriques de la feuille de soins</h3>
+    <form [formGroup]="form" class="grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-3">
       <mat-form-field appearance="outline">
         <mat-label>Nom</mat-label>
         <input matInput formControlName="nom">
@@ -80,14 +80,14 @@
         <mat-label>Téléphone</mat-label>
         <input matInput formControlName="telephone">
       </mat-form-field>
-      <mat-form-field appearance="outline" class="fdf-col-full">
+      <mat-form-field appearance="outline" class="col-span-full">
         <mat-label>Accompagnant — Prénom(s) et Nom (optionnel)</mat-label>
         <input matInput formControlName="accompagnantPrenomNom">
       </mat-form-field>
     </form>
   </mat-card>
 
-  <div class="fdf-actions">
+  <div class="flex justify-end gap-3 flex-wrap">
     <button mat-stroked-button routerLink="/dashboard/feuilles-soins">Annuler</button>
     <button mat-flat-button color="primary" (click)="delivrer()" [disabled]="form.invalid || isSubmitting">
       <mat-icon>print</mat-icon>

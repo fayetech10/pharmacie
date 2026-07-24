@@ -28,6 +28,9 @@ export class LettreGarantieDetailComponent implements OnInit {
   bon: BonCommande | null = null;
   loading = true;
   busy = false;
+  /** Cachet et signature de l'agent créateur (paramétrage BCSU), affichés sur la LG. */
+  cachetImage: string | null = null;
+  signatureImage: string | null = null;
   /** Nombre de lignes de médicaments (vides) à imprimer sur le bon — le pharmacien les remplit. */
   nombreLignesBon = 3;
   /** Service Régional : consultation seule (pas d'émission/annulation/génération de bon). */
@@ -72,6 +75,16 @@ export class LettreGarantieDetailComponent implements OnInit {
         if (lettre.statut === StatutLettreGarantie.EMISE) {
           this.bcsuService.getBonByLettre(lettre.id).subscribe(bon => {
             if (bon) this.bon = bon;
+          });
+        }
+        // Cachet et signature de l'agent créateur (paramétrage BCSU).
+        if (lettre.createdBy) {
+          this.bcsuService.getParametrage(lettre.createdBy).subscribe({
+            next: (p) => {
+              this.cachetImage = p?.cachetImage || null;
+              this.signatureImage = p?.signatureImage || null;
+            },
+            error: () => {} // silencieux : la LG reste lisible sans cachet
           });
         }
       },
@@ -133,7 +146,8 @@ export class LettreGarantieDetailComponent implements OnInit {
 
   partagerLettreWhatsApp() {
     if (!this.lettre) return;
-    const message = `Lettre de garantie ${this.lettre.numero} - ${this.lettre.patientPrenom} ${this.lettre.patientNom} - Montant SEN-CSU : ${this.lettre.montantTotalSencsu} FCFA`;
+    // Message d'accompagnement de la LG (cahier des charges).
+    const message = `Bonne réception de la LG numéro ${this.lettre.numero}`;
     const fileName = `Lettre_Garantie_${this.lettre.numero}.pdf`;
     this.bcsuService.exportLettreGarantiePdf(this.lettre.id).subscribe({
       next: (blob) => this.sharePdf(this.lettre!.patientTelephone, message, blob, fileName),

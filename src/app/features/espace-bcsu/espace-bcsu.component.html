@@ -1,26 +1,37 @@
 <div class="fade-in">
 
-
   <!-- ========== BANNER POINTAGE ========== -->
-  <div class="pointage-banner" *ngIf="currentUser?.pointageHeure">
-    <div class="pointage-banner-content">
-      <div class="pointage-icon-container">
-        <mat-icon>verified</mat-icon>
+  <div class="bg-primary-light border border-primary-200 rounded p-4 px-5 max-md:p-3 mb-6 shadow-sm" *ngIf="currentUser?.pointageHeure">
+    <div class="flex items-center gap-4 max-md:gap-3 max-md:flex-wrap">
+      <div class="w-[42px] h-[42px] max-md:w-9 max-md:h-9 bg-primary rounded-full flex items-center justify-center text-white shrink-0">
+        <mat-icon class="!text-2xl !w-6 !h-6">verified</mat-icon>
       </div>
-      <div class="pointage-details">
-        <h3>Pointage de présence validé</h3>
-        <p>
+      <div>
+        <h3 class="m-0 mb-1 text-base max-md:text-sm font-bold text-primary-dark">Pointage de présence validé</h3>
+        <p class="m-0 text-sm max-md:text-[12.5px] text-primary flex items-center flex-wrap gap-2">
           Arrivée enregistrée à <strong>{{ currentUser.pointageHeure }}</strong>.
           <span *ngIf="currentUser.pointageDepartHeure"> · Départ enregistré à <strong>{{ currentUser.pointageDepartHeure }}</strong>.</span>
         </p>
       </div>
-      <button class="btn-depart-banner" *ngIf="!currentUser.pointageDepartHeure" (click)="ouvrirDepartModal()">
-        <mat-icon>logout</mat-icon> Pointer mon départ
+      <button class="inline-flex items-center gap-1.5 bg-white border border-[#FCA5A5] text-warn text-[13px] font-bold rounded-[10px] py-2 px-4 cursor-pointer transition-all whitespace-nowrap shrink-0 ml-auto max-md:ml-12 hover:bg-warn-light hover:border-[#F87171]"
+              *ngIf="!currentUser.pointageDepartHeure" (click)="ouvrirDepartModal()">
+        <mat-icon class="!text-lg !w-[18px] !h-[18px]">logout</mat-icon> Pointer mon départ
       </button>
     </div>
   </div>
 
-  <div class="pt-2 md:pt-4">
-    <app-lettre-garantie-form></app-lettre-garantie-form>
+  <div class="tab-content-container" [ngSwitch]="selectedTab">
+    <div *ngSwitchCase="0" class="pt-2 md:pt-4">
+      <app-lettre-garantie-form></app-lettre-garantie-form>
+    </div>
+    <div *ngSwitchCase="1" class="pt-2 md:pt-4">
+      <app-patients></app-patients>
+    </div>
+    <div *ngSwitchCase="2" class="pt-2 md:pt-4">
+      <app-constats-bcsu></app-constats-bcsu>
+    </div>
+    <div *ngSwitchCase="3" class="pt-2 md:pt-4">
+      <app-parametrage-bcsu></app-parametrage-bcsu>
+    </div>
   </div>
 </div>

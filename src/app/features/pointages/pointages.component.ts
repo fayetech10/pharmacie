@@ -39,6 +39,8 @@ export class PointagesComponent implements OnInit {
   pointages: Pointage[] = [];
   filteredPointages: Pointage[] = [];
   loading = false;
+  /** Message d'erreur affiché : sans lui, un échec réseau laissait un tableau vide muet. */
+  erreur: string | null = null;
 
   constructor(private dialog: MatDialog, private pointageService: PointageService) {}
 
@@ -46,15 +48,34 @@ export class PointagesComponent implements OnInit {
     this.loadPointages();
   }
 
+  /**
+   * Date CALENDAIRE locale au format YYYY-MM-DD.
+   * `toISOString()` convertit en UTC : pour tout utilisateur hors UTC, la requête
+   * pouvait porter sur la veille ou le lendemain et ne rien remonter.
+   */
+  private toDateLocale(d: Date): string {
+    const mois = String(d.getMonth() + 1).padStart(2, '0');
+    const jour = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mois}-${jour}`;
+  }
+
   loadPointages() {
     this.loading = true;
-    const dateStr = this.selectedDate.toISOString().split('T')[0];
-    this.pointageService.getByDate(dateStr).subscribe(res => {
-      this.pointages = res;
-      this.applyFilters();
-      this.loading = false;
-    }, () => {
-      this.loading = false;
+    this.erreur = null;
+    this.pointageService.getByDate(this.toDateLocale(this.selectedDate)).subscribe({
+      next: (res) => {
+        this.pointages = res || [];
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: (err) => {
+        this.pointages = [];
+        this.filteredPointages = [];
+        this.loading = false;
+        this.erreur = err?.status === 403
+          ? "Vous n'avez pas les droits pour consulter les pointages."
+          : "Impossible de charger les pointages. Vérifiez la connexion au serveur, puis réessayez.";
+      }
     });
   }
 
@@ -63,10 +84,18 @@ export class PointagesComponent implements OnInit {
   }
 
   applyFilters() {
-    this.filteredPointages = this.pointages.filter(p => {
-      const matchName = p.userNom.toLowerCase().includes(this.searchQuery.toLowerCase()) || p.userPrenom.toLowerCase().includes(this.searchQuery.toLowerCase());
-      return matchName;
-    });
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    if (!q) {
+      this.filteredPointages = [...this.pointages];
+      return;
+    }
+    // Nom, prénom et structure peuvent être nuls : sans ces gardes, une seule
+    // valeur manquante faisait échouer le filtre et la page restait vide.
+    this.filteredPointages = this.pointages.filter(p =>
+      (p.userNom || '').toLowerCase().includes(q)
+      || (p.userPrenom || '').toLowerCase().includes(q)
+      || (p.structureNom || '').toLowerCase().includes(q)
+    );
   }
 
   openAgentDetail(p: Pointage) {

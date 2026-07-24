@@ -2,7 +2,7 @@
       <!-- En-tête -->
       <div class="page-head">
         <div>
-          <h1>Gestion des Pharmacies</h1>
+          <h1>Paramétrage pharmacie</h1>
           <p>Gérez les pharmacies partenaires de la CSU.</p>
         </div>
         <div class="page-head-actions">
@@ -13,6 +13,10 @@
             <mat-icon>upload_file</mat-icon> {{ importing ? 'Import…' : 'Importer' }}
           </button>
           <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-outline" (click)="exporterIdentifiants()" type="button"
+                  title="Exporter les pharmacies créées avec leurs identifiants de connexion">
+            <mat-icon>table_view</mat-icon> Exporter les identifiants
+          </button>
           <button class="btn btn-primary" (click)="openModal()">
             <mat-icon>add_business</mat-icon> Ajouter
           </button>
@@ -44,33 +48,39 @@
       </div>
 
       <!-- Récapitulatif du dernier import -->
-      <div class="import-result" *ngIf="importResult" [class.has-errors]="importResult.echecs > 0">
-        <div class="import-result-head">
-          <mat-icon>{{ importResult.echecs > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon>
+      <div class="mb-5 rounded-[10px] border overflow-hidden"
+           [ngClass]="importResult.echecs > 0 ? 'border-[#FED7AA] bg-[#FFFBEB]' : 'border-primary-200 bg-primary-light'"
+           *ngIf="importResult">
+        <div class="flex items-center gap-2.5 py-3 px-4 text-sm font-medium"
+             [ngClass]="importResult.echecs > 0 ? 'text-[#B45309]' : 'text-primary-dark'">
+          <mat-icon class="!text-[22px] !w-[22px] !h-[22px]">{{ importResult.echecs > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon>
           <span>
             <strong>{{ importResult.importes }}</strong> pharmacie(s) importée(s)
             <ng-container *ngIf="importResult.echecs > 0"> · <strong>{{ importResult.echecs }}</strong> échec(s)</ng-container>
           </span>
-          <button class="close-inline" (click)="importResult = null" type="button" aria-label="Fermer">
+          <button class="ml-auto bg-transparent border-0 cursor-pointer text-inherit flex items-center rounded-md p-0.5 hover:bg-black/[0.06]"
+                  (click)="importResult = null" type="button" aria-label="Fermer">
             <mat-icon>close</mat-icon>
           </button>
         </div>
-        <ul class="import-errors" *ngIf="importResult.erreurs.length > 0">
-          <li *ngFor="let err of importResult.erreurs">{{ err }}</li>
+        <ul class="m-0 pt-1 pr-4 pb-3.5 pl-10 list-disc text-[13px] text-[#92400E] max-h-[180px] overflow-y-auto" *ngIf="importResult.erreurs.length > 0">
+          <li class="my-0.5" *ngFor="let err of importResult.erreurs">{{ err }}</li>
         </ul>
       </div>
 
-      <!-- Tableau -->
-      <div class="glass-table-container">
+      <!-- Tableau (desktop / tablette large) -->
+      <div class="glass-table-container desktop-only">
         <table mat-table [dataSource]="dataSource" matSort class="premium-table">
           <ng-container matColumnDef="nom">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Pharmacie </th>
             <td mat-cell *matCellDef="let p">
-              <div class="pharma-cell">
-                <div class="pharma-icon"><mat-icon>local_pharmacy</mat-icon></div>
+              <div class="flex items-center gap-3 py-2">
+                <div class="w-[38px] h-[38px] rounded-[10px] bg-accent-light text-accent flex items-center justify-center shrink-0">
+                  <mat-icon class="!text-xl !w-5 !h-5">local_pharmacy</mat-icon>
+                </div>
                 <div>
-                  <span class="pharma-name">{{ p.nom }}</span>
-                  <span class="pharma-code">{{ p.code }}</span>
+                  <span class="font-semibold text-text-primary block">{{ p.nom }}</span>
+                  <span class="text-xs text-text-secondary block">{{ p.code }}</span>
                 </div>
               </div>
             </td>
@@ -84,9 +94,9 @@
           <ng-container matColumnDef="telephone">
             <th mat-header-cell *matHeaderCellDef> Contact </th>
             <td mat-cell *matCellDef="let p">
-              <div class="contact-cell">
-                <span>{{ p.telephone }}</span>
-                <span class="text-muted">{{ p.email }}</span>
+              <div class="flex flex-col">
+                <span class="text-text-primary">{{ p.telephone }}</span>
+                <span class="text-xs text-text-muted">{{ p.email }}</span>
               </div>
             </td>
           </ng-container>
@@ -94,7 +104,7 @@
           <ng-container matColumnDef="regionId">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Région </th>
             <td mat-cell *matCellDef="let p">
-              <span class="region-chip">{{ getRegionName(p.regionId) }}</span>
+              <span class="inline-flex py-1 px-3 rounded-full bg-primary-light text-primary text-[12.5px] font-semibold">{{ getRegionName(p.regionId) }}</span>
             </td>
           </ng-container>
 
@@ -122,6 +132,36 @@
         </div>
       </div>
 
+      <!-- Cartes mobiles (≤ 768px) -->
+      <div class="m-cards" *ngIf="pharmacies.length > 0">
+        <div class="m-card" *ngFor="let p of pagedPharmacies">
+          <div class="m-card-top">
+            <div class="min-w-0">
+              <div class="m-title">{{ p.nom }}</div>
+              <div class="m-sub">{{ p.code }}</div>
+            </div>
+            <div class="m-actions">
+              <button class="action-btn" (click)="openModal(p)" title="Modifier"><mat-icon>edit</mat-icon></button>
+              <button class="action-btn danger" (click)="deletePharmacie(p.id)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+            </div>
+          </div>
+          <div class="m-meta"><mat-icon class="inline-ic">location_on</mat-icon>{{ p.adresse }}</div>
+          <div class="m-row">
+            <span><mat-icon class="inline-ic">call</mat-icon>{{ p.telephone }}</span>
+            <span *ngIf="p.email"><mat-icon class="inline-ic">mail</mat-icon>{{ p.email }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="inline-flex py-1 px-3 rounded-full bg-primary-light text-primary text-[12.5px] font-semibold">{{ getRegionName(p.regionId) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- État vide (mobile uniquement — le desktop l'affiche dans le tableau) -->
+      <div class="empty-state md:!hidden" *ngIf="pharmacies.length === 0">
+        <mat-icon>local_pharmacy</mat-icon>
+        <p>Aucune pharmacie enregistrée</p>
+      </div>
+
       <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des pharmacies"></mat-paginator>
     </div>
 
@@ -137,19 +177,19 @@
         <form [formGroup]="pharmacieForm" (ngSubmit)="savePharmacie()">
           <div class="modal-body">
             <!-- Section 1 : informations de la pharmacie -->
-            <div class="form-section-title">
-              <mat-icon>local_pharmacy</mat-icon> Informations de la pharmacie
+            <div class="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.04em] text-primary mt-1 mb-3.5">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">local_pharmacy</mat-icon> Informations de la pharmacie
             </div>
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Code</mat-label>
-                <mat-icon matPrefix>tag</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">tag</mat-icon>
                 <input matInput formControlName="code" placeholder="Ex: PH001">
                 <mat-error *ngIf="pharmacieForm.get('code')?.hasError('required')">Code obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Région</mat-label>
-                <mat-icon matPrefix>map</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">map</mat-icon>
                 <mat-select formControlName="regionId">
                   <mat-option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</mat-option>
                 </mat-select>
@@ -158,25 +198,25 @@
               </mat-form-field>
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>Nom de la pharmacie</mat-label>
-                <mat-icon matPrefix>storefront</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">storefront</mat-icon>
                 <input matInput formControlName="nom" placeholder="Ex: Pharmacie Guigon">
                 <mat-error *ngIf="pharmacieForm.get('nom')?.hasError('required')">Nom obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>Adresse</mat-label>
-                <mat-icon matPrefix>location_on</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">location_on</mat-icon>
                 <input matInput formControlName="adresse" placeholder="Ex: Plateau, Dakar">
                 <mat-error *ngIf="pharmacieForm.get('adresse')?.hasError('required')">Adresse obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Téléphone</mat-label>
-                <mat-icon matPrefix>call</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">call</mat-icon>
                 <input matInput formControlName="telephone" placeholder="33 800 00 00">
                 <mat-error *ngIf="pharmacieForm.get('telephone')?.hasError('required')">Téléphone obligatoire.</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Email</mat-label>
-                <mat-icon matPrefix>mail</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">mail</mat-icon>
                 <input matInput formControlName="email" placeholder="contact@pharma.sn">
                 <mat-error *ngIf="pharmacieForm.get('email')?.hasError('required')">Email obligatoire.</mat-error>
                 <mat-error *ngIf="pharmacieForm.get('email')?.hasError('email')">Email invalide.</mat-error>
@@ -184,19 +224,20 @@
             </div>
 
             <!-- Section 2 : compte de connexion du pharmacien -->
-            <div class="form-section-title">
-              <mat-icon>account_circle</mat-icon> Compte du pharmacien (connexion)
+            <div class="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.04em] text-primary mt-[22px] mb-3.5 pt-[18px] border-t border-border">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">account_circle</mat-icon> Compte du pharmacien (connexion)
             </div>
-            <p class="form-note">
-              <mat-icon>info</mat-icon>
+            <p class="flex items-start gap-2 mt-0 mb-3.5 py-2.5 px-3 rounded-sm bg-primary-light text-text-secondary text-[12.5px] leading-[1.4]">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px] text-primary shrink-0">info</mat-icon>
               L'email ci-dessus sert d'identifiant. Un compte Pharmacien est créé automatiquement avec ce mot de passe.
             </p>
             <div class="form-grid">
               <mat-form-field appearance="outline" class="span-2">
                 <mat-label>{{ editMode ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe du compte' }}</mat-label>
-                <mat-icon matPrefix>lock</mat-icon>
+                <mat-icon matPrefix class="!text-text-muted !mr-2">lock</mat-icon>
                 <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Min. 6 caractères">
-                <button type="button" matSuffix class="suffix-btn" (click)="hidePassword = !hidePassword"
+                <button type="button" matSuffix class="bg-transparent border-0 cursor-pointer text-text-muted inline-flex items-center py-0 px-1 hover:text-text-primary"
+                        (click)="hidePassword = !hidePassword"
                         [attr.aria-label]="hidePassword ? 'Afficher' : 'Masquer'">
                   <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
                 </button>
@@ -207,7 +248,7 @@
                   Au moins 6 caractères.
                 </mat-error>
               </mat-form-field>
-              <button type="button" class="btn btn-ghost span-2 generate-btn" (click)="generatePassword()">
+              <button type="button" class="btn btn-ghost span-2 justify-center -mt-1" (click)="generatePassword()">
                 <mat-icon>autorenew</mat-icon> Générer un mot de passe
               </button>
             </div>
@@ -222,4 +263,3 @@
         </form>
       </div>
     </div>
-  

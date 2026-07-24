@@ -39,6 +39,7 @@ export class LettresGarantieListComponent implements OnInit {
   loading = true;
   searchNumero = '';
   searching = false;
+  exporting = false;
   expandedIds = new Set<string>();
 
   filterMois = 0;
@@ -96,6 +97,32 @@ export class LettresGarantieListComponent implements OnInit {
 
   statutIcon(statut: string): string {
     return STATUT_ICONS[statut] || 'info';
+  }
+
+  /** Export Excel de la liste filtrée (régime / mois / année). */
+  exporterExcel() {
+    this.exporting = true;
+    const params: any = {};
+    if (this.filterMois > 0) params.mois = this.filterMois;
+    if (this.filterAnnee > 0) params.annee = this.filterAnnee;
+    if (this.filterRegime) params.regime = this.filterRegime;
+
+    this.bcsuService.exportLettresGarantieExcel(params).subscribe({
+      next: (blob: Blob) => {
+        this.exporting = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Patients_Enregistres.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export Excel téléchargé', 'Fermer', { duration: 3000 });
+      },
+      error: (err) => {
+        this.exporting = false;
+        this.snackBar.open('Erreur lors de l\'export : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000 });
+      }
+    });
   }
 
   rechercherParNumero() {

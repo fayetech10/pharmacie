@@ -15,6 +15,9 @@ import { AuthService } from '../../../core/services/auth.service';
 import { Facture, LigneFacture, LigneDecisionRequest, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../../core/services/confirm.service';
+import { of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 interface PatientGroup {
   nom?: string;
@@ -43,7 +46,7 @@ interface PatientGroup {
     StatusBadgeComponent
   ],
   templateUrl: './facture-detail.component.html',
-  styleUrls: ['./facture-detail.component.css']
+  styleUrls: ['./facture-detail.shared.css', './facture-detail.component.css']
 })
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
@@ -222,8 +225,88 @@ export class FactureDetailComponent implements OnInit {
     private factureService: FactureService,
     public authService: AuthService,
     private dialog: MatDialog,
+    private confirm: ConfirmService,
     private snackBar: MatSnackBar
   ) {}
+
+  /**
+   * Les lignes ne sont modifiables/supprimables que par le pharmacien propriétaire,
+   * et tant que la facture n'est pas partie (ou après un rejet du service régional).
+   * Aligné sur la règle backend de FactureService.updateFacture.
+   */
+  get canEditLignes(): boolean {
+    if (!this.authService.isPharmacien() || !this.facture) return false;
+    return this.facture.statut === 'BROUILLON' || this.facture.statut === 'REJETEE_SR';
+  }
+
+  /** Modifie la quantité puis le prix unitaire d'une ligne, et persiste la facture. */
+  modifierLigne(item: { ligne: LigneFacture; index: number }) {
+    if (!this.canEditLignes) return;
+    this.confirm.prompt({
+      title: `Modifier « ${item.ligne.medicament} »`,
+      label: 'Quantité',
+      initialValue: String(item.ligne.quantite ?? 1),
+      required: true,
+      confirmText: 'Suivant'
+    }).pipe(
+      switchMap(qte => {
+        if (qte === null) return of(null);
+        const quantite = Number(qte);
+        if (!Number.isFinite(quantite) || quantite <= 0) {
+          this.snackBar.open('Quantité invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
+          return of(null);
+        }
+        return this.confirm.prompt({
+          title: `Modifier « ${item.ligne.medicament} »`,
+          label: 'Prix unitaire (FCFA)',
+          initialValue: String(item.ligne.prixUnitaire ?? 0),
+          required: true,
+          confirmText: 'Enregistrer'
+        }).pipe(map(prix => prix === null ? null : { quantite, prix: Number(prix) }));
+      })
+    ).subscribe(res => {
+      if (!res) return;
+      if (!Number.isFinite(res.prix) || res.prix < 0) {
+        this.snackBar.open('Prix unitaire invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
+        return;
+      }
+      const lignes = [...(this.facture!.lignes || [])];
+      lignes[item.index] = {
+        ...lignes[item.index],
+        quantite: res.quantite,
+        prixUnitaire: res.prix,
+        montant: res.quantite * res.prix
+      };
+      this.persisterLignes(lignes, 'Ligne modifiée');
+    });
+  }
+
+  /** Retire une ligne de la facture après confirmation. */
+  supprimerLigne(item: { ligne: LigneFacture; index: number }) {
+    if (!this.canEditLignes) return;
+    this.confirm.ask({
+      title: 'Supprimer cette ligne',
+      message: `Retirer « ${item.ligne.medicament} » de la facture ?`,
+      confirmText: 'Supprimer',
+      danger: true
+    }).subscribe(ok => {
+      if (!ok) return;
+      const lignes = (this.facture!.lignes || []).filter((_, i) => i !== item.index);
+      this.persisterLignes(lignes, 'Ligne supprimée');
+    });
+  }
+
+  private persisterLignes(lignes: LigneFacture[], message: string) {
+    const f = this.facture!;
+    this.factureService.update(f.id!, { mois: f.mois, annee: f.annee, lignes } as any).subscribe({
+      next: (maj) => {
+        this.setFacture(maj);
+        this.snackBar.open(message, 'Fermer', { duration: 2500 });
+      },
+      error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message),
+        'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+    });
+  }
 
   private destroyRef = inject(DestroyRef);
 
@@ -262,7 +345,7 @@ export class FactureDetailComponent implements OnInit {
   goBack() {
     // Retour vers la liste « factures » du rôle courant (la route /dashboard/factures n'existe pas)
     if (this.authService.isPharmacien()) {
-      this.router.navigate(['/dashboard/espace-pharmacie'], { queryParams: { tab: 1 } });
+      this.router.navigate(['/dashboard/espace-pharmacie/factures']);
     } else if (this.authService.isServiceRegional()) {
       this.router.navigate(['/dashboard/espace-region'], { queryParams: { tab: 1 } });
     } else if (this.authService.isServiceCentral()) {
@@ -282,6 +365,21 @@ export class FactureDetailComponent implements OnInit {
         a.click();
         window.URL.revokeObjectURL(url);
         this.snackBar.open('Export PDF réussi', 'Fermer', { duration: 3000 });
+      },
+      error: (err: any) => this.showError(err)
+    });
+  }
+
+  exportExcel() {
+    this.factureService.exportFactureExcel(this.facture.id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Facture_${this.getMonthName(this.facture.mois)}_${this.facture.annee}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export Excel réussi', 'Fermer', { duration: 3000 });
       },
       error: (err: any) => this.showError(err)
     });
@@ -316,7 +414,7 @@ export class FactureDetailComponent implements OnInit {
       this.factureService.envoyer(this.facture.id).subscribe({
         next: () => {
           this.snackBar.open('Facture envoyée avec succès', 'Fermer', { duration: 3000 });
-          // Après envoi/renvoi, retour vers « Mes Factures » (goBack redirige le pharmacien vers espace-pharmacie ?tab=1).
+          // Après envoi/renvoi, retour vers « Mes Factures » (goBack redirige le pharmacien vers espace-pharmacie/factures).
           this.goBack();
         },
         error: (e: any) => this.showError(e)

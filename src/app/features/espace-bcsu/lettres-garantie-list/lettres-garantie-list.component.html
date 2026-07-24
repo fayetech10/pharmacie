@@ -34,6 +34,10 @@
         <option value="">Tous les régimes</option>
         <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
       </select>
+      <button class="lgl-search-btn" [disabled]="exporting || loading" (click)="exporterExcel()">
+        <mat-icon style="font-size:18px;width:18px;height:18px;vertical-align:middle;">download</mat-icon>
+        {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
+      </button>
     </div>
   </div>
 

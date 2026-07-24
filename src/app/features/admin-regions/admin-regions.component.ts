@@ -59,8 +59,7 @@ type DrillLevel = 'regions' | 'pharmacies' | 'structures' | 'factures' | 'factur
     StatusBadgeComponent,
     StatsComponent
   ],
-  templateUrl: './admin-regions.component.html',
-  styleUrls: ['./admin-regions.component.css']
+  templateUrl: './admin-regions.component.html'
 })
 export class AdminRegionsComponent implements OnInit {
   regions: Region[] = [];

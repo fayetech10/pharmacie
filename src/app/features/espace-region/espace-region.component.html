@@ -1,7 +1,7 @@
     <div class="fade-in">
-      <div class="page-head">
+      <div class="page-head max-md:hidden">
         <div>
-          <h1>Espace Régional<ng-container *ngIf="regionName"> - {{ regionName }}</ng-container></h1>
+          <h1>Espace principal<ng-container *ngIf="regionName"> - {{ regionName }}</ng-container></h1>
           <p>Supervisez et validez les factures de votre région</p>
         </div>
       </div>
@@ -11,11 +11,11 @@
         <!-- ===================== ONGLET 1 : TABLEAU DE BORD ===================== -->
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-ic">insights</mat-icon> Tableau de bord
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">insights</mat-icon> Tableau de bord
           </ng-template>
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
-              <app-regional-factures></app-regional-factures>
+              <app-regional-dashboard></app-regional-dashboard>
             </div>
           </ng-template>
         </mat-tab>
@@ -23,44 +23,58 @@
         <!-- ===================== ONGLET 2 : FACTURES PHARMACIES ===================== -->
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-ic">local_pharmacy</mat-icon> Factures Pharmacies
-            <span class="tab-count" *ngIf="counts['ENVOYEE']">{{ counts['ENVOYEE'] }}</span>
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">local_pharmacy</mat-icon> Factures pharmacies
+            <span class="inline-flex items-center justify-center text-[11px] font-bold min-w-[18px] h-[18px] px-[5px] ml-1.5 rounded-full bg-primary text-white leading-none" *ngIf="counts['ENVOYEE']">{{ counts['ENVOYEE'] }}</span>
           </ng-template>
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
-              <div class="seg-toggle seg-toggle--wide">
+              <div class="flex w-full max-w-[560px] max-md:max-w-none rounded-xl gap-1 p-1 bg-border-light mb-5">
                 <button *ngFor="let g of statusGroups" type="button"
-                        [class.active]="pharmaStatut === g.key"
+                        class="flex-1 inline-flex items-center justify-center border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] max-md:py-2.5 max-md:px-2 rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap"
+                        [ngClass]="pharmaStatut === g.key ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'"
                         (click)="selectPharmaStatut(g.key)">
                   {{ g.label }}
-                  <span class="seg-count" [class.danger]="g.danger" *ngIf="badgeCount(g)">{{ badgeCount(g) }}</span>
+                  <span class="inline-flex items-center justify-center font-bold min-w-[17px] h-[17px] px-[5px] ml-1.5 rounded-full text-white text-[10.5px] leading-none"
+                        [ngClass]="g.danger ? 'bg-warn' : 'bg-primary'" *ngIf="badgeCount(g)">{{ badgeCount(g) }}</span>
                 </button>
               </div>
+              <!-- Ciblage d'un prestataire depuis le tableau de bord : filtre visible et effaçable -->
+              <div class="inline-flex items-center gap-2 mb-3 py-[7px] pr-2 pl-3 border border-primary-200 rounded-full bg-primary-light text-primary-hover text-[13px] font-semibold" *ngIf="pharmaProviderId">
+                <mat-icon class="!text-[17px] !w-[17px] !h-[17px] text-primary">filter_alt</mat-icon>
+                <span>Prestataire : <strong>{{ pharmaProviderNom || 'sélectionné' }}</strong></span>
+                <button type="button" class="inline-flex items-center justify-center w-6 h-6 border-0 rounded-full bg-transparent text-primary-hover cursor-pointer transition-colors hover:bg-primary-200" (click)="effacerPrestataire()" aria-label="Retirer le filtre prestataire">
+                  <mat-icon class="!text-[15px] !w-[15px] !h-[15px]">close</mat-icon>
+                </button>
+              </div>
+
               <app-factures-list displayMode="PHARMACIE" [monthlyView]="true"
                                  [allowedStatuses]="pharmaAllowed"
+                                 [providerId]="pharmaProviderId"
                                  [showToolbar]="false"></app-factures-list>
             </div>
           </ng-template>
         </mat-tab>
 
-        <!-- ===================== ONGLET 3 : FACTURES STRUCTURES ===================== -->
+        <!-- ===================== ONGLET 3 : FACTURES STRUCTURES SANITAIRES =====================
+             Présentation PAR STRUCTURE (EPS et CS) ; un clic sur un centre de santé ouvre ses
+             factures et celles des postes de santé rattachés (filtres régime / mois / année). -->
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-ic">local_hospital</mat-icon> Factures Structures
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">local_hospital</mat-icon> Factures structures sanitaires
           </ng-template>
           <ng-template matTabContent>
             <div class="pt-2 md:pt-6">
-              <div class="seg-toggle seg-toggle--wide">
+              <div class="flex w-full max-w-[560px] max-md:max-w-none rounded-xl gap-1 p-1 bg-border-light mb-5">
                 <button *ngFor="let g of statusGroups" type="button"
-                        [class.active]="structStatut === g.key"
+                        class="flex-1 inline-flex items-center justify-center border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] max-md:py-2.5 max-md:px-2 rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap"
+                        [ngClass]="structStatut === g.key ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'"
                         (click)="selectStructStatut(g.key)">
                   {{ g.label }}
-                  <span class="seg-count" [class.danger]="g.danger" *ngIf="badgeCount(g)">{{ badgeCount(g) }}</span>
+                  <span class="inline-flex items-center justify-center font-bold min-w-[17px] h-[17px] px-[5px] ml-1.5 rounded-full text-white text-[10.5px] leading-none"
+                        [ngClass]="g.danger ? 'bg-warn' : 'bg-primary'" *ngIf="badgeCount(g)">{{ badgeCount(g) }}</span>
                 </button>
               </div>
-              <app-factures-list displayMode="STRUCTURE" [monthlyView]="true"
-                                 [allowedStatuses]="structAllowed"
-                                 [showToolbar]="false"></app-factures-list>
+              <app-regional-structures-factures [allowedStatuses]="structAllowed"></app-regional-structures-factures>
             </div>
           </ng-template>
         </mat-tab>

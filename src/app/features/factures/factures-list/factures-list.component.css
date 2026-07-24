@@ -34,7 +34,7 @@
   @apply bg-white;
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(47, 110, 84, 0.12);
+  box-shadow: var(--ring);
 }/* Grille des 12 mois */
 .monthly-grid {
   display: grid;
@@ -309,4 +309,16 @@
 }.pharmacy-section-title {
   @apply text-[17px] font-bold text-text-primary m-0;
 
+}
+
+/* ---------- États vides / chargement de la vue mensuelle ---------- */
+.empty-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.spin-icon {
+  animation: fl-spin 0.9s linear infinite;
+}
+@keyframes fl-spin {
+  to { transform: rotate(360deg); }
 }

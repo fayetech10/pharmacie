@@ -105,6 +105,13 @@
       </mat-form-field>
     </form>
 
+    <!-- Contrôles d'éligibilité par régime (âge 0-5 ans / Sésame, sexe césarienne) -->
+    <div class="lg-regime-error" *ngIf="erreurRegime"
+         style="display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 12px; border-radius:8px; background:#fef2f2; color:#b91c1c; font-size:13px;">
+      <mat-icon style="flex-shrink:0;">error_outline</mat-icon>
+      <span>{{ erreurRegime }}</span>
+    </div>
+
     <div class="lg-actions">
       <button mat-flat-button color="primary" [disabled]="!canGoNext()" (click)="nextStep()">Suivant</button>
     </div>
@@ -123,7 +130,7 @@
     <div class="lg-actions">
       <button mat-stroked-button (click)="prevStep()">Retour</button>
       <button mat-flat-button color="primary" [disabled]="isSubmitting" (click)="enregistrer()">
-        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer le dossier' }}
+        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer et générer' }}
       </button>
     </div>
   </mat-card>

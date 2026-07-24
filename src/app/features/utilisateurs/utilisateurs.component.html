@@ -28,19 +28,19 @@
         </div>
       </div>
 
-      <!-- Tableau -->
-      <mat-card class="table-card">
+      <!-- Tableau (desktop / tablette large) -->
+      <mat-card class="table-card desktop-only">
         <table mat-table [dataSource]="users" class="w-100">
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef> Utilisateur </th>
             <td mat-cell *matCellDef="let u">
-              <div class="user-cell">
-                <div class="user-avatar">
-                   {{ u.prenom?.charAt(0) }}{{ u.nom?.charAt(0) }}
+              <div class="flex items-center gap-3 py-2">
+                <div class="w-[38px] h-[38px] rounded-full text-white flex items-center justify-center text-[13px] font-bold uppercase bg-gradient-to-br from-primary to-accent shrink-0">
+                   {{ u.prenom.charAt(0) }}{{ u.nom.charAt(0) }}
                 </div>
                 <div>
-                  <span class="user-name">{{ u.prenom }} {{ u.nom }}</span>
-                  <span class="user-email">{{ u.email }}</span>
+                  <span class="font-semibold text-text-primary block">{{ u.prenom }} {{ u.nom }}</span>
+                  <span class="text-xs text-text-secondary block">{{ u.email }}</span>
                 </div>
               </div>
             </td>
@@ -49,7 +49,7 @@
           <ng-container matColumnDef="role">
             <th mat-header-cell *matHeaderCellDef> Rôle </th>
             <td mat-cell *matCellDef="let u">
-              <span class="role-badge" [ngClass]="u.role">
+              <span class="inline-flex py-1 px-2.5 rounded-[20px] text-[11px] font-semibold uppercase tracking-[0.03em]" [ngClass]="roleBadgeClass(u.role)">
                 {{ getRoleLabel(u.role) }}
               </span>
             </td>
@@ -68,7 +68,8 @@
           <ng-container matColumnDef="statut">
             <th mat-header-cell *matHeaderCellDef> Statut </th>
             <td mat-cell *matCellDef="let u">
-              <span class="status-indicator" [ngClass]="{ 'active': u.actif, 'inactive': !u.actif }">
+              <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-[#94A3B8]'">
+                <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-[#94A3B8]'"></span>
                 {{ u.actif ? 'Actif' : 'Inactif' }}
               </span>
             </td>
@@ -96,6 +97,43 @@
           <p>Aucun utilisateur enregistré</p>
         </div>
       </mat-card>
+
+      <!-- Cartes mobiles (≤ 768px) -->
+      <div class="m-cards" *ngIf="users.length">
+        <div class="m-card" *ngFor="let u of users">
+          <div class="m-card-top">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-[38px] h-[38px] rounded-full text-white flex items-center justify-center text-[13px] font-bold uppercase bg-gradient-to-br from-primary to-accent shrink-0">
+                {{ u.prenom.charAt(0) }}{{ u.nom.charAt(0) }}
+              </div>
+              <div class="min-w-0">
+                <div class="m-title">{{ u.prenom }} {{ u.nom }}</div>
+                <div class="m-sub break-words">{{ u.email }}</div>
+              </div>
+            </div>
+            <div class="m-actions">
+              <button class="action-btn" (click)="openEditModal(u)" title="Modifier"><mat-icon>edit</mat-icon></button>
+              <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+            </div>
+          </div>
+          <div class="m-row">
+            <span class="inline-flex py-1 px-2.5 rounded-[20px] text-[11px] font-semibold uppercase tracking-[0.03em]" [ngClass]="roleBadgeClass(u.role)">{{ getRoleLabel(u.role) }}</span>
+            <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-[#94A3B8]'">
+              <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-[#94A3B8]'"></span>{{ u.actif ? 'Actif' : 'Inactif' }}
+            </span>
+          </div>
+          <div class="m-row" *ngIf="getRegionNom(u.regionId) !== '-' || getRattachementNom(u) !== '-'">
+            <span *ngIf="getRegionNom(u.regionId) !== '-'"><mat-icon class="inline-ic">map</mat-icon>{{ getRegionNom(u.regionId) }}</span>
+            <span *ngIf="getRattachementNom(u) !== '-'"><mat-icon class="inline-ic">business</mat-icon>{{ getRattachementNom(u) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- État vide (mobile) -->
+      <div class="empty-state md:!hidden" *ngIf="users.length === 0">
+        <mat-icon>people_outline</mat-icon>
+        <p>Aucun utilisateur enregistré</p>
+      </div>
 
       <!-- Modal Form -->
       <div class="modal-overlay" *ngIf="showModal">
@@ -137,6 +175,10 @@
               <mat-form-field appearance="outline" class="w-100" *ngIf="!isEditMode">
                 <mat-label>Mot de passe</mat-label>
                 <input matInput type="password" formControlName="password">
+                <mat-hint>8 caractères minimum</mat-hint>
+                <mat-error *ngIf="userForm.get('password')?.hasError('minlength')">
+                  Le mot de passe doit contenir au moins 8 caractères
+                </mat-error>
               </mat-form-field>
 
 
@@ -186,4 +228,3 @@
         </mat-card>
       </div>
     </div>
-  

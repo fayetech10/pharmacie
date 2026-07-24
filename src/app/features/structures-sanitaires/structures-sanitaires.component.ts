@@ -15,7 +15,7 @@ import { StructureService } from '../../core/services/structure.service';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RegionService, Region } from '../../core/services/region.service';
-import { StructureSanitaire } from '../../core/models/structure.model';
+import { StructureSanitaire, ImportResult, typeEffectifStructure } from '../../core/models/structure.model';
 import { User } from '../../core/models/user.model';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { FacturesStructureListComponent } from '../espace-structure/factures-structure-list/factures-structure-list.component';
@@ -29,8 +29,7 @@ import { StructuresFacturesComponent } from '../structures-factures/structures-f
     MatIconModule, MatTableModule, MatInputModule, MatSelectModule, MatSnackBarModule,
     MatTabsModule, FacturesStructureListComponent, StructuresFacturesComponent
   ],
-  templateUrl: './structures-sanitaires.component.html',
-  styleUrls: ['./structures-sanitaires.component.css']
+  templateUrl: './structures-sanitaires.component.html'
 })
 export class StructuresSanitairesComponent implements OnInit {
   structures: StructureSanitaire[] = [];
@@ -59,19 +58,56 @@ export class StructuresSanitairesComponent implements OnInit {
   ) {
     this.form = this.fb.group({
       code: [''],
+      typeStructure: ['CS'],
       nom: ['', Validators.required],
       adresse: [''],
       telephone: [''],
       email: ['', Validators.email],
       regionId: ['', Validators.required],
       bcsuId: [''],
-      password: ['']
+      password: [''],
+      structureRattachementId: ['']
     });
-
-    if (!this.isServiceRegional) {
-      this.form.get('code')?.setValidators([Validators.required]);
-    }
   }
+
+  /** Type effectif (CS / EPS / PS) d'une structure, y compris les données existantes. */
+  typeDe(s: StructureSanitaire): string {
+    return typeEffectifStructure(s);
+  }
+
+  /** Couleurs de la puce « type » (portées en classes Tailwind — le JIT scanne aussi les .ts). */
+  typeBadgeClass(s: StructureSanitaire): string {
+    const t = this.typeDe(s);
+    if (t === 'PS') return 'bg-[#fef9c3] text-[#a16207]';
+    if (t === 'EPS') return 'bg-[#ede9fe] text-[#6d28d9]';
+    return 'bg-[#ecfeff] text-[#0e7490]';
+  }
+
+  /** Structures pouvant accueillir un poste de santé (CS et EPS uniquement). */
+  get structuresRattachement(): StructureSanitaire[] {
+    return this.structures.filter(s => this.typeDe(s) !== 'PS');
+  }
+
+  /** Le formulaire concerne-t-il un poste de santé (rattachement obligatoire) ? */
+  get isPosteSante(): boolean {
+    if (this.isEditMode && this.editingId) {
+      const s = this.structures.find(x => x.id === this.editingId);
+      if (s) return this.typeDe(s) === 'PS';
+    }
+    return this.form.get('typeStructure')?.value === 'PS';
+  }
+
+  getStructureNom(id?: string): string {
+    if (!id) return '—';
+    return this.structures.find(s => s.id === id)?.nom || '—';
+  }
+
+  /** Types d'établissement : déterminent le code auto-généré ({REGION}{TYPE}{NN}, ex: DKCS01). */
+  readonly typesStructure = [
+    { code: 'CS', label: 'Centre de santé' },
+    { code: 'EPS', label: 'Hôpital (EPS)' },
+    { code: 'PS', label: 'Poste de santé' }
+  ];
 
   get isServiceRegional(): boolean {
     return this.authService.isServiceRegional();
@@ -108,7 +144,7 @@ export class StructuresSanitairesComponent implements OnInit {
   getRegionNom(id: string): string {
     return this.regions.find(r => r.id === id)?.nom || '-';
   }
-  getBcsuNom(id: string): string {
+  getBcsuNom(id?: string): string {
     const u = this.bcsuUsers.find(x => x.id === id);
     return u ? `${u.prenom} ${u.nom}` : '-';
   }
@@ -116,8 +152,8 @@ export class StructuresSanitairesComponent implements OnInit {
   openAdd() {
     this.isEditMode = false;
     this.editingId = null;
-    this.form.reset();
-    
+    this.form.reset({ typeStructure: 'CS' });
+
     if (this.isServiceRegional) {
       const userRegionId = this.authService.getCurrentUser()?.regionId;
       if (userRegionId) {
@@ -133,7 +169,8 @@ export class StructuresSanitairesComponent implements OnInit {
     this.editingId = s.id;
     this.form.patchValue({
       code: s.code, nom: s.nom, adresse: s.adresse, telephone: s.telephone,
-      email: s.email, regionId: s.regionId, bcsuId: s.bcsuId, password: ''
+      email: s.email, regionId: s.regionId, bcsuId: s.bcsuId, password: '',
+      structureRattachementId: s.structureRattachementId || ''
     });
     this.showModal = true;
   }
@@ -143,11 +180,21 @@ export class StructuresSanitairesComponent implements OnInit {
   submit() {
     if (this.form.invalid) return;
     const val = { ...this.form.value };
-    
-    if (this.isServiceRegional && !val.code) {
-      val.code = 'STR_' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+
+    // Poste de santé : rattachement à une structure (CS/EPS) obligatoire.
+    if (this.isPosteSante && !val.structureRattachementId) {
+      this.snackBar.open('Un poste de santé doit être rattaché à une structure sanitaire (CS ou EPS)', 'Fermer', { duration: 5000 });
+      return;
     }
-    
+    if (!this.isPosteSante) {
+      val.structureRattachementId = '';
+    }
+
+    // Création : code laissé vide → généré automatiquement par le backend ({REGION}{TYPE}{NN}).
+    if (!this.isEditMode) {
+      val.code = '';
+    }
+
     const obs = this.isEditMode && this.editingId
       ? this.structureService.updateStructure(this.editingId, val)
       : this.structureService.createStructure(val);
@@ -159,6 +206,94 @@ export class StructuresSanitairesComponent implements OnInit {
       },
       error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
     });
+  }
+
+  // ===== Import Excel des postes de santé =====
+  importing = false;
+  purging = false;
+  importResult: ImportResult | null = null;
+
+  onImportFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.importing = true;
+    this.importResult = null;
+    this.structureService.importPostes(file).subscribe({
+      next: (result) => {
+        this.importing = false;
+        this.importResult = result;
+        this.load();
+        this.snackBar.open(`${result.importes} poste(s) de santé importé(s), ${result.echecs} échec(s)`, 'Fermer', { duration: 5000 });
+      },
+      error: (err) => {
+        this.importing = false;
+        this.snackBar.open('Erreur import : ' + (err.error?.message || err.message), 'Fermer', { duration: 6000, panelClass: 'error-snackbar' });
+      }
+    });
+    input.value = '';
+  }
+
+  telechargerModeleImport() {
+    this.structureService.downloadModeleImportPostes().subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele_import_postes_sante.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+    });
+  }
+
+  /** Export Excel des structures avec leurs identifiants de connexion. */
+  exporterIdentifiants() {
+    this.structureService.exportStructures().subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'structures_identifiants.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.snackBar.open('Export des identifiants lancé', 'Fermer', { duration: 2500 });
+      },
+      error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+    });
+  }
+
+  /**
+   * Supprime les factures de structure restées en brouillon (jamais envoyées).
+   * Action irréversible : confirmation explicite requise.
+   */
+  purgerBrouillons() {
+    this.confirm.ask({
+      title: 'Purger les brouillons de factures',
+      message: 'Toutes les factures de structure encore en brouillon (jamais envoyées) seront '
+        + 'définitivement supprimées. Les factures déjà transmises ne sont pas concernées. Continuer ?',
+      confirmText: 'Purger',
+      cancelText: 'Annuler',
+      danger: true
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.purging = true;
+      this.structureService.purgerBrouillons().subscribe({
+        next: (res) => {
+          this.purging = false;
+          this.snackBar.open(`${res.supprimees} brouillon(s) supprimé(s)`, 'Fermer', { duration: 4000 });
+        },
+        error: (err) => {
+          this.purging = false;
+          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
+  fermerImportResult() {
+    this.importResult = null;
   }
 
   delete(s: StructureSanitaire) {

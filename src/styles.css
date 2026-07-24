@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+/* Une seule famille (Inter) : recommandation « dashboards / admin » du design system
+   — rendu suisse, neutre et fonctionnel — et une police de moins à télécharger. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* Tailwind CSS — base/components/utilities.
    (preflight désactivé dans tailwind.config.js : le reset reste maison.) */
@@ -19,61 +21,79 @@
 }
 
 /* ============================================================
-   DESIGN SYSTEM v2 — CSU Pharmacie
-   Structure « app » : topbar navy · contenu carte · bottom nav
-   Vert CSU pour les actions · or pour la pagination
+   DESIGN SYSTEM v4 — CSU Pharmacie
+   Direction « Minimalism / Swiss » appliquée à un produit dense
+   (dashboards + tables). Trois règles tiennent tout le thème :
+
+     1. La SÉPARATION se fait au trait, pas à l'ombre.
+        Les surfaces sont délimitées par un filet 1px ; les ombres
+        sont réservées à ce qui flotte réellement (modales, menus).
+     2. La COULEUR est porteuse de sens, jamais décorative.
+        L'émeraude signale l'action et l'état actif ; le reste de
+        l'interface est neutre pour laisser parler les données.
+     3. Une seule famille typographique (Inter), une seule échelle
+        d'espacement (4px), un seul jeu de rayons.
+
+   Les composants consomment ces tokens : ils sont la source de
+   vérité unique du thème.
    ============================================================ */
 :root {
-  /* Couleurs de marque — échelle émeraude unique (source de vérité du vert) */
-  --primary: #2F6E54;       /* vert forêt atténué — texte & aplats (non vif) */
-  --primary-hover: #214f3c; /* plus foncé */
-  --primary-light: #F0F6F2; /* vert très doux — fonds de puces / survols */
-  --primary-100: #E1ECE5;   /* vert doux */
-  --primary-200: #C2DACB;   /* bordure verte atténuée */
-  --primary-dark: #163628;  /* vert profond */
-  /* accent & success harmonisés sur le vert atténué */
-  --accent: #356B53;
-  --accent-light: #E1ECE5;
-  --warn: #EF4444;
-  --warn-light: #FEE2E2;
-  --success: #2F6E54;
-  --success-light: #E1ECE5;
+  /* Couleurs de marque — émeraude affirmé (actions, liens, états) */
+  --primary: #047857;       /* emerald-700 — boutons & accents */
+  --primary-hover: #065F46; /* emerald-800 */
+  --primary-light: #ECFDF5; /* emerald-50 — fonds de puces / survols */
+  --primary-100: #D1FAE5;   /* emerald-100 */
+  --primary-200: #A7F3D0;   /* emerald-200 — bordures teintées */
+  --primary-dark: #064E3B;  /* emerald-900 */
+  /* accent & success harmonisés */
+  --accent: #0D9488;
+  --accent-light: #F0FDFA;
+  --warn: #DC2626;
+  --warn-light: #FEF2F2;
+  --success: #059669;
+  --success-light: #ECFDF5;
 
-  /* Structure (topbar, bottom nav) — vert atténué, sobre */
-  --ink: #2F6E54;       
-  --ink-deep: #1D4534;  
-  --ink-soft: #3A7A5E;  
-  --ink-text: #E1ECE5;  
-  /* Dégradé sobre pour les surfaces structurelles (topbar / bottom nav) */
-  --ink-gradient: linear-gradient(135deg, #2F6E54 0%, #22513D 60%, #153427 100%);
+  /* Chrome sombre (sidebar desktop, topbar & bottom nav mobiles) */
+  --ink: #0D1F1A;           /* quasi-noir émeraude */
+  --ink-deep: #071310;
+  --ink-soft: #12332A;      /* surface active sur fond sombre */
+  --ink-text: #9DB4AB;      /* texte secondaire sur fond sombre */
+  --ink-gradient: linear-gradient(180deg, #0E211B 0%, #0A1713 100%);
 
-  /* Accent secondaire (pagination) — aligné sur le vert */
+  /* Accent secondaire (pagination) — aligné sur la marque */
   --gold: var(--primary);
   --gold-hover: var(--primary-hover);
   --gold-light: var(--primary-light);
 
-  /* Surfaces & texte — fond vert nuancé léger, plus épuré */
-  --bg: #F4F7F5;
+  /* Surfaces & texte — neutres purs (le fond ne tire plus vers le bleu) */
+  --bg: #FAFAFA;
   --card-bg: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #94A3B8;
-  --border: #E2EAE4;
-  --border-light: #F0F5F2;
-  --field-bg: #F8FAF9;
+  --text-primary: #101828;
+  --text-secondary: #475467;
+  --text-muted: #98A2B3;
+  --border: #E4E7EC;
+  --border-light: #F2F4F7;
+  /* Filet appuyé : sépare l'en-tête d'un tableau de son corps sans aplat de fond. */
+  --border-strong: #D0D5DD;
+  --field-bg: #F9FAFB;
 
-  /* Élévation simplifiée et moderne */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.03);
-  --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  /* Élévation — volontairement quasi nulle.
+     Une carte posée dans la page se délimite au filet ; seuls les éléments qui
+     FLOTTENT (modales, menus, infobulles) portent une ombre perceptible. */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.03);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 16px 32px -8px rgba(16, 24, 40, 0.12);
 
-  /* Rayons & rythme */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
+  /* Anneau de focus — un seul token pour tout le projet (accessibilité clavier). */
+  --ring: 0 0 0 3px rgba(4, 120, 87, 0.18);
+
+  /* Rayons & rythme — resserrés : un rayon plus court lit « précis » */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
   --radius-full: 999px;
-  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Échelle d'espacement (4px) */
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
@@ -90,7 +110,8 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Inter partout : interface ET titres. Une seule voix typographique. */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
   font-size: 14px;
@@ -99,7 +120,29 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4 { letter-spacing: -0.02em; }
+/* La hiérarchie vient de la taille, de la graisse et de l'espace — pas d'une
+   seconde police. Le resserrage optique croît avec la taille du titre. */
+h1, h2, h3, h4 {
+  font-family: inherit;
+  letter-spacing: -0.018em;
+}
+h1 { letter-spacing: -0.025em; }
+
+/* Focus clavier visible et homogène sur tout le projet (règle a11y n°1).
+   `:focus-visible` n'apparaît qu'à la navigation clavier, jamais au clic souris. */
+:where(a, button, [role='button'], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Design system partagé dans la couche « components » de Tailwind :
    apparence identique, mais surclassable par les utilitaires dans les écrans. */
@@ -117,15 +160,15 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   margin-bottom: var(--sp-6);
 }
 .page-head h1 {
-  font-size: 26px;
-  font-weight: 800;
-  margin: 0 0 var(--sp-1);
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 2px;
   color: var(--text-primary);
 }
 .page-head p {
   color: var(--text-secondary);
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
 }
 .page-head-actions {
   display: flex;
@@ -136,53 +179,50 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
 /* Compat : anciens en-têtes encore utilisés */
 .page-header { margin-bottom: var(--sp-6); }
-.page-header h1 { font-size: 26px; font-weight: 800; margin: 0 0 var(--sp-1); color: var(--text-primary); }
-.page-header p { color: var(--text-secondary); margin: 0; font-size: 15px; }
+.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--text-primary); }
+.page-header p { color: var(--text-secondary); margin: 0; font-size: 14px; }
 
 /* ============================================================
    CARTES / SECTIONS
    ============================================================ */
+/* Une carte est posée à plat : c'est le filet qui la délimite, pas une ombre. */
 .card,
 .section-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
-  margin-bottom: var(--sp-6);
-  transition: box-shadow var(--transition), transform var(--transition);
-}
-.card:hover,
-.section-card:hover {
-  /* No hover effect */
+  margin-bottom: var(--sp-5);
 }
 
+/* En-tête de section : pas d'aplat de fond, un simple filet de séparation. */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: var(--sp-5) var(--sp-6);
+  padding: var(--sp-4) var(--sp-5);
   border-bottom: 1px solid var(--border-light);
   flex-wrap: wrap;
-  background: #FCFDFD;
+  background: transparent;
 }
 .section-title-group { display: flex; align-items: center; gap: var(--sp-3); }
-.section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.section-title-group h2 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0; }
 .section-title-group p { margin: 2px 0 0; font-size: 13px; color: var(--text-secondary); }
+/* Icône de section : discrète et neutre. La pastille émeraude était un accent
+   décoratif répété sur chaque carte — l'émeraude est réservée aux actions. */
 .section-icon {
-  color: var(--primary);
-  background: var(--primary-light);
-  border-radius: 10px;
-  padding: 6px;
+  color: var(--text-secondary);
+  background: transparent;
+  border-radius: var(--radius-sm);
   font-size: 20px;
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.section-body { padding: var(--sp-6); }
+.section-body { padding: var(--sp-5); }
 
 .table-card { padding: 0 !important; overflow: hidden; }
 }
@@ -192,19 +232,22 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
    ============================================================ */
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-transparent text-sm font-semibold cursor-pointer whitespace-nowrap no-underline transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 border border-transparent text-sm font-semibold cursor-pointer whitespace-nowrap no-underline;
+    border-radius: var(--radius-sm);
     font-family: inherit;
-    transition: all var(--transition);
+    transition: background-color var(--transition), border-color var(--transition), color var(--transition);
   }
   .btn:disabled { @apply opacity-[0.55] cursor-not-allowed; }
-  .btn:active:not(:disabled) { transform: scale(0.98); }
+  /* Retour au clic sans déplacement de la mise en page (pas de scale sur la boîte). */
+  .btn:active:not(:disabled) { transform: translateY(1px); }
   .btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  .btn-sm { @apply h-9 px-3 text-[13px] rounded-lg; }
+  .btn-sm { @apply h-9 px-3 text-[13px]; border-radius: var(--radius-sm); }
   .btn-sm mat-icon { font-size: 16px; width: 16px; height: 16px; }
   .btn-block { @apply w-full; }
 
+  /* Aplat franc : ni ombre portée, ni biseau interne. */
   .btn-primary { @apply bg-primary text-white; }
-  .btn-primary:hover:not(:disabled) { @apply bg-primary-hover shadow-sm; }
+  .btn-primary:hover:not(:disabled) { @apply bg-primary-hover; }
 
   .btn-outline { @apply bg-white text-text-primary border-border; }
   .btn-outline:hover:not(:disabled) { @apply border-primary text-primary bg-primary-light; }
@@ -239,13 +282,15 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 /* ============================================================
    BADGES DE STATUT (alignés sur l'enum StatutFacture)
    ============================================================ */
+/* Badge de statut : la pastille + le texte portent le sens (jamais la couleur
+   seule). Bordure allégée — `currentColor` la rendait aussi soutenue que le texte. */
 .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid currentColor;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -258,6 +303,8 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   background: currentColor;
 }
 .status-BROUILLON  { background: #F1F5F9; color: #64748B; border-color: #DBE3EC; }
+.status-SOUMISE_CS { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+.status-REJETEE_CS { background: #FDF2F8; color: #DB2777; border-color: #FBCFE8; }
 .status-ENVOYEE    { background: #E6F4EA; color: #137333; border-color: #CEEAD6; }
 .status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); border-color: var(--primary-200); }
 .status-REJETEE_SR { background: #FFF7ED; color: #EA580C; border-color: #FED7AA; }
@@ -274,35 +321,52 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   gap: var(--sp-4);
   margin-bottom: var(--sp-6);
 }
+/* Tuile d'indicateur : le CHIFFRE est le sujet. L'icône passe au second plan,
+   en filet neutre, pour ne pas concurrencer la donnée. */
 .kpi-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition);
+  gap: var(--sp-3);
+  transition: border-color var(--transition);
 }
-.kpi-card:hover { /* Removed translate */ }
 .kpi-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--text-secondary);
+  background: var(--field-bg);
+  border: 1px solid var(--border-light);
 }
-.kpi-icon.blue  { color: #2563EB; }
+.kpi-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
+/* Variantes conservées pour la compatibilité, mais désaturées : la teinte
+   reste un repère, elle ne crie plus. Le sens passe par le libellé. */
+.kpi-icon.blue  { color: #1D4ED8; }
 .kpi-icon.green { color: var(--primary); }
-.kpi-icon.amber { color: #D97706; }
-.kpi-icon.red   { color: #EF4444; }
+.kpi-icon.amber { color: #B45309; }
+.kpi-icon.red   { color: #DC2626; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
-.kpi-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
-.kpi-value small { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-.kpi-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.kpi-value small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.kpi-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 3px;
+}
 
 @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) {
@@ -341,22 +405,21 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 }
 .search-box input {
   width: 100%;
-  height: 48px;
+  height: 42px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--field-bg);
-  padding: 0 var(--sp-4) 0 44px;
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  padding: 0 var(--sp-4) 0 42px;
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   color: var(--text-primary);
-  transition: all var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 .search-box input::placeholder { color: var(--text-muted); }
 .search-box input:focus {
   outline: none;
   border-color: var(--primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+  box-shadow: var(--ring);
 }
 .filter-field { min-width: 150px; }
 
@@ -653,7 +716,11 @@ mat-icon.inline-ic {
   .page-head h1 { font-size: 21px; }
   .page-head p { font-size: 13.5px; }
   .page-head-actions { width: 100%; }
-  .page-head-actions .btn { flex: 1; min-width: 0; }
+  /* Boutons d'en-tête sur mobile : flex-basis = largeur du contenu (auto) pour
+     qu'ils PASSENT À LA LIGNE au lieu de s'écraser (labels longs + nowrap → les
+     boutons se chevauchaient). flex-grow:1 = ils remplissent leur ligne, donc un
+     en-tête à 1 ou 2 boutons reste en pleine largeur comme avant. */
+  .page-head-actions .btn { flex: 1 1 auto; }
   .filter-strip { gap: var(--sp-2); margin-bottom: var(--sp-3); }
   .filter-field { flex: 1; min-width: calc(50% - var(--sp-2)); }
   .search-box { min-width: 100%; }
@@ -750,12 +817,26 @@ mat-icon.inline-ic {
   .mat-mdc-paginator-range-label { margin-right: var(--sp-2) !important; font-size: 12.5px; }
 }
 
+/* Sidebar = navigation UNIQUE sur desktop : les barres d'onglets in-page des
+   espaces (désormais répliquées dans la sidebar avec ?tab=N) sont masquées
+   ≥768px. Elles restent visibles sur mobile, où la bottom nav + « Plus »
+   partagent la navigation. Le contenu des onglets, lui, reste piloté par le
+   query param (les composants s'abonnent à queryParamMap). */
+@media (min-width: 768px) {
+  app-espace-region .mat-mdc-tab-header,
+  app-espace-central .mat-mdc-tab-header,
+  app-espace-bcsu .custom-tabs-nav,
+  app-espace-structure .custom-tabs-nav {
+    display: none;
+  }
+}
+
 /* --- Onglets en « pills » segmentées --- */
 .mat-mdc-tab-group { --mat-tab-header-divider-height: 0; }
 .mat-mdc-tab-header { border-bottom: none !important; }
 .mat-mdc-tab-labels {
   gap: 6px;
-  background: #E9EEF5;
+  background: #EEF1F5;
   border-radius: var(--radius);
   padding: 4px;
   width: max-content;
@@ -871,14 +952,8 @@ button, a { transition: all var(--transition); }
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
   margin-top: var(--sp-4);
-  transition: box-shadow var(--transition);
-}
-
-.glass-table-container:hover {
-  box-shadow: var(--shadow);
 }
 
 /* Défilement horizontal contenu : la page ne scrolle jamais latéralement. */
@@ -893,35 +968,43 @@ button, a { transition: all var(--transition); }
   background: transparent !important;
 }
 
+/* En-tête sans aplat : un filet appuyé suffit à le détacher du corps. */
 .premium-table thead tr {
-  background: #F8FAFC !important;
-  border-bottom: 1px solid var(--border) !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-strong) !important;
 }
 
 .premium-table th.mat-header-cell {
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 14px 20px;
+  letter-spacing: 0.05em;
+  padding: 12px 20px;
   border-bottom: none;
+  white-space: nowrap;
 }
 
 .premium-table td.mat-cell {
-  padding: 14px 20px;
+  padding: 13px 20px;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-light);
   transition: background-color var(--transition);
 }
+
+/* Chiffres alignés verticalement dans les colonnes de données. */
+.premium-table td.mat-cell.num,
+.premium-table th.mat-header-cell.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .premium-table tbody tr {
   transition: background-color var(--transition);
   background: transparent !important;
 }
 
+/* Survol de ligne neutre : la teinte émeraude sur CHAQUE ligne survolée
+   banalisait la couleur d'action et alourdissait la lecture des tableaux. */
 .premium-table tbody tr:hover {
-  background-color: var(--primary-light) !important;
+  background-color: var(--field-bg) !important;
 }
 
 .premium-table tbody tr:last-child td {

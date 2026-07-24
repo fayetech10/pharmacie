@@ -1,5 +1,7 @@
 export enum StatutFacture {
   BROUILLON = 'BROUILLON',
+  SOUMISE_CS = 'SOUMISE_CS',
+  REJETEE_CS = 'REJETEE_CS',
   ENVOYEE = 'ENVOYEE',
   VALIDEE_SR = 'VALIDEE_SR',
   REJETEE_SR = 'REJETEE_SR',
@@ -24,6 +26,9 @@ export interface LigneFacture {
   montant: number;
   statutLigne?: StatutLigne;
   motifRejet?: string;
+  // Vrai si le pharmacien a ajouté lui-même ce médicament (non répertorié) :
+  // alimente la colonne « Observation » des factures Excel (à valider par la SEN-CSU).
+  ajouteParPharmacien?: boolean;
   // Pièces justificatives du dossier patient (images base64 / data URL)
   ticketCaisse?: string;
   bonCommande?: string;
@@ -37,6 +42,15 @@ export interface LigneFacture {
 export interface LigneDecisionRequest {
   accepter: boolean;
   motif?: string;
+}
+
+/**
+ * Projection minimale d'une facture (identifiant + statut) servant les badges de
+ * notification : évite de transférer les lignes de facture à chaque navigation.
+ */
+export interface FactureStatutLight {
+  id: string;
+  statut: string;
 }
 
 export interface HistoriqueAction {

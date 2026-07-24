@@ -84,6 +84,11 @@
 
       <div class="paper-signature">
         <strong>Signature et cachet</strong>
+        <div class="paper-signature-images" *ngIf="signatureImage || cachetImage"
+             style="display:flex; gap:24px; align-items:flex-end; margin-top:6px;">
+          <img *ngIf="signatureImage" [src]="signatureImage" alt="Signature" style="max-height:60px; max-width:150px;">
+          <img *ngIf="cachetImage" [src]="cachetImage" alt="Cachet" style="max-height:60px; max-width:150px;">
+        </div>
       </div>
 
       <div class="paper-footer">

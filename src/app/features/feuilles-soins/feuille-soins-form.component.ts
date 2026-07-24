@@ -27,8 +27,7 @@ import { FeuilleSoinsRequest } from '../../core/models/feuille-soins.model';
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule, MatCardModule,
     MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule
   ],
-  templateUrl: './feuille-soins-form.component.html',
-  styleUrls: ['./feuille-soins-form.component.css']
+  templateUrl: './feuille-soins-form.component.html'
 })
 export class FeuilleSoinsFormComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;

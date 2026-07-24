@@ -1,9 +1,15 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { FactureEventsService } from './facture-events.service';
-import { Facture, FactureRequest, ValidationRequest, LigneDecisionRequest } from '../models/facture.model';
+import { Facture, FactureRequest, ValidationRequest, LigneDecisionRequest, FactureStatutLight } from '../models/facture.model';
 import { Observable, tap } from 'rxjs';
 import { HttpParams } from '@angular/common/http';
+
+/** Résultat du contrôle de délivrance mensuelle (voir FactureService.controlerDelivrance). */
+export interface ControleDelivrance {
+  quantiteDejaDelivree: number;
+  delivrances: { pharmacieNom?: string; medicament?: string; quantite: number }[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +33,14 @@ export class FactureService {
     return this.api.get<Facture[]>('/factures', { params: queryParams });
   }
 
+  /**
+   * Identifiants + statuts des factures visibles, pour les badges de notification.
+   * Charge utile minimale et sans overlay de chargement (rafraîchissement discret).
+   */
+  getStatuts(): Observable<FactureStatutLight[]> {
+    return this.api.get<FactureStatutLight[]>('/factures/statuts', { skipLoading: true });
+  }
+
   getById(id: string): Observable<Facture> {
     return this.api.get<Facture>(`/factures/${id}`);
   }
@@ -41,6 +55,18 @@ export class FactureService {
 
   getRetards(): Observable<Facture[]> {
     return this.api.get<Facture[]>('/factures/retards');
+  }
+
+  /**
+   * Contrôle « médicament déjà délivré durant le mois » sur la base NATIONALE
+   * (toutes pharmacies, toutes régions). Le bénéficiaire est identifié par son
+   * matricule et, à défaut, par son nom (cas d'un bon de commande physique).
+   */
+  controlerDelivrance(req: { matricule?: string; nom?: string; medicament: string }): Observable<ControleDelivrance> {
+    let params = new HttpParams().set('medicament', req.medicament);
+    if (req.matricule) params = params.set('matricule', req.matricule);
+    if (req.nom) params = params.set('nom', req.nom);
+    return this.api.get<ControleDelivrance>('/factures/controle-delivrance', { params, skipLoading: true });
   }
 
   addLignesToCurrent(lignes: any[]): Observable<Facture> {

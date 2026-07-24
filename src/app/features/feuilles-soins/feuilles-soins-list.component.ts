@@ -19,8 +19,7 @@ import { REGIME_LABELS, REGIME_OPTIONS } from '../../core/models/bcsu.model';
     CommonModule, FormsModule, RouterModule, MatCardModule,
     MatButtonModule, MatIconModule, MatInputModule, MatSnackBarModule
   ],
-  templateUrl: './feuilles-soins-list.component.html',
-  styleUrls: ['./feuilles-soins-list.component.css']
+  templateUrl: './feuilles-soins-list.component.html'
 })
 export class FeuillesSoinsListComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
@@ -115,6 +114,17 @@ export class FeuillesSoinsListComponent implements OnInit {
       case StatutFeuilleSoins.ANNULEE: return 'danger';
       case StatutFeuilleSoins.EMISE: return 'info';
       default: return 'neutral';
+    }
+  }
+
+  /** Couleurs du badge de statut (portées en classes Tailwind — le JIT scanne aussi les .ts). */
+  badgeClass(statut: StatutFeuilleSoins): string {
+    switch (this.statutTone(statut)) {
+      case 'success': return 'bg-[#DCFCE7] text-[#15803D]';
+      case 'warn': return 'bg-[#FEF3C7] text-[#92400E]';
+      case 'danger': return 'bg-[#FEE2E2] text-[#B91C1C]';
+      case 'info': return 'bg-primary-light text-primary';
+      default: return 'bg-[#F1F5F9] text-text-secondary';
     }
   }
 

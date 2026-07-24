@@ -1,0 +1,540 @@
+/* ============================================================
+   TABLEAU DE BORD RÉGIONAL
+   Surfaces neutres, marques fines, grille en hairline pleine.
+   Toutes les couleurs viennent des tokens :root (design system v3),
+   sauf la palette de données, validée et documentée dans le .ts.
+   ============================================================ */
+.rd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5, 20px);
+}
+
+/* ---------- Barre de filtres (une seule rangée, au-dessus de tout) ---------- */
+.rd-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rd-toolbar-left { display: flex; gap: 12px; flex-wrap: wrap; }
+.rd-field { display: flex; flex-direction: column; gap: 5px; }
+.rd-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.rd-select {
+  height: 38px;
+  min-width: 120px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.rd-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.rd-btn-ghost, .rd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.rd-btn-ghost:hover, .rd-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.rd-btn-ghost mat-icon, .rd-btn mat-icon {
+  font-size: 18px; width: 18px; height: 18px;
+}
+
+/* ---------- Rechargement : on garde le rendu, sans clignotement ---------- */
+.rd-body { display: flex; flex-direction: column; gap: var(--sp-5, 20px); }
+.rd-body--refreshing { opacity: 0.55; transition: opacity var(--transition); }
+
+/* ---------- Chiffre phare + indicateurs ---------- */
+.rd-head-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .rd-head-grid { grid-template-columns: minmax(300px, 0.9fr) minmax(0, 2fr); }
+}
+
+.rd-hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 22px 24px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--ink-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+.rd-hero-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.rd-hero-card:focus-visible { outline: 2px solid #34D399; outline-offset: 2px; }
+.rd-hero-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-text);
+}
+/* Flèche « ouvrir » : discrète, affirmée au survol / focus. */
+.rd-go {
+  font-size: 15px; width: 15px; height: 15px;
+  opacity: 0;
+  transition: opacity var(--transition), transform var(--transition);
+}
+.rd-hero-card:hover .rd-go,
+.rd-hero-card:focus-visible .rd-go { opacity: 1; transform: translateX(2px); }
+/* Chiffre phare : même sans que le reste, figures proportionnelles. */
+.rd-hero-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 48px;
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+}
+.rd-hero-unit { font-size: 15px; font-weight: 600; color: var(--ink-text); }
+.rd-hero-sub { font-size: 12.5px; color: var(--ink-text); margin-top: 2px; }
+.rd-hero-meter {
+  height: 6px;
+  margin-top: 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.rd-hero-meter-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: #34D399;
+  transition: width var(--transition);
+}
+
+.rd-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 1280px) {
+  .rd-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.rd-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.rd-kpi:hover {
+  border-color: var(--primary-200);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.rd-kpi:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.rd-kpi:hover .rd-go,
+.rd-kpi:focus-visible .rd-go { opacity: 1; transform: translateX(2px); }
+.rd-kpi .rd-go { margin-left: auto; color: var(--primary); }
+.rd-kpi-top { display: flex; align-items: center; gap: 7px; }
+.rd-kpi-ic {
+  font-size: 17px; width: 17px; height: 17px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.rd-kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+.rd-kpi-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+.rd-kpi-suffix { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.rd-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.rd-kpi-delta mat-icon { font-size: 15px; width: 15px; height: 15px; }
+.rd-kpi-delta.up { color: var(--success); }
+.rd-kpi-delta.down { color: var(--warn); }
+.rd-kpi-delta-cap { font-weight: 500; color: var(--text-muted); }
+
+/* ---------- Cartes ---------- */
+.rd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .rd-grid { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+}
+.rd-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+.rd-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rd-card-head h2 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.rd-card-head p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.rd-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rd-link:hover { text-decoration: underline; }
+
+/* ---------- Graphique ---------- */
+.rd-chart-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.rd-chart-total {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+}
+.rd-chart-total small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.rd-chart-peak { font-size: 12.5px; color: var(--text-secondary); }
+/* Hauteur incluant la bande des libellés d'axe (pas de scroll interne). */
+.rd-chart { position: relative; height: 290px; }
+
+/* ---------- Parcours des factures (part-à-tout) ---------- */
+.rd-stack {
+  display: flex;
+  gap: 2px;                    /* l'écart en couleur de surface sépare les segments */
+  height: 14px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--border-light);
+}
+.rd-stack-seg { min-width: 3px; transition: flex-grow var(--transition), opacity var(--transition); }
+.rd-stack-seg.is-clickable { cursor: pointer; }
+.rd-stack-seg.is-clickable:hover { opacity: 0.82; }
+
+.rd-legend {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rd-legend li { display: block; }
+
+/* Ligne de statut = bouton pleine largeur : cible de clic généreuse (≈40px),
+   accessible au clavier, contrairement aux segments fins de la barre. */
+.rd-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 8px 9px 2px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.rd-legend li:last-child .rd-legend-item { border-bottom: 0; }
+.rd-legend-item:hover:not(:disabled) { background: var(--field-bg); }
+.rd-legend-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.rd-legend-item:disabled { cursor: default; opacity: 0.55; }
+/* Chevron : signale l'ouverture, discret puis affirmé au survol. */
+.rd-legend-go {
+  font-size: 18px; width: 18px; height: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+}
+.rd-legend-item:hover:not(:disabled) .rd-legend-go,
+.rd-legend-item:focus-visible .rd-legend-go { opacity: 1; color: var(--primary); }
+.rd-legend-item:disabled .rd-legend-go { display: none; }
+.rd-legend-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rd-legend-ic {
+  font-size: 16px; width: 16px; height: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.rd-legend-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.rd-legend-count {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.rd-legend-share {
+  min-width: 42px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rd-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.rd-cta:hover { background: var(--primary-hover); }
+.rd-cta mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+/* ---------- Classement des prestataires ---------- */
+.rd-rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rd-rank li { display: block; }
+/* Ligne = bouton pleine largeur : ouvre les factures du prestataire. */
+.rd-rank-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.25fr) minmax(0, 2fr) auto auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 8px 11px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.rd-rank li:last-child .rd-rank-row { border-bottom: 0; }
+.rd-rank-row:hover { background: var(--field-bg); }
+.rd-rank-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.rd-rank-go {
+  font-size: 18px; width: 18px; height: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+}
+.rd-rank-row:hover .rd-rank-go,
+.rd-rank-row:focus-visible .rd-rank-go { opacity: 1; color: var(--primary); }
+.rd-rank-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-rank-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--border-light);
+  overflow: hidden;
+}
+/* Marque fine : extrémité arrondie 4px, carrée à la ligne de base. */
+.rd-rank-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 0 4px 4px 0;
+  transition: width var(--transition);
+}
+.rd-rank-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-align: right;
+}
+.rd-rank-value small { font-size: 10.5px; font-weight: 600; color: var(--text-muted); }
+.rd-rank-count {
+  min-width: 62px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .rd-rank-row { grid-template-columns: 1fr auto auto; row-gap: 6px; }
+  .rd-rank-track { grid-column: 1 / -1; order: 3; }
+  .rd-rank-count { display: none; }
+}
+/* Appareils tactiles : aucun survol possible, les affordances de clic restent visibles. */
+@media (hover: none) {
+  .rd-go, .rd-rank-go, .rd-legend-go { opacity: 1; }
+}
+
+/* ---------- Vue tabulaire (jumelle accessible du graphique) ---------- */
+.rd-table-wrap { overflow-x: auto; }
+.rd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rd-table th, .rd-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-light);
+}
+.rd-table thead th {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+.rd-table tbody th { font-weight: 600; color: var(--text-primary); }
+.rd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.rd-table tbody td { color: var(--text-secondary); }
+.rd-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- États vides & squelette ---------- */
+.rd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.rd-empty--inline { padding: 30px 16px; }
+.rd-empty mat-icon { font-size: 34px; width: 34px; height: 34px; opacity: 0.55; }
+.rd-empty p { margin: 0; font-size: 13.5px; color: var(--text-secondary); }
+
+.rd-skeleton { display: flex; flex-direction: column; gap: 16px; }
+.rd-sk-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 1280px) { .rd-sk-row { grid-template-columns: repeat(4, 1fr); } }
+.rd-sk {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--border-light) 25%, #EDEFF3 37%, var(--border-light) 63%);
+  background-size: 400% 100%;
+  animation: rd-shimmer 1.4s ease infinite;
+}
+.rd-sk-hero { height: 148px; }
+.rd-sk-tile { height: 96px; }
+.rd-sk-chart { height: 300px; }
+@keyframes rd-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-sk { animation: none; }
+  .rd-stack-seg, .rd-rank-bar, .rd-hero-meter-fill { transition: none; }
+}

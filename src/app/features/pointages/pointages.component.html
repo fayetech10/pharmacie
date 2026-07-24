@@ -26,7 +26,36 @@
     </div>
   </mat-card>
 
-  <div class="table-wrap">
+  <!-- Chargement -->
+  <div class="pointages-state" *ngIf="loading">
+    <mat-icon class="pointages-spin">autorenew</mat-icon>
+    <p>Chargement des pointages…</p>
+  </div>
+
+  <!-- Erreur (auparavant silencieuse : le tableau restait vide sans explication) -->
+  <div class="pointages-state pointages-state--error" *ngIf="!loading && erreur">
+    <mat-icon>cloud_off</mat-icon>
+    <p>{{ erreur }}</p>
+    <button type="button" class="btn btn-outline" (click)="loadPointages()">
+      <mat-icon>refresh</mat-icon> Réessayer
+    </button>
+  </div>
+
+  <!-- Aucun pointage / aucun résultat de recherche -->
+  <div class="pointages-state" *ngIf="!loading && !erreur && filteredPointages.length === 0">
+    <mat-icon>fingerprint</mat-icon>
+    <ng-container *ngIf="pointages.length === 0; else aucunResultat">
+      <p>Aucun pointage enregistré le {{ selectedDate | date:'dd/MM/yyyy' }}.</p>
+      <p class="pointages-hint">
+        Un agent apparaît ici dès qu'il enregistre son arrivée. Essayez une autre date.
+      </p>
+    </ng-container>
+    <ng-template #aucunResultat>
+      <p>Aucun agent ne correspond à « {{ searchQuery }} ».</p>
+    </ng-template>
+  </div>
+
+  <div class="table-wrap" *ngIf="!loading && !erreur && filteredPointages.length > 0">
     <table class="pointages-table">
       <thead>
         <tr>
