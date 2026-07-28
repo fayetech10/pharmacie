@@ -51,15 +51,13 @@
         <mat-icon class="ml-auto text-ink-text text-[18px]">unfold_more</mat-icon>
       </button>
       <mat-menu #userMenu="matMenu" xPosition="after">
-        <ng-container *ngIf="authService.isPharmacien()">
-          <button mat-menu-item routerLink="/dashboard/espace-pharmacie">
-            <mat-icon>post_add</mat-icon>
-            <span>Facturation</span>
-          </button>
-          <button mat-menu-item routerLink="/dashboard/espace-pharmacie/factures">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Mes factures</span>
-            <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+        <ng-container *ngFor="let item of topNav">
+          <button mat-menu-item
+                  [routerLink]="item.link"
+                  [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+            <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
           </button>
         </ng-container>
         <button mat-menu-item (click)="logout()">
@@ -97,15 +95,13 @@
         <div class="text-[13.5px] font-bold text-text-primary leading-tight">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
         <div class="text-xs text-text-secondary mt-0.5">{{ getRoleLabel(currentUser?.role || '') }}</div>
       </div>
-      <ng-container *ngIf="authService.isPharmacien()">
-        <button mat-menu-item routerLink="/dashboard/espace-pharmacie">
-          <mat-icon>post_add</mat-icon>
-          <span>Facturation</span>
-        </button>
-        <button mat-menu-item routerLink="/dashboard/espace-pharmacie/factures">
-          <mat-icon>receipt_long</mat-icon>
-          <span>Mes factures</span>
-          <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+      <ng-container *ngFor="let item of topNav">
+        <button mat-menu-item
+                [routerLink]="item.link"
+                [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+          <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
         </button>
       </ng-container>
       <button mat-menu-item (click)="logout()">
@@ -128,9 +124,7 @@
   </div>
 </div>
 
-<main class="w-full px-3 md:px-6 pt-4 md:pt-7 md:pb-10"
-      [class.pb-4]="authService.isPharmacien()"
-      [class.pb-[calc(72px+env(safe-area-inset-bottom))]="!authService.isPharmacien()">
+<main class="w-full px-3 md:px-6 pt-4 md:pt-7 pb-4 md:pb-10">
   <router-outlet></router-outlet>
 </main>
 

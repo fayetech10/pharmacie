@@ -239,58 +239,7 @@ export class MainLayoutComponent implements OnInit {
    * (les destinations de gestion passent dans le panneau « Plus »).
    */
   private get allBottomNav(): NavItem[] {
-    if (this.authService.isPharmacien()) {
-      return [];
-    }
-    if (this.authService.isServiceRegional()) {
-      // Barre du bas alignée sur la sidebar : les onglets facture de l'Espace
-      // régional sont des destinations directes (le reste passe dans « Plus »).
-      return [
-        { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0 },
-        { label: 'Fact. pharmacies', icon: 'receipt_long', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'] },
-        { label: 'Fact. structures', icon: 'request_quote', link: '/dashboard/espace-region', tab: 2 },
-        { label: 'Param. pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
-        { label: 'Param. structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' },
-        { label: 'Patients', icon: 'group', link: '/dashboard/patients' },
-        { label: 'Agents BCSU', icon: 'manage_accounts', link: '/dashboard/utilisateurs' },
-        { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages' },
-        { label: 'Statistiques', icon: 'bar_chart', link: '/dashboard/statistiques-agents' }
-      ];
-    }
-    if (this.authService.isServiceCentral()) {
-      return [
-        { label: 'Tableau', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0 },
-        { label: 'Reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'] },
-        { label: 'Validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2 },
-        { label: 'Payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3 },
-        { label: 'Param. pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
-        { label: 'Param. structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' }
-      ];
-    }
-    if (this.authService.isBcsu()) {
-      return [
-        { label: 'Enregistrement', icon: 'note_add', link: '/dashboard/espace-bcsu', tab: 0 },
-        { label: 'Patients', icon: 'group', link: '/dashboard/espace-bcsu', tab: 1 },
-        { label: 'Constats', icon: 'fact_check', link: '/dashboard/espace-bcsu', tab: 2 },
-        { label: 'Paramétrage', icon: 'settings', link: '/dashboard/espace-bcsu', tab: 3 }
-      ];
-    }
-    if (this.authService.isStructureSanitaire()) {
-      return [
-        { label: 'Facturation', icon: 'note_add', link: '/dashboard/espace-structure', tab: 0 },
-        { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-structure', tab: 1 },
-        { label: 'Postes de santé', icon: 'medical_services', link: '/dashboard/espace-structure', tab: 2 }
-      ];
-    }
-    return [
-      { label: 'Régions', icon: 'map', link: '/dashboard/regions' },
-      { label: 'Param. pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies' },
-      { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs' },
-      { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments' },
-      { label: 'Param. structures', icon: 'local_hospital', link: '/dashboard/structures-sanitaires' },
-      { label: 'Information', icon: 'group', link: '/dashboard/patients' },
-      { label: 'Feuilles de soins', icon: 'description', link: '/dashboard/feuilles-soins' }
-    ];
+    return [];
   }
 
   /** Badge agrégé du bouton « Plus » (notifications des destinations repliées). */
