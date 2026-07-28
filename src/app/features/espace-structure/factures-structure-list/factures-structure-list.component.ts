@@ -161,12 +161,9 @@ export class FacturesStructureListComponent implements OnInit {
     return this.moisNoms[mois] || '';
   }
 
-  /** Nom complet du/des patient(s) d'une facture, pour l'aperçu de la ligne. */
-  patientsApercu(f: FactureStructure): string {
-    const groups = this.getPatientGroups(f);
-    if (groups.length === 0) return '—';
-    if (groups.length === 1) return groups[0].nomComplet;
-    return `${groups[0].nomComplet} +${groups.length - 1} autre${groups.length - 1 > 1 ? 's' : ''}`;
+  /** Nombre de patients distincts compilés dans la facture mensuelle. */
+  patientsCount(f: FactureStructure): number {
+    return this.getPatientGroups(f).length;
   }
 
   openDetail(id: string) {

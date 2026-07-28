@@ -51,9 +51,14 @@ export class RegionalStructuresFacturesComponent implements OnInit, OnChanges {
 
   /** Niveau 1 : structures EPS / CS de la région. */
   rows: StructureRow[] = [];
-  /** Niveau 2 : structure sélectionnée + ses factures (structure + postes rattachés). */
+  /** Niveau 2 : structure sélectionnée. */
   selected: StructureRow | null = null;
-  selectedFactures: FactureStructure[] = [];
+  /** Vue active du niveau 2 : factures de la structure elle-même ou de ses postes rattachés. */
+  detailView: 'structure' | 'postes' = 'structure';
+  /** Factures émises par la structure sanitaire elle-même (EPS / CS). */
+  selectedStructureFactures: FactureStructure[] = [];
+  /** Factures émises par les postes de santé rattachés à la structure. */
+  selectedPostesFactures: FactureStructure[] = [];
 
   loading = true;
   exporting: string | null = null;
@@ -149,26 +154,49 @@ export class RegionalStructuresFacturesComponent implements OnInit, OnChanges {
 
   select(row: StructureRow) {
     this.selected = row;
+    this.detailView = 'structure';
     this.buildSelectedFactures();
   }
 
   back() {
     this.selected = null;
-    this.selectedFactures = [];
+    this.detailView = 'structure';
+    this.selectedStructureFactures = [];
+    this.selectedPostesFactures = [];
   }
 
-  /** Factures de la structure sélectionnée + de ses postes rattachés, plus récentes d'abord. */
+  /** Bascule le niveau 2 vers les factures de la structure ou de ses postes rattachés. */
+  showView(view: 'structure' | 'postes') {
+    if (view === 'postes' && !this.selected?.postes.length) return;
+    this.detailView = view;
+  }
+
+  /** Liste affichée au niveau 2 selon l'onglet actif. */
+  get detailFactures(): FactureStructure[] {
+    return this.detailView === 'postes' ? this.selectedPostesFactures : this.selectedStructureFactures;
+  }
+
+  /**
+   * Sépare les factures du groupe : celles de la structure elle-même d'un côté,
+   * celles de ses postes de santé rattachés de l'autre — les plus récentes d'abord.
+   */
   private buildSelectedFactures() {
-    if (!this.selected) { this.selectedFactures = []; return; }
-    const ids = new Set<string>([this.selected.structure.id, ...this.selected.postes.map(p => p.id)]);
-    this.selectedFactures = this.facturesFiltrees
-      .filter(f => ids.has(f.structureSanitaireId))
-      .sort((a, b) => (a.annee !== b.annee ? b.annee - a.annee : b.mois - a.mois));
-  }
+    if (!this.selected) {
+      this.selectedStructureFactures = [];
+      this.selectedPostesFactures = [];
+      return;
+    }
+    const structureId = this.selected.structure.id;
+    const posteIds = new Set(this.selected.postes.map(p => p.id));
+    const parDate = (a: FactureStructure, b: FactureStructure) =>
+      (a.annee !== b.annee ? b.annee - a.annee : b.mois - a.mois);
 
-  /** La facture vient-elle d'un poste de santé rattaché (et non de la structure elle-même) ? */
-  estFactureDePoste(f: FactureStructure): boolean {
-    return !!this.selected && f.structureSanitaireId !== this.selected.structure.id;
+    this.selectedStructureFactures = this.facturesFiltrees
+      .filter(f => f.structureSanitaireId === structureId)
+      .sort(parDate);
+    this.selectedPostesFactures = this.facturesFiltrees
+      .filter(f => posteIds.has(f.structureSanitaireId))
+      .sort(parDate);
   }
 
   typeLabel(type: string): string {

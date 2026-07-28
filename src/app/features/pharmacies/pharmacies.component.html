@@ -134,13 +134,15 @@
 
       <!-- Cartes mobiles (≤ 768px) -->
       <div class="m-cards" *ngIf="pharmacies.length > 0">
-        <div class="m-card" *ngFor="let p of pagedPharmacies">
+        <div class="m-card clickable" *ngFor="let p of pagedPharmacies"
+             (click)="openModal(p)" role="button" tabindex="0"
+             (keydown.enter)="openModal(p)" [attr.aria-label]="'Modifier ' + p.nom">
           <div class="m-card-top">
             <div class="min-w-0">
               <div class="m-title">{{ p.nom }}</div>
               <div class="m-sub">{{ p.code }}</div>
             </div>
-            <div class="m-actions">
+            <div class="m-actions" (click)="$event.stopPropagation()">
               <button class="action-btn" (click)="openModal(p)" title="Modifier"><mat-icon>edit</mat-icon></button>
               <button class="action-btn danger" (click)="deletePharmacie(p.id)" title="Supprimer"><mat-icon>delete</mat-icon></button>
             </div>

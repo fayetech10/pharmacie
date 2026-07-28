@@ -301,7 +301,9 @@
 
       <!-- Mobile List (m-cards) -->
       <div class="m-cards md:hidden mt-4">
-        <a *ngFor="let f of dataSource.data" class="m-card clickable" (click)="openFacture(f)">
+        <a *ngFor="let f of dataSource.data" class="m-card clickable" (click)="openFacture(f)"
+           role="button" tabindex="0" (keydown.enter)="openFacture(f)"
+           [attr.aria-label]="'Voir la facture ' + (f.providerNom || 'Ma Pharmacie') + ' — ' + getMonthName(f.mois) + ' ' + f.annee">
           <div class="m-card-top">
             <h3 class="m-title">{{ f.providerNom || 'Ma Pharmacie' }}</h3>
             <span class="m-chip" [ngClass]="{'danger': f.statut === 'BROUILLON', 'neutral': f.statut === 'PAYEE'}">{{ statutLabel(f.statut) }}</span>

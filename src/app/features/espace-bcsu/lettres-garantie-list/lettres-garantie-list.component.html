@@ -122,7 +122,9 @@
 
   <!-- Mobile List (m-cards) -->
   <div class="m-cards md:hidden" *ngIf="!loading && filteredLettres.length > 0">
-    <a *ngFor="let l of filteredLettres" class="m-card clickable" (click)="openDetail(l.id)">
+    <a *ngFor="let l of filteredLettres" class="m-card clickable" (click)="openDetail(l.id)"
+       role="button" tabindex="0" (keydown.enter)="openDetail(l.id)"
+       [attr.aria-label]="'Voir la lettre ' + l.numero">
       <div class="m-card-top">
         <h3 class="m-title">{{ l.patientPrenom }} {{ l.patientNom }}</h3>
         <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">{{ statutLabel(l.statut) }}</span>

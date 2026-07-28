@@ -899,8 +899,6 @@
   }
   .fd-header-actions {
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
   .fd-stats {
     grid-template-columns: 1fr 1fr;
@@ -910,8 +908,18 @@
     flex-wrap: wrap;
     gap: 8px;
   }
+  /* La colonne "gauche" (avatar + nom) prend toute la largeur : le nom tronque au lieu de déborder. */
+  .fd-acc-left {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  /* Le groupe d'actions (total + chips dossier/supprimer + chevron) passe SOUS l'identité
+     et ses boutons s'enroulent, au lieu de déborder horizontalement et casser la carte. */
   .fd-acc-right {
     gap: 8px;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
   .fd-acc-total {
     font-size: 13px;

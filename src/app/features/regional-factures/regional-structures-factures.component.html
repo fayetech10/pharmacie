@@ -24,7 +24,7 @@
       <p>Aucune structure sanitaire dans la région.</p>
     </div>
 
-    <div class="rsf-table-wrap" *ngIf="rows.length > 0">
+    <div class="rsf-table-wrap desktop-only" *ngIf="rows.length > 0">
       <table class="rsf-table">
         <thead>
           <tr>
@@ -53,9 +53,32 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Cartes mobiles (≤ 768px) -->
+    <div class="m-cards" *ngIf="rows.length > 0">
+      <div class="m-card clickable" *ngFor="let r of rows" (click)="select(r)"
+           role="button" tabindex="0" (keydown.enter)="select(r)"
+           [attr.aria-label]="'Voir ' + r.structure.nom">
+        <div class="m-card-top">
+          <div class="min-w-0">
+            <div class="m-title">{{ r.structure.nom }}</div>
+            <div class="m-sub">{{ r.structure.code }}</div>
+          </div>
+          <span class="rsf-chip" [class.rsf-chip--eps]="r.type === 'EPS'">{{ typeLabel(r.type) }}</span>
+        </div>
+        <div class="m-row">
+          <span><mat-icon class="inline-ic">store</mat-icon>{{ r.postes.length }} poste{{ r.postes.length > 1 ? 's' : '' }}</span>
+          <span><mat-icon class="inline-ic">receipt_long</mat-icon>{{ r.factureCount }} facture{{ r.factureCount > 1 ? 's' : '' }}</span>
+        </div>
+        <div class="m-foot">
+          <span class="m-amount">{{ r.totalSencsu | number:'1.0-0':'fr' }} F</span>
+          <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+        </div>
+      </div>
+    </div>
   </ng-container>
 
-  <!-- ═══════ NIVEAU 2 : FACTURES DE LA STRUCTURE + DE SES POSTES ═══════ -->
+  <!-- ═══════ NIVEAU 2 : FACTURES DE LA STRUCTURE, PUIS DE SES POSTES ═══════ -->
   <ng-container *ngIf="!loading && selected">
     <div class="rsf-detail-head">
       <button class="rsf-back" type="button" (click)="back()" aria-label="Retour">
@@ -72,12 +95,29 @@
       </div>
     </div>
 
-    <div class="rsf-empty" *ngIf="selectedFactures.length === 0">
-      <mat-icon>receipt_long</mat-icon>
-      <p>Aucune facture pour cette structure (et ses postes) avec les filtres actuels.</p>
+    <!-- Bascule : factures de la structure sanitaire / factures des postes rattachés
+         (tableaux séparés, la structure d'abord). -->
+    <div class="rsf-viewtabs">
+      <button type="button" class="rsf-viewtab" [class.rsf-viewtab--active]="detailView === 'structure'"
+              (click)="showView('structure')">
+        Factures de la structure
+        <span class="rsf-viewtab-count">{{ selectedStructureFactures.length }}</span>
+      </button>
+      <button type="button" class="rsf-viewtab" [class.rsf-viewtab--active]="detailView === 'postes'"
+              (click)="showView('postes')" [disabled]="!selected.postes.length"
+              [title]="selected.postes.length ? '' : 'Aucun poste de santé rattaché'">
+        Factures des postes de santé
+        <span class="rsf-viewtab-count">{{ selectedPostesFactures.length }}</span>
+      </button>
     </div>
 
-    <div class="rsf-table-wrap" *ngIf="selectedFactures.length > 0">
+    <div class="rsf-empty" *ngIf="detailFactures.length === 0">
+      <mat-icon>receipt_long</mat-icon>
+      <p *ngIf="detailView === 'structure'">Aucune facture de la structure avec les filtres actuels.</p>
+      <p *ngIf="detailView === 'postes'">Aucune facture des postes de santé rattachés avec les filtres actuels.</p>
+    </div>
+
+    <div class="rsf-table-wrap desktop-only" *ngIf="detailFactures.length > 0">
       <table class="rsf-table">
         <thead>
           <tr>
@@ -92,14 +132,9 @@
           </tr>
         </thead>
         <tbody>
-          <tr class="rsf-row" *ngFor="let f of selectedFactures" (click)="openDetail(f)">
+          <tr class="rsf-row" *ngFor="let f of detailFactures" (click)="openDetail(f)">
             <td class="rsf-numero">{{ f.numero }}</td>
-            <td>
-              <strong>{{ f.structureNom }}</strong>
-              <div class="rsf-sub" *ngIf="estFactureDePoste(f)">
-                <span class="rsf-chip rsf-chip--ps">Poste de santé</span>
-              </div>
-            </td>
+            <td><strong>{{ f.structureNom }}</strong></td>
             <td>{{ moisNoms[f.mois] }} {{ f.annee }}</td>
             <td><span class="rsf-chip">{{ regimeLabels[f.regime] || f.regime }}</span></td>
             <td class="rsf-num">{{ patientsCount(f) }}</td>
@@ -113,6 +148,33 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Cartes mobiles (≤ 768px) -->
+    <div class="m-cards" *ngIf="detailFactures.length > 0">
+      <div class="m-card clickable" *ngFor="let f of detailFactures" (click)="openDetail(f)"
+           role="button" tabindex="0" (keydown.enter)="openDetail(f)"
+           [attr.aria-label]="'Voir la facture ' + f.numero">
+        <div class="m-card-top">
+          <div class="min-w-0">
+            <div class="m-title">{{ f.numero }}</div>
+            <div class="m-sub">{{ f.structureNom }}</div>
+          </div>
+          <span class="rsf-statut" [ngClass]="'rsf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span>
+        </div>
+        <div class="m-row">
+          <span><mat-icon class="inline-ic">event</mat-icon>{{ moisNoms[f.mois] }} {{ f.annee }}</span>
+          <span class="rsf-chip">{{ regimeLabels[f.regime] || f.regime }}</span>
+          <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }}</span>
+        </div>
+        <div class="m-foot">
+          <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+          <span class="flex items-center gap-1.5" (click)="$event.stopPropagation()">
+            <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterExcel(f, $event)">Excel ↓</button>
+            <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterPdf(f, $event)">PDF ↓</button>
+          </span>
+        </div>
+      </div>
     </div>
   </ng-container>
 </div>

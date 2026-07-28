@@ -599,6 +599,7 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   text-decoration: none;
   transition: box-shadow var(--transition), transform var(--transition);
 }
+a.m-card, .m-card.clickable { cursor: pointer; }
 a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: #FAFCFE; }
 
 .m-card-top {
@@ -609,8 +610,8 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   margin-bottom: 2px;
 }
 .m-title {
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
   line-height: 1.3;
@@ -652,17 +653,20 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 .m-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 600;
   background: var(--primary-light);
   color: var(--primary);
   border: 1px solid var(--primary-200);
+  white-space: nowrap;
 }
 .m-chip.danger { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .m-chip.neutral { background: var(--border-light); color: var(--text-secondary); border-color: var(--border); }
+.m-chip.warning { background: #FEF6E7; color: #B45309; border-color: #FDE2B3; }
+.m-chip.info { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
 
 /* Ligne d'icône + texte dans les cartes mobiles (partagé) */
 .m-row span { display: inline-flex; align-items: center; gap: 4px; }

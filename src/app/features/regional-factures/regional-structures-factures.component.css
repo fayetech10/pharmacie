@@ -63,6 +63,26 @@
 .rsf-detail-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
 .rsf-detail-head p { margin: 2px 0 0; font-size: 12.5px; color: #64748b; }
 
+/* Bascule niveau 2 : factures de la structure / des postes rattachés (tableaux séparés). */
+.rsf-viewtabs {
+  display: inline-flex; gap: 4px; padding: 4px; background: #f1f5f9;
+  border-radius: 10px; flex-wrap: wrap; max-width: 100%;
+}
+.rsf-viewtab {
+  display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent;
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: #64748b; cursor: pointer; transition: all .15s ease; white-space: nowrap;
+}
+.rsf-viewtab:hover:not(:disabled):not(.rsf-viewtab--active) { color: #0f172a; }
+.rsf-viewtab--active { background: #fff; color: #0e7490; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
+.rsf-viewtab:disabled { opacity: .45; cursor: not-allowed; }
+.rsf-viewtab-count {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 18px;
+  padding: 0 6px; border-radius: 999px; background: #e2e8f0; color: #475569;
+  font-size: 11px; font-weight: 700; line-height: 1;
+}
+.rsf-viewtab--active .rsf-viewtab-count { background: #cffafe; color: #0e7490; }
+
 .rsf-mini-btn {
   border: 1px solid #e2e8f0; background: #fff; border-radius: 8px;
   padding: 4px 8px; margin-right: 4px; cursor: pointer; color: #0f172a; font-size: 12px;

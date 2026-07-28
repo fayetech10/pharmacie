@@ -57,7 +57,7 @@
     <!-- Detailed Table -->
     <mat-card class="table-card">
       <h3 class="card-title">Détails des performances</h3>
-      <div class="table-wrap">
+      <div class="table-wrap desktop-only">
         <table class="stats-table">
           <thead>
             <tr>
@@ -87,6 +87,32 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Cartes mobiles (≤ 768px) -->
+      <div class="m-cards">
+        <div class="m-card clickable" *ngFor="let agent of agentsStats" (click)="openAgentDetail(agent)"
+             role="button" tabindex="0" (keydown.enter)="openAgentDetail(agent)"
+             [attr.aria-label]="'Voir les performances de ' + agent.nom">
+          <div class="m-card-top">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="agent-avatar">{{ agent.nom.charAt(0) }}</div>
+              <div class="min-w-0">
+                <div class="m-title">{{ agent.nom }}</div>
+                <div class="m-sub">{{ agent.structure }}</div>
+              </div>
+            </div>
+            <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+          </div>
+          <div class="m-row">
+            <span><mat-icon class="inline-ic">folder_open</mat-icon>{{ agent.dossiersTraites }} dossiers</span>
+            <span><mat-icon class="inline-ic">mark_email_read</mat-icon>{{ agent.lettresEmises }} lettres</span>
+          </div>
+          <div class="m-row">
+            <span><mat-icon class="inline-ic">receipt_long</mat-icon>{{ agent.feuillesSoins }} feuilles</span>
+            <span><mat-icon class="inline-ic">schedule</mat-icon>{{ agent.heuresTravailleesSemaine }} h/sem</span>
+          </div>
+        </div>
       </div>
     </mat-card>
 

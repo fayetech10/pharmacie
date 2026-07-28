@@ -55,7 +55,7 @@
     </ng-template>
   </div>
 
-  <div class="table-wrap" *ngIf="!loading && !erreur && filteredPointages.length > 0">
+  <div class="table-wrap desktop-only" *ngIf="!loading && !erreur && filteredPointages.length > 0">
     <table class="pointages-table">
       <thead>
         <tr>
@@ -97,5 +97,33 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Cartes mobiles (≤ 768px) -->
+  <div class="m-cards" *ngIf="!loading && !erreur && filteredPointages.length > 0">
+    <div class="m-card clickable" *ngFor="let p of filteredPointages" (click)="openAgentDetail(p)"
+         role="button" tabindex="0" (keydown.enter)="openAgentDetail(p)"
+         [attr.aria-label]="'Voir le pointage de ' + getAgentFullName(p)">
+      <div class="m-card-top">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="agent-avatar">{{ getAgentFullName(p).charAt(0) }}</div>
+          <div class="min-w-0">
+            <div class="m-title">{{ getAgentFullName(p) }}</div>
+            <div class="m-sub">{{ p.structureNom }}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="status-badge" [ngClass]="getStatut(p).toLowerCase()">
+            {{ getStatut(p) === 'EN_POSTE' ? 'En poste' : getStatut(p) === 'TERMINE' ? 'Terminé' : 'Absent' }}
+          </span>
+          <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+        </div>
+      </div>
+      <div class="m-row">
+        <span *ngIf="getStatut(p) !== 'ABSENT'"><mat-icon class="inline-ic">login</mat-icon>Arrivée {{ p.heureArrivee | date:'HH:mm' }}</span>
+        <span *ngIf="p.heureDepart"><mat-icon class="inline-ic">logout</mat-icon>Départ {{ p.heureDepart | date:'HH:mm' }}</span>
+        <span *ngIf="getStatut(p) === 'ABSENT'" class="text-text-muted">Aucun pointage</span>
+      </div>
+    </div>
   </div>
 </div>

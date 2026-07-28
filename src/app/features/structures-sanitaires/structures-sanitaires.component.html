@@ -89,13 +89,15 @@
 
   <!-- Cartes mobiles (≤ 768px) -->
   <div class="m-cards" *ngIf="structures.length">
-    <div class="m-card" *ngFor="let s of structures">
+    <div class="m-card clickable" *ngFor="let s of structures"
+         (click)="openEdit(s)" role="button" tabindex="0"
+         (keydown.enter)="openEdit(s)" [attr.aria-label]="'Modifier ' + s.nom">
       <div class="m-card-top">
         <div class="min-w-0">
           <div class="m-title">{{ s.nom }}</div>
           <div class="m-sub break-words">{{ s.code }} · {{ s.email || '—' }}</div>
         </div>
-        <div class="m-actions">
+        <div class="m-actions" (click)="$event.stopPropagation()">
           <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
           <button class="action-btn danger" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
         </div>

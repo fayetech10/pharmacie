@@ -82,7 +82,7 @@
 
 .fsl-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 760px;
   border-collapse: collapse;
   text-align: left;
   font-size: 13.5px;
@@ -113,6 +113,26 @@
 .fsl-table td { padding: 12px 16px; vertical-align: middle; }
 
 .fsl-numero { font-weight: 700; color: var(--text-primary, #0F172A); }
+
+/* Badge régime compact (répété sur chaque ligne, en plus de l'en-tête de groupe) */
+.fsl-chip-regime {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-full, 999px);
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* Compteur de patients : une facture = la compilation du mois de tous les patients */
+.fsl-patients { white-space: nowrap; color: var(--text-secondary); }
+.fsl-patients mat-icon {
+  font-size: 15px; width: 15px; height: 15px; vertical-align: -3px;
+  color: var(--text-muted); margin-right: 3px;
+}
 
 .fsl-col-montant { text-align: right; }
 .fsl-montant { font-weight: 700; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }

@@ -162,7 +162,9 @@
 
       <!-- Cartes mobiles (≤ 768px) -->
       <div class="m-cards" *ngIf="dataSource && dataSource.filteredData.length">
-        <div class="m-card" *ngFor="let m of pagedMedicaments">
+        <div class="m-card clickable" *ngFor="let m of pagedMedicaments"
+             (click)="ouvrirEdition(m)" role="button" tabindex="0"
+             (keydown.enter)="ouvrirEdition(m)" [attr.aria-label]="'Modifier ' + m.nom">
           <div class="m-card-top">
             <div class="min-w-0">
               <div class="m-title">{{ m.nom }}</div>
@@ -170,7 +172,7 @@
                 {{ m.dci }}<span *ngIf="m.dci && m.classeTherapeutique"> · </span>{{ m.classeTherapeutique }}
               </div>
             </div>
-            <div class="m-actions">
+            <div class="m-actions" (click)="$event.stopPropagation()">
               <button class="action-btn" (click)="ouvrirEdition(m)" title="Modifier"><mat-icon>edit</mat-icon></button>
               <button class="action-btn danger" (click)="supprimer(m)" title="Supprimer"><mat-icon>delete</mat-icon></button>
             </div>

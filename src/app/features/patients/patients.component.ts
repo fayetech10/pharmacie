@@ -153,6 +153,38 @@ export class PatientsComponent implements OnInit {
     return this.patients.filter(p => p.regime === regime).length;
   }
 
+  /** Nombre d'enregistrements du mois en cours (mois + année courants). */
+  get countThisMonth(): number {
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    return this.patients.filter(p => this.moisDe(p) === m && this.anneeDe(p) === y).length;
+  }
+
+  /** Nombre d'enregistrements de l'année en cours. */
+  get countThisYear(): number {
+    const y = new Date().getFullYear();
+    return this.patients.filter(p => this.anneeDe(p) === y).length;
+  }
+
+  /** Âge en années révolues à partir de la date de naissance, si disponible. */
+  age(p: Patient): number | null {
+    if (!p.dateNaissance) return null;
+    const d = new Date(p.dateNaissance);
+    if (isNaN(d.getTime())) return null;
+    const now = new Date();
+    let a = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+    return a >= 0 && a < 130 ? a : null;
+  }
+
+  /** Libellé lisible du sexe ("M"/"F" → Homme/Femme). */
+  sexeLabel(p: Patient): string {
+    const s = (p.sexe || '').toUpperCase();
+    return s === 'M' ? 'Homme' : s === 'F' ? 'Femme' : '';
+  }
+
   clearFilters() {
     this.searchQuery = '';
     this.selectedRegime = '';

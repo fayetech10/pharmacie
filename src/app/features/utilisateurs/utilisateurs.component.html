@@ -100,7 +100,10 @@
 
       <!-- Cartes mobiles (≤ 768px) -->
       <div class="m-cards" *ngIf="users.length">
-        <div class="m-card" *ngFor="let u of users">
+        <div class="m-card clickable" *ngFor="let u of users"
+             (click)="openEditModal(u)" role="button" tabindex="0"
+             (keydown.enter)="openEditModal(u)"
+             [attr.aria-label]="'Modifier ' + u.prenom + ' ' + u.nom">
           <div class="m-card-top">
             <div class="flex items-center gap-3 min-w-0">
               <div class="w-[38px] h-[38px] rounded-full text-white flex items-center justify-center text-[13px] font-bold uppercase bg-gradient-to-br from-primary to-accent shrink-0">
@@ -111,7 +114,7 @@
                 <div class="m-sub break-words">{{ u.email }}</div>
               </div>
             </div>
-            <div class="m-actions">
+            <div class="m-actions" (click)="$event.stopPropagation()">
               <button class="action-btn" (click)="openEditModal(u)" title="Modifier"><mat-icon>edit</mat-icon></button>
               <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer"><mat-icon>delete</mat-icon></button>
             </div>

@@ -5,19 +5,47 @@
       <p>Recherchez un bénéficiaire, consultez son dossier consolidé (Lettres, Bons, Factures) et délivrez-lui un bon de commande</p>
     </div>
     <div class="page-head-actions">
-      <span class="inline-flex items-center bg-primary-light text-primary font-bold py-1.5 px-3.5 rounded text-[13px] whitespace-nowrap">
-        {{ patients.length }} patient{{ patients.length > 1 ? 's' : '' }}
-      </span>
       <button mat-stroked-button color="primary" [disabled]="exporting || filteredPatients.length === 0"
               (click)="exporter()">
         <mat-icon>table_view</mat-icon>
-        {{ exporting ? 'Export...' : 'Exporter (Excel)' }}
+        {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
       </button>
     </div>
   </div>
 
+  <!-- Statistiques d'enregistrement -->
+  <div class="grid grid-cols-3 gap-3 max-md:gap-2 mb-6" *ngIf="!loading">
+    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
+      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-primary-light text-primary items-center justify-center shrink-0">
+        <mat-icon>groups</mat-icon>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ patients.length }}</div>
+        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Bénéficiaires</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
+      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-[#EFF6FF] text-[#1D4ED8] items-center justify-center shrink-0">
+        <mat-icon>event_available</mat-icon>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ countThisMonth }}</div>
+        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Ce mois-ci</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
+      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-[#FFFBEB] text-[#B45309] items-center justify-center shrink-0">
+        <mat-icon>calendar_month</mat-icon>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ countThisYear }}</div>
+        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Cette année</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Barre de recherche + filtres -->
-  <mat-card class="mb-6 p-4">
+  <div class="bg-card border border-border rounded-lg shadow-sm p-4 mb-6">
     <div class="flex gap-4 items-center flex-wrap">
       <!-- Recherche -->
       <mat-form-field appearance="outline" class="flex-[2] min-w-[250px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
@@ -38,7 +66,7 @@
       </mat-form-field>
 
       <!-- Filtre par mois d'enregistrement -->
-      <mat-form-field appearance="outline" class="flex-1 min-w-[180px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
+      <mat-form-field appearance="outline" class="flex-1 min-w-[150px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
         <mat-label>Mois</mat-label>
         <mat-select [(ngModel)]="filterMois" (ngModelChange)="resetPage()">
           <mat-option [value]="0">Tous les mois</mat-option>
@@ -49,7 +77,7 @@
       </mat-form-field>
 
       <!-- Filtre par année d'enregistrement -->
-      <mat-form-field appearance="outline" class="flex-1 min-w-[180px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
+      <mat-form-field appearance="outline" class="flex-1 min-w-[130px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
         <mat-label>Année</mat-label>
         <mat-select [(ngModel)]="filterAnnee" (ngModelChange)="resetPage()">
           <mat-option [value]="0">Toutes</mat-option>
@@ -67,7 +95,7 @@
         <mat-icon>filter_alt_off</mat-icon>
       </button>
     </div>
-  </mat-card>
+  </div>
 
   <!-- Résumé filtré -->
   <div *ngIf="!loading && hasActiveFilters" class="mb-4 text-[13px] text-text-secondary flex items-center gap-1.5">
@@ -96,8 +124,9 @@
           <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Bénéficiaire</th>
           <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Téléphone</th>
           <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">N° CNI/N° Assuré</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Date de Naissance</th>
+          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Date de naissance</th>
           <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Régime</th>
+          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Enregistré le</th>
           <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap text-right w-[120px]">Actions</th>
         </tr>
       </thead>
@@ -108,7 +137,10 @@
           <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">
             <div class="flex items-center gap-3">
               <div class="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-primary to-primary-hover text-white flex items-center justify-center text-sm font-extrabold uppercase shrink-0">{{ p.prenom.charAt(0) }}{{ p.nom.charAt(0) }}</div>
-              <span class="font-bold text-text-primary whitespace-nowrap">{{ p.prenom }} {{ p.nom }}</span>
+              <div class="min-w-0">
+                <span class="block font-bold text-text-primary whitespace-nowrap">{{ p.prenom }} {{ p.nom }}</span>
+                <span class="block text-[11.5px] text-text-muted font-medium" *ngIf="sexeLabel(p)">{{ sexeLabel(p) }}</span>
+              </div>
             </div>
           </td>
           <td class="py-3 px-4 align-middle border-b border-border-light font-medium text-text-secondary">{{ p.telephone || '—' }}</td>
@@ -118,12 +150,18 @@
             <ng-container *ngIf="p.numeroAssure">{{ p.numeroAssure }}</ng-container>
             <ng-container *ngIf="!p.numeroCni && !p.numeroAssure">—</ng-container>
           </td>
-          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">{{ p.dateNaissance ? (p.dateNaissance | date:'dd/MM/yyyy') : '—' }}</td>
+          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light whitespace-nowrap">
+            <ng-container *ngIf="p.dateNaissance; else noDob">
+              {{ p.dateNaissance | date:'dd/MM/yyyy' }}<span class="text-text-muted" *ngIf="age(p) !== null"> · {{ age(p) }} ans</span>
+            </ng-container>
+            <ng-template #noDob>—</ng-template>
+          </td>
           <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">
             <span class="whitespace-nowrap" [ngStyle]="getRegimeBadgeStyle(p.regime)">
               {{ regimeLabels[p.regime] }}
             </span>
           </td>
+          <td class="py-3 px-4 align-middle border-b border-border-light whitespace-nowrap text-text-secondary">{{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
           <td class="py-3 px-4 align-middle border-b border-border-light text-right w-[120px]">
             <span class="text-[12.5px] font-bold text-primary inline-flex items-center gap-1">
               Consulter <mat-icon class="!text-base !w-4 !h-4">chevron_right</mat-icon>
@@ -149,12 +187,15 @@
         </div>
         <span class="whitespace-nowrap" [ngStyle]="getRegimeBadgeStyle(p.regime)">{{ regimeLabels[p.regime] }}</span>
       </div>
-      <div class="m-row" *ngIf="p.numeroCni || p.numeroAssure || p.dateNaissance">
+      <div class="m-row" *ngIf="sexeLabel(p) || p.numeroCni || p.numeroAssure || p.dateNaissance">
+        <span *ngIf="sexeLabel(p)"><mat-icon class="inline-ic">wc</mat-icon>{{ sexeLabel(p) }}</span>
         <span *ngIf="p.numeroCni || p.numeroAssure"><mat-icon class="inline-ic">badge</mat-icon>{{ p.numeroCni || p.numeroAssure }}</span>
-        <span *ngIf="p.dateNaissance"><mat-icon class="inline-ic">cake</mat-icon>{{ p.dateNaissance | date:'dd/MM/yyyy' }}</span>
+        <span *ngIf="p.dateNaissance"><mat-icon class="inline-ic">cake</mat-icon>{{ p.dateNaissance | date:'dd/MM/yyyy' }}<ng-container *ngIf="age(p) !== null"> · {{ age(p) }} ans</ng-container></span>
       </div>
       <div class="m-foot">
-        <span></span>
+        <span class="text-[12px] text-text-muted inline-flex items-center gap-1" *ngIf="p.createdAt">
+          <mat-icon class="inline-ic">schedule</mat-icon>Enregistré le {{ p.createdAt | date:'dd/MM/yyyy' }}
+        </span>
         <span class="text-[12.5px] font-bold text-primary inline-flex items-center gap-1">Consulter <mat-icon class="!text-base !w-4 !h-4 !text-primary">chevron_right</mat-icon></span>
       </div>
     </div>

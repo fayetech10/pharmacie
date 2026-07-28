@@ -68,36 +68,68 @@
       </div>
 
       <!-- ===================== Niveau 3 : Tableau des factures ===================== -->
-      <div class="fsl-table-wrap">
+      <div class="fsl-table-wrap desktop-only">
         <table class="fsl-table">
           <thead>
             <tr>
               <th>Mois</th>
+              <th>Régime</th>
               <th>N° Facture</th>
-              <th>Patient</th>
-              <th>Statut</th>
+              <th>Patients</th>
               <th>Prestations</th>
-              <th class="fsl-col-montant">Montant CSU</th>
+              <th>Statut</th>
+              <th class="fsl-col-montant">Montant total (CSU)</th>
             </tr>
           </thead>
           <tbody>
             <ng-container *ngFor="let f of getPaginatedFactures(g)">
               <tr class="fsl-row" (click)="openDetail(f.id)">
                 <td>{{ getMoisNom(f.mois) }} {{ f.annee }}</td>
+                <td><span class="fsl-chip-regime">{{ regimeLabels[f.regime] || f.regime }}</span></td>
                 <td class="fsl-numero">{{ f.numero }}</td>
-                <td>{{ patientsApercu(f) }}</td>
+                <td class="fsl-patients">
+                  <mat-icon>groups</mat-icon>{{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}
+                </td>
+                <td>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</td>
                 <td>
                   <span class="fsl-status-badge" [ngClass]="'status-' + f.statut">
                     <mat-icon>{{ statutIcon(f.statut) }}</mat-icon>
                     {{ statutLabel(f.statut) }}
                   </span>
                 </td>
-                <td>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</td>
                 <td class="fsl-col-montant fsl-montant">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
               </tr>
             </ng-container>
           </tbody>
         </table>
+      </div>
+
+      <!-- Cartes mobiles (≤ 768px) -->
+      <div class="m-cards">
+        <div class="m-card clickable" *ngFor="let f of getPaginatedFactures(g)"
+             (click)="openDetail(f.id)" role="button" tabindex="0"
+             (keydown.enter)="openDetail(f.id)"
+             [attr.aria-label]="'Voir la facture ' + f.numero">
+          <div class="m-card-top">
+            <div class="min-w-0">
+              <div class="m-title">{{ f.numero }}</div>
+              <div class="m-sub">{{ getMoisNom(f.mois) }} {{ f.annee }}</div>
+            </div>
+            <span class="fsl-status-badge" [ngClass]="'status-' + f.statut">
+              <mat-icon>{{ statutIcon(f.statut) }}</mat-icon>
+              {{ statutLabel(f.statut) }}
+            </span>
+          </div>
+          <div class="m-row">
+            <span class="fsl-chip-regime">{{ regimeLabels[f.regime] || f.regime }}</span>
+            <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}</span>
+            <span><mat-icon class="inline-ic">medication</mat-icon>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+            <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+          </div>
+        </div>
       </div>
 
       <!-- Pagination for Regime -->
