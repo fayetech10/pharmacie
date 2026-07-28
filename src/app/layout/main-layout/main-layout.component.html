@@ -51,6 +51,17 @@
         <mat-icon class="ml-auto text-ink-text text-[18px]">unfold_more</mat-icon>
       </button>
       <mat-menu #userMenu="matMenu" xPosition="after">
+        <ng-container *ngIf="authService.isPharmacien()">
+          <button mat-menu-item routerLink="/dashboard/espace-pharmacie">
+            <mat-icon>post_add</mat-icon>
+            <span>Facturation</span>
+          </button>
+          <button mat-menu-item routerLink="/dashboard/espace-pharmacie/factures">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Mes factures</span>
+            <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+          </button>
+        </ng-container>
         <button mat-menu-item (click)="logout()">
           <mat-icon>logout</mat-icon>
           <span>Se déconnecter</span>
@@ -86,6 +97,17 @@
         <div class="text-[13.5px] font-bold text-text-primary leading-tight">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
         <div class="text-xs text-text-secondary mt-0.5">{{ getRoleLabel(currentUser?.role || '') }}</div>
       </div>
+      <ng-container *ngIf="authService.isPharmacien()">
+        <button mat-menu-item routerLink="/dashboard/espace-pharmacie">
+          <mat-icon>post_add</mat-icon>
+          <span>Facturation</span>
+        </button>
+        <button mat-menu-item routerLink="/dashboard/espace-pharmacie/factures">
+          <mat-icon>receipt_long</mat-icon>
+          <span>Mes factures</span>
+          <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="espaceBadge > 0">{{ espaceBadge }}</span>
+        </button>
+      </ng-container>
       <button mat-menu-item (click)="logout()">
         <mat-icon>logout</mat-icon>
         <span>Se déconnecter</span>
@@ -106,7 +128,9 @@
   </div>
 </div>
 
-<main class="w-full px-3 md:px-6 pt-4 md:pt-7 pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-10">
+<main class="w-full px-3 md:px-6 pt-4 md:pt-7 md:pb-10"
+      [class.pb-4]="authService.isPharmacien()"
+      [class.pb-[calc(72px+env(safe-area-inset-bottom))]="!authService.isPharmacien()">
   <router-outlet></router-outlet>
 </main>
 
@@ -114,6 +138,7 @@
      NAVIGATION BASSE MOBILE — 5 items max, « Plus » pour le reste.
      ============================================================ -->
 <nav class="mobile-bottom-nav flex md:hidden fixed left-2.5 right-2.5 bottom-[calc(0.375rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-2xl shadow-[0_6px_18px_-8px_rgba(7,19,16,0.5)] ring-1 ring-white/10 p-1 gap-0.5"
+     *ngIf="!authService.isPharmacien() && bottomNav.length > 0"
      [class.nav-hidden]="navHidden"
      aria-label="Navigation mobile">
   <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-0.5 border-0 rounded-xl bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"

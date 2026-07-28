@@ -240,12 +240,7 @@ export class MainLayoutComponent implements OnInit {
    */
   private get allBottomNav(): NavItem[] {
     if (this.authService.isPharmacien()) {
-      // « Mes factures » est une vraie route (l'espace pharmacie n'a pas d'onglet
-      // ?tab : l'ancien lien tab=1 retombait sur la page Facturation).
-      return [
-        { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie' },
-        { label: 'Factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie/factures', statuts: ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'] }
-      ];
+      return [];
     }
     if (this.authService.isServiceRegional()) {
       // Barre du bas alignée sur la sidebar : les onglets facture de l'Espace
