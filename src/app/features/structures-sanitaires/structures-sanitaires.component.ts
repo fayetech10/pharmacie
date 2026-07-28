@@ -1,7 +1,7 @@
 import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
 import { StructureService } from '../../core/services/structure.service';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -25,9 +28,10 @@ import { StructuresFacturesComponent } from '../structures-factures/structures-f
   selector: 'app-structures-sanitaires',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatCardModule, MatButtonModule,
+    CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatTableModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatTabsModule, FacturesStructureListComponent, StructuresFacturesComponent
+    MatPaginatorModule, MatSortModule, MatTabsModule, MatMenuModule, 
+    FacturesStructureListComponent, StructuresFacturesComponent
   ],
   templateUrl: './structures-sanitaires.component.html'
 })

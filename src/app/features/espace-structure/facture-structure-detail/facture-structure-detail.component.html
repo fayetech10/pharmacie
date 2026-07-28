@@ -25,36 +25,86 @@
       <app-status-badge [statut]="facture.statut"></app-status-badge>
     </div>
     <div class="fd-header-actions">
-      <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterPdf()">
-        <mat-icon>picture_as_pdf</mat-icon> PDF
+      <!-- Desktop Action Buttons (md:flex) -->
+      <div class="hidden md:flex items-center gap-2 flex-wrap">
+        <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterPdf()">
+          <mat-icon>picture_as_pdf</mat-icon> PDF
+        </button>
+        <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterExcel()">
+          <mat-icon>table_view</mat-icon> Excel
+        </button>
+
+        <ng-container *ngIf="auth.isStructureSanitaire() && canSend">
+          <button class="fd-btn fd-btn--primary" (click)="envoyer()">
+            <mat-icon>send</mat-icon> {{ (facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_CS') ? 'Renvoyer' : 'Envoyer' }}
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="canReviewPoste">
+          <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeterPoste()">
+            <mat-icon>cancel</mat-icon> Rejeter (vers Poste)
+          </button>
+          <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="validerPoste()">
+            <mat-icon>check_circle</mat-icon> Valider et Transmettre
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="canReview">
+          <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeter()">
+            <mat-icon>cancel</mat-icon> Rejeter
+          </button>
+          <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="valider()">
+            <mat-icon>check_circle</mat-icon> Valider
+          </button>
+        </ng-container>
+      </div>
+
+      <!-- Mobile Action Menu Icon Button (md:hidden) -->
+      <button class="fd-btn fd-btn--outline md:hidden flex items-center gap-1.5" [matMenuTriggerFor]="actionsMenuStructureMobile" type="button" aria-label="Actions">
+        <mat-icon>more_vert</mat-icon>
+        <span>Actions</span>
       </button>
-      <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterExcel()">
-        <mat-icon>table_view</mat-icon> Excel
-      </button>
 
-      <ng-container *ngIf="auth.isStructureSanitaire() && canSend">
-        <button class="fd-btn fd-btn--primary" (click)="envoyer()">
-          <mat-icon>send</mat-icon> {{ (facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_CS') ? 'Renvoyer' : 'Envoyer' }}
+      <mat-menu #actionsMenuStructureMobile="matMenu" xPosition="before">
+        <button mat-menu-item [disabled]="exporting" (click)="exporterExcel()">
+          <mat-icon>table_view</mat-icon>
+          <span>Exporter Excel</span>
         </button>
-      </ng-container>
 
-      <ng-container *ngIf="canReviewPoste">
-        <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeterPoste()">
-          <mat-icon>cancel</mat-icon> Rejeter (vers Poste)
+        <button mat-menu-item [disabled]="exporting" (click)="exporterPdf()">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>Exporter PDF</span>
         </button>
-        <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="validerPoste()">
-          <mat-icon>check_circle</mat-icon> Valider et Transmettre
-        </button>
-      </ng-container>
 
-      <ng-container *ngIf="canReview">
-        <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeter()">
-          <mat-icon>cancel</mat-icon> Rejeter
-        </button>
-        <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="valider()">
-          <mat-icon>check_circle</mat-icon> Valider
-        </button>
-      </ng-container>
+        <ng-container *ngIf="auth.isStructureSanitaire() && canSend">
+          <button mat-menu-item (click)="envoyer()">
+            <mat-icon>send</mat-icon>
+            <span>{{ (facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_CS') ? 'Renvoyer la facture' : 'Envoyer la facture' }}</span>
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="canReviewPoste">
+          <button mat-menu-item (click)="validerPoste()" [disabled]="busy">
+            <mat-icon class="text-emerald-600">check_circle</mat-icon>
+            <span>Valider et Transmettre</span>
+          </button>
+          <button mat-menu-item (click)="rejeterPoste()" [disabled]="busy">
+            <mat-icon class="text-rose-600">cancel</mat-icon>
+            <span>Rejeter (vers Poste)</span>
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="canReview">
+          <button mat-menu-item (click)="valider()" [disabled]="busy">
+            <mat-icon class="text-emerald-600">check_circle</mat-icon>
+            <span>Valider la facture</span>
+          </button>
+          <button mat-menu-item (click)="rejeter()" [disabled]="busy">
+            <mat-icon class="text-rose-600">cancel</mat-icon>
+            <span>Rejeter la facture</span>
+          </button>
+        </ng-container>
+      </mat-menu>
     </div>
   </header>
 

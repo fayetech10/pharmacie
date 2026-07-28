@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { PharmacieService } from '../../core/services/pharmacie.service';
 import { Pharmacie, PharmacieImportResult } from '../../core/models/pharmacie.model';
 import { RegionService, Region } from '../../core/services/region.service';
@@ -12,16 +12,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-pharmacies',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatTableModule, MatPaginatorModule,
-    MatSortModule, MatIconModule, MatCardModule,
-    MatInputModule, MatSelectModule, MatSnackBarModule
+    CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatIconModule, 
+    MatInputModule, MatButtonModule, MatSelectModule, MatTableModule, 
+    MatPaginatorModule, MatSortModule, MatMenuModule, MatSnackBarModule
   ],
   templateUrl: './pharmacies.component.html'
 })

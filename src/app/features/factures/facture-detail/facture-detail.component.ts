@@ -10,6 +10,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Facture, LigneFacture, LigneDecisionRequest, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
@@ -43,6 +44,7 @@ interface PatientGroup {
     MatDialogModule,
     MatSnackBarModule,
     MatTooltipModule,
+    MatMenuModule,
     StatusBadgeComponent
   ],
   templateUrl: './facture-detail.component.html',

@@ -6,20 +6,46 @@
           <p>Gérez les pharmacies partenaires de la CSU.</p>
         </div>
         <div class="page-head-actions">
-          <button class="btn btn-ghost" (click)="downloadModele()" type="button" title="Télécharger le modèle Excel">
-            <mat-icon>download</mat-icon> Modèle
-          </button>
-          <button class="btn btn-outline" (click)="importInput.click()" type="button" [disabled]="importing" title="Importer des pharmacies depuis un fichier Excel">
-            <mat-icon>upload_file</mat-icon> {{ importing ? 'Import…' : 'Importer' }}
-          </button>
-          <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
-          <button class="btn btn-outline" (click)="exporterIdentifiants()" type="button"
-                  title="Exporter les pharmacies créées avec leurs identifiants de connexion">
-            <mat-icon>table_view</mat-icon> Exporter les identifiants
-          </button>
-          <button class="btn btn-primary" (click)="openModal()">
-            <mat-icon>add_business</mat-icon> Ajouter
-          </button>
+          <!-- Desktop actions -->
+          <div class="hidden md:flex items-center gap-2">
+            <button class="btn btn-ghost" (click)="downloadModele()" type="button" title="Télécharger le modèle Excel">
+              <mat-icon>download</mat-icon> Modèle
+            </button>
+            <button class="btn btn-outline" (click)="importInput.click()" type="button" [disabled]="importing" title="Importer des pharmacies depuis un fichier Excel">
+              <mat-icon>upload_file</mat-icon> {{ importing ? 'Import…' : 'Importer' }}
+            </button>
+            <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
+            <button class="btn btn-outline" (click)="exporterIdentifiants()" type="button"
+                    title="Exporter les pharmacies créées avec leurs identifiants de connexion">
+              <mat-icon>table_view</mat-icon> Exporter les identifiants
+            </button>
+            <button class="btn btn-primary" (click)="openModal()">
+              <mat-icon>add_business</mat-icon> Ajouter
+            </button>
+          </div>
+          <!-- Mobile actions -->
+          <div class="flex md:hidden items-center gap-2 w-full">
+            <button class="btn btn-primary flex-1" (click)="openModal()">
+              <mat-icon>add_business</mat-icon> Ajouter
+            </button>
+            <button mat-icon-button [matMenuTriggerFor]="mobileMenu" class="!bg-border-light !text-text-primary">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #mobileMenu="matMenu">
+              <button mat-menu-item (click)="downloadModele()">
+                <mat-icon>download</mat-icon>
+                <span>Modèle</span>
+              </button>
+              <button mat-menu-item (click)="importInput.click()" [disabled]="importing">
+                <mat-icon>upload_file</mat-icon>
+                <span>{{ importing ? 'Import…' : 'Importer' }}</span>
+              </button>
+              <button mat-menu-item (click)="exporterIdentifiants()">
+                <mat-icon>table_view</mat-icon>
+                <span>Exporter</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
       </div>
 

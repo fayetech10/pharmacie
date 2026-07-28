@@ -5,23 +5,54 @@
       <p>Créez et gérez les structures et leur agent, rattachées à un BCSU</p>
     </div>
     <div class="page-head-actions" *ngIf="selectedTab === 0">
-      <button class="btn btn-outline" (click)="telechargerModeleImport()" title="Modèle Excel à remplir pour l'import des structures (EPS, CS, PS)">
-        <mat-icon>download</mat-icon> Modèle
-      </button>
-      <input type="file" accept=".xlsx" hidden #importPostesInput (change)="onImportFileSelected($event)">
-      <button class="btn btn-outline" [disabled]="importing" (click)="importPostesInput.click()">
-        <mat-icon>upload_file</mat-icon> {{ importing ? 'Import en cours…' : 'Importer des structures (Excel)' }}
-      </button>
-      <button class="btn btn-outline" (click)="exporterIdentifiants()" title="Exporter les structures avec leurs identifiants de connexion">
-        <mat-icon>table_view</mat-icon> Exporter les identifiants
-      </button>
-      <button class="btn btn-outline" [disabled]="purging" (click)="purgerBrouillons()"
-              title="Supprimer les factures de structure restées en brouillon">
-        <mat-icon>delete_sweep</mat-icon> {{ purging ? 'Purge…' : 'Purger les brouillons' }}
-      </button>
-      <button class="btn btn-primary" (click)="openAdd()">
-        <mat-icon>add</mat-icon> Ajouter une structure
-      </button>
+      <!-- Desktop actions -->
+      <div class="hidden md:flex items-center gap-2">
+        <button class="btn btn-outline" (click)="telechargerModeleImport()" title="Modèle Excel à remplir pour l'import des structures (EPS, CS, PS)">
+          <mat-icon>download</mat-icon> Modèle
+        </button>
+        <input type="file" accept=".xlsx" hidden #importPostesInput (change)="onImportFileSelected($event)">
+        <button class="btn btn-outline" [disabled]="importing" (click)="importPostesInput.click()">
+          <mat-icon>upload_file</mat-icon> {{ importing ? 'Import en cours…' : 'Importer des structures (Excel)' }}
+        </button>
+        <button class="btn btn-outline" (click)="exporterIdentifiants()" title="Exporter les structures avec leurs identifiants de connexion">
+          <mat-icon>table_view</mat-icon> Exporter les identifiants
+        </button>
+        <button class="btn btn-outline" [disabled]="purging" (click)="purgerBrouillons()"
+                title="Supprimer les factures de structure restées en brouillon">
+          <mat-icon>delete_sweep</mat-icon> {{ purging ? 'Purge…' : 'Purger les brouillons' }}
+        </button>
+        <button class="btn btn-primary" (click)="openAdd()">
+          <mat-icon>add</mat-icon> Ajouter une structure
+        </button>
+      </div>
+      <!-- Mobile actions -->
+      <div class="flex md:hidden items-center gap-2 w-full">
+        <input type="file" accept=".xlsx" hidden #importPostesInputMobile (change)="onImportFileSelected($event)">
+        <button class="btn btn-primary flex-1" (click)="openAdd()">
+          <mat-icon>add</mat-icon> Ajouter
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="mobileMenu" class="!bg-border-light !text-text-primary">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mobileMenu="matMenu">
+          <button mat-menu-item (click)="telechargerModeleImport()">
+            <mat-icon>download</mat-icon>
+            <span>Modèle</span>
+          </button>
+          <button mat-menu-item (click)="importPostesInputMobile.click()" [disabled]="importing">
+            <mat-icon>upload_file</mat-icon>
+            <span>{{ importing ? 'Import…' : 'Importer' }}</span>
+          </button>
+          <button mat-menu-item (click)="exporterIdentifiants()">
+            <mat-icon>table_view</mat-icon>
+            <span>Exporter</span>
+          </button>
+          <button mat-menu-item (click)="purgerBrouillons()" [disabled]="purging">
+            <mat-icon>delete_sweep</mat-icon>
+            <span>{{ purging ? 'Purge…' : 'Purger brouillons' }}</span>
+          </button>
+        </mat-menu>
+      </div>
     </div>
   </div>
 

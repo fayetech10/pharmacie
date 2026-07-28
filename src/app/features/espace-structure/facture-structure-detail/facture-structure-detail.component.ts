@@ -12,6 +12,7 @@ import { REGIME_LABELS } from '../../../core/models/bcsu.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
+import { MatMenuModule } from '@angular/material/menu';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PatientDetailComponent } from '../../patients/patient-detail/patient-detail.component';
@@ -19,7 +20,7 @@ import { PatientDetailComponent } from '../../patients/patient-detail/patient-de
 @Component({
   selector: 'app-facture-structure-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatDialogModule, StatusBadgeComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatDialogModule, MatMenuModule, StatusBadgeComponent],
   templateUrl: './facture-structure-detail.component.html',
   styleUrls: [
     '../../factures/facture-detail/facture-detail.shared.css',

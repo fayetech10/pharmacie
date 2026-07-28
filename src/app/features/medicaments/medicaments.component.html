@@ -6,17 +6,41 @@
           <p>Consultez la liste des médicaments et importez les listes éligibles / exclues.</p>
         </div>
         <div class="page-head-actions">
-          <button class="btn btn-primary" (click)="fileInput.click()">
-            <mat-icon>upload_file</mat-icon> Liste Éligibles
-          </button>
-          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
-          <button class="btn btn-outline" (click)="exclusionInput.click()">
-            <mat-icon>block</mat-icon> Liste Exclusions
-          </button>
-          <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
-          <button class="btn btn-primary" (click)="ouvrirCreation()">
-            <mat-icon>add</mat-icon> Ajouter
-          </button>
+          <!-- Desktop actions -->
+          <div class="hidden md:flex items-center gap-2">
+            <button class="btn btn-primary" (click)="fileInput.click()">
+              <mat-icon>upload_file</mat-icon> Liste Éligibles
+            </button>
+            <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+            <button class="btn btn-outline" (click)="exclusionInput.click()">
+              <mat-icon>block</mat-icon> Liste Exclusions
+            </button>
+            <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+            <button class="btn btn-primary" (click)="ouvrirCreation()">
+              <mat-icon>add</mat-icon> Ajouter
+            </button>
+          </div>
+          <!-- Mobile actions -->
+          <div class="flex md:hidden items-center gap-2 w-full">
+            <input type="file" #fileInputMobile style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+            <input type="file" #exclusionInputMobile style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
+            <button class="btn btn-primary flex-1" (click)="ouvrirCreation()">
+              <mat-icon>add</mat-icon> Ajouter
+            </button>
+            <button mat-icon-button [matMenuTriggerFor]="mobileMenu" class="!bg-border-light !text-text-primary">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #mobileMenu="matMenu">
+              <button mat-menu-item (click)="fileInputMobile.click()">
+                <mat-icon>upload_file</mat-icon>
+                <span>Liste Éligibles</span>
+              </button>
+              <button mat-menu-item (click)="exclusionInputMobile.click()">
+                <mat-icon>block</mat-icon>
+                <span>Liste Exclusions</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
       </div>
 

@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 
 @Component({
   selector: 'app-medicaments',
@@ -21,7 +22,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   imports: [
     CommonModule, ReactiveFormsModule, MatTableModule, MatPaginatorModule, MatSortModule,
     MatButtonModule, MatIconModule, MatCardModule, MatInputModule, MatSelectModule,
-    MatFormFieldModule, MatSnackBarModule
+    MatFormFieldModule, MatSnackBarModule, MatMenuModule
   ],
   templateUrl: './medicaments.component.html'
 })
