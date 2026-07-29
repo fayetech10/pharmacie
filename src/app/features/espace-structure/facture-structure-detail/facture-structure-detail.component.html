@@ -25,47 +25,13 @@
       <app-status-badge [statut]="facture.statut"></app-status-badge>
     </div>
     <div class="fd-header-actions">
-      <!-- Desktop Action Buttons (md:flex) -->
-      <div class="hidden md:flex items-center gap-2 flex-wrap">
-        <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterPdf()">
-          <mat-icon>picture_as_pdf</mat-icon> PDF
-        </button>
-        <button class="fd-btn fd-btn--outline" [disabled]="exporting" (click)="exporterExcel()">
-          <mat-icon>table_view</mat-icon> Excel
-        </button>
-
-        <ng-container *ngIf="auth.isStructureSanitaire() && canSend">
-          <button class="fd-btn fd-btn--primary" (click)="envoyer()">
-            <mat-icon>send</mat-icon> {{ (facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_CS') ? 'Renvoyer' : 'Envoyer' }}
-          </button>
-        </ng-container>
-
-        <ng-container *ngIf="canReviewPoste">
-          <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeterPoste()">
-            <mat-icon>cancel</mat-icon> Rejeter (vers Poste)
-          </button>
-          <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="validerPoste()">
-            <mat-icon>check_circle</mat-icon> Valider et Transmettre
-          </button>
-        </ng-container>
-
-        <ng-container *ngIf="canReview">
-          <button class="fd-btn fd-btn--danger" [disabled]="busy" (click)="rejeter()">
-            <mat-icon>cancel</mat-icon> Rejeter
-          </button>
-          <button class="fd-btn fd-btn--primary" [disabled]="busy" (click)="valider()">
-            <mat-icon>check_circle</mat-icon> Valider
-          </button>
-        </ng-container>
-      </div>
-
-      <!-- Mobile Action Menu Icon Button (md:hidden) -->
-      <button class="fd-btn fd-btn--outline md:hidden flex items-center gap-1.5" [matMenuTriggerFor]="actionsMenuStructureMobile" type="button" aria-label="Actions">
+      <!-- Action Menu Button (Desktop & Mobile) -->
+      <button class="fd-btn fd-btn--outline flex items-center gap-1.5" [matMenuTriggerFor]="actionsMenuStructure" type="button" aria-label="Actions">
         <mat-icon>more_vert</mat-icon>
         <span>Actions</span>
       </button>
 
-      <mat-menu #actionsMenuStructureMobile="matMenu" xPosition="before">
+      <mat-menu #actionsMenuStructure="matMenu" xPosition="before">
         <button mat-menu-item [disabled]="exporting" (click)="exporterExcel()">
           <mat-icon>table_view</mat-icon>
           <span>Exporter Excel</span>

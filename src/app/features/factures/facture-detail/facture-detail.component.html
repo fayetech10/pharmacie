@@ -28,76 +28,13 @@
       <app-status-badge [statut]="facture.statut"></app-status-badge>
     </div>
     <div class="fd-header-actions">
-      <!-- Desktop Action Buttons (md:flex) -->
-      <div class="hidden md:flex items-center gap-2 flex-wrap">
-        <button class="fd-btn fd-btn--outline" (click)="exportExcel()">
-          <mat-icon>table_view</mat-icon> Excel
-        </button>
-
-        <button class="fd-btn fd-btn--outline" (click)="exportPdf()">
-          <mat-icon>picture_as_pdf</mat-icon> PDF
-        </button>
-
-        <button class="fd-btn fd-btn--danger" *ngIf="authService.isAdmin()" (click)="supprimerFacture()">
-          <mat-icon>delete</mat-icon> Supprimer
-        </button>
-
-        <button class="fd-btn fd-btn--outline" *ngIf="authService.isServiceRegional()" (click)="importFileInput.click()">
-          <mat-icon>upload_file</mat-icon> Importer
-        </button>
-
-        <ng-container *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')">
-          <a class="fd-btn fd-btn--outline" [routerLink]="['edit']">
-            <mat-icon>edit</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Corriger' : 'Modifier' }}
-          </a>
-          <button class="fd-btn fd-btn--primary" (click)="envoyer()">
-            <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
-          </button>
-        </ng-container>
-
-        <ng-container *ngIf="authService.isServiceRegional()">
-          <ng-container *ngIf="facture.statut === 'ENVOYEE'">
-            <button class="fd-btn fd-btn--danger" (click)="rejeter()">
-              <mat-icon>cancel</mat-icon> Rejeter
-            </button>
-            <button class="fd-btn fd-btn--primary" (click)="valider()">
-              <mat-icon>check_circle</mat-icon> Valider
-            </button>
-          </ng-container>
-          <ng-container *ngIf="facture.statut === 'REJETEE_NC'">
-            <button class="fd-btn fd-btn--warning" (click)="renvoyerAPharmacie()">
-              <mat-icon>undo</mat-icon> Renvoyer pharmacie
-            </button>
-            <button class="fd-btn fd-btn--primary" (click)="renvoyerAuCentral()">
-              <mat-icon>send</mat-icon> Renvoyer Centrale
-            </button>
-          </ng-container>
-        </ng-container>
-
-        <ng-container *ngIf="authService.isServiceCentral()">
-          <ng-container *ngIf="facture.statut === 'VALIDEE_SR'">
-            <button class="fd-btn fd-btn--danger" (click)="rejeter()">
-              <mat-icon>cancel</mat-icon> Rejeter
-            </button>
-            <button class="fd-btn fd-btn--primary" (click)="valider()">
-              <mat-icon>check_circle</mat-icon> Valider
-            </button>
-          </ng-container>
-          <ng-container *ngIf="facture.statut === 'VALIDEE_NC'">
-            <button class="fd-btn fd-btn--accent" (click)="payer()">
-              <mat-icon>payment</mat-icon> Enregistrer Paiement
-            </button>
-          </ng-container>
-        </ng-container>
-      </div>
-
-      <!-- Mobile Action Menu Icon Button (md:hidden) -->
-      <button class="fd-btn fd-btn--outline md:hidden flex items-center gap-1.5" [matMenuTriggerFor]="actionsMenuMobile" type="button" aria-label="Actions">
+      <!-- Action Menu Button (Desktop & Mobile) -->
+      <button class="fd-btn fd-btn--outline flex items-center gap-1.5" [matMenuTriggerFor]="actionsMenu" type="button" aria-label="Actions">
         <mat-icon>more_vert</mat-icon>
         <span>Actions</span>
       </button>
 
-      <mat-menu #actionsMenuMobile="matMenu" xPosition="before">
+      <mat-menu #actionsMenu="matMenu" xPosition="before">
         <button mat-menu-item (click)="exportExcel()">
           <mat-icon>table_view</mat-icon>
           <span>Exporter Excel</span>

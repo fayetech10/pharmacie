@@ -8,17 +8,26 @@
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
           <p>Gérez et suivez le statut des factures pharmaceutiques</p>
         </div>
-        <div class="page-head-actions">
-          <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="exportExcel()">
-            <mat-icon>table_view</mat-icon> Excel
-          </button>
-          <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="exportPdf()">
-            <mat-icon>picture_as_pdf</mat-icon> PDF
-          </button>
-          <button class="btn btn-outline" *ngIf="!authService.isPharmacien()" (click)="fileInput.click()">
-            <mat-icon>upload_file</mat-icon> Import
-          </button>
+        <div class="page-head-actions" *ngIf="!authService.isPharmacien()">
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+          <button class="btn btn-outline flex items-center gap-1.5" [matMenuTriggerFor]="actionsListMenu" type="button" aria-label="Actions">
+            <mat-icon>more_vert</mat-icon>
+            <span>Actions</span>
+          </button>
+          <mat-menu #actionsListMenu="matMenu" xPosition="before">
+            <button mat-menu-item (click)="exportExcel()">
+              <mat-icon>table_view</mat-icon>
+              <span>Exporter Excel</span>
+            </button>
+            <button mat-menu-item (click)="exportPdf()">
+              <mat-icon>picture_as_pdf</mat-icon>
+              <span>Exporter PDF</span>
+            </button>
+            <button mat-menu-item (click)="fileInput.click()">
+              <mat-icon>upload_file</mat-icon>
+              <span>Importer des factures</span>
+            </button>
+          </mat-menu>
         </div>
       </div>
 
