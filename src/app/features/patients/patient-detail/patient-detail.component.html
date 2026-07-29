@@ -1,64 +1,126 @@
 <div class="fade-in pd" *ngIf="!loading && dossier">
 
-  <!-- ═══════ PROFILE HEADER CARD ═══════ -->
-  <div class="pd-profile-card">
-    <a routerLink="/dashboard/patients" class="pd-back" aria-label="Retour à la liste des patients">
-      <mat-icon>arrow_back</mat-icon>
-    </a>
+  <!-- ═══════ PROFILE HERO BANNER ═══════ -->
+  <div class="pd-hero-card">
+    <div class="pd-hero-bg-glow"></div>
 
-    <div class="pd-profile-body">
-      <div class="pd-avatar">
-        {{ dossier.patient.prenom.charAt(0) }}{{ dossier.patient.nom.charAt(0) }}
+    <div class="pd-hero-top">
+      <a routerLink="/dashboard/patients" class="pd-back-btn" aria-label="Retour à la liste des patients">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Retour</span>
+      </a>
+      <div class="pd-hero-actions">
+        <button class="pd-action-btn pd-action-btn--glass" [disabled]="isExportingPdf" (click)="exportPdf()">
+          <mat-icon>download</mat-icon> Exporter PDF
+        </button>
+        <button class="pd-action-btn pd-action-btn--light" [disabled]="isExportingPdf" (click)="sendPdf()">
+          <mat-icon>share</mat-icon> Partager
+        </button>
+      </div>
+    </div>
+
+    <div class="pd-hero-body">
+      <div class="pd-avatar-wrapper">
+        <div class="pd-avatar">
+          {{ dossier.patient.prenom.charAt(0) }}{{ dossier.patient.nom.charAt(0) }}
+        </div>
+        <span class="pd-avatar-status" title="Patient enregistré"></span>
       </div>
 
-      <div class="pd-profile-info">
-        <span class="pd-eyebrow">Dossier Bénéficiaire</span>
-        <h1 class="pd-title">{{ dossier.patient.prenom }} {{ dossier.patient.nom }}</h1>
-        <div class="pd-meta-row">
-          <span class="pd-regime-badge pd-upper">{{ regimeLabels[dossier.patient.regime] }}</span>
-          <span class="pd-meta-item" *ngIf="dossier.patient.numeroCni || dossier.patient.numeroAssure">
+      <div class="pd-profile-main">
+        <div class="pd-eyebrow-chip">
+          <mat-icon>folder_shared</mat-icon>
+          <span>Dossier Bénéficiaire Consolidé</span>
+        </div>
+        <h1 class="pd-hero-name">{{ dossier.patient.prenom }} {{ dossier.patient.nom }}</h1>
+
+        <div class="pd-meta-chips">
+          <span class="pd-chip pd-chip--regime">
+            <mat-icon>verified</mat-icon>
+            {{ regimeLabels[dossier.patient.regime] }}
+          </span>
+
+          <span class="pd-chip" *ngIf="dossier.patient.numeroCni || dossier.patient.numeroAssure">
             <mat-icon>badge</mat-icon>
-            {{ dossier.patient.numeroCni || dossier.patient.numeroAssure }}
+            CNI/N° : {{ dossier.patient.numeroCni || dossier.patient.numeroAssure }}
           </span>
-          <span class="pd-meta-item">
+
+          <span class="pd-chip">
             <mat-icon>phone</mat-icon>
-            {{ dossier.patient.telephone || '—' }}
+            {{ dossier.patient.telephone || 'Non renseigné' }}
           </span>
-          <span class="pd-meta-item" *ngIf="dossier.patient.dateNaissance">
+
+          <span class="pd-chip" *ngIf="dossier.patient.dateNaissance">
             <mat-icon>cake</mat-icon>
             {{ dossier.patient.dateNaissance | date:'dd/MM/yyyy' }}
           </span>
         </div>
       </div>
 
-      <div class="pd-profile-right">
-        <div class="pd-csu-card">
-          <div class="pd-csu-icon"><mat-icon>shield</mat-icon></div>
-          <div>
-            <span class="pd-csu-label">Prise en charge CSU</span>
-            <span class="pd-csu-amount">{{ totalSencsuPrisEnCharge | number:'1.0-0':'fr' }} FCFA</span>
-          </div>
+      <div class="pd-csu-hero-box">
+        <div class="pd-csu-hero-icon">
+          <mat-icon>shield</mat-icon>
         </div>
-        <div class="pd-actions">
-          <button mat-flat-button color="primary" [disabled]="isExportingPdf" (click)="exportPdf()">
-            <mat-icon>download</mat-icon> PDF
-          </button>
-          <button mat-stroked-button color="primary" [disabled]="isExportingPdf" (click)="sendPdf()">
-            <mat-icon>send</mat-icon> Envoyer
-          </button>
+        <div>
+          <span class="pd-csu-hero-title">Prise en Charge CSU</span>
+          <span class="pd-csu-hero-val">{{ totalSencsuPrisEnCharge | number:'1.0-0':'fr' }} <small>FCFA</small></span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════ TABS ═══════ -->
+  <!-- ═══════ KPI SUMMARY CARDS ═══════ -->
+  <div class="pd-kpi-grid">
+    <div class="pd-kpi-card">
+      <div class="pd-kpi-icon pd-kpi-icon--emerald">
+        <mat-icon>assignment_turned_in</mat-icon>
+      </div>
+      <div class="pd-kpi-content">
+        <span class="pd-kpi-num">{{ dossier.lettresGarantie.length }}</span>
+        <span class="pd-kpi-label">Lettres de garantie</span>
+      </div>
+    </div>
+
+    <div class="pd-kpi-card" *ngIf="dossier.patient.regime === 'CONTRIBUTIF'">
+      <div class="pd-kpi-icon pd-kpi-icon--teal">
+        <mat-icon>receipt</mat-icon>
+      </div>
+      <div class="pd-kpi-content">
+        <span class="pd-kpi-num">{{ dossier.bonsCommande.length }}</span>
+        <span class="pd-kpi-label">Bons de commande</span>
+      </div>
+    </div>
+
+    <div class="pd-kpi-card">
+      <div class="pd-kpi-icon pd-kpi-icon--blue">
+        <mat-icon>description</mat-icon>
+      </div>
+      <div class="pd-kpi-content">
+        <span class="pd-kpi-num">{{ feuillesSoins.length }}</span>
+        <span class="pd-kpi-label">Feuilles de soins</span>
+      </div>
+    </div>
+
+    <div class="pd-kpi-card">
+      <div class="pd-kpi-icon pd-kpi-icon--purple">
+        <mat-icon>local_pharmacy</mat-icon>
+      </div>
+      <div class="pd-kpi-content">
+        <span class="pd-kpi-num">{{ dossier.lignesFactureOfficine.length }}</span>
+        <span class="pd-kpi-label">Achats pharmacie</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ TABS CONTENT ═══════ -->
   <mat-tab-group animationDuration="200ms" class="pd-tabs">
 
     <!-- 1. LETTRES DE GARANTIE -->
     <mat-tab *ngIf="dossier.lettresGarantie.length > 0">
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">assignment_turned_in</mat-icon>
-        Lettres ({{ dossier.lettresGarantie.length }})
+        <span>Lettres</span>
+        <span class="pd-tab-count">{{ dossier.lettresGarantie.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
         <div class="pd-table-wrap" *ngIf="dossier.lettresGarantie.length > 0">
@@ -66,22 +128,25 @@
             <thead>
               <tr>
                 <th>N° Lettre</th>
-                <th>Date</th>
+                <th>Date d'émission</th>
                 <th>Régime</th>
                 <th>Prise en charge CSU</th>
                 <th>Statut</th>
-                <th class="pd-col-action">Actions</th>
+                <th class="pd-col-action">Action</th>
               </tr>
             </thead>
             <tbody>
               <tr class="pd-row pd-row--clickable" *ngFor="let l of dossier.lettresGarantie" [routerLink]="['/dashboard/lettres-garantie', l.id]">
-                <td class="pd-link-cell">{{ l.numero }}</td>
+                <td class="pd-link-cell">
+                  <mat-icon class="pd-cell-icon">description</mat-icon>
+                  {{ l.numero }}
+                </td>
                 <td>{{ l.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td class="pd-upper">{{ regimeLabels[l.regime] }}</td>
-                <td class="pd-strong">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+                <td><span class="pd-pill-regime">{{ regimeLabels[l.regime] }}</span></td>
+                <td class="pd-strong pd-primary">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
                 <td><span class="pd-badge" [ngClass]="'pd-badge--' + lettreTone(l.statut)">{{ l.statut }}</span></td>
-                <td class="pd-col-action">
-                  <button class="pd-dossier-btn" (click)="imprimerDossierComplet(l, $event)" title="Voir la lettre, le bon et la feuille">
+                <td class="pd-col-action" (click)="$event.stopPropagation()">
+                  <button class="pd-dossier-btn" (click)="imprimerDossierComplet(l, $event)" title="Voir le dossier complet">
                     <mat-icon>visibility</mat-icon><span>Dossier</span>
                   </button>
                 </td>
@@ -96,12 +161,20 @@
     <mat-tab *ngIf="dossier.patient.regime === 'CONTRIBUTIF' && (dossier.bonsCommande.length > 0 || (canDelivrerBon && lettresEligibles.length > 0))">
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">receipt</mat-icon>
-        Bons ({{ dossier.bonsCommande.length }})
+        <span>Bons</span>
+        <span class="pd-tab-count">{{ dossier.bonsCommande.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
-        <!-- Délivrance d'un bon -->
-        <mat-card class="pd-deliver-card" *ngIf="canDelivrerBon && lettresEligibles.length > 0">
-          <h4 class="pd-deliver-title"><mat-icon>post_add</mat-icon> Délivrer un bon de commande</h4>
+        <!-- Card Délivrance de bon -->
+        <div class="pd-deliver-card" *ngIf="canDelivrerBon && lettresEligibles.length > 0">
+          <div class="pd-deliver-header">
+            <div class="pd-deliver-icon"><mat-icon>post_add</mat-icon></div>
+            <div>
+              <h4 class="pd-deliver-title">Délivrer un bon de commande</h4>
+              <p class="pd-deliver-sub">Sélectionnez la lettre de garantie active pour générer un nouveau bon</p>
+            </div>
+          </div>
+
           <div class="pd-deliver-row">
             <mat-form-field appearance="outline" class="pd-deliver-select">
               <mat-label>Lettre de garantie émise</mat-label>
@@ -112,18 +185,15 @@
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="outline" class="pd-deliver-nb">
-              <mat-label>Nombre de lignes</mat-label>
+              <mat-label>Nb. de lignes</mat-label>
               <input matInput type="number" min="1" [(ngModel)]="nombreLignesBon">
             </mat-form-field>
-            <button mat-flat-button color="primary" class="pd-deliver-btn" (click)="delivrerBon()" [disabled]="delivering || !selectedLettreId">
+            <button class="pd-btn-deliver" (click)="delivrerBon()" [disabled]="delivering || !selectedLettreId">
               <mat-icon>{{ delivering ? 'hourglass_top' : 'print' }}</mat-icon>
-              {{ delivering ? 'En cours…' : 'Délivrer' }}
+              <span>{{ delivering ? 'Génération…' : 'Délivrer le bon' }}</span>
             </button>
           </div>
-          <p class="pd-deliver-hint">
-            Le bon est généré à partir de la lettre de garantie sélectionnée, puis ouvert en PDF pour impression.
-          </p>
-        </mat-card>
+        </div>
 
         <div *ngIf="dossier.bonsCommande.length === 0" class="pd-empty">
           <mat-icon>folder_open</mat-icon>
@@ -135,35 +205,40 @@
             <thead>
               <tr>
                 <th>N° Bon</th>
-                <th>Lettre</th>
-                <th>Date</th>
-                <th>Lignes</th>
+                <th>Lettre rattachée</th>
+                <th>Date d'émission</th>
+                <th>Lignes utilisées</th>
                 <th>Prise en charge CSU</th>
                 <th>Statut</th>
-                <th class="pd-col-action">Actions</th>
+                <th class="pd-col-action">Impression</th>
               </tr>
             </thead>
             <tbody>
               <ng-container *ngFor="let b of dossier.bonsCommande">
                 <tr class="pd-row">
                   <td class="pd-strong">{{ b.numero }}</td>
-                  <td class="pd-link-cell" [routerLink]="['/dashboard/lettres-garantie', b.lettreGarantieId]">{{ b.lettreGarantieNumero }}</td>
+                  <td class="pd-link-cell" [routerLink]="['/dashboard/lettres-garantie', b.lettreGarantieId]">
+                    <mat-icon class="pd-cell-icon">link</mat-icon>
+                    {{ b.lettreGarantieNumero }}
+                  </td>
                   <td>{{ b.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td class="pd-semi">{{ b.lignesUtilisees ?? 0 }} / {{ b.nombreLignes }}</td>
-                  <td class="pd-strong">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+                  <td>
+                    <span class="pd-lines-badge">{{ b.lignesUtilisees ?? 0 }} / {{ b.nombreLignes }}</span>
+                  </td>
+                  <td class="pd-strong pd-primary">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
                   <td><span class="pd-badge" [ngClass]="'pd-badge--' + bonTone(b.statut)">{{ b.statut }}</span></td>
                   <td class="pd-col-action">
-                    <button mat-icon-button color="primary" (click)="imprimerBon(b)" title="Imprimer le bon (PDF)">
+                    <button class="pd-icon-btn" (click)="imprimerBon(b)" title="Imprimer le bon (PDF)">
                       <mat-icon>print</mat-icon>
                     </button>
                   </td>
                 </tr>
                 <tr class="pd-subrow" *ngIf="getLignesForBon(b.numero).length > 0">
                   <td colspan="7">
-                    <div class="pd-subrow-title">Médicaments servis :</div>
+                    <div class="pd-subrow-title">Médicaments délivrés en officine :</div>
                     <div class="pd-subline" *ngFor="let l of getLignesForBon(b.numero)">
-                      <span>• {{ l.medicament }} <span class="pd-muted-teal">({{ l.pharmacieNom }})</span></span>
-                      <span><strong>{{ l.quantite }}</strong> x {{ l.prixUnitaire | number:'1.0-0':'fr' }} F = <strong>{{ l.montant | number:'1.0-0':'fr' }} F</strong></span>
+                      <span class="pd-subline-item"><mat-icon>medication</mat-icon> {{ l.medicament }} <em class="pd-muted-teal">({{ l.pharmacieNom }})</em></span>
+                      <span><strong>{{ l.quantite }}</strong> × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F = <strong>{{ l.montant | number:'1.0-0':'fr' }} F</strong></span>
                     </div>
                   </td>
                 </tr>
@@ -178,39 +253,45 @@
     <mat-tab *ngIf="feuillesSoins.length > 0 || canDelivrerBon">
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">description</mat-icon>
-        Feuilles ({{ feuillesSoins.length }})
+        <span>Feuilles</span>
+        <span class="pd-tab-count">{{ feuillesSoins.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
-        <div class="pd-section-head">
-          <button *ngIf="canDelivrerBon" mat-stroked-button color="primary" (click)="delivrerFeuilleSoins()">
-            <mat-icon>note_add</mat-icon> Délivrer une feuille de soins
+        <div class="pd-section-head" *ngIf="canDelivrerBon">
+          <button class="pd-btn-new" (click)="delivrerFeuilleSoins()">
+            <mat-icon>note_add</mat-icon> Nouvelle feuille de soins
           </button>
         </div>
+
         <div *ngIf="feuillesSoins.length === 0" class="pd-empty">
           <mat-icon>folder_open</mat-icon>
           <p>Aucune feuille de soins délivrée à ce patient.</p>
         </div>
+
         <div class="pd-table-wrap" *ngIf="feuillesSoins.length > 0">
           <table class="pd-table">
             <thead>
               <tr>
                 <th>N° Feuille</th>
-                <th>Structure</th>
-                <th>Date</th>
-                <th>Part assureur</th>
+                <th>Structure sanitaire</th>
+                <th>Date d'émission</th>
+                <th>Part Assureur</th>
                 <th>Statut</th>
-                <th class="pd-col-action">Actions</th>
+                <th class="pd-col-action">Impression</th>
               </tr>
             </thead>
             <tbody>
               <tr class="pd-row pd-row--clickable" *ngFor="let fds of feuillesSoins" [routerLink]="['/dashboard/feuilles-soins', fds.id]">
-                <td class="pd-link-cell">{{ fds.numero }}</td>
+                <td class="pd-link-cell">
+                  <mat-icon class="pd-cell-icon">description</mat-icon>
+                  {{ fds.numero }}
+                </td>
                 <td>{{ fds.structureNom || '—' }}</td>
                 <td>{{ fds.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td class="pd-strong">{{ fds.montantTotalAssureur | number:'1.0-0':'fr' }} F</td>
+                <td class="pd-strong pd-primary">{{ fds.montantTotalAssureur | number:'1.0-0':'fr' }} F</td>
                 <td><span class="pd-badge" [ngClass]="'pd-badge--' + feuilleTone(fds.statut)">{{ statutFeuilleLabels[fds.statut] }}</span></td>
-                <td class="pd-col-action">
-                  <button mat-icon-button class="pd-print-violet" (click)="imprimerFeuille(fds, $event)" title="Imprimer la feuille de soins">
+                <td class="pd-col-action" (click)="$event.stopPropagation()">
+                  <button class="pd-icon-btn pd-print-violet" (click)="imprimerFeuille(fds, $event)" title="Imprimer la feuille de soins">
                     <mat-icon>print</mat-icon>
                   </button>
                 </td>
@@ -225,7 +306,8 @@
     <mat-tab *ngIf="dossier.lignesFactureOfficine.length > 0">
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">local_pharmacy</mat-icon>
-        Pharmacie ({{ dossier.lignesFactureOfficine.length }})
+        <span>Pharmacie</span>
+        <span class="pd-tab-count">{{ dossier.lignesFactureOfficine.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
         <div class="pd-table-wrap" *ngIf="dossier.lignesFactureOfficine.length > 0">
@@ -234,7 +316,7 @@
               <tr>
                 <th>Médicament</th>
                 <th>Pharmacie</th>
-                <th>Bon</th>
+                <th>Bon rattaché</th>
                 <th>Qté</th>
                 <th>P.U.</th>
                 <th>Montant</th>
@@ -264,7 +346,8 @@
     <mat-tab *ngIf="dossier.facturesStructure.length > 0">
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">local_hospital</mat-icon>
-        Structure ({{ dossier.facturesStructure.length }})
+        <span>Structure</span>
+        <span class="pd-tab-count">{{ dossier.facturesStructure.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
         <div *ngIf="dossier.facturesStructure.length === 0" class="pd-empty">
@@ -300,7 +383,7 @@
                     <div class="pd-subrow-title">Actes médicaux :</div>
                     <div class="pd-subline" *ngFor="let l of fs.lignes">
                       <span>• {{ l.designation }} <span *ngIf="l.motifCesarienne" class="pd-danger-text">({{ l.motifCesarienne }})</span></span>
-                      <span><strong>{{ l.quantite }}</strong> x {{ l.prixUnitaire | number:'1.0-0':'fr' }} F = <strong>{{ l.montantSencsu | number:'1.0-0':'fr' }} F</strong> (CSU)</span>
+                      <span><strong>{{ l.quantite }}</strong> × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F = <strong>{{ l.montantSencsu | number:'1.0-0':'fr' }} F</strong> (CSU)</span>
                     </div>
                   </td>
                 </tr>
@@ -315,7 +398,8 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="pd-tab-icon">photo_library</mat-icon>
-        Documents ({{ documentsLiasse.length }})
+        <span>Documents</span>
+        <span class="pd-tab-count">{{ documentsLiasse.length }}</span>
       </ng-template>
       <div class="pd-tab-body">
         <div *ngIf="documentsLiasse.length === 0" class="pd-empty">
@@ -323,7 +407,7 @@
           <p>Aucun document numérisé pour ce patient.</p>
         </div>
         <div *ngIf="documentsLiasse.length > 0" class="pd-doc-grid">
-          <mat-card class="pd-doc-card" *ngFor="let doc of documentsLiasse" (click)="openImagePreview(doc, imagePreviewModalTemplate)">
+          <div class="pd-doc-card" *ngFor="let doc of documentsLiasse" (click)="openImagePreview(doc, imagePreviewModalTemplate)">
             <div class="pd-doc-thumb">
               <ng-container *ngIf="!doc.isDynamicPdf && !isPdf(doc.imageB64); else pdfThumb">
                 <img [src]="getImageSrc(doc.imageB64)" [alt]="doc.titre" (error)="handleImageError($event)">
@@ -331,18 +415,18 @@
               <ng-template #pdfThumb>
                 <div class="pd-doc-pdf">
                   <mat-icon>picture_as_pdf</mat-icon>
-                  <span>Document PDF</span>
+                  <span>Aperçu Document PDF</span>
                 </div>
               </ng-template>
             </div>
             <div class="pd-doc-body">
-              <div class="pd-doc-title">{{ doc.titre }}</div>
+              <div class="pd-doc-title" [title]="doc.titre">{{ doc.titre }}</div>
               <div class="pd-doc-meta">
                 <span class="pd-doc-source">{{ doc.source }}</span>
                 <span *ngIf="doc.date">{{ doc.date | date:'dd/MM/yyyy' }}</span>
               </div>
             </div>
-          </mat-card>
+          </div>
         </div>
       </div>
     </mat-tab>
@@ -354,7 +438,7 @@
     <div class="pd-preview">
       <div class="pd-preview-head">
         <h2 class="pd-preview-title">{{ selectedDocument?.titre || 'Visualisation du document' }}</h2>
-        <button mat-icon-button [mat-dialog-close]="true" aria-label="Fermer"><mat-icon>close</mat-icon></button>
+        <button class="pd-icon-btn" [mat-dialog-close]="true" aria-label="Fermer"><mat-icon>close</mat-icon></button>
       </div>
       <div class="pd-preview-body">
         <ng-container *ngIf="selectedDocument">
@@ -372,6 +456,6 @@
 </div>
 
 <div *ngIf="loading" class="pd-loading">
-  <mat-icon class="pd-spin">sync</mat-icon>
+  <div class="pd-spinner-ring"></div>
   <span>Chargement du dossier consolidé du patient…</span>
 </div>
