@@ -1,120 +1,166 @@
-<div class="fade-in stats-page">
-  <div class="page-head">
-    <div>
-      <h1>Statistiques & Performances</h1>
-      <p>Suivi détaillé des performances des agents par rapport à leur structure de rattachement</p>
+<div class="fade-in sa" *ngIf="!loading">
+
+  <!-- ═══════ HERO HEADER ═══════ -->
+  <div class="sa-hero">
+    <div class="sa-hero-glow"></div>
+    <div class="sa-hero-body">
+      <div class="sa-hero-text">
+        <div class="sa-eyebrow">
+          <mat-icon>insights</mat-icon>
+          <span>Tableau de bord analytique</span>
+        </div>
+        <h1 class="sa-hero-title">Statistiques & Performances</h1>
+        <p class="sa-hero-sub">Suivi détaillé des performances des agents par rapport à leur structure de rattachement</p>
+      </div>
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div class="kpi-grid">
-    <mat-card class="kpi-card">
-      <div class="kpi-icon total-dossiers">
+  <!-- ═══════ KPI GRID ═══════ -->
+  <div class="sa-kpi-grid">
+    <div class="sa-kpi-card">
+      <div class="sa-kpi-icon sa-kpi-icon--emerald">
         <mat-icon>folder_open</mat-icon>
       </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Dossiers Traités</span>
-        <span class="kpi-value">{{ totalDossiers }}</span>
+      <div class="sa-kpi-content">
+        <span class="sa-kpi-num">{{ totalDossiers }}</span>
+        <span class="sa-kpi-label">Dossiers Traités</span>
       </div>
-    </mat-card>
+    </div>
 
-    <mat-card class="kpi-card">
-      <div class="kpi-icon total-lettres">
+    <div class="sa-kpi-card">
+      <div class="sa-kpi-icon sa-kpi-icon--blue">
         <mat-icon>mark_email_read</mat-icon>
       </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Lettres Émises</span>
-        <span class="kpi-value">{{ totalLettres }}</span>
+      <div class="sa-kpi-content">
+        <span class="sa-kpi-num">{{ totalLettres }}</span>
+        <span class="sa-kpi-label">Lettres Émises</span>
       </div>
-    </mat-card>
+    </div>
 
-    <mat-card class="kpi-card">
-      <div class="kpi-icon total-feuilles" style="background: #E0E7FF; color: #4F46E5;">
+    <div class="sa-kpi-card">
+      <div class="sa-kpi-icon sa-kpi-icon--violet">
         <mat-icon>receipt_long</mat-icon>
       </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Feuilles de Soins</span>
-        <span class="kpi-value">{{ totalFeuilles }}</span>
+      <div class="sa-kpi-content">
+        <span class="sa-kpi-num">{{ totalFeuilles }}</span>
+        <span class="sa-kpi-label">Feuilles de Soins</span>
       </div>
-    </mat-card>
+    </div>
   </div>
 
-  <!-- Charts & Table Section -->
-  <div class="stats-content-grid">
-    
-    <!-- Chart -->
-    <mat-card class="chart-card">
-      <h3 class="card-title">Volumes par Agent</h3>
-      <div class="chart-container">
+  <!-- ═══════ CONTENT GRID: CHART + TABLE ═══════ -->
+  <div class="sa-content-grid">
+
+    <!-- Chart Card -->
+    <div class="sa-card sa-chart-card">
+      <div class="sa-card-head">
+        <div class="sa-card-title-group">
+          <div class="sa-card-icon">
+            <mat-icon>bar_chart</mat-icon>
+          </div>
+          <h3 class="sa-card-title">Volumes par Agent</h3>
+        </div>
+      </div>
+      <div class="sa-chart-body">
         <canvas baseChart
           [data]="barChartData"
           [options]="barChartOptions"
           [type]="barChartType">
         </canvas>
       </div>
-    </mat-card>
+    </div>
 
-    <!-- Detailed Table -->
-    <mat-card class="table-card">
-      <h3 class="card-title">Détails des performances</h3>
-      <div class="table-wrap desktop-only">
-        <table class="stats-table">
+    <!-- Table Card -->
+    <div class="sa-card sa-table-card">
+      <div class="sa-card-head">
+        <div class="sa-card-title-group">
+          <div class="sa-card-icon">
+            <mat-icon>leaderboard</mat-icon>
+          </div>
+          <h3 class="sa-card-title">Détails des performances</h3>
+        </div>
+      </div>
+
+      <!-- Desktop Table -->
+      <div class="sa-table-wrap desktop-only">
+        <table class="sa-table">
           <thead>
             <tr>
               <th>Agent</th>
               <th>Structure</th>
-              <th class="text-center">Enregistrements</th>
-              <th class="text-center">Lettres</th>
-              <th class="text-center">Feuilles Soins</th>
-              <th class="text-center">Heures / Semaine</th>
+              <th class="sa-center">Enregistrements</th>
+              <th class="sa-center">Lettres</th>
+              <th class="sa-center">Feuilles Soins</th>
+              <th class="sa-center">Heures / Semaine</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let agent of agentsStats" class="stats-row clickable-row" (click)="openAgentDetail(agent)">
+            <tr *ngFor="let agent of agentsStats; let i = index"
+                class="sa-row sa-row--clickable"
+                (click)="openAgentDetail(agent)">
               <td>
-                <div class="agent-identity">
-                  <div class="agent-avatar">{{ agent.nom.charAt(0) }}</div>
-                  <span class="agent-name">{{ agent.nom }}</span>
+                <div class="sa-agent-cell">
+                  <div class="sa-agent-avatar">{{ agent.nom.charAt(0) }}</div>
+                  <span class="sa-agent-name">{{ agent.nom }}</span>
                 </div>
               </td>
-              <td><span class="structure-badge">{{ agent.structure }}</span></td>
-              <td class="text-center font-bold text-ink">{{ agent.dossiersTraites }}</td>
-              <td class="text-center font-bold text-primary">{{ agent.lettresEmises }}</td>
-              <td class="text-center font-bold" style="color: #4F46E5;">{{ agent.feuillesSoins }}</td>
-              <td class="text-center">
-                <span class="time-badge">{{ agent.heuresTravailleesSemaine }} h</span>
+              <td><span class="sa-structure-pill">{{ agent.structure }}</span></td>
+              <td class="sa-center sa-bold">{{ agent.dossiersTraites }}</td>
+              <td class="sa-center sa-bold sa-primary">{{ agent.lettresEmises }}</td>
+              <td class="sa-center sa-bold sa-violet">{{ agent.feuillesSoins }}</td>
+              <td class="sa-center">
+                <span class="sa-time-badge">{{ agent.heuresTravailleesSemaine }} h</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Cartes mobiles (≤ 768px) -->
-      <div class="m-cards">
-        <div class="m-card clickable" *ngFor="let agent of agentsStats" (click)="openAgentDetail(agent)"
+      <!-- Mobile Cards -->
+      <div class="sa-m-cards">
+        <div class="sa-m-card" *ngFor="let agent of agentsStats"
+             (click)="openAgentDetail(agent)"
              role="button" tabindex="0" (keydown.enter)="openAgentDetail(agent)"
              [attr.aria-label]="'Voir les performances de ' + agent.nom">
-          <div class="m-card-top">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="agent-avatar">{{ agent.nom.charAt(0) }}</div>
-              <div class="min-w-0">
-                <div class="m-title">{{ agent.nom }}</div>
-                <div class="m-sub">{{ agent.structure }}</div>
+          <div class="sa-m-card-top">
+            <div class="sa-m-card-identity">
+              <div class="sa-agent-avatar">{{ agent.nom.charAt(0) }}</div>
+              <div class="sa-m-card-info">
+                <div class="sa-m-title">{{ agent.nom }}</div>
+                <div class="sa-m-sub">{{ agent.structure }}</div>
               </div>
             </div>
-            <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+            <mat-icon class="sa-m-chevron">chevron_right</mat-icon>
           </div>
-          <div class="m-row">
-            <span><mat-icon class="inline-ic">folder_open</mat-icon>{{ agent.dossiersTraites }} dossiers</span>
-            <span><mat-icon class="inline-ic">mark_email_read</mat-icon>{{ agent.lettresEmises }} lettres</span>
+          <div class="sa-m-row">
+            <span class="sa-m-stat">
+              <mat-icon>folder_open</mat-icon>
+              <strong>{{ agent.dossiersTraites }}</strong> dossiers
+            </span>
+            <span class="sa-m-stat">
+              <mat-icon>mark_email_read</mat-icon>
+              <strong>{{ agent.lettresEmises }}</strong> lettres
+            </span>
           </div>
-          <div class="m-row">
-            <span><mat-icon class="inline-ic">receipt_long</mat-icon>{{ agent.feuillesSoins }} feuilles</span>
-            <span><mat-icon class="inline-ic">schedule</mat-icon>{{ agent.heuresTravailleesSemaine }} h/sem</span>
+          <div class="sa-m-row">
+            <span class="sa-m-stat">
+              <mat-icon>receipt_long</mat-icon>
+              <strong>{{ agent.feuillesSoins }}</strong> feuilles
+            </span>
+            <span class="sa-m-stat">
+              <mat-icon>schedule</mat-icon>
+              <strong>{{ agent.heuresTravailleesSemaine }}</strong> h/sem
+            </span>
           </div>
         </div>
       </div>
-    </mat-card>
+    </div>
 
   </div>
+</div>
+
+<!-- Loading -->
+<div *ngIf="loading" class="sa-loading">
+  <div class="sa-spinner"></div>
+  <span>Chargement des statistiques…</span>
 </div>
