@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { StructureService } from '../../../core/services/structure.service';
 import { FactureStructure, LigneFactureStructure } from '../../../core/models/structure.model';
@@ -65,7 +66,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-factures-structure-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatSnackBarModule, SkeletonListComponent],
   templateUrl: './factures-structure-list.component.html',
   styleUrls: ['./factures-structure-list.component.css']
 })

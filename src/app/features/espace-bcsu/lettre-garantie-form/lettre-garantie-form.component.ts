@@ -518,7 +518,13 @@ export class LettreGarantieFormComponent implements OnInit {
       next: (lettre) => {
         this.isSubmitting = false;
         this.snackBar.open(this.isEditMode ? 'Dossier modifié' : 'Dossier enregistré et LG générée : ' + lettre.numero, 'Fermer', { duration: 3000 });
-        this.router.navigate(['/dashboard/lettres-garantie', lettre.id]);
+        // Après émission d'une nouvelle LG : retour à la liste « Patients enregistrés »
+        // (onglet 1 de l'espace BCSU). En modification, on revient au détail de la lettre.
+        if (this.isEditMode) {
+          this.router.navigate(['/dashboard/lettres-garantie', lettre.id]);
+        } else {
+          this.router.navigate(['/dashboard/espace-bcsu'], { queryParams: { tab: 1 } });
+        }
       },
       error: (err) => {
         this.isSubmitting = false;

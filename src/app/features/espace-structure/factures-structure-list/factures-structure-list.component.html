@@ -44,26 +44,36 @@
         <span class="fsl-regime-badge">{{ g.titre }}</span>
         <span class="fsl-regime-count">{{ g.factures.length }} facture{{ g.factures.length > 1 ? 's' : '' }}</span>
         <div class="fsl-regime-actions">
-          <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
-          <button mat-flat-button color="primary"
-                  *ngIf="g.brouillons > 0"
-                  [disabled]="envoiEnCours === cleGroupe(g)"
-                  (click)="envoyerGroupe(g, $event)">
-            <mat-icon>send</mat-icon>
-            {{ envoiEnCours === cleGroupe(g) ? 'Envoi...' : 'Envoyer (' + g.brouillons + ')' }}
+          <!-- Actions du groupe (envoi mensuel + exports) regroupées sous une icône. -->
+          <button mat-icon-button color="primary"
+                  [matMenuTriggerFor]="groupMenu"
+                  (click)="$event.stopPropagation()"
+                  [disabled]="envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)"
+                  aria-label="Actions de la facture mensuelle">
+            <mat-icon>{{ (envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)) ? 'hourglass_top' : 'more_vert' }}</mat-icon>
           </button>
-          <button mat-stroked-button color="primary"
-                  [disabled]="exporting === cleGroupe(g)"
-                  (click)="exporterGroupe(g, $event)">
-            <mat-icon>table_view</mat-icon>
-            {{ exporting === cleGroupe(g) ? 'Export...' : 'Excel' }}
-          </button>
-          <button mat-stroked-button color="primary"
-                  [disabled]="exporting === cleGroupe(g)"
-                  (click)="exporterGroupePdf(g, $event)">
-            <mat-icon>picture_as_pdf</mat-icon>
-            {{ exporting === cleGroupe(g) ? 'Export...' : 'PDF' }}
-          </button>
+          <mat-menu #groupMenu="matMenu">
+            <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
+            <button mat-menu-item
+                    *ngIf="g.brouillons > 0"
+                    [disabled]="envoiEnCours === cleGroupe(g)"
+                    (click)="envoyerGroupe(g, $event)">
+              <mat-icon color="primary">send</mat-icon>
+              <span>{{ envoiEnCours === cleGroupe(g) ? 'Envoi...' : 'Envoyer (' + g.brouillons + ')' }}</span>
+            </button>
+            <button mat-menu-item
+                    [disabled]="exporting === cleGroupe(g)"
+                    (click)="exporterGroupe(g, $event)">
+              <mat-icon>table_view</mat-icon>
+              <span>{{ exporting === cleGroupe(g) ? 'Export...' : 'Exporter en Excel' }}</span>
+            </button>
+            <button mat-menu-item
+                    [disabled]="exporting === cleGroupe(g)"
+                    (click)="exporterGroupePdf(g, $event)">
+              <mat-icon>picture_as_pdf</mat-icon>
+              <span>{{ exporting === cleGroupe(g) ? 'Export...' : 'Exporter en PDF' }}</span>
+            </button>
+          </mat-menu>
         </div>
       </div>
 
