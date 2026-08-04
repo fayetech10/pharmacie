@@ -76,6 +76,9 @@
   /* Filet appuyé : sépare l'en-tête d'un tableau de son corps sans aplat de fond. */
   --border-strong: #D0D5DD;
   --field-bg: #F9FAFB;
+  /* Fond « rempli » des champs de formulaire (design sans bordure, tout le projet). */
+  --field-fill: #EFF1F4;
+  --field-fill-hover: #E7EBEF;
 
   /* Élévation — volontairement quasi nulle.
      Une carte posée dans la page se délimite au filet ; seuls les éléments qui
@@ -133,6 +136,90 @@ h1 { letter-spacing: -0.025em; }
 :where(a, button, [role='button'], input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   CHAMPS DE FORMULAIRE — design « rempli », sans bordure (tout le projet).
+   Les champs texte / select / zone de texte perdent leur bordure au profit
+   d'un fond doux + anneau de focus émeraude (l'indicateur de focus reste
+   VISIBLE : règle a11y n°1). Le `!important` est volontaire : il uniformise
+   TOUS les champs, y compris ceux portant un utilitaire Tailwind (`border`,
+   `bg-*`) ou un style inline. Cases à cocher, radios, curseurs, fichiers,
+   sélecteurs de couleur et boutons-inputs sont exclus.
+   ============================================================ */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']),
+select,
+textarea {
+  border: 0 !important;
+  background-color: var(--field-fill) !important;
+  box-shadow: none !important;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: background-color var(--transition), box-shadow var(--transition);
+}
+
+/* Survol : fond légèrement plus soutenu (hors focus). */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']):hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+  background-color: var(--field-fill-hover) !important;
+}
+
+/* Focus : fond blanc net + anneau émeraude (remplace la bordure). */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']):focus,
+select:focus,
+textarea:focus {
+  background-color: #FFFFFF !important;
+  box-shadow: var(--ring) !important;
+}
+
+/* On retire le liseré natif UNIQUEMENT au focus souris ; la navigation clavier
+   (`:focus-visible`) conserve son liseré émeraude appuyé défini plus haut. */
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* Désactivé / lecture seule : emphase réduite (a11y). */
+input:disabled, select:disabled, textarea:disabled,
+input[readonly], textarea[readonly] {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Champs Angular Material (tous en appearance="outline") ──
+   L'encoche MDC devient transparente (bordure supprimée visuellement, sans
+   casser la mise en page) et le conteneur reçoit le même fond « rempli ». */
+.mat-mdc-form-field .mdc-notched-outline__leading,
+.mat-mdc-form-field .mdc-notched-outline__notch,
+.mat-mdc-form-field .mdc-notched-outline__trailing {
+  border-color: transparent !important;
+}
+.mat-mdc-text-field-wrapper {
+  background-color: var(--field-fill) !important;
+  border-radius: var(--radius-sm) !important;
+}
+.mat-mdc-form-field:hover:not(.mat-focused) .mat-mdc-text-field-wrapper {
+  background-color: var(--field-fill-hover) !important;
+}
+.mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
+  background-color: #FFFFFF !important;
+  box-shadow: var(--ring);
+}
+/* L'input DANS un champ Material reste transparent : le fond/anneau sont
+   portés par le conteneur (évite le double-fond). */
+.mat-mdc-form-field input,
+.mat-mdc-form-field textarea,
+.mat-mdc-input-element {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
