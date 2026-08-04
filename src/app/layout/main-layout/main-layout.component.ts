@@ -49,7 +49,6 @@ export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
   currentUrl = '';
-  isSidebarCollapsed = false;
   /** Nombre de factures par statut, pour les badges de la navigation. */
   counts: StatutCounts = {};
   regionName: string | null = null;
@@ -395,10 +394,6 @@ export class MainLayoutComponent implements OnInit {
   }
 
   ngOnDestroy() {}
-
-  toggleSidebar() {
-    this.isSidebarCollapsed = !this.isSidebarCollapsed;
-  }
 
   logout() {
     if (this.authService.isBcsu() && this.currentUser && !this.currentUser.pointageDepartHeure) {

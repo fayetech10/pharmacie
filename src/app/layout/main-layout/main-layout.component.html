@@ -2,7 +2,7 @@
   <!-- ============================================================
        SIDEBAR DESKTOP (≥ md)
        ============================================================ -->
-  <aside class="sidebar-desktop hidden md:flex" [class.collapsed]="isSidebarCollapsed">
+  <aside class="sidebar-desktop hidden md:flex">
     <div class="sidebar-brand">
       <a routerLink="/dashboard" class="flex items-center gap-3 no-underline">
         <span class="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
@@ -14,10 +14,10 @@
 
     <nav class="sidebar-nav" aria-label="Navigation principale">
       <ng-container *ngFor="let group of topNavGroups">
-        <div class="nav-group-header" *ngIf="group.name !== 'Général' && !isSidebarCollapsed">
+        <div class="nav-group-header" *ngIf="group.name !== 'Général'">
           {{ group.name }}
         </div>
-        <div class="nav-group-spacer" *ngIf="group.name !== 'Général' && isSidebarCollapsed"></div>
+        <div class="nav-group-spacer" *ngIf="group.name !== 'Général'"></div>
         <a *ngFor="let item of group.items"
            [routerLink]="item.link"
            [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
@@ -32,12 +32,6 @@
         </a>
       </ng-container>
     </nav>
-
-    <!-- Bouton de réduction -->
-    <button class="sidebar-collapse-btn mx-4 mb-2" (click)="toggleSidebar()" aria-label="Réduire le menu">
-      <mat-icon class="collapse-icon">{{ isSidebarCollapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-      <span>Réduire</span>
-    </button>
 
     <div class="sidebar-footer">
       <button type="button" class="sidebar-user-btn" [matMenuTriggerFor]="userMenu" aria-label="Menu du compte">

@@ -10,48 +10,69 @@
   background-color: var(--bg);
 }
 
+/* Le rail (position: fixed) est hors flux : on réserve sa largeur côté contenu
+   sur desktop uniquement (sur mobile la sidebar est masquée, donc pas de marge). */
+@media (min-width: 768px) {
+  .main-content-wrapper {
+    margin-left: 84px;
+  }
+}
+
 .sidebar-desktop {
-  width: 264px;
+  width: 84px;                    /* rail réduit : icônes seules par défaut */
   background: var(--ink-gradient);
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
-  position: sticky;
+  position: fixed;                /* s'étend PAR-DESSUS le contenu au survol (pas de reflow) */
   top: 0;
+  left: 0;
   height: 100vh;
   z-index: 100;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;               /* rogne les libellés tant que le rail est étroit */
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s ease;
 }
 
-.sidebar-desktop.collapsed {
-  width: 84px;
+/* Au survol (ou focus clavier) : le rail s'étend et révèle les noms des onglets. */
+.sidebar-desktop:hover,
+.sidebar-desktop:focus-within {
+  width: 264px;
+  box-shadow: 8px 0 32px -10px rgba(0, 0, 0, 0.5);
 }
 
-.sidebar-desktop.collapsed .sidebar-brand span:not(.w-9),
-.sidebar-desktop.collapsed .sidebar-nav-label,
-.sidebar-desktop.collapsed .sidebar-user-btn > span:not(.w-9),
-.sidebar-desktop.collapsed .sidebar-user-btn > mat-icon:not(.collapse-icon) {
+/* ── État « mini » (rail non survolé) : textes masqués, icônes centrées. ── */
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-brand span:not(.w-9),
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-nav-label,
+.sidebar-desktop:not(:hover):not(:focus-within) .nav-group-header,
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-user-btn > span:not(.w-9),
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-user-btn > mat-icon {
   display: none;
 }
 
-.sidebar-desktop.collapsed .sidebar-brand {
+/* L'espaceur inter-groupes tient lieu d'entête en mode mini ; l'entête reprend au survol. */
+.sidebar-desktop:hover .nav-group-spacer,
+.sidebar-desktop:focus-within .nav-group-spacer {
+  display: none;
+}
+
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-brand {
   padding: 0;
   justify-content: center;
 }
 
-.sidebar-desktop.collapsed .sidebar-nav {
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-nav {
   padding: 20px 14px;
 }
 
-.sidebar-desktop.collapsed .sidebar-nav-link {
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-nav-link {
   padding: 10px;
   justify-content: center;
 }
 
-.sidebar-desktop.collapsed .sidebar-nav-link.active::before {
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-nav-link.active::before {
   display: none;
 }
 
-.sidebar-desktop.collapsed .sidebar-user-btn {
+.sidebar-desktop:not(:hover):not(:focus-within) .sidebar-user-btn {
   justify-content: center;
   padding: 8px;
 }
@@ -159,36 +180,6 @@
 .sidebar-user-btn:hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.12);
-}
-
-.sidebar-collapse-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  margin-top: auto;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
-  color: var(--ink-text);
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.sidebar-collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #F3F7F5;
-}
-
-.sidebar-desktop.collapsed .sidebar-collapse-btn {
-  padding: 10px;
-  justify-content: center;
-}
-
-.sidebar-desktop.collapsed .sidebar-collapse-btn span {
-  display: none;
 }
 
 .main-content-wrapper {
