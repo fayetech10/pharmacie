@@ -1,0 +1,313 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Consolidation district</h1>
+    </div>
+    <div class="page-head-actions flex items-center gap-2">
+      <!-- « Situation 0-5 ans » : un Excel (une feuille par poste / centre) + un PDF réunissant la
+           « Liste + facture 0-5 ans » de chaque poste et centre du district. -->
+      <button class="btn btn-outline" type="button" (click)="exporterSituationEnfants()"
+              [disabled]="!tableau || export === 'excel'"
+              title="Télécharge deux fichiers pour les enfants de moins de 5 ans : le classeur Excel (une feuille par poste et centre) et le PDF des listes et factures de tous les postes et centres">
+        <mat-icon>child_care</mat-icon>
+        {{ export === 'excel' ? 'Génération…' : 'Situation 0-5 ans' }}
+      </button>
+      <button class="btn btn-primary" type="button" (click)="exporterFactureGlobale()"
+              [disabled]="!tableau || export === 'pdf'"
+              title="Télécharge la facture globale du district (0-5 ans) : la facture du mois de tous les postes et centres réunis, et la liste nominative consolidée">
+        <mat-icon>picture_as_pdf</mat-icon>
+        {{ export === 'pdf' ? 'Génération…' : 'Facture Globale' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filter-strip">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            *ngIf="!districtImpose"
+            [(ngModel)]="filtres.districtId" (change)="charger()">
+      <option [ngValue]="undefined">— Choisir un district —</option>
+      <option *ngFor="let d of districts" [value]="d.id">{{ d.nom }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtres.mois" (change)="charger()">
+      <option [ngValue]="undefined">Toute l'année</option>
+      <option *ngFor="let m of mois" [value]="m">{{ moisNoms[m] }}</option>
+    </select>
+    <input type="number" class="filter-field h-10 w-28 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+           [(ngModel)]="filtres.annee" (change)="charger()">
+    <!-- Un district ne consolide que le 0-5 ans (les autres régimes vont au service régional) :
+         le régime est verrouillé ; seuls les superviseurs nationaux le choisissent. -->
+    <select *ngIf="!districtImpose" class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtres.regime" (change)="charger()">
+      <option [ngValue]="undefined">Tous les régimes</option>
+      <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+    </select>
+    <span *ngIf="districtImpose"
+          class="filter-field h-10 px-3 inline-flex items-center rounded-lg border border-border bg-field-bg text-[14px] text-text-muted">
+      Enfants 0-5 ans
+    </span>
+  </div>
+
+  <div class="empty-state" *ngIf="!chargement && !tableau">
+    <mat-icon>stacked_bar_chart</mat-icon>
+    <p>Sélectionnez un district et une période pour lancer la consolidation.</p>
+  </div>
+
+  <ng-container *ngIf="tableau">
+
+    <!-- Volumétrie (§10) -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon blue"><mat-icon>local_hospital</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ tableau.nombreStructures }}</span>
+          <span class="kpi-label">Structures du district</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon green"><mat-icon>group</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ tableau.nombreBeneficiaires }}</span>
+          <span class="kpi-label">Bénéficiaires</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon amber"><mat-icon>medical_information</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ tableau.nombrePrestations }}</span>
+          <span class="kpi-label">Prestations facturées</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon green"><mat-icon>payments</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ tableau.montantSencsu | number:'1.0-0':'fr' }} <small>FCFA</small></span>
+          <span class="kpi-label">Prise en charge SEN-CSU</span>
+          <span class="text-[11.5px] text-text-muted" *ngIf="tableau.montantSencsuEnCours > 0">
+            dont {{ tableau.montantSencsuEnCours | number:'1.0-0':'fr' }} F en cours
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toutes les factures sont comptées : on dit clairement ce qui n'est pas encore transmis -->
+    <div class="p-4 rounded-lg bg-field text-[13px] mb-6 flex items-start gap-2" *ngIf="tableau.nombreFacturesEnCours > 0">
+      <mat-icon class="text-warn shrink-0">info</mat-icon>
+      <span>
+        <strong>{{ tableau.nombreFacturesTransmises }}</strong> facture(s) transmise(s)
+        ({{ tableau.montantSencsuTransmis | number:'1.0-0':'fr' }} F de part SEN-CSU) et
+        <strong>{{ tableau.nombreFacturesEnCours }} en cours</strong>
+        ({{ tableau.montantSencsuEnCours | number:'1.0-0':'fr' }} F) : brouillon ou facture rejetée, que la
+        structure doit encore transmettre ou corriger. Les totaux affichés comprennent les deux.
+      </span>
+    </div>
+
+    <!-- Couverture : les structures qui n'ont pas facturé sont l'information utile -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>fact_check</mat-icon></div>
+          <div>
+            <h2>Couverture — {{ tableau.periode }}</h2>
+            <p>{{ tableau.structuresFacturees.length }} structure(s) ont facturé sur
+               {{ tableau.structuresFacturees.length + tableau.structuresNonFacturees.length }}
+               ({{ tableau.tauxCouverture }} %).</p>
+          </div>
+        </div>
+      </div>
+      <div class="section-body grid gap-6 md:grid-cols-2">
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-2 uppercase">Ont facturé</h3>
+          <div class="text-[13px] text-text-muted" *ngIf="tableau.structuresFacturees.length === 0">
+            Aucune structure n'a encore facturé sur cette période.
+          </div>
+          <div *ngFor="let s of tableau.structuresFacturees"
+               class="flex items-center gap-2 py-1.5 border-b border-border-light text-[13.5px]">
+            <mat-icon [class]="aToutTransmis(s) ? 'text-primary' : 'text-warn'"
+                      style="font-size:18px;width:18px;height:18px">
+              {{ aToutTransmis(s) ? 'check_circle' : 'pending' }}
+            </mat-icon>
+            <span class="flex-1 min-w-0">
+              {{ s.nom }}
+              <span class="block text-[11.5px]">
+                <span *ngIf="s.facturesTransmises" class="text-primary font-semibold">{{ s.facturesTransmises }} transmise(s)</span>
+                <span *ngIf="s.facturesTransmises && s.facturesEnCours" class="text-text-muted"> · </span>
+                <span *ngIf="s.facturesEnCours" class="text-warn font-semibold">{{ s.facturesEnCours }} en cours</span>
+              </span>
+            </span>
+            <span class="text-[12.5px] font-semibold whitespace-nowrap">{{ s.montantSencsu | number:'1.0-0':'fr' }} F</span>
+            <span class="text-text-muted text-[12px]">{{ s.type }}</span>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-2 uppercase">
+            N'ont pas facturé — à relancer
+          </h3>
+          <div class="text-[13px] text-text-muted" *ngIf="tableau.structuresNonFacturees.length === 0">
+            Toutes les structures actives ont facturé.
+          </div>
+          <div *ngFor="let s of tableau.structuresNonFacturees"
+               class="flex items-center gap-2 py-1.5 border-b border-border-light text-[13.5px]">
+            <mat-icon class="text-warn" style="font-size:18px;width:18px;height:18px">error_outline</mat-icon>
+            <span class="flex-1">{{ s.nom }}</span>
+            <span class="text-text-muted text-[12px]">{{ s.type }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suivi mensuel + répartition par régime -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>insights</mat-icon></div>
+          <div>
+            <h2>Suivi de la facturation</h2>
+            <p>Part SEN-CSU mois par mois sur {{ filtres.annee }}, et répartition par régime.</p>
+          </div>
+        </div>
+      </div>
+      <div class="section-body grid gap-6 md:grid-cols-2">
+
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-3 uppercase">Suivi mensuel</h3>
+          <div class="text-[13px] text-text-muted" *ngIf="moisRenseignes().length === 0">
+            Aucune facture sur l'année.
+          </div>
+          <div *ngFor="let m of moisRenseignes()" class="mb-2">
+            <div class="flex justify-between text-[13px] mb-1">
+              <span>{{ m }}</span>
+              <strong>{{ tableau.montantParMois[m] | number:'1.0-0':'fr' }} FCFA
+                <span class="text-text-muted font-normal">
+                  ({{ tableau.facturesParMois[m] }} facture(s))
+                </span>
+              </strong>
+            </div>
+            <div class="h-2 rounded-full bg-border-light overflow-hidden">
+              <div class="h-full bg-primary rounded-full" [style.width.%]="hauteurBarre(m)"></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-3 uppercase">Par régime</h3>
+          <div class="text-[13px] text-text-muted" *ngIf="cles(tableau.parRegime).length === 0">
+            Aucun régime facturé sur la période.
+          </div>
+          <div *ngFor="let cle of cles(tableau.parRegime)"
+               class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+            <span>{{ cle }}</span>
+            <strong>{{ tableau.parRegime[cle] | number:'1.0-0':'fr' }} FCFA</strong>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-border">
+            <div class="flex justify-between py-1 text-[13.5px]">
+              <span>Montant total facturé</span>
+              <strong>{{ tableau.montantTotal | number:'1.0-0':'fr' }}</strong>
+            </div>
+            <div class="flex justify-between py-1 text-[13.5px]">
+              <span>Ticket modérateur</span>
+              <strong>{{ tableau.montantBeneficiaire | number:'1.0-0':'fr' }}</strong>
+            </div>
+            <div class="flex justify-between py-1 text-[14px] font-bold text-primary">
+              <span>Prise en charge SEN-CSU</span>
+              <strong>{{ tableau.montantSencsu | number:'1.0-0':'fr' }}</strong>
+            </div>
+            <ng-container *ngIf="tableau.montantSencsuEnCours > 0">
+              <div class="flex justify-between py-0.5 text-[12.5px] text-text-secondary">
+                <span>dont transmis</span>
+                <span>{{ tableau.montantSencsuTransmis | number:'1.0-0':'fr' }}</span>
+              </div>
+              <div class="flex justify-between py-0.5 text-[12.5px] text-text-secondary">
+                <span>dont en cours (brouillon / à corriger)</span>
+                <span>{{ tableau.montantSencsuEnCours | number:'1.0-0':'fr' }}</span>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Facturation des postes et centres : une ligne par facture, avec son statut -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>receipt_long</mat-icon></div>
+          <div>
+            <h2>Factures de la période</h2>
+            <p>{{ factures.length }} facture(s) des postes et centres du district — {{ tableau.periode }}.</p>
+          </div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="text-[13px] text-text-muted" *ngIf="factures.length === 0">
+          Aucune facture sur la période.
+        </div>
+
+        <!-- Table desktop -->
+        <div class="overflow-x-auto desktop-only" *ngIf="factures.length">
+          <table class="premium-table w-full">
+            <thead>
+              <tr>
+                <th>Structure</th>
+                <th>Facture</th>
+                <th>Régime</th>
+                <th>Statut</th>
+                <th class="text-center">Patients</th>
+                <th class="text-center">Prestations</th>
+                <th class="text-right">Montant</th>
+                <th class="text-right">Part SEN-CSU</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of factures | paginer: pgF.page : pgF.taille">
+                <td class="font-semibold">
+                  {{ f.structureNom }}
+                  <span class="block text-[11.5px] text-text-muted font-normal">{{ f.typeStructure }}</span>
+                </td>
+                <td>
+                  <span class="font-mono text-[12px]">{{ f.numero }}</span>
+                  <span class="block text-[11.5px] text-text-muted">{{ moisNoms[f.mois] }} {{ f.annee }}</span>
+                </td>
+                <td><app-regime-badge [regime]="f.regime"></app-regime-badge></td>
+                <td><app-status-badge [statut]="f.statut"></app-status-badge></td>
+                <td class="text-center">{{ patients(f) }}</td>
+                <td class="text-center">{{ prestations(f) }}</td>
+                <td class="text-right">{{ f.montantTotal | number:'1.0-0':'fr' }} F</td>
+                <td class="text-right font-semibold">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cartes mobiles -->
+        <div class="m-cards" *ngIf="factures.length">
+          <div class="m-card" *ngFor="let f of factures | paginer: pgF.page : pgF.taille">
+            <div class="m-card-top">
+              <span class="m-title">{{ f.structureNom }}</span>
+              <app-status-badge [statut]="f.statut"></app-status-badge>
+            </div>
+            <div class="m-row">
+              <span class="font-mono text-[12px]">{{ f.numero }}</span>
+              <span>{{ moisNoms[f.mois] }} {{ f.annee }}</span>
+            </div>
+            <div class="m-row">
+              <app-regime-badge [regime]="f.regime"></app-regime-badge>
+              <span>{{ patients(f) }} patient(s) · {{ prestations(f) }} prestation(s)</span>
+            </div>
+            <div class="m-row">
+              <span>Part SEN-CSU{{ estTransmise(f) ? '' : ' (en cours)' }}</span>
+              <strong>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong>
+            </div>
+          </div>
+        </div>
+        <app-pagination #pgF [total]="factures.length"></app-pagination>
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>

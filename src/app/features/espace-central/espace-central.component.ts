@@ -4,13 +4,14 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { AdminRegionsComponent } from '../admin-regions/admin-regions.component';
-import { FacturesListComponent } from '../factures/factures-list/factures-list.component';
-import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
+import { CentralFacturesStructureComponent } from './central-factures-structure.component';
+import { CentralFacturesPharmacieComponent } from './central-factures-pharmacie.component';
+import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
 
 @Component({
   selector: 'app-espace-central',
   standalone: true,
-  imports: [CommonModule, MatTabsModule, AdminRegionsComponent, FacturesListComponent],
+  imports: [CommonModule, MatTabsModule, AdminRegionsComponent, CentralFacturesStructureComponent, CentralFacturesPharmacieComponent],
   templateUrl: './espace-central.component.html',
   styleUrls: ['./espace-central.component.css']
 })
@@ -55,13 +56,11 @@ export class EspaceCentralComponent implements OnInit {
 
   /** Statuts couverts par chaque onglet (pour le marquage « vu » des badges). */
   private statusesForTab(index: number): string[] {
-    switch (index) {
-      case 1: return ['VALIDEE_SR'];
-      case 2: return ['VALIDEE_NC'];
-      case 3: return ['PAYEE'];
-      case 4: return ['REJETEE_NC'];
-      default: return [];
-    }
+    // Onglets : 0 Tableau de bord · 1 Factures structure · 2 Factures pharmacie.
+    // Chaque écran marque « vues » les factures reçues de SA famille seulement.
+    if (index === 1) return statutsStructure(['VALIDEE_SR']);
+    if (index === 2) return ['VALIDEE_SR'];
+    return [];
   }
 
   /** Marque les factures de l'onglet actif comme vues → son badge disparaît. */

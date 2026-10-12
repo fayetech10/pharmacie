@@ -1,79 +1,95 @@
 <div class="fade-in fds-page" *ngIf="!loading && feuille">
 
-  <!-- Barre d'actions (hors impression) -->
-  <div class="fds-actions">
-    <div class="fds-actions-left">
-      <a routerLink="/dashboard/feuilles-soins" class="fds-back" aria-label="Retour à la liste des feuilles de soins">
-        <mat-icon>arrow_back</mat-icon>
-      </a>
-      <div>
-        <h1 class="fds-h1">Feuille de soins {{ feuille.numero }}</h1>
-        <span class="fds-status-badge" [ngClass]="'fds-status-badge--' + statutTone(feuille.statut)">
-          {{ statutLabels[feuille.statut] }}
-        </span>
-        <span *ngIf="feuille.factureStructureNumero" class="fds-facture-ref">
-          Facture : <strong>{{ feuille.factureStructureNumero }}</strong>
-        </span>
+  <a routerLink="/dashboard/feuilles-soins"
+     class="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg no-underline print:hidden">
+    <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Feuilles de soins
+  </a>
+
+  <!-- En-tête, au gabarit des écrans du poste de santé (hors impression) -->
+  <div class="card print:hidden">
+    <div class="section-body flex flex-wrap items-start gap-3">
+      <div class="min-w-0 flex-1">
+        <h1 class="m-0 text-[20px] font-bold text-text-primary">Feuille de soins <span class="font-mono">{{ feuille.numero }}</span></h1>
+        <p class="m-0 mt-1 text-[13px] text-text-secondary">
+          {{ feuille.patientPrenom }} {{ feuille.patientNom }}
+          <ng-container *ngIf="feuille.structureNom"> · {{ feuille.structureNom }}</ng-container>
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <app-status-badge [statut]="feuille.statut" famille="feuille" [grand]="true"></app-status-badge>
+          <app-regime-badge [regime]="feuille.regime"></app-regime-badge>
+          <span *ngIf="feuille.factureStructureNumero"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold bg-primary-light text-primary">
+            <mat-icon class="!text-sm !w-3.5 !h-3.5">receipt_long</mat-icon> Facture {{ feuille.factureStructureNumero }}
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="fds-actions-right">
-      <button mat-stroked-button color="primary" (click)="imprimerPdf()">
-        <mat-icon>print</mat-icon> Imprimer (PDF)
-      </button>
-      <button *ngIf="peutRemplirPriseEnCharge && !editionPriseEnCharge" mat-flat-button color="primary" (click)="ouvrirPriseEnCharge()">
-        <mat-icon>edit_note</mat-icon> Remplir la prise en charge
-      </button>
-      <button *ngIf="peutFacturer" mat-flat-button color="accent" (click)="facturer()">
-        <mat-icon>receipt_long</mat-icon> Facturer cette feuille
-      </button>
-      <button *ngIf="peutAnnuler" mat-stroked-button color="warn" (click)="annuler()">
-        <mat-icon>cancel</mat-icon> Annuler
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline btn-sm" (click)="imprimerPdf()"><mat-icon>print</mat-icon> Imprimer (PDF)</button>
+        <button type="button" *ngIf="peutRemplirPriseEnCharge && !editionPriseEnCharge" class="btn btn-primary btn-sm" (click)="ouvrirPriseEnCharge()">
+          <mat-icon>edit_note</mat-icon> Remplir la prise en charge
+        </button>
+        <button type="button" *ngIf="peutFacturer" class="btn btn-primary btn-sm" (click)="facturer()">
+          <mat-icon>receipt_long</mat-icon> Facturer cette feuille
+        </button>
+        <button type="button" *ngIf="peutAnnuler" class="btn btn-danger btn-sm" (click)="annuler()">
+          <mat-icon>cancel</mat-icon> Annuler
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Saisie de la prise en charge (structure sanitaire) -->
-  <mat-card *ngIf="editionPriseEnCharge" class="fds-pec-card">
-    <h3 class="fds-pec-title">
-      <mat-icon>edit_note</mat-icon> Prise en charge — remplie par la structure sanitaire
-    </h3>
-    <mat-form-field appearance="outline" class="fds-pec-diag">
-      <mat-label>Diagnostic</mat-label>
-      <input matInput [(ngModel)]="diagnosticStructure">
-    </mat-form-field>
-    <div *ngFor="let l of lignes; let i = index" class="fds-pec-line">
-      <mat-form-field appearance="outline" class="fds-pec-date">
-        <mat-label>Date</mat-label>
-        <input matInput type="date" [(ngModel)]="l.date">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="fds-pec-desig">
-        <mat-label>Désignation de la prestation</mat-label>
-        <input matInput [(ngModel)]="l.designation">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="fds-pec-montant">
-        <mat-label>Montant (FCFA)</mat-label>
-        <input matInput type="number" min="0" [(ngModel)]="l.montant">
-      </mat-form-field>
-      <button mat-icon-button color="warn" (click)="retirerLigne(i)" [disabled]="lignes.length === 1" title="Retirer la ligne">
-        <mat-icon>delete</mat-icon>
-      </button>
-    </div>
-    <div class="fds-pec-foot">
-      <button mat-stroked-button (click)="ajouterLigne()">
-        <mat-icon>add</mat-icon> Ajouter une prestation
-      </button>
-      <div class="fds-pec-total">
-        Total saisi : <strong>{{ totalSaisi | number:'1.0-0':'fr' }} FCFA</strong>
-        <span class="fds-pec-hint"> (les parts assuré/assureur sont calculées selon le régime)</span>
+  <div *ngIf="editionPriseEnCharge" class="card print:hidden">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>edit_note</mat-icon></div>
+        <div>
+          <h2>Prise en charge</h2>
+        </div>
       </div>
     </div>
-    <div class="fds-pec-actions">
-      <button mat-stroked-button (click)="editionPriseEnCharge = false">Fermer</button>
-      <button mat-flat-button color="primary" (click)="enregistrerPriseEnCharge()" [disabled]="!lignesValides || busy">
-        {{ busy ? 'Enregistrement…' : 'Enregistrer la prise en charge' }}
-      </button>
+    <div class="section-body flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Diagnostic
+        <input [(ngModel)]="diagnosticStructure"
+               class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+      </label>
+      <div *ngFor="let l of lignes; let i = index" class="grid grid-cols-6 sm:grid-cols-12 gap-2 items-end">
+        <label class="col-span-3 sm:col-span-3 flex flex-col gap-1 text-[12px] font-semibold text-text-secondary">
+          Date
+          <input type="date" [(ngModel)]="l.date"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="col-span-6 sm:col-span-6 flex flex-col gap-1 text-[12px] font-semibold text-text-secondary order-first sm:order-none">
+          Prestation
+          <input [(ngModel)]="l.designation"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="col-span-2 sm:col-span-2 flex flex-col gap-1 text-[12px] font-semibold text-text-secondary">
+          Montant (F)
+          <input type="number" min="0" [(ngModel)]="l.montant"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-right text-text-primary">
+        </label>
+        <button type="button" (click)="retirerLigne(i)" [disabled]="lignes.length === 1" [attr.aria-label]="'Retirer la ligne ' + (i + 1)"
+                class="col-span-1 w-11 h-11 inline-flex items-center justify-center rounded-lg text-text-muted hover:bg-warn-light hover:text-warn disabled:opacity-40">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button type="button" class="btn btn-outline" (click)="ajouterLigne()"><mat-icon>add</mat-icon> Ajouter une prestation</button>
+        <div class="text-[13px] text-text-secondary">
+          Total saisi : <strong class="text-text-primary">{{ totalSaisi | number:'1.0-0':'fr' }} F</strong>
+          — les parts assuré / assureur suivent le régime.
+        </div>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-outline" (click)="editionPriseEnCharge = false">Fermer</button>
+        <button type="button" class="btn btn-primary" (click)="enregistrerPriseEnCharge()" [disabled]="!lignesValides || busy">
+          <mat-icon>save</mat-icon> {{ busy ? 'Enregistrement…' : 'Enregistrer la prise en charge' }}
+        </button>
+      </div>
     </div>
-  </mat-card>
+  </div>
 
   <!-- ============ FEUILLE DE SOINS (aspect du formulaire papier) ============ -->
   <div class="fds-paper">

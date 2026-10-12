@@ -23,6 +23,8 @@ export interface ConfirmDialogData {
   multiline?: boolean;
   initialValue?: string;
   maxLength?: number;
+  /** Saisie masquée (mot de passe), renvoyée telle quelle — sans retrait des espaces. */
+  motDePasse?: boolean;
 }
 
 /**
@@ -58,6 +60,10 @@ export class ConfirmDialogComponent {
 
   confirm(): void {
     if (!this.canConfirm) return;
-    this.dialogRef.close(this.data.prompt ? this.value.trim() : true);
+    if (!this.data.prompt) {
+      this.dialogRef.close(true);
+      return;
+    }
+    this.dialogRef.close(this.data.motDePasse ? this.value : this.value.trim());
   }
 }

@@ -1,180 +1,409 @@
-<div class="rsf">
-  <!-- Filtres régime / mois / année -->
-  <div class="rsf-filters">
-    <select class="rsf-select" [(ngModel)]="filterRegime" (ngModelChange)="load()">
-      <option value="">Tous les régimes</option>
-      <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
-    </select>
-    <select class="rsf-select" [(ngModel)]="filterMois" (ngModelChange)="load()">
-      <option [ngValue]="0">Tous les mois</option>
-      <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
-    </select>
-    <select class="rsf-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
-      <option [ngValue]="0">Toutes les années</option>
-      <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
-    </select>
+<div class="fade-in">
+
+  <div class="empty-state" *ngIf="loading">
+    <mat-icon>hourglass_empty</mat-icon>
+    <p>Chargement des factures des structures sanitaires…</p>
   </div>
 
-  <div class="rsf-loading" *ngIf="loading">Chargement des factures des structures sanitaires…</div>
+  <ng-container *ngIf="!loading">
 
-  <!-- ═══════ NIVEAU 1 : STRUCTURES (EPS et CS) ═══════ -->
-  <ng-container *ngIf="!loading && !selected">
-    <div class="rsf-empty" *ngIf="rows.length === 0">
-      <mat-icon>local_hospital</mat-icon>
-      <p>Aucune structure sanitaire dans la région.</p>
-    </div>
+    <!-- ═══════ NIVEAU 1 : BARRE HORIZONTALE DES STRUCTURES ═══════ -->
+    <div class="bg-card border border-border rounded-lg shadow-sm mb-4 md:mb-6 overflow-hidden">
 
-    <div class="rsf-table-wrap desktop-only" *ngIf="rows.length > 0">
-      <table class="rsf-table">
-        <thead>
-          <tr>
-            <th>Structure sanitaire</th>
-            <th>Type</th>
-            <th class="rsf-num">Postes rattachés</th>
-            <th class="rsf-num">Factures</th>
-            <th class="rsf-num">Part SEN-CSU</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="rsf-row" *ngFor="let r of rows" (click)="select(r)">
-            <td>
-              <strong>{{ r.structure.nom }}</strong>
-              <div class="rsf-sub">{{ r.structure.code }}</div>
-            </td>
-            <td>
-              <span class="rsf-chip" [class.rsf-chip--eps]="r.type === 'EPS'">{{ typeLabel(r.type) }}</span>
-            </td>
-            <td class="rsf-num">{{ r.postes.length }}</td>
-            <td class="rsf-num">{{ r.factureCount }}</td>
-            <td class="rsf-num rsf-csu">{{ r.totalSencsu | number:'1.0-0':'fr' }} F</td>
-            <td><mat-icon class="rsf-chevron">chevron_right</mat-icon></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Cartes mobiles (≤ 768px) -->
-    <div class="m-cards" *ngIf="rows.length > 0">
-      <div class="m-card clickable" *ngFor="let r of rows" (click)="select(r)"
-           role="button" tabindex="0" (keydown.enter)="select(r)"
-           [attr.aria-label]="'Voir ' + r.structure.nom">
-        <div class="m-card-top">
+      <!-- En-tête : titre + filtres serveur (régime / mois / année) -->
+      <div class="flex flex-wrap items-center justify-between gap-3 py-4 px-4 md:px-6">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="w-10 h-10 shrink-0 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+            <mat-icon class="!text-[22px] !w-[22px] !h-[22px]">local_hospital</mat-icon>
+          </span>
           <div class="min-w-0">
-            <div class="m-title">{{ r.structure.nom }}</div>
-            <div class="m-sub">{{ r.structure.code }}</div>
+            <h2 class="text-[16px] md:text-[17px] font-bold text-text-primary m-0 leading-tight">Structures sanitaires</h2>
+            <p class="text-[12.5px] text-text-muted m-0 mt-0.5">
+              <ng-container *ngIf="visibleRows.length === rows.length">
+                {{ rows.length }} structure{{ rows.length > 1 ? 's' : '' }} {{ rows.length > 1 ? 'ont' : 'a' }} facturé · postes de santé rattachés inclus
+              </ng-container>
+              <ng-container *ngIf="visibleRows.length !== rows.length">
+                {{ visibleRows.length }} résultat{{ visibleRows.length > 1 ? 's' : '' }} sur {{ rows.length }} structure{{ rows.length > 1 ? 's' : '' }}
+              </ng-container>
+            </p>
           </div>
-          <span class="rsf-chip" [class.rsf-chip--eps]="r.type === 'EPS'">{{ typeLabel(r.type) }}</span>
         </div>
-        <div class="m-row">
-          <span><mat-icon class="inline-ic">store</mat-icon>{{ r.postes.length }} poste{{ r.postes.length > 1 ? 's' : '' }}</span>
-          <span><mat-icon class="inline-ic">receipt_long</mat-icon>{{ r.factureCount }} facture{{ r.factureCount > 1 ? 's' : '' }}</span>
-        </div>
-        <div class="m-foot">
-          <span class="m-amount">{{ r.totalSencsu | number:'1.0-0':'fr' }} F</span>
-          <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+        <div class="flex flex-wrap items-center gap-2">
+          <select class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer"
+                  [(ngModel)]="filterRegime" (ngModelChange)="load()" aria-label="Régime">
+            <option value="">Tous les régimes</option>
+            <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+          </select>
+          <select class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer"
+                  [(ngModel)]="filterMois" (ngModelChange)="load()" aria-label="Mois">
+            <option [ngValue]="0">Tous les mois</option>
+            <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
+          </select>
+          <select class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer"
+                  [(ngModel)]="filterAnnee" (ngModelChange)="load()" aria-label="Année">
+            <option [ngValue]="0">Toutes les années</option>
+            <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+          </select>
         </div>
       </div>
-    </div>
-  </ng-container>
 
-  <!-- ═══════ NIVEAU 2 : FACTURES DE LA STRUCTURE, PUIS DE SES POSTES ═══════ -->
-  <ng-container *ngIf="!loading && selected">
-    <div class="rsf-detail-head">
-      <button class="rsf-back" type="button" (click)="back()" aria-label="Retour">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <div>
-        <h3>{{ selected.structure.nom }}</h3>
-        <p>
-          {{ typeLabel(selected.type) }} · {{ selected.structure.code }}
-          <ng-container *ngIf="selected.postes.length">
-            · {{ selected.postes.length }} poste(s) de santé rattaché(s)
-          </ng-container>
+      <!-- Recherche + filtres de statut + type + tri -->
+      <div class="flex flex-wrap items-center gap-2 pb-3 px-4 md:px-6" *ngIf="rows.length > 0">
+        <div class="relative flex-1 min-w-[170px] max-w-full sm:max-w-[300px]">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none z-10">search</mat-icon>
+          <input type="text" [(ngModel)]="search" (ngModelChange)="onFilterChange()"
+                 placeholder="Structure, code ou poste rattaché…" aria-label="Rechercher une structure"
+                 class="h-10 w-full pl-10 pr-9 text-[13.5px]">
+          <button type="button" *ngIf="search" (click)="search = ''; onFilterChange()"
+                  aria-label="Effacer la recherche"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center
+                         rounded-full text-text-muted hover:text-text-primary hover:bg-border-light transition-colors">
+            <mat-icon class="!text-[16px] !w-4 !h-4">close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Filtre segmenté par statut, avec le nombre de structures concernées -->
+        <div class="inline-flex gap-1 p-1 rounded-lg bg-field max-w-full overflow-x-auto">
+          <button type="button" *ngFor="let f of filtresStatut"
+                  (click)="filtreStatut = f.key; onFilterChange()"
+                  [attr.aria-pressed]="filtreStatut === f.key"
+                  class="inline-flex shrink-0 items-center gap-1.5 px-2.5 h-8 rounded-md text-[12.5px] font-semibold transition-colors"
+                  [ngClass]="filtreStatut === f.key
+                             ? 'bg-white text-primary shadow-sm'
+                             : 'text-text-secondary hover:text-text-primary'">
+            {{ f.label }}
+            <span class="px-1.5 rounded-full text-[11px] font-bold"
+                  [ngClass]="filtreStatut === f.key ? 'bg-primary-light text-primary' : 'bg-border-light text-text-secondary'">
+              {{ filterCounts[f.key] || 0 }}
+            </span>
+          </button>
+        </div>
+
+        <select [(ngModel)]="filtreType" (ngModelChange)="onFilterChange()" aria-label="Type de structure"
+                class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer">
+          <option value="">Tous les types</option>
+          <option value="EPS">Hôpitaux (EPS)</option>
+          <option value="CS">Centres de santé</option>
+        </select>
+
+        <select [(ngModel)]="tri" (ngModelChange)="onFilterChange()" aria-label="Trier les structures"
+                class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer">
+          <option value="NOM">Trier : nom (A → Z)</option>
+          <option value="MONTANT">Trier : montant décroissant</option>
+          <option value="FACTURES">Trier : nombre de factures</option>
+          <option value="A_TRAITER">Trier : à traiter d'abord</option>
+        </select>
+
+        <button type="button" *ngIf="filtresActifs" (click)="resetFilters()"
+                class="inline-flex items-center gap-1 h-10 px-2.5 rounded-lg text-[12.5px] font-semibold
+                       text-text-secondary hover:text-primary hover:bg-primary-light transition-colors">
+          <mat-icon class="!text-[16px] !w-4 !h-4">restart_alt</mat-icon>
+          Réinitialiser
+        </button>
+      </div>
+
+      <!-- Vignettes des structures (défilement horizontal) -->
+      <div class="flex items-center gap-1.5 pb-4 px-2 md:px-4" *ngIf="visibleRows.length > 0">
+        <button type="button" (click)="scrollStructures(-1)" aria-label="Faire défiler vers la gauche"
+                class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
+                       bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
+          <mat-icon class="!text-[20px] !w-5 !h-5">chevron_left</mat-icon>
+        </button>
+
+        <div #structureTrack class="flex-1 flex items-stretch gap-3 overflow-x-auto scroll-smooth px-1 py-1">
+          <button type="button" *ngFor="let r of visibleRows; trackBy: trackByRow" (click)="select(r)"
+                  [attr.aria-pressed]="selected?.structure?.id === r.structure.id"
+                  [attr.aria-label]="'Voir les factures de ' + r.structure.nom"
+                  class="relative shrink-0 w-[248px] text-left rounded-xl border p-3 cursor-pointer transition-all"
+                  [ngClass]="selected?.structure?.id === r.structure.id
+                             ? 'border-primary bg-primary-light shadow-md -translate-y-0.5'
+                             : 'border-border bg-white hover:border-primary-200 hover:shadow-sm hover:-translate-y-0.5'">
+
+            <!-- Ligne 1 : pastille d'initiales + nom + type -->
+            <span class="flex items-start gap-2.5">
+              <span class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[12.5px] font-extrabold tracking-tight transition-colors"
+                    [ngClass]="selected?.structure?.id === r.structure.id ? 'bg-primary text-white' : 'bg-primary-light text-primary'">
+                {{ initiales(r.structure.nom) }}
+              </span>
+              <span class="flex-1 min-w-0">
+                <span class="block truncate text-[13.5px] font-bold text-text-primary leading-tight"
+                      [title]="r.structure.nom">{{ r.structure.nom }}</span>
+                <span class="flex flex-wrap items-center gap-1 mt-1">
+                  <span class="px-1.5 py-[1px] rounded-full text-[10.5px] font-bold uppercase"
+                        [ngClass]="r.type === 'EPS' ? 'bg-primary text-white' : 'bg-border-light text-text-secondary'">
+                    {{ r.type === 'EPS' ? 'EPS' : 'CS' }}
+                  </span>
+                  <span class="px-1.5 py-[1px] rounded-full bg-warn text-white text-[10.5px] font-bold"
+                        *ngIf="r.pending > 0">{{ r.pending }} à traiter</span>
+                </span>
+              </span>
+              <mat-icon class="!text-[18px] !w-[18px] !h-[18px] shrink-0 text-primary"
+                        *ngIf="selected?.structure?.id === r.structure.id">check_circle</mat-icon>
+            </span>
+
+            <!-- Ligne 2 : postes rattachés (la spécificité des structures) -->
+            <span class="flex items-center gap-1.5 mt-2 text-[11.5px]"
+                  [ngClass]="r.postes.length ? 'text-text-secondary' : 'text-text-muted'">
+              <mat-icon class="!text-[14px] !w-[14px] !h-[14px] shrink-0">hub</mat-icon>
+              <span class="truncate">
+                {{ r.postes.length ? r.postes.length + ' poste' + (r.postes.length > 1 ? 's' : '') + ' rattaché' + (r.postes.length > 1 ? 's' : '') : 'Aucun poste rattaché' }}
+              </span>
+            </span>
+
+            <!-- Ligne 3 : volumes -->
+            <span class="flex items-end justify-between gap-2 mt-2 pt-2.5 border-t"
+                  [ngClass]="selected?.structure?.id === r.structure.id ? 'border-primary-200' : 'border-border-light'">
+              <span class="text-[11.5px] text-text-secondary">
+                {{ r.factureCount }} facture{{ r.factureCount > 1 ? 's' : '' }}
+              </span>
+              <span class="text-[13.5px] font-extrabold text-primary tabular-nums">
+                {{ r.totalSencsu | number:'1.0-0':'fr' }} F
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <button type="button" (click)="scrollStructures(1)" aria-label="Faire défiler vers la droite"
+                class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
+                       bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
+          <mat-icon class="!text-[20px] !w-5 !h-5">chevron_right</mat-icon>
+        </button>
+      </div>
+
+      <!-- Aucun résultat -->
+      <div class="flex flex-col items-center gap-2 py-8 px-4 text-center" *ngIf="visibleRows.length === 0">
+        <mat-icon class="!text-[28px] !w-7 !h-7 text-text-muted">search_off</mat-icon>
+        <p class="text-[13.5px] text-text-secondary m-0" *ngIf="rows.length > 0">
+          Aucune structure ne correspond
+          <ng-container *ngIf="search"> à « <strong>{{ search }}</strong> »</ng-container>
+          <ng-container *ngIf="filtreStatut !== 'TOUS' || filtreType"> avec ces filtres</ng-container>.
         </p>
+        <p class="text-[13.5px] text-text-secondary m-0" *ngIf="rows.length === 0">
+          Aucune structure sanitaire de la région n'a facturé avec les filtres actuels.
+        </p>
+        <button type="button" class="btn btn-outline btn-sm" *ngIf="rows.length > 0" (click)="resetFilters()">
+          Réinitialiser la recherche
+        </button>
       </div>
     </div>
 
-    <!-- Bascule : factures de la structure sanitaire / factures des postes rattachés
-         (tableaux séparés, la structure d'abord). -->
-    <div class="rsf-viewtabs">
-      <button type="button" class="rsf-viewtab" [class.rsf-viewtab--active]="detailView === 'structure'"
-              (click)="showView('structure')">
-        Factures de la structure
-        <span class="rsf-viewtab-count">{{ selectedStructureFactures.length }}</span>
-      </button>
-      <button type="button" class="rsf-viewtab" [class.rsf-viewtab--active]="detailView === 'postes'"
-              (click)="showView('postes')" [disabled]="!selected.postes.length"
-              [title]="selected.postes.length ? '' : 'Aucun poste de santé rattaché'">
-        Factures des postes de santé
-        <span class="rsf-viewtab-count">{{ selectedPostesFactures.length }}</span>
-      </button>
-    </div>
+    <!-- ═══════ NIVEAU 2 : STRUCTURE OUVERTE, PUIS SES POSTES ═══════ -->
+    <div class="bg-card border border-border rounded-lg shadow-sm overflow-hidden" *ngIf="selected as s">
 
-    <div class="rsf-empty" *ngIf="detailFactures.length === 0">
-      <mat-icon>receipt_long</mat-icon>
-      <p *ngIf="detailView === 'structure'">Aucune facture de la structure avec les filtres actuels.</p>
-      <p *ngIf="detailView === 'postes'">Aucune facture des postes de santé rattachés avec les filtres actuels.</p>
-    </div>
-
-    <div class="rsf-table-wrap desktop-only" *ngIf="detailFactures.length > 0">
-      <table class="rsf-table">
-        <thead>
-          <tr>
-            <th>N° Facture</th>
-            <th>Émetteur</th>
-            <th>Période</th>
-            <th>Régime</th>
-            <th class="rsf-num">Patients</th>
-            <th>Statut</th>
-            <th class="rsf-num">Part SEN-CSU</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="rsf-row" *ngFor="let f of detailFactures" (click)="openDetail(f)">
-            <td class="rsf-numero">{{ f.numero }}</td>
-            <td><strong>{{ f.structureNom }}</strong></td>
-            <td>{{ moisNoms[f.mois] }} {{ f.annee }}</td>
-            <td><span class="rsf-chip">{{ regimeLabels[f.regime] || f.regime }}</span></td>
-            <td class="rsf-num">{{ patientsCount(f) }}</td>
-            <td><span class="rsf-statut" [ngClass]="'rsf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span></td>
-            <td class="rsf-num rsf-csu">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
-            <td (click)="$event.stopPropagation()" style="white-space:nowrap;">
-              <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterExcel(f, $event)">Excel ↓</button>
-              <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterPdf(f, $event)">PDF ↓</button>
-              <button class="rsf-mini-btn" type="button" (click)="openDetail(f)"><mat-icon style="font-size:15px;width:15px;height:15px;vertical-align:middle;">visibility</mat-icon></button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Cartes mobiles (≤ 768px) -->
-    <div class="m-cards" *ngIf="detailFactures.length > 0">
-      <div class="m-card clickable" *ngFor="let f of detailFactures" (click)="openDetail(f)"
-           role="button" tabindex="0" (keydown.enter)="openDetail(f)"
-           [attr.aria-label]="'Voir la facture ' + f.numero">
-        <div class="m-card-top">
+      <!-- En-tête de la structure ouverte + synthèse -->
+      <div class="flex flex-wrap items-center justify-between gap-3 py-4 px-4 md:px-6 border-b border-border-light">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="w-10 h-10 shrink-0 rounded-lg bg-primary text-white flex items-center justify-center text-[13px] font-extrabold">
+            {{ initiales(s.structure.nom) }}
+          </span>
           <div class="min-w-0">
-            <div class="m-title">{{ f.numero }}</div>
-            <div class="m-sub">{{ f.structureNom }}</div>
+            <h3 class="text-[17px] font-bold text-text-primary m-0 truncate">{{ s.structure.nom }}</h3>
+            <p class="text-[12.5px] text-text-muted m-0 mt-0.5">
+              {{ typeLabel(s.type) }}<ng-container *ngIf="s.structure.code"> · {{ s.structure.code }}</ng-container>
+              <ng-container *ngIf="s.postes.length"> · {{ s.postes.length }} poste{{ s.postes.length > 1 ? 's' : '' }} de santé rattaché{{ s.postes.length > 1 ? 's' : '' }}</ng-container>
+            </p>
           </div>
-          <span class="rsf-statut" [ngClass]="'rsf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span>
         </div>
-        <div class="m-row">
-          <span><mat-icon class="inline-ic">event</mat-icon>{{ moisNoms[f.mois] }} {{ f.annee }}</span>
-          <span class="rsf-chip">{{ regimeLabels[f.regime] || f.regime }}</span>
-          <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }}</span>
-        </div>
-        <div class="m-foot">
-          <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
-          <span class="flex items-center gap-1.5" (click)="$event.stopPropagation()">
-            <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterExcel(f, $event)">Excel ↓</button>
-            <button class="rsf-mini-btn" type="button" [disabled]="exporting === f.id" (click)="exporterPdf(f, $event)">PDF ↓</button>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-field">
+            <span class="text-[10.5px] font-bold uppercase text-text-muted tracking-wide">Factures</span>
+            <span class="text-[14px] font-extrabold text-text-primary tabular-nums">{{ s.factureCount }}</span>
+          </span>
+          <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-field">
+            <span class="text-[10.5px] font-bold uppercase text-text-muted tracking-wide">Part SEN-CSU</span>
+            <span class="text-[14px] font-extrabold text-primary tabular-nums">{{ s.totalSencsu | number:'1.0-0':'fr' }} F</span>
+          </span>
+          <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-warn-light" *ngIf="s.pending > 0">
+            <span class="text-[10.5px] font-bold uppercase text-warn tracking-wide">À traiter</span>
+            <span class="text-[14px] font-extrabold text-warn tabular-nums">{{ s.pending }}</span>
           </span>
         </div>
       </div>
+
+      <div class="p-4 md:p-6">
+
+        <!-- Bascule : factures de la structure / factures des postes rattachés -->
+        <div class="inline-flex gap-1 p-1 mb-4 rounded-lg bg-field max-w-full overflow-x-auto">
+          <button type="button" (click)="showView('structure')"
+                  class="inline-flex shrink-0 items-center gap-2 px-3 h-9 rounded-md text-[13.5px] font-semibold transition-colors"
+                  [ngClass]="detailView === 'structure'
+                             ? 'bg-white text-primary shadow-sm'
+                             : 'text-text-secondary hover:text-text-primary'">
+            <mat-icon class="!text-[17px] !w-[17px] !h-[17px]">domain</mat-icon>
+            Factures de la structure
+            <span class="px-1.5 rounded-full bg-border-light text-[11px] font-bold">
+              {{ selectedStructureFactures.length }}
+            </span>
+          </button>
+          <button type="button" (click)="showView('postes')" [disabled]="!posteRows.length"
+                  [title]="posteRows.length ? '' : 'Aucun poste de santé rattaché n\'a facturé'"
+                  class="inline-flex shrink-0 items-center gap-2 px-3 h-9 rounded-md text-[13.5px] font-semibold
+                         transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  [ngClass]="detailView === 'postes'
+                             ? 'bg-white text-primary shadow-sm'
+                             : 'text-text-secondary hover:text-text-primary'">
+            <mat-icon class="!text-[17px] !w-[17px] !h-[17px]">hub</mat-icon>
+            Postes de santé
+            <span class="px-1.5 rounded-full bg-border-light text-[11px] font-bold">
+              {{ selectedPostesFactures.length }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Barre horizontale des postes rattachés (second niveau de navigation) -->
+        <div class="mb-4" *ngIf="detailView === 'postes' && posteRows.length">
+          <div class="flex items-center gap-2 mb-2">
+            <mat-icon class="!text-[16px] !w-4 !h-4 text-text-muted">filter_alt</mat-icon>
+            <span class="text-[12px] font-bold uppercase text-text-secondary tracking-wide">
+              Poste de santé ({{ posteRows.length }} {{ posteRows.length > 1 ? 'ont' : 'a' }} facturé sur {{ s.postes.length }})
+            </span>
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto py-1">
+            <button type="button" (click)="selectPoste(null)"
+                    [attr.aria-pressed]="selectedPosteId === null"
+                    class="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[12.5px] font-semibold transition-all"
+                    [ngClass]="selectedPosteId === null
+                               ? 'border-primary bg-primary text-white shadow-sm'
+                               : 'border-border bg-white text-text-secondary hover:border-primary-200 hover:text-primary'">
+              Tous les postes
+              <span class="px-1.5 rounded-full text-[11px] font-bold"
+                    [ngClass]="selectedPosteId === null ? 'bg-white/25 text-white' : 'bg-border-light text-text-secondary'">
+                {{ selectedPostesFactures.length }}
+              </span>
+            </button>
+
+            <button type="button" *ngFor="let p of posteRows" (click)="selectPoste(p.poste.id)"
+                    [attr.aria-pressed]="selectedPosteId === p.poste.id"
+                    [attr.aria-label]="'Factures du poste ' + p.poste.nom"
+                    class="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[12.5px] font-semibold transition-all"
+                    [ngClass]="selectedPosteId === p.poste.id
+                               ? 'border-primary bg-primary text-white shadow-sm'
+                               : 'border-border bg-white text-text-secondary hover:border-primary-200 hover:text-primary'">
+              <span class="max-w-[190px] truncate" [title]="p.poste.nom">{{ p.poste.nom }}</span>
+              <span class="px-1.5 rounded-full text-[11px] font-bold"
+                    [ngClass]="selectedPosteId === p.poste.id ? 'bg-white/25 text-white' : 'bg-border-light text-text-secondary'">
+                {{ p.factures.length }}
+              </span>
+              <span class="w-1.5 h-1.5 rounded-full bg-warn" *ngIf="p.pending > 0"
+                    [title]="p.pending + ' facture(s) à traiter'"></span>
+            </button>
+          </div>
+          <p class="text-[12.5px] text-text-muted m-0 mt-2" *ngIf="selectedPosteNom">
+            Factures du poste <strong>{{ selectedPosteNom }}</strong> uniquement ·
+            <button type="button" class="text-primary font-semibold hover:underline" (click)="selectPoste(null)">
+              voir tous les postes
+            </button>
+          </p>
+        </div>
+
+        <div class="empty-state" *ngIf="detailFactures.length === 0">
+          <mat-icon>receipt_long</mat-icon>
+          <p *ngIf="detailView === 'structure'">Aucune facture de la structure avec les filtres actuels.</p>
+          <p *ngIf="detailView === 'postes'">Aucune facture des postes de santé rattachés avec les filtres actuels.</p>
+        </div>
+
+        <div class="glass-table-container table-scroll desktop-only" *ngIf="detailFactures.length > 0">
+          <table class="w-full text-[13.5px]
+                        [&_thead_tr]:border-b [&_thead_tr]:border-border-strong
+                        [&_th]:py-3 [&_th]:px-4 [&_th]:text-left [&_th]:font-semibold [&_th]:text-text-secondary
+                        [&_tbody_tr]:border-b [&_tbody_tr]:border-border-light
+                        [&_td]:py-2.5 [&_td]:px-4">
+            <thead>
+              <tr>
+                <th>N° Facture</th>
+                <th>Émetteur</th>
+                <th>Période</th>
+                <th>Régime</th>
+                <th class="!text-right">Patients</th>
+                <th class="!text-right">Part SEN-CSU</th>
+                <th class="!text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of detailFactures | paginer: pg.page : pg.taille" (click)="openDetail(f)"
+                  class="cursor-pointer transition-colors hover:bg-primary-light/40">
+                <td>
+                  <span class="font-semibold whitespace-nowrap">{{ f.numero }}</span>
+                  <!-- Avancement du contrôle (pointage) de la facture par la région -->
+                  <div class="mt-1">
+                    <app-avancement-pointage [facture]="f" echelon="region"
+                                             [enControle]="f.statut === 'ENVOYEE'"></app-avancement-pointage>
+                  </div>
+                </td>
+                <td>
+                  <strong>{{ f.structureNom }}</strong>
+                  <div class="text-[12px] text-text-muted" *ngIf="detailView === 'postes'">Poste de santé</div>
+                </td>
+                <td>{{ moisNoms[f.mois] }} {{ f.annee }}</td>
+                <td>
+                  <app-regime-badge [regime]="f.regime"></app-regime-badge>
+                </td>
+                <td class="text-right">{{ patientsCount(f) }}</td>
+                <td class="text-right font-bold text-primary whitespace-nowrap">
+                  {{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F
+                </td>
+                <td class="text-right">
+                  <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cartes mobiles (≤ 768px) -->
+        <div class="m-cards" *ngIf="detailFactures.length > 0">
+          <div class="m-card clickable" *ngFor="let f of detailFactures | paginer: pg.page : pg.taille" (click)="openDetail(f)"
+               role="button" tabindex="0" (keydown.enter)="openDetail(f)"
+               [attr.aria-label]="'Voir la facture ' + f.numero">
+            <div class="m-card-top">
+              <div class="min-w-0">
+                <div class="m-title">{{ f.numero }}</div>
+                <div class="m-sub">{{ f.structureNom }}</div>
+              </div>
+              <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+            </div>
+            <div class="m-row">
+              <span><mat-icon class="inline-ic">event</mat-icon>{{ moisNoms[f.mois] }} {{ f.annee }}</span>
+              <app-regime-badge [regime]="f.regime"></app-regime-badge>
+              <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }}</span>
+              <app-avancement-pointage [facture]="f" echelon="region"
+                                       [enControle]="f.statut === 'ENVOYEE'"></app-avancement-pointage>
+            </div>
+            <div class="m-foot">
+              <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+              <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+            </div>
+          </div>
+        </div>
+        <app-pagination #pg [total]="detailFactures.length"></app-pagination>
+      </div>
     </div>
   </ng-container>
+
+  <!-- Actions d'une facture, regroupées sous les trois points (tableau et cartes mobiles).
+       Le clic ne doit pas remonter à la ligne / carte, qui ouvrirait la facture. -->
+  <ng-template #boutonActions let-f>
+    <button type="button" class="btn btn-ghost btn-sm !px-2" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+            (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+            [disabled]="exporting === f.id" aria-label="Actions de la facture" title="Actions">
+      <mat-icon class="!m-0">{{ exporting === f.id ? 'hourglass_top' : 'more_vert' }}</mat-icon>
+    </button>
+  </ng-template>
+
+  <mat-menu #menuFacture="matMenu" xPosition="before">
+    <ng-template matMenuContent let-f="f">
+      <!-- Validation / rejet : dans la facture elle-même (Consulter). -->
+      <button mat-menu-item (click)="openDetail(f)">
+        <mat-icon>visibility</mat-icon><span>Consulter</span>
+      </button>
+      <button mat-menu-item (click)="exporterExcel(f, $event)">
+        <mat-icon>table_view</mat-icon><span>Excel</span>
+      </button>
+      <button mat-menu-item (click)="exporterPdf(f, $event)">
+        <mat-icon>picture_as_pdf</mat-icon><span>PDF</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+
 </div>

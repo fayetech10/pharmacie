@@ -1,12 +1,11 @@
-    <div class="list-page fade-in">
-      <!-- Sélecteur de fichier partagé pour l'import « facture corrigée » par ligne -->
+﻿    <div class="list-page fade-in">
+      <!-- SÃ©lecteur de fichier partagÃ© pour l'import Â« facture corrigÃ©e Â» par ligne -->
       <input type="file" #singleFileInput style="display: none" (change)="onSingleFileSelected($event)" accept=".xlsx, .xls">
 
-      <!-- En-tête Global -->
+      <!-- En-tÃªte Global -->
       <div class="page-head" *ngIf="showToolbar">
         <div>
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
-          <p>Gérez et suivez le statut des factures pharmaceutiques</p>
         </div>
         <div class="page-head-actions" *ngIf="!authService.isPharmacien()">
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
@@ -34,206 +33,424 @@
       <!-- ===================== VUE MENSUELLE ===================== -->
       <ng-container *ngIf="monthlyView">
         
-        <!-- Cas Pharmacien : un seul bloc carte blanche (exactement comme la photo) -->
+        <!-- Cas Pharmacien : Â« Mes factures Â» comme au poste de santÃ© â€” annÃ©e â†’ les 12 mois -->
         <ng-container *ngIf="authService.isPharmacien()">
-          <div class="monthly-card">
-            <div class="monthly-header">
-              <h2 class="monthly-title">Mes factures</h2>
-              <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
-                <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
-              </select>
+          <div class="card">
+            <div class="section-body flex flex-wrap items-end gap-3">
+              <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+                AnnÃ©e
+                <select [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()"
+                        class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+                  <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
+                </select>
+              </label>
+              <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+                Mois
+                <select [(ngModel)]="selectedMonthToScroll" (ngModelChange)="scrollToMonth()"
+                        class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+                  <option [ngValue]="0">Aller à...</option>
+                  <option *ngFor="let m of moisAnnee" [ngValue]="m">{{ getMonthName(m) }}</option>
+                </select>
+              </label>
             </div>
-            
-            <div class="monthly-grid">
-              <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
-                <!-- Each tile is clickable if it has an invoice -->
-                <div class="month-tile" 
-                     [class.has-facture]="getFactureForMonth(m)"
-                     [class.current]="m === currentMonth && selectedYear === currentYear"
-                     (click)="getFactureForMonth(m) ? openFacture(getFactureForMonth(m)!) : null">
-                  
-                  <div class="tile-header">
-                    <span class="month-name">{{ getMonthName(m) }}</span>
-                    <mat-icon *ngIf="getFactureForMonth(m)" class="tile-icon" [ngClass]="'icon-' + getFactureForMonth(m)?.statut">
-                      {{ getFactureForMonth(m)?.statut === 'VALIDEE_NC' || getFactureForMonth(m)?.statut === 'VALIDEE_SR' ? 'check_circle' : 
-                         getFactureForMonth(m)?.statut === 'BROUILLON' ? 'edit_document' :
-                         getFactureForMonth(m)?.statut === 'ENVOYEE' ? 'send' : 
-                         getFactureForMonth(m)?.statut === 'PAYEE' ? 'payments' : 'cancel' }}
-                    </mat-icon>
-                  </div>
-                  
-                  <div class="tile-body">
-                    <!-- Mois sans facture -->
-                    <div *ngIf="!getFactureForMonth(m)" class="tile-empty">
-                      <span>Aucune facturation</span>
-                    </div>
-
-                    <!-- Mois avec facture -->
-                    <ng-container *ngIf="getFactureForMonth(m) as f">
-                      <div class="tile-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</div>
-                      <div class="tile-patients">{{ countPatients(f) }} patient(s)</div>
-                      
-                      <div class="tile-footer">
-                        <span class="status-badge" [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
-                      </div>
-                    </ng-container>
-                  </div>
-
-                  <!-- Actions -->
-                  <div class="tile-actions" *ngIf="getFactureForMonth(m) as f" (click)="$event.stopPropagation()">
-                    <button class="btn-action-icon" matTooltip="Modifier" *ngIf="f.statut === 'BROUILLON'" [routerLink]="['/dashboard/factures', f.id, 'edit']">
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                    <button class="btn-action-icon" matTooltip="Exporter Excel" (click)="exportSingleExcel(f)">
-                      <mat-icon>table_view</mat-icon>
-                    </button>
-                    <button class="btn-action-icon" matTooltip="Exporter PDF" (click)="exportSinglePdf(f)">
-                      <mat-icon>picture_as_pdf</mat-icon>
-                    </button>
-                    <button class="btn-action-icon" matTooltip="Voir les détails" (click)="openFacture(f)">
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  </div>
+          </div>
+          <div class="card table-card">
+            <div class="section-header">
+              <div class="section-title-group">
+                <div class="section-icon"><mat-icon>calendar_month</mat-icon></div>
+                <div>
+                  <h2>Mes factures — {{ selectedYear }}</h2>
                 </div>
-              </ng-container>
+              </div>
             </div>
+            <ng-container *ngTemplateOutlet="tableMois; context: { factures: null, menuActions: true }"></ng-container>
           </div>
         </ng-container>
 
-        <!-- Cas Régional / Central : regroupé par prestataire puis les 12 mois -->
+        <!-- Cas RÃ©gional / Central : regroupÃ© par prestataire puis les 12 mois -->
         <ng-container *ngIf="!authService.isPharmacien()">
 
-          <!-- Chargement : évite un écran vide pendant la requête -->
-          <div class="empty-state" *ngIf="loading">
-            <mat-icon class="spin-icon">autorenew</mat-icon>
-            <p>Chargement des factures…</p>
+          <!-- Skeleton Loader pendant le chargement -->
+          <div class="space-y-4 animate-pulse my-6" *ngIf="loading">
+            <div *ngFor="let i of [1,2]" class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+                <div class="h-4 bg-gray-200 rounded w-16"></div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div *ngFor="let m of [1,2,3,4]" class="h-20 bg-gray-200 rounded-xl"></div>
+              </div>
+            </div>
           </div>
 
-          <!-- Onglet sans aucune facture : message explicite plutôt qu'une zone vide -->
+          <!-- Onglet sans aucune facture : message explicite plutÃ´t qu'une zone vide -->
           <div class="empty-state" *ngIf="!loading && providerGroups.length === 0">
             <mat-icon>receipt_long</mat-icon>
             <p>{{ emptyStateMessage }}</p>
-            <span class="empty-hint">Les factures concernées s'afficheront ici automatiquement.</span>
+            <span class="empty-hint">Les factures concernÃ©es s'afficheront ici automatiquement.</span>
           </div>
 
-          <div class="pharmacy-group-list" *ngIf="!loading && providerGroups.length > 0">
-            <div class="pharmacy-section-card" *ngFor="let g of providerGroups">
-              <div class="pharmacy-section-header">
-                <div class="pharma-title-block">
-                  <mat-icon class="pharma-icon" *ngIf="g.providerType === 'PHARMACIE'">local_pharmacy</mat-icon>
-                  <mat-icon class="pharma-icon" style="color:var(--secondary);" *ngIf="g.providerType === 'STRUCTURE'">local_hospital</mat-icon>
-                  <h3 class="pharmacy-section-title">{{ g.providerNom }}</h3>
+          <ng-container *ngIf="!loading && providerGroups.length > 0">
+
+            <!-- ---- Barre horizontale des prestataires : un seul bloc mensuel ouvert ---- -->
+            <div class="bg-card border border-border rounded-lg shadow-sm mb-4 md:mb-6 overflow-hidden">
+
+              <!-- En-tÃªte : titre + annÃ©e -->
+              <div class="flex flex-wrap items-center justify-between gap-3 py-4 px-4 md:px-6">
+                <div class="flex items-center gap-3 min-w-0">
+                  <span class="w-10 h-10 shrink-0 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+                    <mat-icon class="!text-[22px] !w-[22px] !h-[22px]">storefront</mat-icon>
+                  </span>
+                  <div class="min-w-0">
+                    <h2 class="text-[16px] md:text-[17px] font-bold text-text-primary m-0 leading-tight">Prestataires</h2>
+                    <p class="text-[12.5px] text-text-muted m-0 mt-0.5">
+                      <ng-container *ngIf="visibleProviderGroups.length === yearProviderCount">
+                        {{ yearProviderCount }} prestataire{{ yearProviderCount > 1 ? 's' : '' }} {{ yearProviderCount > 1 ? 'ont' : 'a' }} facturÃ© en {{ selectedYear }}
+                      </ng-container>
+                      <ng-container *ngIf="visibleProviderGroups.length !== yearProviderCount">
+                        {{ visibleProviderGroups.length }} rÃ©sultat{{ visibleProviderGroups.length > 1 ? 's' : '' }} sur {{ yearProviderCount }} prestataire{{ yearProviderCount > 1 ? 's' : '' }}
+                      </ng-container>
+                    </p>
+                  </div>
                 </div>
-                <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
+                <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()"
+                        aria-label="AnnÃ©e de facturation">
                   <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
                 </select>
+                  <select class="year-select ml-2" [(ngModel)]="selectedMonthToScroll" (ngModelChange)="scrollToMonth()" aria-label="Aller au mois">
+                    <option [ngValue]="0">Mois...</option>
+                    <option *ngFor="let m of moisAnnee" [ngValue]="m">{{ getMonthName(m) }}</option>
+                  </select>
               </div>
-              
-              <div class="monthly-grid">
-                <ng-container *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]">
-                  <div class="month-tile" 
-                       [class.has-facture]="getFactureForMonthAndGroup(m, g.factures)"
-                       [class.current]="m === currentMonth && selectedYear === currentYear"
-                       (click)="getFactureForMonthAndGroup(m, g.factures) ? openFacture(getFactureForMonthAndGroup(m, g.factures)!) : null">
-                    
-                    <div class="tile-header">
-                      <span class="month-name">{{ getMonthName(m) }}</span>
-                      <mat-icon *ngIf="getFactureForMonthAndGroup(m, g.factures)" class="tile-icon" [ngClass]="'icon-' + getFactureForMonthAndGroup(m, g.factures)?.statut">
-                        {{ getFactureForMonthAndGroup(m, g.factures)?.statut === 'VALIDEE_NC' || getFactureForMonthAndGroup(m, g.factures)?.statut === 'VALIDEE_SR' ? 'check_circle' : 
-                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'BROUILLON' ? 'edit_document' :
-                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'ENVOYEE' ? 'send' : 
-                           getFactureForMonthAndGroup(m, g.factures)?.statut === 'PAYEE' ? 'payments' : 'cancel' }}
-                      </mat-icon>
-                    </div>
-                    
-                    <div class="tile-body">
-                      <!-- Mois sans facture -->
-                      <div *ngIf="!getFactureForMonthAndGroup(m, g.factures)" class="tile-empty">
-                        <span>Aucune facturation</span>
-                      </div>
 
-                      <!-- Mois avec facture -->
-                      <ng-container *ngIf="getFactureForMonthAndGroup(m, g.factures) as f">
-                        <div class="tile-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</div>
-                        <div class="tile-patients">{{ countPatients(f) }} patient(s)</div>
-                        
-                        <div class="tile-footer">
-                          <span class="status-badge" [ngClass]="'status-' + f.statut">{{ getStatutDateLabel(f) }}</span>
-                        </div>
-                      </ng-container>
-                    </div>
+              <!-- Recherche + filtres de statut + tri -->
+              <div class="flex flex-wrap items-center gap-2 pb-3 px-4 md:px-6">
+                <div class="relative flex-1 min-w-[170px] max-w-full sm:max-w-[280px]">
+                  <mat-icon class="!text-[18px] !w-[18px] !h-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none z-10">search</mat-icon>
+                  <input type="text" [(ngModel)]="providerSearch" (ngModelChange)="onProviderFilterChange()"
+                         placeholder="Rechercher une pharmacieâ€¦" aria-label="Rechercher une pharmacie"
+                         class="h-10 w-full pl-10 pr-9 text-[13.5px]">
+                  <button type="button" *ngIf="providerSearch" (click)="providerSearch = ''; onProviderFilterChange()"
+                          aria-label="Effacer la recherche"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center
+                                 rounded-full text-text-muted hover:text-text-primary hover:bg-border-light transition-colors">
+                    <mat-icon class="!text-[16px] !w-4 !h-4">close</mat-icon>
+                  </button>
+                </div>
 
-                    <!-- Actions -->
-                    <div class="tile-actions" *ngIf="getFactureForMonthAndGroup(m, g.factures) as f" (click)="$event.stopPropagation()">
-                      <button class="btn-action-icon" matTooltip="Exporter Excel" (click)="exportSingleExcel(f)">
-                        <mat-icon>download</mat-icon>
-                      </button>
-                      <button class="btn-action-icon" matTooltip="Voir les détails" (click)="openFacture(f)">
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                      <button class="btn-action-icon text-[var(--primary)]" matTooltip="Renvoyer Centrale" *ngIf="authService.isServiceRegional() && f.statut === 'REJETEE_NC'" (click)="renvoyerAuCentral(f.id)">
-                        <mat-icon>send</mat-icon>
-                      </button>
-                      <button class="btn-action-icon text-[var(--gold)]" matTooltip="Payer" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'" (click)="payerFacture(f.id)">
-                        <mat-icon>payments</mat-icon>
-                      </button>
-                    </div>
-                  </div>
-                </ng-container>
+                <!-- Filtre segmentÃ© par statut, avec le nombre de prestataires concernÃ©s -->
+                <div class="inline-flex gap-1 p-1 rounded-lg bg-field max-w-full overflow-x-auto">
+                  <button type="button" *ngFor="let f of providerFilters"
+                          (click)="providerFilter = f.key; onProviderFilterChange()"
+                          [attr.aria-pressed]="providerFilter === f.key"
+                          class="inline-flex shrink-0 items-center gap-1.5 px-2.5 h-8 rounded-md text-[12.5px] font-semibold transition-colors"
+                          [ngClass]="providerFilter === f.key
+                                     ? 'bg-white text-primary shadow-sm'
+                                     : 'text-text-secondary hover:text-text-primary'">
+                    {{ f.label }}
+                    <span class="px-1.5 rounded-full text-[11px] font-bold"
+                          [ngClass]="providerFilter === f.key ? 'bg-primary-light text-primary' : 'bg-border-light text-text-secondary'">
+                      {{ filterCounts[f.key] || 0 }}
+                    </span>
+                  </button>
+                </div>
+
+                <select [(ngModel)]="providerSort" (ngModelChange)="onProviderFilterChange()"
+                        aria-label="Trier les prestataires"
+                        class="h-10 px-3 text-[13px] font-semibold text-text-secondary cursor-pointer">
+                  <option value="NOM">Trier : nom (A â†’ Z)</option>
+                  <option value="MONTANT">Trier : montant dÃ©croissant</option>
+                  <option value="FACTURES">Trier : nombre de factures</option>
+                  <option value="A_TRAITER">Trier : Ã  traiter d'abord</option>
+                </select>
+
+                <button type="button" *ngIf="providerFiltersActifs" (click)="resetProviderFilters()"
+                        class="inline-flex items-center gap-1 h-10 px-2.5 rounded-lg text-[12.5px] font-semibold
+                               text-text-secondary hover:text-primary hover:bg-primary-light transition-colors">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">restart_alt</mat-icon>
+                  RÃ©initialiser
+                </button>
+              </div>
+
+              <!-- Vignettes des prestataires (dÃ©filement horizontal) -->
+              <div class="flex items-center gap-1.5 pb-4 px-2 md:px-4" *ngIf="visibleProviderGroups.length > 0">
+                <button type="button" (click)="scrollProviders(-1)" aria-label="Faire dÃ©filer vers la gauche"
+                        class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
+                               bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
+                  <mat-icon class="!text-[20px] !w-5 !h-5">chevron_left</mat-icon>
+                </button>
+
+                <div #providerTrack class="flex-1 flex items-stretch gap-3 overflow-x-auto scroll-smooth px-1 py-1">
+                  <button type="button" *ngFor="let g of visibleProviderGroups; trackBy: trackByProvider"
+                          (click)="selectProvider(g.providerId)"
+                          [attr.aria-pressed]="g.providerId === selectedProviderKey"
+                          [attr.aria-label]="'Voir les factures de ' + g.providerNom"
+                          class="relative shrink-0 w-[232px] text-left rounded-xl border p-3 cursor-pointer transition-all"
+                          [ngClass]="g.providerId === selectedProviderKey
+                                     ? 'border-primary bg-primary-light shadow-md -translate-y-0.5'
+                                     : 'border-border bg-white hover:border-primary-200 hover:shadow-sm hover:-translate-y-0.5'">
+
+                    <!-- Ligne 1 : pastille d'initiales + nom + rÃ©gime -->
+                    <span class="flex items-start gap-2.5">
+                      <span class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[12.5px] font-extrabold tracking-tight transition-colors"
+                            [ngClass]="g.providerId === selectedProviderKey ? 'bg-primary text-white' : 'bg-primary-light text-primary'">
+                        {{ groupInitials(g) }}
+                      </span>
+                      <span class="flex-1 min-w-0">
+                        <span class="flex items-center gap-1 min-w-0">
+                          <mat-icon class="!text-[14px] !w-[14px] !h-[14px] shrink-0 text-text-muted"
+                                    *ngIf="g.providerType === 'STRUCTURE'">local_hospital</mat-icon>
+                          <span class="truncate text-[13.5px] font-bold text-text-primary leading-tight"
+                                [title]="g.providerNom">{{ g.nomPrestataire }}</span>
+                        </span>
+                        <span class="flex flex-wrap items-center gap-1 mt-1">
+                          <span class="px-1.5 py-[1px] rounded-full bg-border-light text-[10.5px] font-bold uppercase text-text-secondary"
+                                *ngIf="g.regime">{{ g.regime }}</span>
+                          <span class="px-1.5 py-[1px] rounded-full bg-warn text-white text-[10.5px] font-bold"
+                                *ngIf="groupPending(g) > 0">{{ groupPending(g) }} Ã  traiter</span>
+                        </span>
+                      </span>
+                      <mat-icon class="!text-[18px] !w-[18px] !h-[18px] shrink-0 text-primary"
+                                *ngIf="g.providerId === selectedProviderKey">check_circle</mat-icon>
+                    </span>
+
+                    <!-- Ligne 2 : volumes -->
+                    <span class="flex items-end justify-between gap-2 mt-2.5 pt-2.5 border-t"
+                          [ngClass]="g.providerId === selectedProviderKey ? 'border-primary-200' : 'border-border-light'">
+                      <span class="text-[11.5px] text-text-secondary">
+                        {{ groupCount(g) }} facture{{ groupCount(g) > 1 ? 's' : '' }}
+                      </span>
+                      <span class="text-[13.5px] font-extrabold text-primary tabular-nums">
+                        {{ groupTotal(g) | number:'1.0-0':'fr' }} F
+                      </span>
+                    </span>
+                  </button>
+                </div>
+
+                <button type="button" (click)="scrollProviders(1)" aria-label="Faire dÃ©filer vers la droite"
+                        class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
+                               bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
+                  <mat-icon class="!text-[20px] !w-5 !h-5">chevron_right</mat-icon>
+                </button>
+              </div>
+
+              <!-- Aucun rÃ©sultat -->
+              <div class="flex flex-col items-center gap-2 py-8 px-4 text-center" *ngIf="visibleProviderGroups.length === 0">
+                <mat-icon class="!text-[28px] !w-7 !h-7 text-text-muted">search_off</mat-icon>
+                <p class="text-[13.5px] text-text-secondary m-0" *ngIf="yearProviderCount > 0">
+                  Aucun prestataire ne correspond
+                  <ng-container *ngIf="providerSearch"> Ã  Â« <strong>{{ providerSearch }}</strong> Â»</ng-container>
+                  <ng-container *ngIf="providerFilter !== 'TOUS'"> avec ce filtre</ng-container>.
+                </p>
+                <p class="text-[13.5px] text-text-secondary m-0" *ngIf="yearProviderCount === 0">
+                  Aucune facture en <strong>{{ selectedYear }}</strong> â€” changez d'annÃ©e pour voir les prestataires concernÃ©s.
+                </p>
+                <button type="button" class="btn btn-outline btn-sm" *ngIf="yearProviderCount > 0" (click)="resetProviderFilters()">
+                  RÃ©initialiser la recherche
+                </button>
               </div>
             </div>
-          </div>
+
+            <!-- ---- Factures du prestataire sÃ©lectionnÃ© ---- -->
+            <div class="pharmacy-section-card" *ngIf="selectedGroup as g">
+              <div class="pharmacy-section-header !flex-wrap gap-3">
+                <div class="pharma-title-block min-w-0">
+                  <span class="w-10 h-10 shrink-0 rounded-lg bg-primary text-white flex items-center justify-center text-[13px] font-extrabold">
+                    {{ groupInitials(g) }}
+                  </span>
+                  <div class="min-w-0">
+                    <h3 class="pharmacy-section-title truncate">{{ g.providerNom }}</h3>
+                    <p class="text-[12.5px] text-text-muted m-0 mt-0.5">
+                      {{ g.providerType === 'STRUCTURE' ? 'Structure sanitaire' : 'Pharmacie' }} Â·
+                      facturation {{ selectedYear }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- SynthÃ¨se du prestataire ouvert -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-field">
+                    <span class="text-[10.5px] font-bold uppercase text-text-muted tracking-wide">Factures</span>
+                    <span class="text-[14px] font-extrabold text-text-primary tabular-nums">{{ groupCount(g) }}</span>
+                  </span>
+                  <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-field">
+                    <span class="text-[10.5px] font-bold uppercase text-text-muted tracking-wide">Montant</span>
+                    <span class="text-[14px] font-extrabold text-primary tabular-nums">{{ groupTotal(g) | number:'1.0-0':'fr' }} F</span>
+                  </span>
+                  <span class="inline-flex flex-col px-3 py-1.5 rounded-lg bg-warn-light" *ngIf="groupPending(g) > 0">
+                    <span class="text-[10.5px] font-bold uppercase text-warn tracking-wide">Ã€ traiter</span>
+                    <span class="text-[14px] font-extrabold text-warn tabular-nums">{{ groupPending(g) }}</span>
+                  </span>
+                </div>
+              </div>
+
+              <ng-container *ngTemplateOutlet="tableMois; context: { factures: g.factures, menuActions: authService.isServiceRegional() }"></ng-container>
+            </div>
+          </ng-container>
         </ng-container>
       </ng-container>
+
+
+      <!-- Les 12 mois d'une annÃ©e : le tableau de Â« Mes factures Â» du poste de santÃ©.
+           `menuActions` (Â« Mes factures Â» du pharmacien, factures du service rÃ©gional) : sans
+           colonne Statut, actions sous les trois points. La vue centrale garde statut et boutons. -->
+      <ng-template #tableMois let-factures="factures" let-menuActions="menuActions">
+        <div class="overflow-x-auto desktop-only">
+          <table class="premium-table w-full">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th *ngIf="!menuActions">Statut</th>
+                <th class="text-center">Patients</th>
+                <th class="text-right">Montant</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of moisAnnee" [id]="'month-row-' + m">
+                <td class="font-semibold whitespace-nowrap">
+                  {{ getMonthName(m) }}
+                  <span *ngIf="m === currentMonth && selectedYear === currentYear"
+                        class="ml-1 px-1.5 py-0.5 rounded-full bg-primary-light text-primary text-[10.5px] font-bold">en cours</span>
+                </td>
+                <ng-container *ngIf="factureDuMois(m, factures) as f; else aucune">
+                  <td *ngIf="!menuActions"><app-status-badge [statut]="f.statut" [libelle]="getStatutDateLabel(f)"></app-status-badge></td>
+                  <td class="text-center">{{ countPatients(f) }}</td>
+                  <td class="text-right font-semibold whitespace-nowrap">{{ f.montantTotal | number:'1.0-0':'fr' }} F</td>
+                  <td *ngIf="menuActions" class="text-right">
+                    <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+                  </td>
+                  <td *ngIf="!menuActions" class="text-right whitespace-nowrap">
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openFacture(f)"><mat-icon>visibility</mat-icon> Consulter</button>
+                    <a class="btn btn-ghost btn-sm" *ngIf="authService.isPharmacien() && (f.statut === 'BROUILLON' || f.statut === 'REJETEE_SR')"
+                       [routerLink]="['/dashboard/factures', f.id, 'edit']"><mat-icon>edit</mat-icon> Modifier</a>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="exportSingleExcel(f)"><mat-icon>table_view</mat-icon> Excel</button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="exportSinglePdf(f)"><mat-icon>picture_as_pdf</mat-icon> PDF</button>
+                    <button type="button" class="btn btn-primary btn-sm" *ngIf="authService.isServiceRegional() && f.statut === 'REJETEE_NC'"
+                            (click)="renvoyerAuCentral(f.id)"><mat-icon>send</mat-icon> Renvoyer au central</button>
+                    <button type="button" class="btn btn-primary btn-sm" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
+                            (click)="payerFacture(f.id)"><mat-icon>payments</mat-icon> Payer</button>
+                  </td>
+                </ng-container>
+                <ng-template #aucune><td [attr.colspan]="menuActions ? 3 : 4" class="text-text-muted italic">Aucune facture</td></ng-template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="m-cards">
+          <div class="m-card" *ngFor="let m of moisAnnee" [id]="'month-card-' + m">
+            <div class="m-card-top">
+              <span class="m-title">{{ getMonthName(m) }} {{ selectedYear }}</span>
+              <ng-container *ngIf="factureDuMois(m, factures) as f">
+                <ng-container *ngIf="menuActions; else badgeStatut">
+                  <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+                </ng-container>
+                <ng-template #badgeStatut><app-status-badge [statut]="f.statut"></app-status-badge></ng-template>
+              </ng-container>
+              <span *ngIf="!factureDuMois(m, factures)" class="text-[12.5px] italic text-text-muted">Aucune facture</span>
+            </div>
+            <ng-container *ngIf="factureDuMois(m, factures) as f">
+              <div class="m-row">
+                <span>{{ countPatients(f) }} patient(s)</span>
+                <strong>{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
+              </div>
+              <div *ngIf="!menuActions" class="m-foot flex-wrap">
+                <button type="button" class="btn btn-outline btn-sm" (click)="openFacture(f)"><mat-icon>visibility</mat-icon> Consulter</button>
+                <a class="btn btn-outline btn-sm" *ngIf="authService.isPharmacien() && (f.statut === 'BROUILLON' || f.statut === 'REJETEE_SR')"
+                   [routerLink]="['/dashboard/factures', f.id, 'edit']"><mat-icon>edit</mat-icon> Modifier</a>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="exportSingleExcel(f)"><mat-icon>table_view</mat-icon> Excel</button>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="exportSinglePdf(f)"><mat-icon>picture_as_pdf</mat-icon> PDF</button>
+                <button type="button" class="btn btn-primary btn-sm" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
+                        (click)="payerFacture(f.id)"><mat-icon>payments</mat-icon> Payer</button>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Actions d'une facture (pharmacien, service rÃ©gional), regroupÃ©es sous les trois points
+           (tableau et cartes). Chaque entrÃ©e garde la condition de l'ancien bouton. -->
+      <ng-template #boutonActions let-f>
+        <button type="button" class="btn btn-ghost btn-sm !px-2" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+                aria-label="Actions de la facture" title="Actions">
+          <mat-icon class="!m-0">more_vert</mat-icon>
+        </button>
+      </ng-template>
+
+      <mat-menu #menuFacture="matMenu" xPosition="before">
+        <ng-template matMenuContent let-f="f">
+          <a mat-menu-item *ngIf="authService.isPharmacien() && (f.statut === 'BROUILLON' || f.statut === 'REJETEE_SR')"
+             [routerLink]="['/dashboard/factures', f.id, 'edit']">
+            <mat-icon>edit</mat-icon><span>Modifier</span>
+          </a>
+          <button mat-menu-item (click)="openFacture(f)">
+            <mat-icon>visibility</mat-icon><span>Consulter</span>
+          </button>
+          <button mat-menu-item (click)="exportSingleExcel(f)">
+            <mat-icon>table_view</mat-icon><span>Excel</span>
+          </button>
+          <button mat-menu-item (click)="exportSinglePdf(f)">
+            <mat-icon>picture_as_pdf</mat-icon><span>PDF</span>
+          </button>
+          <button mat-menu-item *ngIf="authService.isServiceRegional() && f.statut === 'REJETEE_NC'" (click)="renvoyerAuCentral(f.id)">
+            <mat-icon>send</mat-icon><span>Renvoyer au central</span>
+          </button>
+          <button mat-menu-item *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'" (click)="payerFacture(f.id)">
+            <mat-icon>payments</mat-icon><span>Payer</span>
+          </button>
+        </ng-template>
+      </mat-menu>
 
       <!-- ===================== VUE CLASSIQUE (tableau + cartes) ===================== -->
       <ng-container *ngIf="!monthlyView">
 
       <!-- Filtres -->
-      <div class="filter-strip">
-        <div class="search-box">
-          <mat-icon>search</mat-icon>
-          <input (keyup)="applyFilter($event)" placeholder="Rechercher par ID ou prestataire…" #input>
+      <div class="card">
+        <div class="section-body grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2 lg:col-span-1">
+            Recherche
+            <input type="search" (keyup)="applyFilter($event)" placeholder="NÂ° ou prestataireâ€¦" #input
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Statut
+            <select [(ngModel)]="filterStatut" (ngModelChange)="applyAdvancedFilter()"
+                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <option value="">Tous les statuts</option>
+              <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
+            </select>
+          </label>
+          <label *ngIf="!authService.isPharmacien()" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Mois
+            <select [(ngModel)]="filterMois" (ngModelChange)="applyAdvancedFilter()"
+                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <option [ngValue]="0">Tous</option>
+              <option *ngFor="let m of moisAnnee" [ngValue]="m">{{ getMonthName(m) }}</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            AnnÃ©e
+            <select [(ngModel)]="filterAnnee" (ngModelChange)="applyAdvancedFilter()"
+                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <option [ngValue]="0">Toutes</option>
+              <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+            </select>
+          </label>
+          <label *ngIf="!authService.isPharmacien()" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            RÃ©gime
+            <select [(ngModel)]="filterRegime" (ngModelChange)="applyAdvancedFilter()"
+                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <option value="">Tous les rÃ©gimes</option>
+              <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+            </select>
+          </label>
         </div>
-
-        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
-          <mat-label>Statut</mat-label>
-          <mat-select [(value)]="filterStatut" (selectionChange)="applyAdvancedFilter()">
-            <mat-option value="">Tous les statuts</mat-option>
-            <mat-option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
-          <mat-label>Mois</mat-label>
-          <mat-select [(value)]="filterMois" (selectionChange)="applyAdvancedFilter()">
-            <mat-option [value]="0">Tous</mat-option>
-            <mat-option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">{{ getMonthName(m) }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
-          <mat-label>Année</mat-label>
-          <mat-select [(value)]="filterAnnee" (selectionChange)="applyAdvancedFilter()">
-            <mat-option [value]="0">Toutes</mat-option>
-            <mat-option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic" *ngIf="!authService.isPharmacien()">
-          <mat-label>Régime</mat-label>
-          <mat-select [(value)]="filterRegime" (selectionChange)="applyAdvancedFilter()">
-            <mat-option value="">Tous les régimes</mat-option>
-            <mat-option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</mat-option>
-          </mat-select>
-        </mat-form-field>
       </div>
-
-
 
       <!-- Tableau (desktop) -->
       <div class="glass-table-container desktop-only">
-        <table mat-table [dataSource]="dataSource" matSort class="premium-table">
+        <table mat-table [dataSource]="dataSource.connect() | async | paginer: pg.page : pg.taille" matSort class="premium-table">
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
             <td mat-cell *matCellDef="let f">
@@ -247,7 +464,7 @@
           </ng-container>
 
           <ng-container matColumnDef="periode">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Période </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> PÃ©riode </th>
             <td mat-cell *matCellDef="let f"> {{ getMonthName(f.mois) }} {{ f.annee }} </td>
           </ng-container>
 
@@ -264,7 +481,7 @@
           </ng-container>
 
           <ng-container matColumnDef="date">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Modifiée </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> ModifiÃ©e </th>
             <td mat-cell *matCellDef="let f" class="text-muted"> {{ f.date | date:'dd/MM/yyyy' }} </td>
           </ng-container>
 
@@ -275,13 +492,13 @@
                 <a class="action-btn" (click)="openFacture(f)" title="Voir" style="cursor: pointer;">
                   <mat-icon>visibility</mat-icon>
                 </a>
-                <button class="action-btn primary" *ngIf="canImportCorrige(f)" (click)="triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigée">
+                <button class="action-btn primary" *ngIf="canImportCorrige(f)" (click)="triggerSingleImport(f.id, singleFileInput)" title="Importer la facture corrigÃ©e">
                   <mat-icon>upload_file</mat-icon>
                 </button>
                 <button class="action-btn success" (click)="exportSingleExcel(f)" title="Excel">
                   <mat-icon>table_view</mat-icon>
                 </button>
-                <button class="action-btn" style="color:#2b579a;" *ngIf="f.providerType === 'STRUCTURE'" (click)="exportSingleWord(f)" title="Word">
+                <button class="action-btn text-blue-700" *ngIf="f.providerType === 'STRUCTURE'" (click)="exportSingleWord(f)" title="Word">
                   <mat-icon>description</mat-icon>
                 </button>
                 <a class="action-btn" *ngIf="authService.isPharmacien() && f.statut === 'BROUILLON'" [routerLink]="['/dashboard/factures', f.id, 'edit']" title="Modifier">
@@ -302,7 +519,7 @@
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell empty-state" [attr.colspan]="displayedColumns.length">
               <mat-icon>search_off</mat-icon>
-              <p>Aucune facture trouvée</p>
+              <p>Aucune facture trouvÃ©e</p>
             </td>
           </tr>
         </table>
@@ -310,14 +527,14 @@
 
       <!-- Mobile List (m-cards) -->
       <div class="m-cards md:hidden mt-4">
-        <a *ngFor="let f of dataSource.data" class="m-card clickable" (click)="openFacture(f)"
+        <a *ngFor="let f of dataSource.connect() | async | paginer: pg.page : pg.taille" class="m-card clickable" (click)="openFacture(f)"
            role="button" tabindex="0" (keydown.enter)="openFacture(f)"
-           [attr.aria-label]="'Voir la facture ' + (f.providerNom || 'Ma Pharmacie') + ' — ' + getMonthName(f.mois) + ' ' + f.annee">
+           [attr.aria-label]="'Voir la facture ' + (f.providerNom || 'Ma Pharmacie') + ' â€” ' + getMonthName(f.mois) + ' ' + f.annee">
           <div class="m-card-top">
             <h3 class="m-title">{{ f.providerNom || 'Ma Pharmacie' }}</h3>
-            <span class="m-chip" [ngClass]="{'danger': f.statut === 'BROUILLON', 'neutral': f.statut === 'PAYEE'}">{{ statutLabel(f.statut) }}</span>
+            <app-status-badge [statut]="f.statut"></app-status-badge>
           </div>
-          <div class="m-sub">{{ getMonthName(f.mois) }} {{ f.annee }} • <span class="id-chip">{{ f.id | slice:0:8 }}</span></div>
+          <div class="m-sub">{{ getMonthName(f.mois) }} {{ f.annee }} â€¢ <span class="id-chip">{{ f.id | slice:0:8 }}</span></div>
           <div class="m-foot">
             <span class="m-amount">{{ f.montantTotal | number }} CFA</span>
             <mat-icon class="m-chevron">chevron_right</mat-icon>
@@ -325,15 +542,17 @@
         </a>
         <div *ngIf="dataSource.data.length === 0" class="empty-state">
           <mat-icon>search_off</mat-icon>
-          <p>Aucune facture trouvée</p>
+          <p>Aucune facture trouvÃ©e</p>
         </div>
       </div>
 
 
 
       <!-- Pagination (desktop + mobile) -->
-      <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="Pagination des factures"></mat-paginator>
+      <app-pagination #pg [total]="dataSource.filteredData.length"></app-pagination>
 
       </ng-container>
     </div>
   
+
+

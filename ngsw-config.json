@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "application",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js",
+          "/media/material-icons*.woff2",
+          "/media/inter-latin-400-normal*.woff2",
+          "/media/inter-latin-500-normal*.woff2",
+          "/media/inter-latin-600-normal*.woff2",
+          "/media/inter-latin-700-normal*.woff2",
+          "/media/inter-latin-800-normal*.woff2",
+          "/media/caveat-latin-500-normal*.woff2",
+          "/media/caveat-latin-700-normal*.woff2"
+        ]
+      }
+    },
+    {
+      "name": "images",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/*.png",
+          "/assets/*.jpg",
+          "/assets/icones/**"
+        ]
+      }
+    },
+    {
+      "name": "polices-autres-alphabets",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/media/**"
+        ]
+      }
+    },
+    {
+      "name": "lecture-cni",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/assets/tesseract/**"
+        ]
+      }
+    }
+  ],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**"
+  ]
+}

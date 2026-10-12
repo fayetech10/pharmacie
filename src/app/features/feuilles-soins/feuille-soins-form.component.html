@@ -1,97 +1,113 @@
-<div class="fade-in p-6 max-md:p-4 max-w-[860px] mx-auto">
-  <div class="flex items-center gap-4 mb-6">
-    <a routerLink="/dashboard/feuilles-soins" class="flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border text-text-secondary no-underline transition-colors hover:bg-primary-light hover:text-primary" aria-label="Retour à la liste des feuilles de soins">
-      <mat-icon>arrow_back</mat-icon>
-    </a>
+<div class="fade-in max-w-[860px]">
+
+  <a routerLink="/dashboard/feuilles-soins"
+     class="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg no-underline">
+    <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Feuilles de soins
+  </a>
+
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-extrabold m-0 mb-1 text-text-primary">Délivrer une feuille de soins</h1>
-      <p class="text-sm text-text-secondary m-0">
-        Recherchez le bénéficiaire, complétez les rubriques du formulaire, puis remettez-lui la feuille imprimée.
-      </p>
+      <h1>Délivrer une feuille de soins</h1>
     </div>
   </div>
 
-  <!-- Recherche du patient -->
-  <mat-card class="mb-5 p-5 rounded border border-border">
-    <h3 class="text-[15px] font-bold text-text-primary m-0 mb-4 flex items-center gap-2"><mat-icon class="text-primary">person_search</mat-icon> Bénéficiaire</h3>
-    <mat-form-field appearance="outline" class="w-full -mb-2">
-      <mat-label>Rechercher par nom, n° CNI ou n° d'assuré…</mat-label>
-      <input matInput [value]="searchQuery" (input)="onSearchInput($event)" [disabled]="!!selectedPatientId">
-      <mat-icon matSuffix>search</mat-icon>
-    </mat-form-field>
-
-    <div *ngIf="searchResults.length > 0" class="border border-border rounded-[10px] overflow-hidden mt-2">
-      <div *ngFor="let p of searchResults" (click)="selectPatient(p)"
-           class="py-2.5 px-3.5 cursor-pointer border-b border-border-light last:border-b-0 flex justify-between items-center gap-2 transition-colors hover:bg-primary-light focus-visible:bg-primary-light focus-visible:outline-none"
-           tabindex="0" role="button"
-           [attr.aria-label]="'Sélectionner ' + p.prenom + ' ' + p.nom"
-           (keydown.enter)="selectPatient(p)">
-        <span class="font-semibold text-text-primary">{{ p.prenom }} {{ p.nom }}</span>
-        <span class="text-xs text-text-secondary">{{ regimeLabels[p.regime] }} · {{ p.numeroAssure || p.numeroCni || p.telephone || '' }}</span>
+  <!-- Bénéficiaire -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>person_search</mat-icon></div>
+        <div>
+          <h2>Bénéficiaire</h2>
+        </div>
       </div>
     </div>
+    <div class="section-body">
+      <div class="relative">
+        <mat-icon class="absolute left-3 top-[22px] -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted pointer-events-none">search</mat-icon>
+        <input type="search" [value]="searchQuery" (input)="onSearchInput($event)" [disabled]="!!selectedPatientId"
+               placeholder="Rechercher par nom, n° CNI ou n° d'assuré…"
+               class="w-full h-11 pl-10 pr-3 rounded-lg border border-border bg-field-bg text-[14px]">
+        <div *ngIf="searchResults.length > 0"
+             class="absolute left-0 right-0 top-[48px] z-10 max-h-[240px] overflow-y-auto rounded-lg border border-border bg-white shadow-md">
+          <button type="button" *ngFor="let p of searchResults" (click)="selectPatient(p)"
+                  class="flex justify-between items-center gap-2 w-full text-left py-2.5 px-3.5 bg-white border-0 border-b border-border-light last:border-b-0 hover:bg-primary-light cursor-pointer"
+                  [attr.aria-label]="'Sélectionner ' + p.prenom + ' ' + p.nom">
+            <strong class="text-[13.5px]">{{ p.prenom }} {{ p.nom }}</strong>
+            <span class="text-[12px] text-text-secondary">{{ regimeLabels[p.regime] }} · {{ p.numeroAssure || p.numeroCni || p.telephone || '' }}</span>
+          </button>
+        </div>
+      </div>
 
-    <div *ngIf="selectedPatientId" class="flex items-center gap-2 mt-2.5 text-[13px] text-primary">
-      <mat-icon class="!text-lg !w-[18px] !h-[18px]">check_circle</mat-icon>
-      Patient existant rattaché à la feuille
-      <button mat-button color="warn" class="!ml-auto" (click)="clearPatient()">Changer</button>
+      <div *ngIf="selectedPatientId"
+           class="flex items-center justify-between gap-3 mt-3 py-2.5 px-3.5 rounded-lg bg-primary-light text-primary text-[13px] font-semibold border border-primary-200">
+        <span class="inline-flex items-center gap-2"><mat-icon class="!text-xl !w-5 !h-5">how_to_reg</mat-icon> Patient existant rattaché à la feuille</span>
+        <button type="button" class="font-bold underline bg-transparent border-0 cursor-pointer text-primary" (click)="clearPatient()">Changer</button>
+      </div>
     </div>
-  </mat-card>
+  </div>
 
-  <!-- Rubriques du formulaire papier -->
-  <mat-card class="mb-5 p-5 rounded border border-border">
-    <h3 class="text-[15px] font-bold text-text-primary m-0 mb-4 flex items-center gap-2"><mat-icon class="text-[#B7791F]">assignment</mat-icon> Rubriques de la feuille de soins</h3>
-    <form [formGroup]="form" class="grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-3">
-      <mat-form-field appearance="outline">
-        <mat-label>Nom</mat-label>
-        <input matInput formControlName="nom">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Prénom(s)</mat-label>
-        <input matInput formControlName="prenom">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Régime</mat-label>
-        <mat-select formControlName="regime">
-          <mat-option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Code assuré / N° immatriculation</mat-label>
-        <input matInput formControlName="codeAssure">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>N° lettre de garantie (optionnel)</mat-label>
-        <input matInput formControlName="lettreGarantieNumero" placeholder="LG-…">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Sexe</mat-label>
-        <mat-select formControlName="sexe">
-          <mat-option value="">—</mat-option>
-          <mat-option value="M">Masculin (M)</mat-option>
-          <mat-option value="F">Féminin (F)</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Âge</mat-label>
-        <input matInput type="number" min="0" formControlName="age">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Téléphone</mat-label>
-        <input matInput formControlName="telephone">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="col-span-full">
-        <mat-label>Accompagnant — Prénom(s) et Nom (optionnel)</mat-label>
-        <input matInput formControlName="accompagnantPrenomNom">
-      </mat-form-field>
-    </form>
-  </mat-card>
+  <!-- Rubriques -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>assignment</mat-icon></div>
+        <div>
+          <h2>Rubriques de la feuille de soins</h2>
+        </div>
+      </div>
+    </div>
+    <div class="section-body">
+      <form [formGroup]="form" class="grid gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Prénom(s)
+          <input formControlName="prenom" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Nom
+          <input formControlName="nom" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Régime
+          <select formControlName="regime" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Code assuré / n° d'immatriculation
+          <input formControlName="codeAssure" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-mono font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          N° lettre de garantie <span class="font-normal text-text-muted">(facultatif)</span>
+          <input formControlName="lettreGarantieNumero" placeholder="G-…" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-mono font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Sexe
+          <select formControlName="sexe" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">—</option>
+            <option value="M">Masculin</option>
+            <option value="F">Féminin</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Âge
+          <input type="number" min="0" formControlName="age" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Téléphone
+          <input type="tel" formControlName="telephone" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2">
+          Accompagnant — prénom(s) et nom <span class="font-normal text-text-muted">(facultatif)</span>
+          <input formControlName="accompagnantPrenomNom" class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+      </form>
+    </div>
+  </div>
 
-  <div class="flex justify-end gap-3 flex-wrap">
-    <button mat-stroked-button routerLink="/dashboard/feuilles-soins">Annuler</button>
-    <button mat-flat-button color="primary" (click)="delivrer()" [disabled]="form.invalid || isSubmitting">
-      <mat-icon>print</mat-icon>
-      {{ isSubmitting ? 'Délivrance en cours…' : 'Délivrer la feuille de soins' }}
+  <div class="flex justify-end gap-3 flex-wrap mb-6">
+    <a class="btn btn-outline" routerLink="/dashboard/feuilles-soins">Annuler</a>
+    <button type="button" class="btn btn-primary" (click)="delivrer()" [disabled]="form.invalid || isSubmitting">
+      <mat-icon>print</mat-icon> {{ isSubmitting ? 'Délivrance en cours…' : 'Délivrer la feuille de soins' }}
     </button>
   </div>
 </div>

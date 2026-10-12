@@ -1,107 +1,18 @@
 /* Détail d'une lettre de garantie (BCSU / SR lecture seule).
    CSS complet (les anciennes règles @apply tronquées cassaient le layout). */
 
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap');
+/* Police manuscrite Caveat (500, 700) : hébergée localement, déclarée globalement dans
+   angular.json (« styles », @fontsource/caveat). */
 
-.lgd-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-4);
-}
-.lgd-header h2 { margin: 0; font-size: 22px; font-weight: 800; color: var(--text-primary); }
-.lgd-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition);
-}
-.lgd-back:hover { background: var(--border-light); color: var(--text-primary); }
 
-.lgd-badge {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  padding: 2px 8px;
-  background: var(--border);
-}
-.lgd-badge.EMISE { background: var(--primary-light); color: var(--primary); }
-.lgd-badge.ANNULEE { background: var(--warn-light, #FEE2E2); color: var(--warn); }
 
-.lgd-card { padding: var(--sp-4); margin-bottom: var(--sp-4); }
-.lgd-card h3 { margin: 0 0 var(--sp-3); font-size: 15px; font-weight: 700; color: var(--text-primary); }
 
-.lgd-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--sp-3);
-}
-.lgd-grid div { display: flex; flex-direction: column; gap: 2px; }
-.lgd-grid span { font-size: 12px; color: var(--text-secondary); }
-.lgd-grid strong { font-weight: 600; color: var(--text-primary); }
 
-.lgd-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-2) 0;
-  border-bottom: 1px solid var(--border-light);
-}
-.lgd-line-main { display: flex; flex-direction: column; min-width: 0; }
-.lgd-line-main small { font-size: 12.5px; color: var(--text-secondary); }
-.lgd-line-amounts { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
-.lgd-line-amounts small { font-size: 12px; color: var(--text-secondary); }
 
-.lgd-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--sp-3);
-  margin-top: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--border);
-  font-weight: 700;
-  color: var(--primary);
-}
 
-.lgd-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-4);
-}
 
-.lgd-loading { padding: var(--sp-6); text-align: center; color: var(--text-secondary); }
 
 /* --- Génération du bon de commande --- */
-.lgd-bon-gen { margin-bottom: var(--sp-2); }
-.lgd-bon-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: var(--sp-2); color: var(--text-primary); }
-.lgd-bon-hint { font-weight: 400; font-size: 12.5px; color: var(--text-secondary); }
-.lgd-bon-row { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
-.lgd-bon-input {
-  width: 90px;
-  height: 40px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 15px;
-  padding: 0 var(--sp-3);
-  font-family: inherit;
-  text-align: center;
-  color: var(--text-primary);
-}
-.lgd-bon-input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
 
 /* --- Format papier Lettre de Garantie --- */
 .paper-container {

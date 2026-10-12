@@ -7,35 +7,36 @@ import { FactureService } from '../../../core/services/facture.service';
 import { BcsuService } from '../../../core/services/bcsu.service';
 import { Facture, FactureRequest } from '../../../core/models/facture.model';
 import { BonCommande, REGIME_LABELS } from '../../../core/models/bcsu.model';
-import { MatCardModule } from '@angular/material/card';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MedicamentService } from '../../../core/services/medicament.service';
 import { Medicament, StatutMedicament } from '../../../core/models/medicament.model';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
-import { compressImageToDataUrl } from '../../../core/utils/image-compression';
 import { renderBonCommandeToDataUrl } from '../../../core/utils/bon-commande-image';
 import { QrScannerComponent } from '../../../shared/qr-scanner/qr-scanner.component';
+import { PhotoPieceComponent } from '../../../shared/photo-piece/photo-piece.component';
+import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 
 type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
 
+/**
+ * Saisie de la facture mensuelle d'une pharmacie, au gabarit de la facturation du
+ * poste de santé : un patient à la fois, en trois étapes (patient, médicaments,
+ * dossier et validation).
+ */
 @Component({
   selector: 'app-facture-form',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSnackBarModule,
-    MatTableModule, MatTooltipModule, RouterModule, FormsModule,
-    QrScannerComponent
+    CommonModule, ReactiveFormsModule, FormsModule, RouterModule,
+    MatIconModule, MatSnackBarModule, MatProgressSpinnerModule, MatTooltipModule,
+    QrScannerComponent, PhotoPieceComponent, StatusBadgeComponent
   ],
-  templateUrl: './facture-form.component.html',
-  styleUrls: ['./facture-form.component.css']
+  templateUrl: './facture-form.component.html'
 })
 export class FactureFormComponent implements OnInit {
   searchBcNumero = 'BC-';
@@ -94,7 +95,11 @@ export class FactureFormComponent implements OnInit {
   }
   private _cachedManualPhotoFields: { key: PhotoKey; label: string }[] | null = null;
   isMedicamentSelected = false;
-  currentStep = 1; // 1: Médicaments, 2: Patient, 3: Dossier
+  /** Comme au poste de santé : le patient d'abord, puis ses médicaments, puis le dossier. */
+  readonly etapes = ['Patient', 'Médicaments', 'Dossier et validation'];
+  currentStep = 1; // 1: Patient, 2: Médicaments, 3: Dossier et validation
+  /** Dernier patient enregistré, rappelé en tête de la saisie suivante. */
+  dernierEnregistrement: { nom: string; lignes: number; total: number } | null = null;
 
   // Bon de commande recherché et rattaché (affiché comme le formulaire papier ASCSU)
   rattacheBon: BonCommande | null = null;
@@ -127,9 +132,7 @@ export class FactureFormComponent implements OnInit {
   nextStep() {
     if (this.currentStep < 3 && this.canGoNext()) {
       this.currentStep++;
-      if (this.currentStep === 3) {
-        this.dossierOpen = true;
-      }
+      this.dernierEnregistrement = null;
     }
   }
 
@@ -140,13 +143,20 @@ export class FactureFormComponent implements OnInit {
   }
 
   canGoNext(): boolean {
-    if (this.currentStep === 1) {
-      return this.patientLignes.length > 0;
+    return this.peutAller(this.currentStep + 1);
+  }
+
+  /** Une étape est accessible dès que les précédentes sont renseignées. */
+  peutAller(etape: number): boolean {
+    if (etape <= 1) return true;
+    if (!this.patientForm.valid) return false;
+    return etape === 2 || this.patientLignes.length > 0;
+  }
+
+  allerA(etape: number) {
+    if (etape !== this.currentStep && this.peutAller(etape)) {
+      this.currentStep = etape;
     }
-    if (this.currentStep === 2) {
-      return this.patientForm.valid;
-    }
-    return true;
   }
 
   constructor(
@@ -273,13 +283,6 @@ export class FactureFormComponent implements OnInit {
       });
     // L'avertissement « limite mensuelle ≥ 2 » est désormais affiché en ligne
     // (bloc calme près du champ Quantité) plutôt que via un snackbar à chaque frappe.
-  }
-
-  // ===== Dossier (pièces justificatives) : repliable pour alléger l'écran =====
-  dossierOpen = false;
-  toggleDossier() { this.dossierOpen = !this.dossierOpen; }
-  get photosCount(): number {
-    return this.photoFields.filter(p => !!this.photos[p.key]).length;
   }
 
   // ===== Totaux courants du patient en cours de saisie =====
@@ -684,24 +687,9 @@ export class FactureFormComponent implements OnInit {
     });
   }
 
-  onPhotoSelected(key: PhotoKey, event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.snackBar.open('Veuillez sélectionner une image', 'Fermer', { duration: 3000 });
-      input.value = '';
-      return;
-    }
-    // Compression côté client (≤ 50 Ko) avant envoi au serveur.
-    compressImageToDataUrl(file, 50 * 1024)
-      .then(dataUrl => { this.photos[key] = dataUrl; })
-      .catch(() => this.snackBar.open("Impossible de traiter l'image", 'Fermer', { duration: 3000 }));
-    input.value = '';
-  }
-
-  removePhoto(key: PhotoKey) {
-    this.photos[key] = null;
+  /** Photo acceptée par le contrôle de qualité (compressée à 50 Ko), ou retirée (null). */
+  onPhoto(key: PhotoKey, image: string | null) {
+    this.photos[key] = image;
   }
 
   openViewer(src: string) {
@@ -738,6 +726,7 @@ export class FactureFormComponent implements OnInit {
           this.facture = res;
           this.factureChange.emit(res);
           this.currentLinesChange.emit([]);
+          this.memoriserEnregistrement();
           this.patientForm.reset();
           this.patientLignes = [];
           this.rattacheBon = null;
@@ -757,6 +746,15 @@ export class FactureFormComponent implements OnInit {
       const lignesCombines = [...this.facture.lignes, ...nouvellesLignes];
       this.mettreAJourLignes(lignesCombines, true);
     }
+  }
+
+  /** Garde la trace du patient qui vient d'être enregistré (bandeau de confirmation). */
+  private memoriserEnregistrement() {
+    this.dernierEnregistrement = {
+      nom: (this.patientForm.get('patientNomPrenom')?.value || '').toString().trim(),
+      lignes: this.patientLignes.length,
+      total: this.patientTotal
+    };
   }
 
   supprimerLigne(index: number) {
@@ -825,6 +823,7 @@ export class FactureFormComponent implements OnInit {
         this.facture = res;
         this.factureChange.emit(res);
         if (clearForm) {
+          this.memoriserEnregistrement();
           this.patientForm.reset();
           this.patientLignes = [];
           this.rattacheBon = null;

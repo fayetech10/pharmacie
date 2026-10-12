@@ -1,139 +1,137 @@
-<div class="lgl">
-  <!-- Barre de recherche et filtres -->
-  <div class="lgl-filter-bar">
-    <div class="lgl-search">
-      <mat-icon>search</mat-icon>
-      <input type="text" placeholder="Rechercher un dossier par numéro (LG-...)"
-             [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()" class="lgl-input" />
-      <button class="lgl-search-btn" [disabled]="searching" (click)="rechercherParNumero()">
-        {{ searching ? 'Recherche...' : 'Rechercher' }}
-      </button>
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Lettres de garantie</h1>
     </div>
-    
-    <div class="lgl-filters">
-      <select class="lgl-select" [(ngModel)]="filterMois" (ngModelChange)="load()">
-        <option [ngValue]="0">Tous les mois</option>
-        <option [ngValue]="1">Janvier</option>
-        <option [ngValue]="2">Février</option>
-        <option [ngValue]="3">Mars</option>
-        <option [ngValue]="4">Avril</option>
-        <option [ngValue]="5">Mai</option>
-        <option [ngValue]="6">Juin</option>
-        <option [ngValue]="7">Juillet</option>
-        <option [ngValue]="8">Août</option>
-        <option [ngValue]="9">Septembre</option>
-        <option [ngValue]="10">Octobre</option>
-        <option [ngValue]="11">Novembre</option>
-        <option [ngValue]="12">Décembre</option>
-      </select>
-      <select class="lgl-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
-        <option [ngValue]="0">Toutes les années</option>
-        <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
-      </select>
-      <select class="lgl-select" [(ngModel)]="filterRegime" (ngModelChange)="load()">
-        <option value="">Tous les régimes</option>
-        <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
-      </select>
-      <button class="lgl-search-btn" [disabled]="exporting || loading" (click)="exporterExcel()">
-        <mat-icon style="font-size:18px;width:18px;height:18px;vertical-align:middle;">download</mat-icon>
+    <div class="page-head-actions flex items-center gap-2">
+      <button class="btn btn-outline" type="button" [disabled]="exporting || loading" (click)="exporterExcel()">
+        <mat-icon>download</mat-icon>
         {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
       </button>
     </div>
   </div>
 
+  <!-- Filtres. Les numéros sont de la forme G-THCS-0001 : le préfixe « LG- » de
+       l'ancienne codification ne correspond à rien en base. -->
+  <div class="filter-strip">
+    <div class="relative flex-1 min-w-[220px]">
+      <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted">
+        search
+      </mat-icon>
+      <input type="text" placeholder="Rechercher un dossier par numéro (G-…)"
+             [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()"
+             class="w-full h-10 pl-10 pr-3 rounded-lg text-[14px]">
+    </div>
+    <button class="btn btn-outline btn-sm" [disabled]="searching" (click)="rechercherParNumero()">
+      {{ searching ? 'Recherche…' : 'Rechercher' }}
+    </button>
+
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterMois" (ngModelChange)="load()">
+      <option [ngValue]="0">Tous les mois</option>
+      <option [ngValue]="1">Janvier</option>
+      <option [ngValue]="2">Février</option>
+      <option [ngValue]="3">Mars</option>
+      <option [ngValue]="4">Avril</option>
+      <option [ngValue]="5">Mai</option>
+      <option [ngValue]="6">Juin</option>
+      <option [ngValue]="7">Juillet</option>
+      <option [ngValue]="8">Août</option>
+      <option [ngValue]="9">Septembre</option>
+      <option [ngValue]="10">Octobre</option>
+      <option [ngValue]="11">Novembre</option>
+      <option [ngValue]="12">Décembre</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterAnnee" (ngModelChange)="load()">
+      <option [ngValue]="0">Toutes les années</option>
+      <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterRegime" (ngModelChange)="load()">
+      <option value="">Tous les régimes</option>
+      <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+    </select>
+  </div>
+
   <app-skeleton-list *ngIf="loading" [rows]="5" [cols]="7"></app-skeleton-list>
-  <div *ngIf="!loading && filteredLettres.length === 0" class="lgl-empty">
+
+  <div class="empty-state" *ngIf="!loading && filteredLettres.length === 0">
     <mat-icon>folder_off</mat-icon>
     <p>Aucun dossier trouvé.</p>
   </div>
 
-  <div class="lgl-table-wrap desktop-only" *ngIf="!loading && filteredLettres.length > 0">
-    <table class="lgl-table">
-      <thead>
-        <tr>
-          <th class="lgl-col-expand"></th>
-          <th>N° Lettre</th>
-          <th>Patient</th>
-          <th>Régime</th>
-          <th>Date</th>
-          <th>Statut</th>
-          <th class="lgl-col-montant">Montant CSU</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngFor="let l of filteredLettres">
-          <tr class="lgl-row" [class.lgl-row--expanded]="isExpanded(l.id)" (click)="toggleExpand(l.id, $event)">
-            <td class="lgl-col-expand">
-              <mat-icon class="lgl-chevron">{{ isExpanded(l.id) ? 'expand_more' : 'chevron_right' }}</mat-icon>
-            </td>
-            <td class="lgl-numero">{{ l.numero }}</td>
-            <td>
-              <div class="lgl-patient">
-                <mat-icon>person</mat-icon>
-                <span>{{ l.patientPrenom }} {{ l.patientNom }}</span>
-              </div>
-            </td>
-            <td><span class="lgl-regime-chip">{{ regimeLabels[l.regime] }}</span></td>
-            <td class="lgl-meta">{{ l.createdAt | date:'dd/MM/yyyy' }}</td>
-            <td>
-              <span class="lgl-badge" [ngClass]="l.statut">
-                <mat-icon>{{ statutIcon(l.statut) }}</mat-icon>
-                {{ statutLabel(l.statut) }}
-              </span>
-            </td>
-            <td class="lgl-col-montant lgl-montant">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+  <!-- Table (desktop). Sur mobile, les cartes ci-dessous prennent le relais : une table
+       dans un conteneur à coins arrondis clippe au lieu de défiler. -->
+  <div class="glass-table-container desktop-only" *ngIf="!loading && filteredLettres.length > 0">
+    <div class="table-scroll">
+      <table class="w-full text-[13.5px]">
+        <thead>
+          <tr class="border-b border-border-strong text-left">
+            <th class="py-3 px-4 font-semibold text-text-secondary">N° Lettre</th>
+            <th class="py-3 px-4 font-semibold text-text-secondary">Patient</th>
+            <th class="py-3 px-4 font-semibold text-text-secondary">Régime</th>
+            <th class="py-3 px-4 font-semibold text-text-secondary">Date</th>
+            <th class="py-3 px-4 font-semibold text-text-secondary">Statut</th>
+            <th class="py-3 px-4 font-semibold text-text-secondary text-right">Motif</th>
           </tr>
-
-          <!-- Détail des prestations du dossier -->
-          <tr class="lgl-detail-row" *ngIf="isExpanded(l.id)">
-            <td [attr.colspan]="7">
-              <div class="lgl-detail">
-                <table class="lgl-presta-table">
-                  <thead>
-                    <tr>
-                      <th>Désignation</th>
-                      <th>Date de prise en charge</th>
-                      <th>Montant</th>
-                      <th>Montant CSU</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let p of l.prestations">
-                      <td>{{ p.designation }}</td>
-                      <td>{{ p.datePriseEnCharge | date:'dd/MM/yyyy' }}</td>
-                      <td>{{ p.montant | number:'1.0-0':'fr' }} F</td>
-                      <td class="lgl-montant">{{ (p.montantSencsu ?? p.montant) | number:'1.0-0':'fr' }} F</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div class="lgl-detail-actions" (click)="$event.stopPropagation()">
-                  <a class="lgl-link" (click)="openDetail(l.id)">
-                    <mat-icon>visibility</mat-icon> Voir le dossier complet
-                  </a>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let l of filteredLettres | paginer: pg.page : pg.taille">
+            <tr class="border-b border-border-light cursor-pointer transition-colors hover:bg-primary-light/40"
+                (click)="openDetail(l.id)">
+              <td class="py-2.5 px-4 font-semibold">{{ l.numero }}</td>
+              <td class="py-2.5 px-4">
+                <div class="flex items-center gap-2">
+                  <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-muted">person</mat-icon>
+                  <span>{{ l.patientPrenom }} {{ l.patientNom }}</span>
                 </div>
-              </div>
-            </td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
+              </td>
+              <td class="py-2.5 px-4">
+                <span class="inline-block px-2 py-0.5 rounded-full bg-border-light text-[12px] font-semibold">
+                  {{ regimeLabels[l.regime] }}
+                </span>
+              </td>
+              <td class="py-2.5 px-4 text-text-secondary">{{ l.createdAt | date:'dd/MM/yyyy' }}</td>
+              <td class="py-2.5 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold"
+                      [ngClass]="statutClasses(l.statut)">
+                  <mat-icon class="!text-sm !w-3.5 !h-3.5">{{ statutIcon(l.statut) }}</mat-icon>
+                  {{ statutLabel(l.statut) }}
+                </span>
+              </td>
+              <td class="py-2.5 px-4 text-right">
+                {{ l.prestations && l.prestations.length > 0 ? l.prestations[0].designation : '—' }}
+              </td>
+            </tr>
+
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Mobile List (m-cards) -->
+  <!-- Cartes mobiles -->
   <div class="m-cards md:hidden" *ngIf="!loading && filteredLettres.length > 0">
-    <a *ngFor="let l of filteredLettres" class="m-card clickable" (click)="openDetail(l.id)"
+    <a *ngFor="let l of filteredLettres | paginer: pg.page : pg.taille" class="m-card clickable" (click)="openDetail(l.id)"
        role="button" tabindex="0" (keydown.enter)="openDetail(l.id)"
        [attr.aria-label]="'Voir la lettre ' + l.numero">
       <div class="m-card-top">
         <h3 class="m-title">{{ l.patientPrenom }} {{ l.patientNom }}</h3>
-        <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">{{ statutLabel(l.statut) }}</span>
+        <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">
+          {{ statutLabel(l.statut) }}
+        </span>
       </div>
       <div class="m-sub">{{ l.numero }} • {{ l.createdAt | date:'dd/MM/yyyy' }}</div>
       <div class="m-foot">
-        <span class="m-amount">{{ l.montantTotalSencsu | number:'1.0-0':'fr' }} CFA</span>
+        <span class="m-amount" style="font-size: 13px; font-weight: 500;">
+          {{ l.prestations && l.prestations.length > 0 ? l.prestations[0].designation : '—' }}
+        </span>
         <mat-icon class="m-chevron">chevron_right</mat-icon>
       </div>
     </a>
   </div>
+  <app-pagination #pg [total]="filteredLettres.length"></app-pagination>
+
 </div>

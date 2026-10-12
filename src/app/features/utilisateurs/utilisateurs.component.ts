@@ -6,7 +6,7 @@ import { RegionService, Region } from '../../core/services/region.service';
 import { PharmacieService } from '../../core/services/pharmacie.service';
 import { StructureService } from '../../core/services/structure.service';
 import { Pharmacie } from '../../core/models/pharmacie.model';
-import { StructureSanitaire } from '../../core/models/structure.model';
+import { StructureSanitaire, typeEffectifStructure } from '../../core/models/structure.model';
 import { User, Role } from '../../core/models/user.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,10 +18,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { AuthService } from '../../core/services/auth.service';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-utilisateurs',
   standalone: true,
-  imports: [
+  imports: [PaginationComponent, PaginerPipe, 
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -76,11 +78,12 @@ export class UtilisateursComponent implements OnInit {
 
   initForm() {
     const defaultRole = this.isRegional ? Role.BCSU : Role.PHARMACIEN;
+    // Ni email ni mot de passe : l'identifiant (prénom.nom) et un mot de passe temporaire
+    // sont générés côté serveur et renvoyés à la création.
     this.userForm = this.fb.group({
       nom: ['', Validators.required],
       prenom: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      password: [''],
+      telephone: [''],
       role: [defaultRole, Validators.required],
       regionId: [''],
       pharmacieId: [''],
@@ -104,6 +107,15 @@ export class UtilisateursComponent implements OnInit {
     this.regionService.getAll().subscribe(data => this.regions = data);
     this.pharmacieService.getAll().subscribe(data => this.pharmacies = data);
     this.structureService.getStructures().subscribe(data => this.structures = data);
+  }
+
+  /**
+   * Structures pouvant accueillir un agent BCSU : centres de santé (CS) et hôpitaux (EPS).
+   * Les postes de santé (PS) sont exclus — un bureau CSU siège en CS/EPS, jamais en poste.
+   * typeEffectifStructure gère aussi les structures sans type explicite (déduit du code).
+   */
+  get structuresRattachement(): StructureSanitaire[] {
+    return this.structures.filter(s => typeEffectifStructure(s) !== 'PS');
   }
 
   getRoleLabel(role: string): string {
@@ -222,9 +234,6 @@ export class UtilisateursComponent implements OnInit {
     this.isEditMode = false;
     this.editingUserId = null;
     this.userForm.reset({ role: defaultRole });
-    // Aligné sur la règle serveur (@Size min 8) : erreur claire avant soumission.
-    this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
-    this.userForm.get('password')?.updateValueAndValidity();
     this.onRoleChange(defaultRole);
     this.showModal = true;
   }
@@ -235,15 +244,12 @@ export class UtilisateursComponent implements OnInit {
     this.userForm.patchValue({
       nom: user.nom,
       prenom: user.prenom,
-      email: user.email,
-      password: '',
+      telephone: user.telephone || '',
       role: user.role,
       regionId: user.regionId || '',
       pharmacieId: user.pharmacieId || '',
       structureSanitaireId: user.structureSanitaireId || ''
     });
-    this.userForm.get('password')?.clearValidators();
-    this.userForm.get('password')?.updateValueAndValidity();
     this.onRoleChange(user.role);
     // onRoleChange vide le champ structure (réinitialisation des validateurs) :
     // on repose la valeur de l'utilisateur édité après coup.
@@ -282,8 +288,13 @@ export class UtilisateursComponent implements OnInit {
     } else {
       // create
       this.userService.create(val).subscribe({
-        next: () => {
-          this.showMsg('Utilisateur créé avec succès');
+        next: (res) => {
+          // Les accès (identifiant + mot de passe temporaire) ne sont montrés QU'ICI :
+          // l'administrateur doit les communiquer à l'utilisateur avant de fermer.
+          const u = res?.utilisateur;
+          const identifiant = u?.username || u?.email || '';
+          const motDePasse = res?.motDePasseTemporaire || '';
+          this.confirm.afficherAcces('Compte créé', identifiant, motDePasse).subscribe();
           this.loadUsers();
           this.closeModal();
         },
@@ -306,6 +317,71 @@ export class UtilisateursComponent implements OnInit {
           this.loadUsers();
         },
         error: (err) => this.showMsg('Erreur de suppression')
+      });
+    });
+  }
+
+  // ----- Compte : activation et mot de passe -----
+
+  /** Compte dont une action est en cours (ses boutons sont désactivés). */
+  actionEnCours: string | null = null;
+
+  /** Son propre compte ne se désactive ni ne se réinitialise depuis cette liste. */
+  estMoi(u: User): boolean {
+    return !!u.id && u.id === this.authService.getCurrentUser()?.userId;
+  }
+
+  private nomCompte(u: User): string {
+    return `${u.prenom || ''} ${u.nom || ''}`.trim() || u.username || u.email;
+  }
+
+  basculerActivation(u: User) {
+    if (!u.id) return;
+    const id = u.id;
+    const desactiver = !!u.actif;
+    this.confirm.ask({
+      title: desactiver ? 'Désactiver le compte' : 'Réactiver le compte',
+      message: desactiver
+        ? `${this.nomCompte(u)} ne pourra plus se connecter. Le compte est conservé et pourra être réactivé.`
+        : `${this.nomCompte(u)} pourra de nouveau se connecter.`,
+      confirmText: desactiver ? 'Désactiver' : 'Réactiver',
+      danger: desactiver
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.actionEnCours = id;
+      this.userService.basculerActivation(id, !desactiver).subscribe({
+        next: maj => {
+          this.actionEnCours = null;
+          u.actif = maj.actif;
+          this.showMsg(maj.actif ? 'Compte réactivé' : 'Compte désactivé');
+        },
+        error: err => {
+          this.actionEnCours = null;
+          this.showMsg('Erreur : ' + (err.error?.message || err.message));
+        }
+      });
+    });
+  }
+
+  reinitialiserMotDePasse(u: User) {
+    if (!u.id) return;
+    const id = u.id;
+    this.confirm.ask({
+      title: 'Réinitialiser le mot de passe',
+      message: `Le mot de passe de ${this.nomCompte(u)} va être remis à « password123 » (à changer à la connexion). L'ancien ne permettra plus de se connecter.`,
+      confirmText: 'Réinitialiser'
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.actionEnCours = id;
+      this.userService.reinitialiserMotDePasse(id).subscribe({
+        next: res => {
+          this.actionEnCours = null;
+          this.confirm.afficherAcces('Mot de passe réinitialisé', u.username || u.email, res.motDePasseTemporaire).subscribe();
+        },
+        error: err => {
+          this.actionEnCours = null;
+          this.showMsg('Erreur : ' + (err.error?.message || err.message));
+        }
       });
     });
   }

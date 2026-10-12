@@ -4,8 +4,26 @@ import { FactureService } from './facture.service';
 import { StructureService } from './structure.service';
 import { AuthService } from './auth.service';
 
-/** Nombre de factures par statut (clé = StatutFacture). */
+/**
+ * Nombre de factures par statut. Clé = StatutFacture pour les factures des pharmacies,
+ * `S:` + StatutFacture pour celles des structures sanitaires (voir {@link statutsStructure}).
+ */
 export type StatutCounts = Record<string, number>;
+
+/**
+ * Préfixe des compteurs des factures de structures sanitaires.
+ *
+ * <p>Pharmacies et structures partagent les mêmes statuts (ENVOYEE, VALIDEE_SR…). Comptés
+ * ensemble, une facture de structure transmise au service régional allumait le badge
+ * « Factures pharmacies ». Les clés des pharmacies restent nues : l'état « vu » déjà
+ * enregistré dans le navigateur reste valable.</p>
+ */
+export const PREFIXE_STRUCTURE = 'S:';
+
+/** Clés de compteurs des factures de structures pour ces statuts. */
+export function statutsStructure(statuts: string[]): string[] {
+  return statuts.map(s => PREFIXE_STRUCTURE + s);
+}
 
 /**
  * Compteurs de factures par statut, partagés entre les onglets (espace) et la
@@ -81,10 +99,10 @@ export class FactureCountService {
     }).subscribe({
       next: ({ pharmacieFactures, structureFactures }) => {
         const current: Record<string, string[]> = {};
-        for (const f of [...pharmacieFactures, ...structureFactures]) {
-          const s = String(f.statut);
-          (current[s] = current[s] || []).push(String(f.id));
-        }
+        const ajouter = (cle: string, id: unknown) => (current[cle] = current[cle] || []).push(String(id));
+        for (const f of pharmacieFactures) ajouter(String(f.statut), f.id);
+        // Clés séparées : une facture de structure ne doit jamais compter chez les pharmacies.
+        for (const f of structureFactures) ajouter(PREFIXE_STRUCTURE + String(f.statut), f.id);
         this.currentIds = current;
         this.loaded = true;
         this.pruneSeen(current);

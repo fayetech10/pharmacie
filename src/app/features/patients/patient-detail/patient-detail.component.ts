@@ -1,15 +1,16 @@
+import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
+import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
+import { Onglet, OngletsComponent } from '../../../shared/onglets/onglets.component';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatTabsModule } from '@angular/material/tabs';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Optional, Inject } from '@angular/core';
 import { PatientService } from '../../../core/services/patient.service';
@@ -20,6 +21,8 @@ import { BonCommande, LettreGarantie, REGIME_LABELS, StatutLettreGarantie } from
 import { FeuilleSoins, STATUT_FEUILLE_LABELS } from '../../../core/models/feuille-soins.model';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
 import { buildWhatsAppLink } from '../../../core/utils/whatsapp-share';
+import { CarteCsuService } from '../../../core/services/carte-csu.service';
+import { exigeCartePoste } from '../../espace-poste/poste-facturation';
 
 export interface PatientDocument {
   titre: string;
@@ -31,28 +34,163 @@ export interface PatientDocument {
   dynamicPdfType?: 'feuille-soins' | 'lettre-garantie' | 'bon-commande';
 }
 
+type OngletDossier = 'lettres' | 'bons' | 'feuilles' | 'pharmacie' | 'structure' | 'documents';
+
+@Component({
+  selector: 'app-patient-edit-dialog',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatInputModule, MatSelectModule, MatDialogModule],
+  template: `
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="font-bold text-[15px]">Modifier le patient</h2>
+        <button class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-text-muted hover:bg-border-light hover:text-text-primary transition-colors" mat-dialog-close aria-label="Fermer"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="modal-body">
+        <form #f="ngForm" class="flex flex-col gap-4">
+          <mat-form-field appearance="outline">
+            <mat-label>Nom</mat-label>
+            <input matInput name="nom" [(ngModel)]="data.nom" required>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Prénom</mat-label>
+            <input matInput name="prenom" [(ngModel)]="data.prenom" required>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone</mat-label>
+            <input matInput name="telephone" [(ngModel)]="data.telephone">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Sexe</mat-label>
+            <mat-select name="sexe" [(ngModel)]="data.sexe">
+              <mat-option value="M">Homme</mat-option>
+              <mat-option value="F">Femme</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <div class="flex gap-4 mt-4 justify-end">
+            <button mat-stroked-button mat-dialog-close>Annuler</button>
+            <button mat-flat-button color="primary" [mat-dialog-close]="data" [disabled]="!f.valid">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+})
+export class PatientEditDialogComponent {
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any) {}
+}
+
 @Component({
   selector: 'app-patient-detail',
   standalone: true,
   imports: [
+    StatusBadgeComponent, RegimeBadgeComponent, OngletsComponent,
     CommonModule,
     FormsModule,
     RouterModule,
-    MatCardModule,
-    MatButtonModule,
     MatIconModule,
-    MatInputModule,
-    MatSelectModule,
     MatSnackBarModule,
-    MatDialogModule,
-    MatTabsModule
+    MatDialogModule
   ],
-  templateUrl: './patient-detail.component.html',
-  styleUrls: ['./patient-detail.component.css']
+  templateUrl: './patient-detail.component.html'
 })
 export class PatientDetailComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
   readonly statutFeuilleLabels = STATUT_FEUILLE_LABELS;
+
+  /** Section affichée dans l'historique du dossier. */
+  onglet: OngletDossier = 'documents';
+  /** Sections présentes pour ce patient (recalculées au chargement, pas à chaque détection). */
+  onglets: Onglet<OngletDossier>[] = [];
+
+  private construireOnglets() {
+    const d = this.dossier;
+    this.onglets = [];
+    if (!d) return;
+    if (d.lettresGarantie.length) {
+      this.onglets.push({ cle: 'lettres', libelle: `Lettres · ${d.lettresGarantie.length}`, icone: 'assignment_turned_in' });
+    }
+    if (d.patient.regime === 'CONTRIBUTIF' && (d.bonsCommande.length || (this.canDelivrerBon && this.lettresEligibles.length))) {
+      this.onglets.push({ cle: 'bons', libelle: `Bons · ${d.bonsCommande.length}`, icone: 'receipt' });
+    }
+    if (this.feuillesSoins.length || this.canDelivrerBon) {
+      this.onglets.push({ cle: 'feuilles', libelle: `Feuilles · ${this.feuillesSoins.length}`, icone: 'description' });
+    }
+    if (d.lignesFactureOfficine.length) {
+      this.onglets.push({ cle: 'pharmacie', libelle: `Pharmacie · ${d.lignesFactureOfficine.length}`, icone: 'local_pharmacy' });
+    }
+    if (d.facturesStructure.length) {
+      this.onglets.push({ cle: 'structure', libelle: `Structure · ${d.facturesStructure.length}`, icone: 'local_hospital' });
+    }
+    this.onglets.push({ cle: 'documents', libelle: `Documents · ${this.documentsLiasse.length}`, icone: 'photo_library' });
+    if (!this.aOnglet(this.onglet)) {
+      this.onglet = this.onglets[0].cle;
+    }
+  }
+
+  private aOnglet(cle: OngletDossier): boolean {
+    return this.onglets.some(o => o.cle === cle);
+  }
+
+  get sexeLibelle(): string | null {
+    const s = (this.dossier?.patient.sexe || '').toUpperCase();
+    return s === 'F' ? 'Femme' : s === 'M' || s === 'H' ? 'Homme' : null;
+  }
+
+  /** Âge en années (en mois avant un an), d'après la date de naissance. */
+  get age(): string | null {
+    const dn = this.dossier?.patient.dateNaissance;
+    if (!dn) return null;
+    const naissance = new Date(dn);
+    if (isNaN(naissance.getTime())) return null;
+    const auj = new Date();
+    let mois = (auj.getFullYear() - naissance.getFullYear()) * 12 + auj.getMonth() - naissance.getMonth();
+    if (auj.getDate() < naissance.getDate()) mois--;
+    if (mois < 0) return null;
+    if (mois < 12) return `${mois} mois`;
+    const ans = Math.floor(mois / 12);
+    return `${ans} an${ans > 1 ? 's' : ''}`;
+  }
+
+  editPatient() {
+    if (!this.dossier?.patient) return;
+    const dialogRef = this.dialog.open(PatientEditDialogComponent, {
+      width: '450px',
+      data: { ...this.dossier.patient }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.patientService.update(this.dossier!.patient.id!, result).subscribe({
+          next: () => {
+            this.snackBar.open('Patient modifié avec succès', 'Fermer', { duration: 3000 });
+            this.loadDossier();
+          },
+          error: () => this.snackBar.open('Erreur lors de la modification', 'Fermer', { duration: 3000 })
+        });
+      }
+    });
+  }
+
+  deletePatient() {
+    if (!this.dossier?.patient) return;
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce patient ? Cette action est irréversible.')) {
+      this.patientService.delete(this.dossier.patient.id!).subscribe({
+        next: () => {
+          this.snackBar.open('Patient supprimé avec succès', 'Fermer', { duration: 3000 });
+          this.router.navigate(['/dashboard/patients']);
+        },
+        error: () => this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000 })
+      });
+    }
+  }
+
+  loadDossier() {
+    this.dossier = null;
+    this.loading = true;
+    this.documentsLiasse = [];
+    this.load(this.patientId!);
+  }
 
   dossier: DossierPatientDto | null = null;
   loading = true;
@@ -76,6 +214,7 @@ export class PatientDetailComponent implements OnInit {
     private sanitizer: DomSanitizer,
     public authService: AuthService,
     private feuilleSoinsService: FeuilleSoinsService,
+    private carteCsu: CarteCsuService,
     @Optional() @Inject(MAT_DIALOG_DATA) public dialogData: { patientId: string },
     @Optional() public dialogRef: MatDialogRef<PatientDetailComponent>
   ) {}
@@ -104,7 +243,8 @@ export class PatientDetailComponent implements OnInit {
     this.patientService.getDossierCsu(id).subscribe({
       next: (res) => {
         this.dossier = res;
-        
+        this.chargerPhoto(res);
+
         // Correction pour les anciens dossiers : recalcul des montants CSU s'ils sont à 0
         if (this.dossier.lettresGarantie) {
           this.dossier.lettresGarantie.forEach(lg => {
@@ -147,6 +287,7 @@ export class PatientDetailComponent implements OnInit {
         this.selectedLettreId = eligibles.length ? eligibles[0].id : null;
         
         this.extractDocuments();
+        this.construireOnglets();
       },
       error: () => {
         this.snackBar.open('Erreur lors de la récupération du dossier consolidé', 'Fermer', { duration: 3000 });
@@ -324,6 +465,29 @@ export class PatientDetailComponent implements OnInit {
     this.router.navigate(['/dashboard/feuilles-soins/new'], { queryParams: { patientId: this.patientId } });
   }
 
+  /** Photo du patient, affichée à la place de ses initiales. */
+  photoPatient: string | null = null;
+
+  /**
+   * Photo du porteur : celle enregistrée lors d'un contrôle de sa carte en Espace PS, à
+   * défaut celle que renvoie sa carte CSU, interrogée directement (régimes à carte, comptes
+   * autorisés à vérifier une carte). Un échec laisse simplement les initiales.
+   */
+  private chargerPhoto(dossier: DossierPatientDto) {
+    this.photoPatient = dossier.photoAssure || null;
+    const patient = dossier.patient;
+    const numero = (patient.numeroAssure || '').trim();
+    const autorise = this.authService.isBcsu() || this.authService.isAdmin()
+      || this.authService.isPosteDeSante() || this.authService.isCentreDeSante();
+    if (this.photoPatient || !numero || !autorise || !exigeCartePoste(patient.regime)) return;
+    this.carteCsu.verifier(numero).subscribe({
+      next: carte => {
+        if (carte?.photo && this.dossier?.patient.id === patient.id) this.photoPatient = carte.photo;
+      },
+      error: () => { /* carte injoignable ou invalide : on garde les initiales */ }
+    });
+  }
+
   get initials(): string {
     if (!this.dossier?.patient) return '';
     const p = this.dossier.patient.prenom?.charAt(0) || '';
@@ -354,6 +518,11 @@ export class PatientDetailComponent implements OnInit {
 
   /** Seuls l'agent BCSU et l'admin peuvent délivrer un bon (règle backend). */
   get canDelivrerBon(): boolean {
+    return this.authService.isBcsu() || this.authService.isAdmin();
+  }
+
+  /** Modifier / supprimer un patient : agent BCSU (dans son périmètre) et admin (règle backend). */
+  get canGererPatient(): boolean {
     return this.authService.isBcsu() || this.authService.isAdmin();
   }
 
@@ -447,6 +616,24 @@ export class PatientDetailComponent implements OnInit {
   // ===== Tonalité des badges de statut (remplace les styles inline conditionnels) =====
 
   /** Lettre de garantie : EMISE=succès, BROUILLON=attente, ANNULEE=danger. */
+  /**
+   * Tonalité → classes Tailwind du badge.
+   *
+   * <p>Les `xxxTone()` ci-dessous disent le SENS (succès, attente, danger…) ; cette
+   * fonction dit la couleur. Les garder séparés évite de réécrire cinq helpers le jour
+   * où la palette bouge — et permet de supprimer la feuille de style scopée, dont le
+   * seul rôle restant était de colorer ces pastilles.</p>
+   */
+  tonalite(ton: string): string {
+    switch (ton) {
+      case 'success': return 'bg-primary-light text-primary';
+      case 'danger':  return 'bg-warn-light text-warn';
+      case 'warn':    return 'bg-amber-50 text-amber-700';
+      case 'info':    return 'bg-blue-50 text-blue-700';
+      default:        return 'bg-border-light text-text-secondary';
+    }
+  }
+
   lettreTone(statut: string): string {
     if (statut === 'EMISE') return 'success';
     if (statut === 'BROUILLON') return 'warn';

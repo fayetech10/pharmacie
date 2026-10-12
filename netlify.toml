@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Tableau de bord sur Netlify, API sur le VPS (cf. README racine, « Hébergement
+# séparé »).
+#
+# Seule saisie dans Netlify, AVANT le premier déploiement :
+#   Site configuration → Environment variables → API_URL = https://api.votre-domaine
+# Sans elle, le build s'arrête avec un message explicite.
+#
+# Côté VPS, CORS_ALLOWED_ORIGINS doit contenir l'adresse EXACTE de ce site
+# (https://<nom>.netlify.app, et le domaine personnalisé s'il y en a un), sinon la
+# connexion répond 403 « Invalid CORS request ».
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+  command = "npm run build:netlify"
+  publish = "dist/pharmacie-csu-frontend/browser"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Application Angular : toute route inconnue retombe sur index.html, c'est le routage
+# côté client qui tranche. Les fichiers existants (main-*.js, ngsw-worker.js, assets…)
+# restent servis tels quels : une règle sans « force » ne les masque pas.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Mêmes en-têtes de sécurité que le nginx du déploiement Docker.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Manifeste de l'application installable (mode hors ligne) : type MIME attendu.
+#
+# Pas de règle de cache : Netlify sert tout en « max-age=0, must-revalidate » avec ETag,
+# ce que réclament index.html et le service worker (ngsw-worker.js, ngsw.json) pour
+# qu'un déploiement atteigne les téléphones. Les fichiers empreintés se revalident en 304.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"

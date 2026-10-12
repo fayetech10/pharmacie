@@ -1,6 +1,14 @@
-<div class="fsl">
-  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-    <select class="fsl-input" [(ngModel)]="filterMois" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Mes factures</h1>
+    </div>
+  </div>
+
+  <div class="filter-strip">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterMois" (ngModelChange)="load()">
       <option [ngValue]="0">Tous les mois</option>
       <option [ngValue]="1">Janvier</option>
       <option [ngValue]="2">Février</option>
@@ -15,150 +23,192 @@
       <option [ngValue]="11">Novembre</option>
       <option [ngValue]="12">Décembre</option>
     </select>
-    <select class="fsl-input" [(ngModel)]="filterAnnee" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterAnnee" (ngModelChange)="load()">
       <option [ngValue]="0">Toutes les années</option>
       <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
     </select>
-    <select class="fsl-input" [(ngModel)]="filterRegime" (ngModelChange)="load()" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterRegime" (ngModelChange)="load()">
       <option value="">Tous les régimes</option>
       <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
     </select>
   </div>
 
   <app-skeleton-list *ngIf="loading" [rows]="4" [cols]="5"></app-skeleton-list>
-  <div *ngIf="!loading && factures.length === 0" class="fsl-empty">
+
+  <div class="empty-state" *ngIf="!loading && factures.length === 0">
     <mat-icon>receipt_long</mat-icon>
     <p>Aucune facture pour le moment.</p>
   </div>
 
-  <!-- ===================== Niveau 1 : Mois ===================== -->
-  <section class="fsl-month" *ngFor="let month of monthGroups">
-    <div class="fsl-month-head">
-      <mat-icon>calendar_month</mat-icon>
-      <h3 class="fsl-month-title">{{ month.titre }}</h3>
-    </div>
-
-    <!-- ===================== Niveau 2 : Régime ===================== -->
-    <div class="fsl-regime" *ngFor="let g of month.regimes">
-      <div class="fsl-regime-head">
-        <span class="fsl-regime-badge">{{ g.titre }}</span>
-        <span class="fsl-regime-count">{{ g.factures.length }} facture{{ g.factures.length > 1 ? 's' : '' }}</span>
-        <div class="fsl-regime-actions">
-          <!-- Actions du groupe (envoi mensuel + exports) regroupées sous une icône. -->
-          <button mat-icon-button color="primary"
-                  [matMenuTriggerFor]="groupMenu"
-                  (click)="$event.stopPropagation()"
-                  [disabled]="envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)"
-                  aria-label="Actions de la facture mensuelle">
-            <mat-icon>{{ (envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)) ? 'hourglass_top' : 'more_vert' }}</mat-icon>
-          </button>
-          <mat-menu #groupMenu="matMenu">
-            <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
-            <button mat-menu-item
-                    *ngIf="g.brouillons > 0"
-                    [disabled]="envoiEnCours === cleGroupe(g)"
-                    (click)="envoyerGroupe(g, $event)">
-              <mat-icon color="primary">send</mat-icon>
-              <span>{{ envoiEnCours === cleGroupe(g) ? 'Envoi...' : 'Envoyer (' + g.brouillons + ')' }}</span>
-            </button>
-            <button mat-menu-item
-                    [disabled]="exporting === cleGroupe(g)"
-                    (click)="exporterGroupe(g, $event)">
-              <mat-icon>table_view</mat-icon>
-              <span>{{ exporting === cleGroupe(g) ? 'Export...' : 'Exporter en Excel' }}</span>
-            </button>
-            <button mat-menu-item
-                    [disabled]="exporting === cleGroupe(g)"
-                    (click)="exporterGroupePdf(g, $event)">
-              <mat-icon>picture_as_pdf</mat-icon>
-              <span>{{ exporting === cleGroupe(g) ? 'Export...' : 'Exporter en PDF' }}</span>
-            </button>
-          </mat-menu>
+  <!-- ═════ Niveau 1 : une carte par mois ═════ -->
+  <div class="card" *ngFor="let month of monthGroups">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>calendar_month</mat-icon></div>
+        <div>
+          <h2>{{ month.titre }}</h2>
         </div>
       </div>
+    </div>
 
-      <!-- ===================== Niveau 3 : Tableau des factures ===================== -->
-      <div class="fsl-table-wrap desktop-only">
-        <table class="fsl-table">
-          <thead>
-            <tr>
-              <th>Mois</th>
-              <th>Régime</th>
-              <th>N° Facture</th>
-              <th>Patients</th>
-              <th>Prestations</th>
-              <th>Statut</th>
-              <th class="fsl-col-montant">Montant total (CSU)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <ng-container *ngFor="let f of getPaginatedFactures(g)">
-              <tr class="fsl-row" (click)="openDetail(f.id)">
+    <div class="section-body">
+
+      <!-- ═════ Niveau 2 : un bloc par régime ═════ -->
+      <section class="mb-6 last:mb-0" *ngFor="let g of month.regimes">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="inline-block px-2.5 py-1 rounded-full bg-primary-light text-primary
+                       text-[12px] font-semibold">{{ g.titre }}</span>
+          <span class="text-[12px] text-text-muted">
+            {{ g.factures.length }} facture{{ g.factures.length > 1 ? 's' : '' }}
+          </span>
+
+          <!-- Actions du groupe (envoi mensuel + exports) regroupées sous une icône. -->
+          <div class="ml-auto">
+            <button type="button" class="btn btn-ghost btn-sm"
+                    [matMenuTriggerFor]="groupMenu"
+                    (click)="$event.stopPropagation()"
+                    [disabled]="envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)"
+                    aria-label="Actions de la facture mensuelle">
+              <mat-icon>
+                {{ (envoiEnCours === cleGroupe(g) || exporting === cleGroupe(g)) ? 'hourglass_top' : 'more_vert' }}
+              </mat-icon>
+            </button>
+            <mat-menu #groupMenu="matMenu">
+              <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
+              <button mat-menu-item
+                      *ngIf="g.brouillons > 0"
+                      [disabled]="envoiEnCours === cleGroupe(g)"
+                      (click)="envoyerGroupe(g, $event)">
+                <mat-icon color="primary">send</mat-icon>
+                <span>{{ envoiEnCours === cleGroupe(g) ? 'Envoi…' : 'Envoyer (' + g.brouillons + ')' }}</span>
+              </button>
+              <button mat-menu-item
+                      [disabled]="exporting === cleGroupe(g)"
+                      (click)="exporterGroupe(g, $event)">
+                <mat-icon>table_view</mat-icon>
+                <span>{{ exporting === cleGroupe(g) ? 'Export…' : 'Exporter en Excel' }}</span>
+              </button>
+              <button mat-menu-item
+                      [disabled]="exporting === cleGroupe(g)"
+                      (click)="exporterGroupePdf(g, $event)">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>{{ exporting === cleGroupe(g) ? 'Export…' : 'Exporter en PDF' }}</span>
+              </button>
+            </mat-menu>
+          </div>
+        </div>
+
+        <!-- ═════ Niveau 3 : les factures. Table au-dessus de 768px, cartes en dessous —
+             une table dans un conteneur à coins arrondis clippe au lieu de défiler. ═════ -->
+        <div class="table-scroll desktop-only">
+          <table class="w-full text-[13.5px]
+                        [&_thead_tr]:border-b [&_thead_tr]:border-border-strong
+                        [&_th]:py-3 [&_th]:px-4 [&_th]:text-left [&_th]:font-semibold [&_th]:text-text-secondary
+                        [&_tbody_tr]:border-b [&_tbody_tr]:border-border-light
+                        [&_td]:py-2.5 [&_td]:px-4">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>Régime</th>
+                <th>N° Facture</th>
+                <th>Patients</th>
+                <th>Prestations</th>
+                <th class="!text-right">Montant total (CSU)</th>
+                <th class="!text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of g.factures | paginer: pgG.page : pgG.taille" (click)="openDetail(f.id)"
+                  class="cursor-pointer transition-colors hover:bg-primary-light/40">
                 <td>{{ getMoisNom(f.mois) }} {{ f.annee }}</td>
-                <td><span class="fsl-chip-regime">{{ regimeLabels[f.regime] || f.regime }}</span></td>
-                <td class="fsl-numero">{{ f.numero }}</td>
-                <td class="fsl-patients">
-                  <mat-icon>groups</mat-icon>{{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}
-                </td>
-                <td>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</td>
                 <td>
-                  <span class="fsl-status-badge" [ngClass]="'status-' + f.statut">
-                    <mat-icon>{{ statutIcon(f.statut) }}</mat-icon>
-                    {{ statutLabel(f.statut) }}
+                  <app-regime-badge [regime]="f.regime"></app-regime-badge>
+                </td>
+                <td class="font-semibold whitespace-nowrap">{{ f.numero }}</td>
+                <td>
+                  <span class="inline-flex items-center gap-1.5">
+                    <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-muted">groups</mat-icon>
+                    {{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}
                   </span>
                 </td>
-                <td class="fsl-col-montant fsl-montant">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+                <td>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</td>
+                <td class="text-right font-bold text-primary whitespace-nowrap">
+                  {{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F
+                </td>
+                <td class="text-right">
+                  <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+                </td>
               </tr>
-            </ng-container>
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Cartes mobiles (≤ 768px) -->
-      <div class="m-cards">
-        <div class="m-card clickable" *ngFor="let f of getPaginatedFactures(g)"
-             (click)="openDetail(f.id)" role="button" tabindex="0"
-             (keydown.enter)="openDetail(f.id)"
-             [attr.aria-label]="'Voir la facture ' + f.numero">
-          <div class="m-card-top">
-            <div class="min-w-0">
-              <div class="m-title">{{ f.numero }}</div>
-              <div class="m-sub">{{ getMoisNom(f.mois) }} {{ f.annee }}</div>
+        <!-- Cartes mobiles (≤ 768px) -->
+        <div class="m-cards">
+          <div class="m-card clickable" *ngFor="let f of g.factures | paginer: pgG.page : pgG.taille"
+               (click)="openDetail(f.id)" role="button" tabindex="0"
+               (keydown.enter)="openDetail(f.id)"
+               [attr.aria-label]="'Voir la facture ' + f.numero">
+            <div class="m-card-top">
+              <div class="min-w-0">
+                <div class="m-title">{{ f.numero }}</div>
+                <div class="m-sub">{{ getMoisNom(f.mois) }} {{ f.annee }}</div>
+              </div>
+              <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
             </div>
-            <span class="fsl-status-badge" [ngClass]="'status-' + f.statut">
-              <mat-icon>{{ statutIcon(f.statut) }}</mat-icon>
-              {{ statutLabel(f.statut) }}
-            </span>
-          </div>
-          <div class="m-row">
-            <span class="fsl-chip-regime">{{ regimeLabels[f.regime] || f.regime }}</span>
-            <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}</span>
-            <span><mat-icon class="inline-ic">medication</mat-icon>{{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}</span>
-          </div>
-          <div class="m-foot">
-            <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
-            <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+            <div class="m-row">
+              <app-regime-badge [regime]="f.regime"></app-regime-badge>
+              <span>
+                <mat-icon class="inline-ic">groups</mat-icon>
+                {{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}
+              </span>
+              <span>
+                <mat-icon class="inline-ic">medication</mat-icon>
+                {{ prestationsCount(f) }} prestation{{ prestationsCount(f) > 1 ? 's' : '' }}
+              </span>
+            </div>
+            <div class="m-foot">
+              <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+              <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Pagination for Regime -->
-      <div class="fsl-pagination" *ngIf="g.factures.length > g.pageSize">
-        <span class="fsl-pagination-info">
-          {{ (g.currentPage - 1) * g.pageSize + 1 }}–{{ Math.min(g.currentPage * g.pageSize, g.factures.length) }} sur {{ g.factures.length }}
-        </span>
-        <div class="fsl-pagination-btns">
-          <button class="fsl-page-btn" [disabled]="g.currentPage <= 1" (click)="goToPage(g, g.currentPage - 1)">
-            <mat-icon>chevron_left</mat-icon>
-          </button>
-          <ng-container *ngFor="let p of getPageNumbers(g)">
-            <button class="fsl-page-btn" [class.active]="p === g.currentPage" (click)="goToPage(g, p)">{{ p }}</button>
-          </ng-container>
-          <button class="fsl-page-btn" [disabled]="g.currentPage >= getTotalPages(g)" (click)="goToPage(g, g.currentPage + 1)">
-            <mat-icon>chevron_right</mat-icon>
-          </button>
-        </div>
-      </div>
+        <!-- Pagination du régime -->
+        <app-pagination #pgG [total]="g.factures.length"></app-pagination>
+      </section>
     </div>
-  </section>
+  </div>
+
+  <!-- Actions d'une facture, regroupées sous les trois points (tableau et cartes mobiles).
+       Le clic ne doit pas remonter à la ligne / carte, qui ouvrirait la facture. -->
+  <ng-template #boutonActions let-f>
+    <button type="button" class="btn btn-ghost btn-sm !px-2" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+            (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+            [disabled]="exportFacture === f.id" aria-label="Actions de la facture" title="Actions">
+      <mat-icon class="!m-0">{{ exportFacture === f.id ? 'hourglass_top' : 'more_vert' }}</mat-icon>
+    </button>
+  </ng-template>
+
+  <mat-menu #menuFacture="matMenu" xPosition="before">
+    <ng-template matMenuContent let-f="f">
+      <!-- Les corrections se font dans la facture elle-même, tant qu'elle est modifiable. -->
+      <button mat-menu-item *ngIf="peutModifier(f)" (click)="openDetail(f.id)">
+        <mat-icon>edit</mat-icon><span>Modifier</span>
+      </button>
+      <button mat-menu-item (click)="openDetail(f.id)">
+        <mat-icon>visibility</mat-icon><span>Consulter</span>
+      </button>
+      <button mat-menu-item (click)="exporterFacture(f, 'excel')">
+        <mat-icon>table_view</mat-icon><span>Excel</span>
+      </button>
+      <button mat-menu-item (click)="exporterFacture(f, 'pdf')">
+        <mat-icon>picture_as_pdf</mat-icon><span>PDF</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+
 </div>
+

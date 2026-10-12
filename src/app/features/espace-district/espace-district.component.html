@@ -1,0 +1,18 @@
+<div class="fade-in space-y-6">
+
+  <!-- Contenu Onglet 0: Consolidation -->
+  <div *ngIf="selectedTab === 0" class="pt-2">
+    <app-consolidation></app-consolidation>
+  </div>
+
+  <!-- Contenu Onglet 1: Structures Sanitaires -->
+  <div *ngIf="selectedTab === 1" class="pt-2">
+    <app-structures-sanitaires></app-structures-sanitaires>
+  </div>
+
+  <!-- Contenu Onglet 2: Factures des postes de santé du district — validation, rejet,
+       pointage (réservé au district depuis le 08/10/2026, plus au centre de santé). -->
+  <div *ngIf="selectedTab === 2" class="pt-2">
+    <app-postes-factures></app-postes-factures>
+  </div>
+</div>

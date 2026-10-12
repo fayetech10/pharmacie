@@ -1,84 +1,108 @@
-<div class="cb">
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Constats</h1>
+    </div>
+  </div>
 
   <!-- ========== FORMULAIRE DE SAISIE ========== -->
-  <mat-card class="cb-form-card">
-    <div class="cb-form-head">
-      <div class="cb-form-ic"><mat-icon>fact_check</mat-icon></div>
-      <div>
-        <h3>Nouveau constat</h3>
-        <p>Décrivez un constat rencontré pour un régime donné dans votre structure.</p>
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>fact_check</mat-icon></div>
+        <div>
+          <h2>Nouveau constat</h2>
+        </div>
       </div>
     </div>
+    <div class="section-body">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="block">
+          <span class="block text-[13px] font-semibold text-text-secondary mb-1.5">
+            Régime concerné <em class="text-warn not-italic">*</em>
+          </span>
+          <select class="w-full h-11 px-3 rounded-lg text-[14px]" [(ngModel)]="regime">
+            <option [ngValue]="''" disabled>Choisir un régime…</option>
+            <option *ngFor="let r of regimeOptions" [ngValue]="r">{{ regimeLabels[r] }}</option>
+          </select>
+        </label>
 
-    <div class="cb-form-grid">
-      <label class="cb-field">
-        <span class="cb-label">Régime concerné <em>*</em></span>
-        <select class="cb-select" [(ngModel)]="regime">
-          <option [ngValue]="''" disabled>Choisir un régime…</option>
-          <option *ngFor="let r of regimeOptions" [ngValue]="r">{{ regimeLabels[r] }}</option>
-        </select>
-      </label>
+        <label class="block sm:col-span-2">
+          <span class="block text-[13px] font-semibold text-text-secondary mb-1.5">
+            Description du constat <em class="text-warn not-italic">*</em>
+          </span>
+          <textarea rows="4" [(ngModel)]="description" class="w-full p-3 rounded-lg text-[14px]"
+                    placeholder="Ex : rupture de médicament pour le régime Sésame, difficulté de prise en charge, dossier incomplet…"></textarea>
+        </label>
+      </div>
 
-      <label class="cb-field cb-field--full">
-        <span class="cb-label">Description du constat <em>*</em></span>
-        <textarea class="cb-textarea" rows="4" [(ngModel)]="description"
-                  placeholder="Ex : rupture de médicament pour le régime Sésame, difficulté de prise en charge, dossier incomplet…"></textarea>
-      </label>
+      <div class="flex justify-end mt-4">
+        <button type="button" class="btn btn-primary" [disabled]="saving" (click)="enregistrer()">
+          <mat-icon>{{ saving ? 'hourglass_empty' : 'save' }}</mat-icon>
+          {{ saving ? 'Enregistrement…' : 'Enregistrer le constat' }}
+        </button>
+      </div>
     </div>
-
-    <div class="cb-form-actions">
-      <button type="button" class="cb-btn" [disabled]="saving" (click)="enregistrer()">
-        <mat-icon>{{ saving ? 'hourglass_empty' : 'save' }}</mat-icon>
-        {{ saving ? 'Enregistrement…' : 'Enregistrer le constat' }}
-      </button>
-    </div>
-  </mat-card>
+  </div>
 
   <!-- ========== LISTE DES CONSTATS ENREGISTRÉS ========== -->
-  <mat-card class="cb-list-card">
-    <div class="cb-list-head">
-      <h3>Constats enregistrés <span class="cb-count">{{ filteredConstats.length }}</span></h3>
-      <select class="cb-select" [(ngModel)]="filterRegime">
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>list_alt</mat-icon></div>
+        <div>
+          <h2>Constats enregistrés</h2>
+          <p>{{ filteredConstats.length }} constat(s), regroupé(s) par régime concerné.</p>
+        </div>
+      </div>
+      <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+              [(ngModel)]="filterRegime">
         <option [ngValue]="''">Tous les régimes</option>
         <option *ngFor="let r of regimeOptions" [ngValue]="r">{{ regimeLabels[r] }}</option>
       </select>
     </div>
 
-    <div class="cb-loading" *ngIf="loading">Chargement des constats…</div>
+    <div class="section-body">
+      <div class="text-[13px] text-text-muted" *ngIf="loading">Chargement des constats…</div>
 
-    <div class="cb-empty" *ngIf="!loading && filteredConstats.length === 0">
-      <mat-icon>fact_check</mat-icon>
-      <p>Aucun constat enregistré pour le moment.</p>
-    </div>
+      <div class="empty-state" *ngIf="!loading && filteredConstats.length === 0">
+        <mat-icon>fact_check</mat-icon>
+        <p>Aucun constat enregistré pour le moment.</p>
+      </div>
 
-    <!-- Les constats sont notés par régime : un bloc par régime concerné. -->
-    <div class="cb-groupes" *ngIf="!loading && filteredConstats.length > 0">
-      <section class="cb-groupe" *ngFor="let g of constatsParRegime">
-        <div class="cb-groupe-head">
-          <span class="cb-chip">{{ g.label }}</span>
-          <span class="cb-count">{{ g.constats.length }}</span>
-        </div>
+      <!-- Les constats sont notés par régime : un bloc par régime concerné. -->
+      <ng-container *ngIf="!loading && filteredConstats.length > 0">
+        <section class="mb-6 last:mb-0" *ngFor="let g of constatsParRegime">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="inline-block px-2.5 py-1 rounded-full bg-primary-light text-primary
+                         text-[12px] font-semibold">{{ g.label }}</span>
+            <span class="text-[12px] text-text-muted">{{ g.constats.length }}</span>
+          </div>
 
-        <div class="cb-constats">
-          <div class="cb-constat" *ngFor="let c of g.constats">
-            <div class="cb-constat-body">
-              <p class="cb-constat-desc">{{ c.description }}</p>
-              <div class="cb-constat-meta">
-                <mat-icon>schedule</mat-icon>
+          <div *ngFor="let c of g.constats"
+               class="flex items-start gap-3 py-2.5 border-b border-border-light last:border-b-0">
+            <div class="flex-1 min-w-0">
+              <p class="m-0 text-[13.5px]">{{ c.description }}</p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1 text-[12px] text-text-muted">
+                <mat-icon class="!text-sm !w-3.5 !h-3.5">schedule</mat-icon>
                 <span>{{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 <ng-container *ngIf="c.agentPrenom || c.agentNom">
-                  <span class="cb-dot">·</span>
-                  <mat-icon>person</mat-icon>
+                  <span>·</span>
+                  <mat-icon class="!text-sm !w-3.5 !h-3.5">person</mat-icon>
                   <span>{{ c.agentPrenom }} {{ c.agentNom }}</span>
                 </ng-container>
               </div>
             </div>
-            <button type="button" class="cb-del" title="Supprimer ce constat" (click)="supprimer(c)">
-              <mat-icon>delete_outline</mat-icon>
+            <button type="button" title="Supprimer ce constat" (click)="supprimer(c)"
+                    class="shrink-0 w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg
+                           text-text-muted hover:bg-warn-light hover:text-warn transition-colors">
+              <mat-icon class="!text-xl !w-5 !h-5">delete_outline</mat-icon>
             </button>
           </div>
-        </div>
-      </section>
+        </section>
+      </ng-container>
     </div>
-  </mat-card>
+  </div>
+
 </div>

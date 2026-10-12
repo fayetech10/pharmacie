@@ -1,8 +1,6 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,19 +8,19 @@ import { MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { StructureService } from '../../core/services/structure.service';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RegionService, Region } from '../../core/services/region.service';
+import { DistrictService } from '../../core/services/district.service';
+import { District } from '../../core/models/referentiel.model';
 import { StructureSanitaire, ImportResult, typeEffectifStructure } from '../../core/models/structure.model';
 import { User } from '../../core/models/user.model';
 import { ConfirmService } from '../../core/services/confirm.service';
-import { FacturesStructureListComponent } from '../espace-structure/factures-structure-list/factures-structure-list.component';
-import { StructuresFacturesComponent } from '../structures-factures/structures-factures.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 
 @Component({
   selector: 'app-structures-sanitaires',
@@ -30,31 +28,26 @@ import { StructuresFacturesComponent } from '../structures-factures/structures-f
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatTableModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatPaginatorModule, MatSortModule, MatTabsModule, MatMenuModule, 
-    FacturesStructureListComponent, StructuresFacturesComponent
+    MatSortModule, MatMenuModule, PaginationComponent, PaginerPipe
   ],
   templateUrl: './structures-sanitaires.component.html'
 })
 export class StructuresSanitairesComponent implements OnInit {
   structures: StructureSanitaire[] = [];
   regions: Region[] = [];
+  districts: District[] = [];
   bcsuUsers: User[] = [];
 
-  /** Onglets : 0 Structures (gestion), 1 Factures structures. */
-  selectedTab = 0;
-  
   showModal = false;
   isEditMode = false;
   editingId: string | null = null;
   form!: FormGroup;
-  private destroyRef = inject(DestroyRef);
 
   constructor(
     private structureService: StructureService,
     private userService: UserService,
     private regionService: RegionService,
-    private route: ActivatedRoute,
-    private router: Router,
+    private districtService: DistrictService,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private confirm: ConfirmService,
@@ -68,10 +61,30 @@ export class StructuresSanitairesComponent implements OnInit {
       telephone: [''],
       email: ['', Validators.email],
       regionId: ['', Validators.required],
+      districtId: [''],
       bcsuId: [''],
       password: [''],
-      structureRattachementId: ['']
+      structureRattachementId: [''],
+      // Centre de santé siège du district : double casquette centre + district.
+      siegeDistrict: [false]
     });
+    // Réactions aux choix, quel que soit le champ (natif ou non) qui les produit.
+    this.form.get('structureRattachementId')!.valueChanges.subscribe(() => this.onCentreChange());
+    this.form.get('regionId')!.valueChanges.subscribe(() => this.onRegionChange());
+  }
+
+  /**
+   * Seuls les EPS (hôpitaux) peuvent être enregistrés sans district sanitaire — et un centre
+   * « siège du district » : s'il n'en choisit pas, le district est créé à partir de lui.
+   */
+  get districtObligatoire(): boolean {
+    if (this.siegeCoche) return false;
+    return (this.form?.get('typeStructure')?.value || 'CS') !== 'EPS';
+  }
+
+  /** Centre de santé coché « siège du district ». */
+  get siegeCoche(): boolean {
+    return this.estCentreSante && !!this.form?.get('siegeDistrict')?.value;
   }
 
   /** Type effectif (CS / EPS / PS) d'une structure, y compris les données existantes. */
@@ -92,13 +105,75 @@ export class StructuresSanitairesComponent implements OnInit {
     return this.structures.filter(s => this.typeDe(s) !== 'PS');
   }
 
+  /**
+   * Districts proposés : ceux de la région choisie.
+   *
+   * <p>Le serveur refuse un district qui n'appartient pas à la région déclarée
+   * (« Le district X n'appartient pas à la région sélectionnée »). Filtrer ici évite
+   * de faire découvrir cette règle par un message d'erreur après coup.</p>
+   */
+  get districtsDeLaRegion(): District[] {
+    const regionId = this.form?.get('regionId')?.value;
+    if (!regionId) return [];
+    return this.districts.filter(d => d.regionId === regionId);
+  }
+
+  /** Région changée : un district d'une autre région ne peut pas rester sélectionné. */
+  onRegionChange(): void {
+    const districtId = this.form.get('districtId')?.value;
+    if (districtId && !this.districtsDeLaRegion.some(d => d.id === districtId)) {
+      this.form.patchValue({ districtId: '' });
+    }
+  }
+
   /** Le formulaire concerne-t-il un poste de santé (rattachement obligatoire) ? */
+  /** Type « Centre de santé » choisi dans le formulaire (seul type pouvant être siège du district). */
+  get estCentreSante(): boolean {
+    return this.form.get('typeStructure')?.value === 'CS';
+  }
+
   get isPosteSante(): boolean {
     if (this.isEditMode && this.editingId) {
       const s = this.structures.find(x => x.id === this.editingId);
       if (s) return this.typeDe(s) === 'PS';
     }
     return this.form.get('typeStructure')?.value === 'PS';
+  }
+
+  /** Centre de rattachement choisi pour le poste. */
+  get centreChoisi(): StructureSanitaire | undefined {
+    const id = this.form.get('structureRattachementId')?.value;
+    return id ? this.structures.find(s => s.id === id) : undefined;
+  }
+
+  /**
+   * Un poste prend le district (et la région) de son centre : ils ne se saisissent pas.
+   * Seule exception, un centre sans district (EPS) : le district du poste reste à choisir.
+   */
+  get districtDuCentre(): boolean {
+    return this.isPosteSante && !!this.centreChoisi?.districtId;
+  }
+
+  /** Afficher région / district : pas pour un poste, sauf si son centre n'a pas de district. */
+  get afficherDistrict(): boolean {
+    return !this.isPosteSante || (!!this.centreChoisi && !this.centreChoisi.districtId);
+  }
+
+  get aideDistrict(): string {
+    if (this.siegeCoche) {
+      return 'Laissez vide : le district sera créé à partir de ce centre. '
+        + 'Ou choisissez un district existant dont ce centre devient le siège.';
+    }
+    if (this.isPosteSante) return 'Le centre choisi n\'a pas de district : indiquez celui du poste.';
+    return this.districtsDeLaRegion.length ? 'Détermine la consolidation district.' : 'Choisissez d\'abord une région.';
+  }
+
+  /** Centre choisi : le poste en reprend aussitôt le district et la région (le serveur fait de même). */
+  onCentreChange(): void {
+    const centre = this.centreChoisi;
+    if (this.isPosteSante && centre?.districtId) {
+      this.form.patchValue({ districtId: centre.districtId, regionId: centre.regionId });
+    }
   }
 
   getStructureNom(id?: string): string {
@@ -108,46 +183,98 @@ export class StructuresSanitairesComponent implements OnInit {
 
   /** Types d'établissement : déterminent le code auto-généré ({REGION}{TYPE}{NN}, ex: DKCS01). */
   readonly typesStructure = [
-    { code: 'CS', label: 'Centre de santé' },
-    { code: 'EPS', label: 'Hôpital (EPS)' },
-    { code: 'PS', label: 'Poste de santé' }
+    { code: 'CS', label: 'Centre de santé', icone: 'local_hospital',
+      description: 'Facture et valide les factures de ses postes' },
+    { code: 'PS', label: 'Poste de santé', icone: 'medical_services',
+      description: 'Rattaché à un centre, dont il prend le district' },
+    { code: 'EPS', label: 'Hôpital (EPS)', icone: 'apartment',
+      description: 'Établissement public de santé' }
   ];
+
+  /** Type affiché dans le formulaire (en modification : celui de la structure). */
+  get typeCourant() {
+    const code = this.isPosteSante ? 'PS' : (this.form.get('typeStructure')?.value || 'CS');
+    return this.typesStructure.find(t => t.code === code) || this.typesStructure[0];
+  }
+
+  /** Choix du type à la création : un poste seul se rattache à un centre. */
+  choisirType(code: string): void {
+    this.form.patchValue({ typeStructure: code });
+    if (code !== 'PS') {
+      this.form.patchValue({ structureRattachementId: '' });
+    }
+  }
+
+  voirMotDePasse = false;
+
+  /** Champ en erreur, une fois touché (pas d'erreur rouge à l'ouverture du formulaire). */
+  invalide(champ: string): boolean {
+    const c = this.form.get(champ);
+    return !!c && c.invalid && (c.touched || c.dirty);
+  }
 
   get isServiceRegional(): boolean {
     return this.authService.isServiceRegional();
   }
 
+  /**
+   * Ajouter, modifier, activer, réinitialiser, exporter : administration nationale et
+   * régionale. Le District consulte seulement (espace District) — le serveur lui refuse
+   * toute écriture, les boutons ne faisaient qu'échouer.
+   */
+  peutGerer = false;
+
+  /** Supprimer, importer, purger : servis par le cœur, qui les réserve au SR et à l'Admin. */
+  peutSupprimerImporter = false;
+
+  /** Colonnes du tableau, selon le rôle (fixées une fois : le rôle ne change pas en cours de page). */
+  colonnes: string[] = [];
+
   ngOnInit() {
+    this.peutGerer = this.authService.isAdmin() || this.authService.isServiceRegional()
+      || this.authService.isServiceCentral();
+    this.peutSupprimerImporter = this.authService.isAdmin() || this.authService.isServiceRegional();
+    this.colonnes = this.peutGerer
+      ? ['nom', 'type', 'region', 'district', 'bcsu', 'statut', 'actions']
+      : ['nom', 'type', 'region', 'district', 'statut'];
+
     this.load();
     this.regionService.getAll().subscribe(r => this.regions = r);
-    // /users/bcsu et non /users : la liste complète est réservée à l'Admin,
-    // or cette page est aussi ouverte au Service Régional (403 → déconnexion sinon).
-    this.userService.getBcsu().subscribe(u => this.bcsuUsers = u);
-    // L'onglet actif suit le paramètre ?tab= (liens de retour des pages de détail).
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(params => this.selectedTab = +(params.get('tab') ?? 0));
+    this.districtService.getDistricts().subscribe(d => this.districts = d);
+    // /users/bcsu et non /users : la liste complète est réservée à l'Admin. Ouverte au SR,
+    // au Service Central et à l'Admin — pas au District, d'où la colonne masquée pour lui.
+    if (this.peutGerer) {
+      this.userService.getBcsu().subscribe(u => this.bcsuUsers = u);
+    }
   }
 
-  onTabChange(index: number) {
-    const currentTab = +(this.route.snapshot.queryParamMap.get('tab') ?? 0);
-    if (index === currentTab) {
-      return; // Évite les navigations redondantes
-    }
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: index },
-      replaceUrl: true
-    });
-  }
+
+  loading = true;
 
   load() {
-    this.structureService.getStructures().subscribe(s => this.structures = s);
+    this.loading = true;
+    this.structureService.getStructures().subscribe({
+      next: s => { this.structures = s; this.loading = false; },
+      error: () => this.loading = false
+    });
   }
 
   getRegionNom(id: string): string {
     return this.regions.find(r => r.id === id)?.nom || '-';
   }
+  /**
+   * Nom du district, ou {@code null} quand la structure n'en a aucun.
+   *
+   * <p>La distinction compte : sans district, une structure n'apparaît dans <b>aucune</b>
+   * consolidation. La liste doit donc signaler ce vide au lieu d'afficher un tiret qui se
+   * confond avec une donnée simplement absente. Un identifiant présent mais introuvable
+   * (district supprimé) rend « — » : ce n'est pas le même problème.</p>
+   */
+  getDistrictNom(id?: string): string | null {
+    if (!id) return null;
+    return this.districts.find(d => d.id === id)?.nom ?? '—';
+  }
+
   getBcsuNom(id?: string): string {
     const u = this.bcsuUsers.find(x => x.id === id);
     return u ? `${u.prenom} ${u.nom}` : '-';
@@ -156,7 +283,8 @@ export class StructuresSanitairesComponent implements OnInit {
   openAdd() {
     this.isEditMode = false;
     this.editingId = null;
-    this.form.reset({ typeStructure: 'CS' });
+    this.form.reset({ typeStructure: 'CS', districtId: '', regionId: '', bcsuId: '', structureRattachementId: '', siegeDistrict: false });
+    this.voirMotDePasse = false;
 
     if (this.isServiceRegional) {
       const userRegionId = this.authService.getCurrentUser()?.regionId;
@@ -171,27 +299,55 @@ export class StructuresSanitairesComponent implements OnInit {
   openEdit(s: StructureSanitaire) {
     this.isEditMode = true;
     this.editingId = s.id;
+    // typeStructure et districtId sont repris explicitement : le serveur les applique
+    // sans condition (setDistrictId / setTypeStructure), donc un formulaire qui ne les
+    // rechargerait pas ferait pire que ne rien changer — il écraserait la valeur en base
+    // par celle laissée par l'ouverture précédente (ou par du vide).
     this.form.patchValue({
       code: s.code, nom: s.nom, adresse: s.adresse, telephone: s.telephone,
-      email: s.email, regionId: s.regionId, bcsuId: s.bcsuId, password: '',
-      structureRattachementId: s.structureRattachementId || ''
+      email: s.email, regionId: s.regionId, districtId: s.districtId || '',
+      bcsuId: s.bcsuId, password: '',
+      typeStructure: this.typeDe(s),
+      structureRattachementId: s.structureRattachementId || '',
+      siegeDistrict: !!s.siegeDistrict
     });
+    // Poste déjà incohérent (district ≠ celui de son centre) : l'écran montre d'emblée
+    // le district qu'il prendra à l'enregistrement.
+    this.onCentreChange();
     this.showModal = true;
   }
 
   close() { this.showModal = false; }
 
   submit() {
-    if (this.form.invalid) return;
+    // Poste de santé : rattachement à une structure (CS/EPS) obligatoire. Vérifié avant la
+    // validité du formulaire : sans centre, la région (obligatoire) est vide, et le clic
+    // sur « Enregistrer » ne faisait rien sans dire pourquoi.
+    if (this.isPosteSante && !this.form.value.structureRattachementId) {
+      this.snackBar.open('Un poste de santé doit être rattaché à une structure sanitaire (CS ou EPS)', 'Fermer', { duration: 5000 });
+      return;
+    }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const val = { ...this.form.value };
 
-    // Poste de santé : rattachement à une structure (CS/EPS) obligatoire.
-    if (this.isPosteSante && !val.structureRattachementId) {
-      this.snackBar.open('Un poste de santé doit être rattaché à une structure sanitaire (CS ou EPS)', 'Fermer', { duration: 5000 });
+    // Cahier « Espace PS », §2 : poste et centre de santé obligatoirement rattachés à un district.
+    if (this.districtObligatoire && !val.districtId) {
+      this.snackBar.open('Un poste ou un centre de santé doit être rattaché à un district sanitaire.', 'Fermer', { duration: 5000 });
       return;
     }
     if (!this.isPosteSante) {
       val.structureRattachementId = '';
+    }
+    // « Siège du district » : centre de santé seulement. Sans district choisi, le serveur crée
+    // le district à partir de ce centre (il EST le district qui polarise ses postes).
+    val.siegeDistrict = this.estCentreSante && !!val.siegeDistrict;
+    const districtACreer = val.siegeDistrict && !val.districtId;
+    if (districtACreer && !val.regionId) {
+      this.snackBar.open('Choisissez la région : le district créé à partir de ce centre y sera rattaché.', 'Fermer', { duration: 5000 });
+      return;
     }
 
     // Création : code laissé vide → généré automatiquement par le backend ({REGION}{TYPE}{NN}).
@@ -204,8 +360,12 @@ export class StructuresSanitairesComponent implements OnInit {
       : this.structureService.createStructure(val);
     obs.subscribe({
       next: () => {
-        this.snackBar.open(this.isEditMode ? 'Structure modifiée' : 'Structure créée', 'Fermer', { duration: 3000 });
+        const base = this.isEditMode ? 'Structure modifiée' : 'Structure créée';
+        this.snackBar.open(districtACreer ? `${base} — district créé à partir de ce centre, dont il est le siège.` : base,
+          'Fermer', { duration: districtACreer ? 6000 : 3000 });
         this.load();
+        // Le district créé doit apparaître aussitôt dans les listes (colonne District, sélecteurs).
+        if (districtACreer) this.districtService.getDistricts().subscribe(d => this.districts = d);
         this.close();
       },
       error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
@@ -298,6 +458,66 @@ export class StructuresSanitairesComponent implements OnInit {
 
   fermerImportResult() {
     this.importResult = null;
+  }
+
+  // ===== Compte de connexion : activation et mot de passe =====
+
+  /** Structure dont une action de compte est en cours (ses boutons sont désactivés). */
+  actionEnCours: string | null = null;
+
+  /**
+   * Active / désactive la structure. Le serveur fait suivre son compte de connexion :
+   * une structure désactivée ne peut plus se connecter, mais ses factures restent.
+   */
+  basculerActivation(s: StructureSanitaire) {
+    const desactiver = s.actif;
+    this.confirm.ask({
+      title: desactiver ? 'Désactiver la structure' : 'Réactiver la structure',
+      message: desactiver
+        ? `« ${s.nom} » ne pourra plus se connecter. Ses factures restent consultables et elle pourra être réactivée à tout moment.`
+        : `« ${s.nom} » pourra de nouveau se connecter avec son compte.`,
+      confirmText: desactiver ? 'Désactiver' : 'Réactiver',
+      danger: desactiver
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.actionEnCours = s.id;
+      this.structureService.basculerActivation(s.id, !desactiver).subscribe({
+        next: maj => {
+          this.actionEnCours = null;
+          s.actif = maj.actif;
+          this.snackBar.open(maj.actif ? 'Structure réactivée' : 'Structure désactivée', 'Fermer', { duration: 3000 });
+        },
+        error: err => {
+          this.actionEnCours = null;
+          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 6000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
+  }
+
+  /** Nouveau mot de passe temporaire pour le compte de la structure, affiché une seule fois. */
+  reinitialiserMotDePasse(s: StructureSanitaire) {
+    this.confirm.ask({
+      title: 'Réinitialiser le mot de passe',
+      message: `Le mot de passe de « ${s.nom} » va être remis à « password123 » (à changer à la connexion). L'ancien ne permettra plus de se connecter.`,
+      confirmText: 'Réinitialiser'
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.actionEnCours = s.id;
+      this.structureService.reinitialiserMotDePasse(s.id).subscribe({
+        next: acces => {
+          this.actionEnCours = null;
+          this.confirm.afficherAcces(
+            acces.compteCree ? 'Compte de connexion créé' : 'Mot de passe réinitialisé',
+            acces.identifiant, acces.motDePasseTemporaire, 'la structure'
+          ).subscribe();
+        },
+        error: err => {
+          this.actionEnCours = null;
+          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 6000, panelClass: 'error-snackbar' });
+        }
+      });
+    });
   }
 
   delete(s: StructureSanitaire) {

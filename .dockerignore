@@ -1,0 +1,14 @@
+# node_modules est reinstalle dans l'image : l'envoyer serait a la fois inutile
+# et dangereux (binaires natifs compiles pour l'hote, pas pour alpine).
+node_modules/
+dist/
+.angular/
+
+.git/
+.gitignore
+.vscode/
+.idea/
+
+*.md
+Dockerfile
+.dockerignore

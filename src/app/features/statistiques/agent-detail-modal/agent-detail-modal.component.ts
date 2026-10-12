@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { PointageService, Pointage } from '../../../core/services/pointage.service';
 
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 export interface AgentDetailData {
   agentNom: string;
   structure: string;
@@ -23,7 +25,7 @@ interface PointageHistory {
 @Component({
   selector: 'app-agent-detail-modal',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatCardModule],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatCardModule],
   templateUrl: './agent-detail-modal.component.html',
   styleUrls: ['./agent-detail-modal.component.css']
 })

@@ -30,6 +30,8 @@
 }.cfd-msg {
   @apply m-0 text-sm text-text-secondary;
   line-height: 1.55;
+  /* Respecte les sauts de ligne des messages (ex. accès d'un compte créé). */
+  white-space: pre-line;
 }.cfd-field {
   @apply mt-4 flex flex-col;
   gap: 6px;
@@ -50,7 +52,7 @@
   @apply text-text-muted;
 
 }.cfd-input:focus {
- border-color: var(--primary); box-shadow: var(--ring); 
+ box-shadow: var(--ring-field);
 }.cfd--danger .cfd-input:focus {
  border-color: var(--warn); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); 
 }.cfd-counter {

@@ -1,0 +1,153 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Référentiel des prestations</h1>
+    </div>
+    <div class="page-head-actions flex items-center gap-2">
+      <input type="file" #fichierImport class="hidden" accept=".xlsx,.xls" (change)="importer($event)">
+      <button class="btn btn-outline" type="button" (click)="fichierImport.click()">
+        <mat-icon>upload_file</mat-icon> Importer Excel
+      </button>
+      <button class="btn btn-primary" type="button" (click)="nouvelle()">
+        <mat-icon>add</mat-icon> Nouvelle prestation
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filter-strip">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input [(ngModel)]="recherche" (input)="onRecherche()" placeholder="Rechercher par désignation ou code…">
+    </div>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreService" (change)="changerFiltre()">
+      <option value="">Tous les services</option>
+      <option *ngFor="let s of services" [value]="s.id">{{ s.nom }}</option>
+    </select>
+    <label class="flex items-center gap-2 text-[13.5px] font-semibold text-text-secondary">
+      <input type="checkbox" [(ngModel)]="actifSeulement" (change)="changerFiltre()">
+      Actives seulement
+    </label>
+  </div>
+
+  <!-- Formulaire d'édition -->
+  <div class="card" *ngIf="edition">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>edit</mat-icon></div>
+        <div>
+          <h2>{{ edition.id ? 'Modifier la prestation' : 'Nouvelle prestation' }}</h2>
+          <p>Le prix saisi ici s'appliquera à toutes les structures.</p>
+        </div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="grid gap-3 md:grid-cols-3">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Code
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.code" placeholder="Ex : CONS-GEN">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary md:col-span-2">
+          Désignation
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.designation" placeholder="Ex : Consultation générale">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Service
+          <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                  [(ngModel)]="edition.serviceId">
+            <option [ngValue]="undefined">— Aucun —</option>
+            <option *ngFor="let s of services" [value]="s.id">{{ s.nom }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Prix unitaire (FCFA)
+          <input type="number" min="0"
+                 class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.prix">
+        </label>
+        <label class="flex items-center gap-2 text-[13.5px] font-semibold text-text-secondary self-end pb-2">
+          <input type="checkbox" [(ngModel)]="edition.depositaire">
+          Prestation dépositaire (sortie de stock automatique)
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary md:col-span-3"
+               *ngIf="edition.depositaire">
+          Article de stock associé
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.medicamentId"
+                 placeholder="Identifiant ou code de l'article dans le stock de la structure">
+          <span class="text-[12px] font-normal text-text-muted">
+            Obligatoire : c'est cet article qui sera décrémenté à chaque facturation.
+          </span>
+        </label>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-primary" type="button" (click)="enregistrer()" [disabled]="enregistrement">
+          <mat-icon>check</mat-icon> {{ enregistrement ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+        <button class="btn btn-ghost" type="button" (click)="annulerEdition()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card table-card">
+    <div class="section-body">
+      <div class="empty-state" *ngIf="!chargement && (!page || page.content.length === 0)">
+        <mat-icon>price_change</mat-icon>
+        <p>Aucune prestation ne correspond à ces critères.</p>
+      </div>
+
+      <div class="overflow-x-auto" *ngIf="page && page.content.length > 0">
+        <table class="w-full border-collapse text-[13.5px]">
+          <thead>
+            <tr class="text-left text-text-secondary border-b border-border">
+              <th class="py-2">Code</th>
+              <th class="py-2">Désignation</th>
+              <th class="py-2">Service</th>
+              <th class="py-2 text-right">Prix</th>
+              <th class="py-2 text-center">Dépositaire</th>
+              <th class="py-2 text-center">Statut</th>
+              <th class="py-2 w-32"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of page.content; trackBy: trackPrestation"
+                class="border-b border-border-light" [class.opacity-60]="!p.actif">
+              <td class="py-2 font-mono text-[12.5px]">{{ p.code }}</td>
+              <td class="py-2 font-semibold">{{ p.designation }}</td>
+              <td class="py-2">{{ nomService(p.serviceId) }}</td>
+              <td class="py-2 text-right">{{ p.prix | number:'1.0-0':'fr' }} FCFA</td>
+              <td class="py-2 text-center">
+                <mat-icon class="text-primary" *ngIf="p.depositaire" title="Sortie de stock automatique">inventory_2</mat-icon>
+                <span *ngIf="!p.depositaire" class="text-text-muted">—</span>
+              </td>
+              <td class="py-2 text-center">
+                <span class="status-badge">{{ p.actif ? 'Active' : 'Désactivée' }}</span>
+              </td>
+              <td class="py-2 text-right whitespace-nowrap">
+                <button class="btn btn-ghost btn-sm" type="button" (click)="modifier(p)" title="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="basculerActivation(p)"
+                        [title]="p.actif ? 'Désactiver' : 'Réactiver'">
+                  <mat-icon>{{ p.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="supprimer(p)" title="Supprimer">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <app-pagination [total]="page?.totalElements || 0" [page]="pageCourante" [taille]="taille"
+                      [tailles]="[taille]" (pageChange)="allerPage($event)"></app-pagination>
+    </div>
+  </div>
+
+</div>

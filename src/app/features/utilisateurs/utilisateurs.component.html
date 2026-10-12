@@ -3,7 +3,6 @@
       <div class="page-head">
         <div>
           <h1>{{ isRegional ? 'Gestion des agents BCSU' : 'Gestion des Utilisateurs' }}</h1>
-          <p>{{ isRegional ? 'Créez et gérez les comptes des agents BCSU de votre région' : 'Créez et gérez les comptes des pharmaciens et des services régionaux/centraux' }}</p>
         </div>
         <div class="page-head-actions">
           <button class="btn btn-primary" (click)="openAddModal()">
@@ -30,7 +29,7 @@
 
       <!-- Tableau (desktop / tablette large) -->
       <mat-card class="table-card desktop-only">
-        <table mat-table [dataSource]="users" class="w-100">
+        <table mat-table [dataSource]="users | paginer: pgU.page : pgU.taille" class="w-100">
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef> Utilisateur </th>
             <td mat-cell *matCellDef="let u">
@@ -40,7 +39,10 @@
                 </div>
                 <div>
                   <span class="font-semibold text-text-primary block">{{ u.prenom }} {{ u.nom }}</span>
-                  <span class="text-xs text-text-secondary block">{{ u.email }}</span>
+                  <span class="text-xs text-text-secondary block">
+                    <span class="font-medium">{{ u.username || u.email }}</span>
+                    <span *ngIf="u.email && u.email !== u.username" class="text-text-muted"> · {{ u.email }}</span>
+                  </span>
                 </div>
               </div>
             </td>
@@ -68,8 +70,8 @@
           <ng-container matColumnDef="statut">
             <th mat-header-cell *matHeaderCellDef> Statut </th>
             <td mat-cell *matCellDef="let u">
-              <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-[#94A3B8]'">
-                <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-[#94A3B8]'"></span>
+              <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-text-muted'">
+                <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-slate-400'"></span>
                 {{ u.actif ? 'Actif' : 'Inactif' }}
               </span>
             </td>
@@ -82,6 +84,16 @@
                 <button class="action-btn" (click)="openEditModal(u)" title="Modifier">
                   <mat-icon>edit</mat-icon>
                 </button>
+                <ng-container *ngIf="!estMoi(u)">
+                  <button class="action-btn" (click)="reinitialiserMotDePasse(u)" [disabled]="actionEnCours === u.id"
+                          title="Réinitialiser le mot de passe">
+                    <mat-icon>lock_reset</mat-icon>
+                  </button>
+                  <button class="action-btn" (click)="basculerActivation(u)" [disabled]="actionEnCours === u.id"
+                          [title]="u.actif ? 'Désactiver' : 'Réactiver'">
+                    <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                  </button>
+                </ng-container>
                 <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer">
                   <mat-icon>delete</mat-icon>
                 </button>
@@ -100,7 +112,7 @@
 
       <!-- Cartes mobiles (≤ 768px) -->
       <div class="m-cards" *ngIf="users.length">
-        <div class="m-card clickable" *ngFor="let u of users"
+        <div class="m-card clickable" *ngFor="let u of users | paginer: pgU.page : pgU.taille"
              (click)="openEditModal(u)" role="button" tabindex="0"
              (keydown.enter)="openEditModal(u)"
              [attr.aria-label]="'Modifier ' + u.prenom + ' ' + u.nom">
@@ -111,18 +123,26 @@
               </div>
               <div class="min-w-0">
                 <div class="m-title">{{ u.prenom }} {{ u.nom }}</div>
-                <div class="m-sub break-words">{{ u.email }}</div>
+                <div class="m-sub break-words">{{ u.username || u.email }}</div>
               </div>
             </div>
             <div class="m-actions" (click)="$event.stopPropagation()">
               <button class="action-btn" (click)="openEditModal(u)" title="Modifier"><mat-icon>edit</mat-icon></button>
+              <ng-container *ngIf="!estMoi(u)">
+                <button class="action-btn" (click)="reinitialiserMotDePasse(u)" [disabled]="actionEnCours === u.id"
+                        title="Réinitialiser le mot de passe"><mat-icon>lock_reset</mat-icon></button>
+                <button class="action-btn" (click)="basculerActivation(u)" [disabled]="actionEnCours === u.id"
+                        [title]="u.actif ? 'Désactiver' : 'Réactiver'">
+                  <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              </ng-container>
               <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer"><mat-icon>delete</mat-icon></button>
             </div>
           </div>
           <div class="m-row">
             <span class="inline-flex py-1 px-2.5 rounded-[20px] text-[11px] font-semibold uppercase tracking-[0.03em]" [ngClass]="roleBadgeClass(u.role)">{{ getRoleLabel(u.role) }}</span>
-            <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-[#94A3B8]'">
-              <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-[#94A3B8]'"></span>{{ u.actif ? 'Actif' : 'Inactif' }}
+            <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="u.actif ? 'text-primary' : 'text-text-muted'">
+              <span class="w-2 h-2 rounded-full" [ngClass]="u.actif ? 'bg-primary' : 'bg-slate-400'"></span>{{ u.actif ? 'Actif' : 'Inactif' }}
             </span>
           </div>
           <div class="m-row" *ngIf="getRegionNom(u.regionId) !== '-' || getRattachementNom(u) !== '-'">
@@ -131,6 +151,7 @@
           </div>
         </div>
       </div>
+      <app-pagination #pgU [total]="users.length"></app-pagination>
 
       <!-- État vide (mobile) -->
       <div class="empty-state md:!hidden" *ngIf="users.length === 0">
@@ -170,19 +191,16 @@
                 </mat-form-field>
               </div>
 
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Email</mat-label>
-                <input matInput type="email" formControlName="email" placeholder="Ex: user@csu.sn">
+              <mat-form-field appearance="outline" class="w-100" *ngIf="userForm.get('role')?.value !== 'SERVICE_REGIONAL'">
+                <mat-label>Téléphone</mat-label>
+                <input matInput type="tel" formControlName="telephone" placeholder="Ex: 77 123 45 67">
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="w-100" *ngIf="!isEditMode">
-                <mat-label>Mot de passe</mat-label>
-                <input matInput type="password" formControlName="password">
-                <mat-hint>8 caractères minimum</mat-hint>
-                <mat-error *ngIf="userForm.get('password')?.hasError('minlength')">
-                  Le mot de passe doit contenir au moins 8 caractères
-                </mat-error>
-              </mat-form-field>
+              <div class="flex items-start gap-2 p-3 rounded-lg bg-primary-light text-primary text-[13px] leading-snug" *ngIf="!isEditMode">
+                <mat-icon class="!text-xl !w-5 !h-5 shrink-0">info</mat-icon>
+                <span *ngIf="userForm.get('role')?.value !== 'SERVICE_REGIONAL'">Identifiant de connexion : <strong>prénom.nom</strong>. Mot de passe par défaut : <strong>password123</strong>, à changer à la première connexion. Les accès s'afficheront après la création — à communiquer à l'utilisateur.</span>
+                <span *ngIf="userForm.get('role')?.value === 'SERVICE_REGIONAL'">Identifiant : <strong>service_regional_</strong> suivi des initiales de la région (ex. <strong>service_regional_th</strong> pour Thiès). Mot de passe par défaut : <strong>password123</strong>, à changer à la première connexion.</span>
+              </div>
 
 
               <!-- Région masquée si c'est Service Régional (région forcée à celle du SR connecté) -->
@@ -208,7 +226,7 @@
                 <mat-label>Structure de rattachement</mat-label>
                 <mat-select formControlName="structureSanitaireId">
                   <mat-option value="">— Aucune —</mat-option>
-                  <mat-option *ngFor="let s of structures" [value]="s.id">
+                  <mat-option *ngFor="let s of structuresRattachement" [value]="s.id">
                     {{ s.nom }}
                   </mat-option>
                 </mat-select>

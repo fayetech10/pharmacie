@@ -1,185 +1,423 @@
-<div class="fs-form">
-  <!-- Recherche lettre de garantie -->
-  <mat-card class="fs-card" *ngIf="!isPosteDeSante && !lettre">
-    <h3 class="fs-title">Rechercher une lettre de garantie</h3>
-    <p class="fs-hint">Scannez le QR code de la lettre de garantie ou saisissez son numero (LG-...).</p>
-    <div class="fs-search">
-      <input type="text" class="fs-input" placeholder="Ex : LG-DKCS01-001-26"
-             [(ngModel)]="searchNumero" (keyup.enter)="rechercher()">
-      <button mat-flat-button color="primary" [disabled]="searching" (click)="rechercher()">Rechercher</button>
-      <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Nouvelle facturation</h1>
     </div>
-  </mat-card>
+  </div>
+
+  <!-- Recherche lettre de garantie. Les numéros sont de la forme G-THCS-0001 :
+       le préfixe « LG- » de l'ancienne codification ne correspond à rien en base. -->
+  <div class="card" *ngIf="!isPosteDeSante && !lettre">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>qr_code_scanner</mat-icon></div>
+        <div>
+          <h2>Rechercher une lettre de garantie</h2>
+        </div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="flex flex-wrap items-center gap-3">
+        <input type="text" placeholder="Ex : G-THCS-0001"
+               [(ngModel)]="searchNumero" (keyup.enter)="rechercher()"
+               class="flex-1 min-w-[220px] h-11 px-3 rounded-lg text-[14px]">
+        <button type="button" class="btn btn-primary" [disabled]="searching" (click)="rechercher()">
+          <mat-icon>search</mat-icon>
+          {{ searching ? 'Recherche…' : 'Rechercher' }}
+        </button>
+        <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
+      </div>
+    </div>
+  </div>
 
   <ng-container *ngIf="lettre || isPosteDeSante">
-    <!-- Feuille de soins rattachee (circuit patient -> agent bureau -> facturation) -->
-    <div *ngIf="feuilleSoins" class="fs-info-banner">
-      <mat-icon>description</mat-icon>
-      Feuille de soins <strong>&nbsp;{{ feuilleSoins.numero }}&nbsp;</strong> rattachee - elle passera au statut "Facturee" a l'enregistrement.
+
+    <!-- Feuille de soins rattachée (circuit patient → agent bureau → facturation) -->
+    <div *ngIf="feuilleSoins"
+         class="flex items-center gap-2 mb-5 py-2.5 px-3 rounded-lg
+                bg-primary-light text-primary text-[13px]">
+      <mat-icon class="shrink-0 !text-xl !w-5 !h-5">description</mat-icon>
+      <span>
+        Feuille de soins <strong>{{ feuilleSoins.numero }}</strong> rattachée — elle passera au
+        statut « Facturée » à l'enregistrement.
+      </span>
     </div>
 
-    <!-- Beneficiaire affiche en lecture seule pour CS/EPS -->
-    <mat-card class="fs-card" *ngIf="!isPosteDeSante && lettre">
-      <div class="fs-card-head">
-        <h3 class="fs-title">Beneficiaire - {{ lettre.numero }}</h3>
-        <button mat-stroked-button (click)="reset()"><mat-icon>close</mat-icon> Changer</button>
-      </div>
-      <div class="fs-grid">
-        <div><span>Nom &amp; prenom</span><strong>{{ lettre.patientPrenom }} {{ lettre.patientNom }}</strong></div>
-        <div><span>Telephone</span><strong>{{ lettre.patientTelephone }}</strong></div>
-        <div><span>Categorie</span><strong>{{ regimeLabels[lettre.regime] }}</strong></div>
-      </div>
-    </mat-card>
-
-    <!-- Saisie Beneficiaire pour Poste de Santé -->
-    <mat-card class="fs-card" *ngIf="isPosteDeSante">
-      <div class="fs-card-head">
-        <h3 class="fs-title">Informations du Patient</h3>
-      </div>
-      <form [formGroup]="patientForm" class="fs-grid">
-        <mat-form-field appearance="outline" style="grid-column: 1 / -1;">
-          <mat-label>Catégorie / Régime</mat-label>
-          <mat-select formControlName="regime" required>
-            <mat-option *ngFor="let option of regimeOptions" [value]="option">
-              {{regimeLabels[option]}}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Prénom</mat-label>
-          <input matInput formControlName="prenom" required>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Nom</mat-label>
-          <input matInput formControlName="nom" required>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Téléphone</mat-label>
-          <input matInput formControlName="telephone" required>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Date de naissance</mat-label>
-          <input matInput type="date" formControlName="dateNaissance">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Sexe</mat-label>
-          <mat-select formControlName="sexe">
-            <mat-option value="M">Masculin</mat-option>
-            <mat-option value="F">Féminin</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" *ngIf="champs.matriculeLabel">
-          <mat-label>{{ champs.matriculeLabel }}</mat-label>
-          <input matInput formControlName="matricule">
-        </mat-form-field>
-        <mat-form-field appearance="outline" *ngIf="champs.cniSeparee">
-          <mat-label>Numéro CNI</mat-label>
-          <input matInput formControlName="numeroCni">
-        </mat-form-field>
-      </form>
-    </mat-card>
-
-    <!-- Informations médicales -->
-    <mat-card class="fs-card">
-      <h3 class="fs-title">Informations médicales</h3>
-      <form [formGroup]="factureForm">
-        <mat-form-field appearance="outline" style="width: 100%; display: block;">
-          <mat-label>Diagnostique</mat-label>
-          <mat-select formControlName="diagnostique" placeholder="Sélectionner le diagnostique...">
-            <mat-option *ngFor="let option of listDiagnostiques" [value]="option">
-              {{option}}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </form>
-    </mat-card>
-
-    <!-- Prestations : la structure saisit la prestation, le prix et les details d'hospitalisation de ce patient -->
-    <mat-card class="fs-card">
-      <h3 class="fs-title">Prestations & Hospitalisation</h3>
-      <form [formGroup]="prestationForm" class="fs-prest-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>{{ champs.designationLabel }}</mat-label>
-          <mat-select formControlName="designation" placeholder="Sélectionner la prestation...">
-            <mat-option *ngFor="let option of listPrestations" [value]="option">
-              {{option}}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>{{ champs.puLabel }}</mat-label>
-          <input matInput type="number" min="0" formControlName="prixUnitaire">
-        </mat-form-field>
-      </form>
-      <button mat-stroked-button color="primary" (click)="ajouterLigne()">
-        <mat-icon>add</mat-icon> Ajouter la prestation
-      </button>
-
-      <div class="fs-lines" *ngIf="lignes.length > 0">
-        <div class="fs-line" *ngFor="let l of lignes; let i = index">
-          <div class="fs-line-main">
-            <span class="fs-line-name">{{ l.designation }}</span>
-            <span class="fs-line-meta">{{ l.prixUnitaire | number:'1.0-0':'fr' }} F</span>
-          </div>
-          <div class="fs-line-amounts">
-            <strong>{{ ligneMontant(l) | number:'1.0-0':'fr' }} F</strong>
-            <span>Benef. {{ l.montantBeneficiaire | number:'1.0-0':'fr' }} F - SEN-CSU {{ l.montantSencsu | number:'1.0-0':'fr' }} F</span>
-          </div>
-          <button class="fs-del" type="button" (click)="retirerLigne(i)"><mat-icon>delete</mat-icon></button>
-        </div>
-        <div class="fs-line-foot">
-          <span>Total à ajouter</span>
-          <div class="fs-line-foot-amounts">
-            <strong>{{ montantTotal | number:'1.0-0':'fr' }} F</strong>
-            <span>Benef. {{ montantBeneficiaireTotal | number:'1.0-0':'fr' }} F - SEN-CSU {{ montantSencsuTotal | number:'1.0-0':'fr' }} F</span>
+    <!-- Bénéficiaire en lecture seule pour CS/EPS : c'est la lettre qui fait foi. -->
+    <div class="card" *ngIf="!isPosteDeSante && lettre">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>person</mat-icon></div>
+          <div>
+            <h2>Bénéficiaire — {{ lettre.numero }}</h2>
+  
           </div>
         </div>
+        <button type="button" class="btn btn-outline btn-sm" (click)="reset()">
+          <mat-icon>close</mat-icon> Changer
+        </button>
       </div>
-    </mat-card>
+      <div class="section-body grid gap-x-6 md:grid-cols-3">
+        <div class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Nom &amp; prénom</span>
+          <strong>{{ lettre.patientPrenom }} {{ lettre.patientNom }}</strong>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Téléphone</span>
+          <strong>{{ lettre.patientTelephone }}</strong>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Catégorie</span>
+          <strong>{{ regimeLabels[lettre.regime] }}</strong>
+        </div>
+      </div>
+    </div>
 
-    <!-- Pieces jointes (masquées pour les Postes de Santé) -->
-    <mat-card class="fs-card" *ngIf="!isPosteDeSante">
-      <h3 class="fs-title">Pieces justificatives</h3>
+    <!-- Saisie du bénéficiaire pour un poste de santé : pas de lettre, il l'identifie lui-même.
+         Ordre imposé : 1. régime  2. carte CSU (régimes à carte)  3. identité. -->
+    <ng-container *ngIf="isPosteDeSante">
 
-      <div class="fs-photo-block">
-        <span class="fs-photo-label">Ticket de caisse</span>
-        <div class="fs-photo-drop" *ngIf="!ticketCaisse; else ticketPreview">
-          <input type="file" accept="image/*" capture="environment" hidden #ticketInput (change)="onTicketSelected($event)">
-          <button type="button" class="fs-photo-btn" (click)="ticketInput.click()">
-            <mat-icon>photo_camera</mat-icon><span>Prendre une photo</span>
+      <!-- 1. Régime : il décide de la suite du parcours -->
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title-group">
+            <div class="section-icon"><mat-icon>category</mat-icon></div>
+            <div>
+              <h2>1. Régime du patient</h2>
+    
+            </div>
+          </div>
+        </div>
+        <div class="section-body">
+          <app-regime-tuiles [options]="regimeOptionsPoste" [selection]="regime" [libelle]="libelleTuile"
+                             (choisi)="choisirRegime($event)"></app-regime-tuiles>
+        </div>
+      </div>
+
+      <!-- 2. Carte CSU : seulement pour les régimes à carte -->
+      <div class="card" *ngIf="carteRequise">
+        <div class="section-header">
+          <div class="section-title-group">
+            <div class="section-icon"><mat-icon>verified_user</mat-icon></div>
+            <div>
+              <h2>2. Carte CSU</h2>
+              </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" *ngIf="verification !== null" (click)="changerDeCarte()">
+            <mat-icon>swap_horiz</mat-icon>
+            Changer de carte
           </button>
         </div>
-        <ng-template #ticketPreview>
-          <div class="fs-photo-preview">
-            <img [src]="ticketCaisse" alt="Ticket de caisse">
-            <button type="button" class="fs-photo-remove" (click)="removeTicket()"><mat-icon>close</mat-icon></button>
+        <div class="section-body">
+          <form [formGroup]="patientForm" class="flex flex-col sm:flex-row sm:items-start gap-3">
+            <mat-form-field appearance="outline" class="flex-1" subscriptSizing="dynamic">
+              <mat-label>Matricule CSU (n° de la carte)</mat-label>
+              <input matInput formControlName="matricule" placeholder="ex. V8658Y2605" autocomplete="off"
+                     [readonly]="verification === 'VERIFIEE'" (keydown.enter)="onEntreeMatricule($event)">
+            </mat-form-field>
+            <button type="button" class="btn btn-primary sm:h-14 justify-center" *ngIf="verification === null"
+                    (click)="verifierCarteCsu()">
+              <mat-icon>verified_user</mat-icon>
+              Vérifier la carte
+            </button>
+          </form>
+
+          <div *ngIf="verification === 'VERIFIEE'"
+               class="flex items-center gap-2 mt-3 py-2.5 px-3 rounded-lg bg-success-light text-success text-[13px] font-semibold">
+            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">verified</mat-icon>
+            Carte vérifiée — la carte d'assuré est jointe aux documents de la facture.
           </div>
-        </ng-template>
-      </div>
-
-      <div class="fs-docs">
-        <span class="fs-photo-label">Documents complementaires</span>
-        <div class="fs-doc-add">
-          <input type="text" class="fs-input" placeholder="Titre du document" [(ngModel)]="docTitre">
-          <input type="file" accept="image/*" capture="environment" hidden #docInput (change)="onDocSelected($event)">
-          <button mat-stroked-button (click)="docInput.click()"><mat-icon>add_a_photo</mat-icon> Ajouter</button>
-        </div>
-        <div class="fs-doc-item" *ngFor="let d of documents; let i = index">
-          <img [src]="d.image" [alt]="d.titre">
-          <span>{{ d.titre }}</span>
-          <button class="fs-del" type="button" (click)="removeDoc(i)"><mat-icon>delete</mat-icon></button>
+          <div *ngIf="verification === 'NON_VERIFIEE_PANNE'"
+               class="flex items-start gap-2 mt-3 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">warning_amber</mat-icon>
+            <span>
+              <strong>Carte non vérifiée</strong> (site indisponible) : la facture portera cette mention.
+              Joignez une photo de la carte dans les documents complémentaires.
+            </span>
+          </div>
         </div>
       </div>
-    </mat-card>
 
-    <div class="fs-actions">
-      <button mat-stroked-button color="primary" [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(true)" style="margin-right: 16px;">
-        {{ isSubmitting ? 'Patient en cours...' : 'Ajouter un autre patient' }}
+      <!-- 3. Identité : ouverte quand le régime est choisi et, s'il en faut une, la carte vérifiée -->
+      <div class="card" *ngIf="patientAffiche">
+        <div class="section-header">
+          <div class="section-title-group">
+            <div class="section-icon"><mat-icon>person</mat-icon></div>
+            <div>
+              <h2>{{ carteRequise ? '3' : '2' }}. Informations du patient</h2>
+            </div>
+          </div>
+        </div>
+        <div class="section-body">
+          <form [formGroup]="patientForm" class="grid gap-x-4 sm:grid-cols-2">
+            <!-- Régime sans carte : l'identifiant est une pièce (CNI, extrait de naissance…). -->
+            <mat-form-field appearance="outline" class="sm:col-span-2" *ngIf="!carteRequise && champs.matriculeLabel">
+              <mat-label>{{ champs.matriculeLabel }}</mat-label>
+              <input matInput formControlName="matricule">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Prénom</mat-label>
+              <input matInput formControlName="prenom" required>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Nom</mat-label>
+              <input matInput formControlName="nom" required>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Téléphone</mat-label>
+              <input matInput formControlName="telephone" type="tel" required>
+            </mat-form-field>
+            <!-- startView multi-year : une date de naissance commence par choisir l'année,
+                 sinon il faut reculer le calendrier mois par mois. -->
+            <mat-form-field appearance="outline">
+              <mat-label>Date de naissance</mat-label>
+              <input matInput [matDatepicker]="pickerNaissance" formControlName="dateNaissance"
+                     (click)="pickerNaissance.open()" placeholder="jj/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="pickerNaissance"></mat-datepicker-toggle>
+              <mat-datepicker #pickerNaissance startView="multi-year"></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Sexe</mat-label>
+              <mat-select formControlName="sexe">
+                <mat-option value="M">Masculin</mat-option>
+                <mat-option value="F">Féminin</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" *ngIf="champs.cniSeparee">
+              <mat-label>Numéro CNI</mat-label>
+              <input matInput formControlName="numeroCni">
+            </mat-form-field>
+          </form>
+        </div>
+      </div>
+
+    </ng-container>
+
+    <!-- Informations médicales -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>medical_information</mat-icon></div>
+          <div>
+            <h2>Informations médicales</h2>
+          </div>
+        </div>
+      </div>
+      <div class="section-body">
+        <form [formGroup]="factureForm">
+          <mat-form-field appearance="outline" class="block w-full">
+            <mat-label>Diagnostique</mat-label>
+            <mat-select formControlName="diagnostique" placeholder="Sélectionner le diagnostique…">
+              <mat-option *ngFor="let option of listDiagnostiques" [value]="option">
+                {{ option }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </form>
+      </div>
+    </div>
+
+    <!-- Prestations : la structure saisit la prestation, le prix et les détails d'hospitalisation. -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>receipt_long</mat-icon></div>
+          <div>
+            <h2>Prestations &amp; hospitalisation</h2>
+          </div>
+        </div>
+      </div>
+      <div class="section-body">
+        <form [formGroup]="prestationForm" class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+          <!-- Poste de santé : le type remplace la liste d'actes. ICP et Consultation sont
+               facturés tels quels ; Dépositaire ouvre le dépôt de médicaments du poste. -->
+          <mat-form-field appearance="outline" *ngIf="afficherTypePrestation">
+            <mat-label>Type de prestation</mat-label>
+            <mat-select formControlName="typePrestation"
+                        (selectionChange)="onTypePrestationChange($event.value)"
+                        placeholder="Sélectionner le type…">
+              <mat-option *ngFor="let type of typesPrestationPoste" [value]="type">
+                {{ type }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Dépositaire : la désignation devient celle du médicament servi. -->
+          <mat-form-field appearance="outline" *ngIf="afficherTypePrestation && estDepositaire">
+            <mat-label>Médicament</mat-label>
+            <mat-select [value]="medicamentSelectionne"
+                        (selectionChange)="onMedicamentChange($event.value)"
+                        placeholder="Sélectionner le médicament…">
+              <mat-option *ngFor="let m of medicamentsDepot" [value]="m.code">
+                {{ m.designation }}
+                <span *ngIf="m.prix"> — {{ m.prix | number:'1.0-0':'fr' }} F</span>
+                <span *ngIf="!m.prix"> — prix à fixer</span>
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Centres et EPS : la liste d'actes historique reste inchangée. -->
+          <mat-form-field appearance="outline" *ngIf="!afficherTypePrestation">
+            <mat-label>{{ champs.designationLabel }}</mat-label>
+            <mat-select formControlName="designation" placeholder="Sélectionner la prestation…">
+              <mat-option *ngFor="let option of listPrestations" [value]="option">
+                {{ option }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" *ngIf="!puForfaitImpose">
+            <mat-label>{{ champs.puLabel }}</mat-label>
+            <input matInput type="number" min="0" formControlName="prixUnitaire">
+          </mat-form-field>
+          <!-- Poste + 0-5 ans : le P.U est un forfait imposé (1400 F) → champ masqué, note à la place. -->
+          <div *ngIf="puForfaitImpose"
+               class="flex items-center gap-2 py-2 px-3 rounded-lg bg-primary-light text-primary">
+            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">verified</mat-icon>
+            <div class="flex flex-col leading-tight">
+              <span class="text-[12px]">Forfait 0-5 ans</span>
+              <strong class="text-[14px]">1 400 F</strong>
+            </div>
+          </div>
+        </form>
+
+        <!-- Dépôt non tarifé : sans ce message, la liste « Médicament » apparaît vide sans
+             que rien n'indique où la remplir. -->
+        <div *ngIf="afficherTypePrestation && estDepositaire && medicamentsDepot.length === 0"
+             class="flex items-start gap-2 py-2 px-3 mb-3 rounded-lg bg-warn-light text-warn">
+          <mat-icon class="shrink-0 !text-xl !w-5 !h-5">info</mat-icon>
+          <span class="text-[13px]">
+            Votre dépôt ne contient encore aucun médicament tarifé. Renseignez-le dans
+            <strong>Paramètres</strong> (import Excel ou ajout à la main).
+          </span>
+        </div>
+
+        <button type="button" class="btn btn-outline" (click)="ajouterLigne()">
+          <mat-icon>add</mat-icon>
+          Ajouter la prestation
+        </button>
+
+        <div class="mt-4" *ngIf="lignes.length > 0">
+          <div *ngFor="let l of lignes; let i = index"
+               class="flex items-center gap-3 py-2.5 border-b border-border-light last:border-b-0">
+            <div class="flex flex-col flex-1 min-w-0">
+              <span class="text-[14px] font-semibold">{{ l.designation }}</span>
+              <span class="text-[12.5px] text-text-secondary">
+                {{ l.prixUnitaire | number:'1.0-0':'fr' }} F
+              </span>
+            </div>
+            <div class="flex flex-col items-end text-right">
+              <strong>{{ ligneMontant(l) | number:'1.0-0':'fr' }} F</strong>
+              <span class="text-[12px] text-text-secondary">
+                Bénéf. {{ l.montantBeneficiaire | number:'1.0-0':'fr' }} F ·
+                SEN-CSU {{ l.montantSencsu | number:'1.0-0':'fr' }} F
+              </span>
+            </div>
+            <button type="button" (click)="retirerLigne(i)" [attr.aria-label]="'Retirer ' + l.designation"
+                    class="shrink-0 w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg
+                           text-text-muted hover:bg-warn-light hover:text-warn transition-colors">
+              <mat-icon class="!text-xl !w-5 !h-5">delete_outline</mat-icon>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
+            <span class="text-[14px] font-bold">Total à ajouter</span>
+            <div class="flex flex-col items-end text-right">
+              <strong class="text-[15px] text-primary">
+                {{ montantTotal | number:'1.0-0':'fr' }} F
+              </strong>
+              <span class="text-[12px] font-normal text-text-secondary">
+                Bénéf. {{ montantBeneficiaireTotal | number:'1.0-0':'fr' }} F ·
+                SEN-CSU {{ montantSencsuTotal | number:'1.0-0':'fr' }} F
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pièces jointes (masquées pour les postes de santé) -->
+    <div class="card" *ngIf="!isPosteDeSante">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>attach_file</mat-icon></div>
+          <div>
+            <h2>Pièces justificatives</h2>
+          </div>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <div class="flex flex-col gap-2 mb-6">
+          <span class="text-[13px] font-semibold text-text-secondary">Ticket de caisse</span>
+          <div *ngIf="!ticketCaisse; else ticketPreview"
+               class="flex items-center justify-center min-h-[96px] p-5 rounded-lg
+                      border border-dashed border-border bg-field-bg">
+            <input type="file" accept="image/*" capture="environment" hidden
+                   #ticketInput (change)="onTicketSelected($event)">
+            <button type="button" class="btn btn-sm bg-primary-light text-primary"
+                    (click)="ticketInput.click()">
+              <mat-icon>photo_camera</mat-icon>
+              Prendre une photo
+            </button>
+          </div>
+          <ng-template #ticketPreview>
+            <div class="relative overflow-hidden rounded-lg border border-border max-w-[320px]">
+              <img [src]="ticketCaisse" alt="Ticket de caisse" class="block w-full max-h-[200px] object-cover">
+              <button type="button" (click)="removeTicket()" aria-label="Retirer le ticket"
+                      class="absolute top-1.5 right-1.5 w-[26px] h-[26px] flex items-center justify-center
+                             rounded-full bg-black/55 text-white">
+                <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <span class="text-[13px] font-semibold text-text-secondary">Documents complémentaires</span>
+          <div class="flex flex-wrap items-center gap-3">
+            <input type="text" placeholder="Titre du document" [(ngModel)]="docTitre"
+                   class="flex-1 min-w-[200px] h-11 px-3 rounded-lg text-[14px]">
+            <input type="file" accept="image/*" capture="environment" hidden
+                   #docInput (change)="onDocSelected($event)">
+            <button type="button" class="btn btn-outline" (click)="docInput.click()">
+              <mat-icon>add_a_photo</mat-icon> Ajouter
+            </button>
+          </div>
+
+          <div *ngFor="let d of documents; let i = index"
+               class="flex items-center gap-3 py-2 border-b border-border-light last:border-b-0">
+            <img [src]="d.image" [alt]="d.titre"
+                 class="h-12 rounded-lg border border-border"
+                 [ngClass]="d === docCarte ? 'w-[76px] object-contain bg-white' : 'w-12 object-cover'">
+            <span class="flex-1 min-w-0 truncate text-[13.5px]">{{ d.titre }}</span>
+            <!-- La carte générée vient de la vérification : elle change avec la carte, pas à la main. -->
+            <span *ngIf="d === docCarte"
+                  class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-light text-primary text-[11px] font-bold">
+              <mat-icon class="!text-sm !w-3.5 !h-3.5">verified</mat-icon>
+              Vérifiée
+            </span>
+            <button type="button" *ngIf="d !== docCarte" (click)="removeDoc(i)" [attr.aria-label]="'Retirer ' + d.titre"
+                    class="shrink-0 w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg
+                           text-text-muted hover:bg-warn-light hover:text-warn transition-colors">
+              <mat-icon class="!text-xl !w-5 !h-5">delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap justify-end gap-3 mb-6">
+      <button type="button" class="btn btn-outline"
+              [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(true)">
+        {{ isSubmitting ? 'Patient en cours…' : 'Ajouter un autre patient' }}
       </button>
-      <button mat-flat-button color="primary" [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(false)">
-        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer et voir la facture' }}
+      <button type="button" class="btn btn-primary"
+              [disabled]="isSubmitting || lignes.length === 0" (click)="enregistrer(false)">
+        {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer et voir la facture' }}
       </button>
     </div>
+
   </ng-container>
 </div>
+

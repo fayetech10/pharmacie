@@ -11,10 +11,12 @@ import { AgentStat } from '../../core/models/stats.model';
 
 
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-statistiques-agents',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatDialogModule, BaseChartDirective],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, MatCardModule, MatIconModule, MatDialogModule, BaseChartDirective],
   templateUrl: './statistiques-agents.component.html',
   styleUrls: ['./statistiques-agents.component.css']
 })

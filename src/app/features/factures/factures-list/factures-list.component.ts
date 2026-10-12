@@ -12,7 +12,6 @@ import { REGIME_OPTIONS, REGIME_LABELS } from '../../../core/models/bcsu.model';
 import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,19 +20,38 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
+import { apparenceStatut } from '../../../core/models/statuts';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { MatMenuModule } from '@angular/material/menu';
 
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
+/**
+ * Groupe de la vue mensuelle : un prestataire (× régime) et ses factures.
+ * {@code providerId} est la clé du groupe (id + régime), {@code nomPrestataire} le nom
+ * seul — {@code providerNom} y ajoute le suffixe « - Régime X ».
+ */
+export type ProviderFilterKey = 'TOUS' | 'A_TRAITER' | 'VALIDEES' | 'REJETEES' | 'PAYEES';
+export type ProviderSortKey = 'NOM' | 'MONTANT' | 'FACTURES' | 'A_TRAITER';
+
+export interface ProviderGroup {
+  providerId: string;
+  providerNom: string;
+  nomPrestataire: string;
+  providerType: string;
+  regime?: string;
+  factures: UnifiedFacture[];
+}
+
 @Component({
   selector: 'app-factures-list',
   standalone: true,
-  imports: [
+  imports: [PaginationComponent, PaginerPipe, 
     CommonModule,
     RouterModule,
     MatTableModule,
-    MatPaginatorModule,
     MatSortModule,
     MatIconModule,
     MatButtonModule,
@@ -50,11 +68,24 @@ import { MatMenuModule } from '@angular/material/menu';
 })
 export class FacturesListComponent implements OnInit, OnChanges {
   displayedColumns: string[] = ['id', 'periode', 'montant', 'statut', 'date', 'actions'];
-  dataSource!: MatTableDataSource<UnifiedFacture>;
+  dataSource: MatTableDataSource<UnifiedFacture> = new MatTableDataSource<UnifiedFacture>([]);
   factures: UnifiedFacture[] = [];
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  private _sort!: MatSort;
+
+  /** Pagination partagée ; le tri reste porté par la source de données. */
+  @ViewChild('pg') pg?: PaginationComponent;
+
+  @ViewChild(MatSort) set sort(matSort: MatSort) {
+    this._sort = matSort;
+    if (this.dataSource && matSort) {
+      this.dataSource.sort = matSort;
+    }
+  }
+  get sort(): MatSort {
+    return this._sort;
+  }
+
   @ViewChild('input') input!: ElementRef<HTMLInputElement>;
 
   filterStatut = '';
@@ -71,15 +102,6 @@ export class FacturesListComponent implements OnInit, OnChanges {
   /** Mobile (≤768px) : vue cartes sans pagination → on affiche toutes les factures. */
   isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
-  private readonly statutLabels: Record<string, string> = {
-    BROUILLON: 'Non envoyée',
-    ENVOYEE: 'Envoyée',
-    VALIDEE_SR: 'Validée SR',
-    REJETEE_SR: 'Rejetée SR',
-    VALIDEE_NC: 'Validée NC',
-    REJETEE_NC: 'Rejetée NC',
-    PAYEE: 'Payée'
-  };
 
   @Input() displayMode: 'PHARMACIE' | 'STRUCTURE' | 'ALL' = 'PHARMACIE';
   @Input() allowedStatuses?: string[];
@@ -90,6 +112,14 @@ export class FacturesListComponent implements OnInit, OnChanges {
   @Input() showToolbar = true;
   /** Active la vue mensuelle (Janvier → Décembre) comme dans la photo de référence. */
   @Input() monthlyView = false;
+  /** Filtre région (Espace Central) : ne garde que les factures de cette région. */
+  @Input() regionId?: string | null;
+  /**
+   * Restreint la liste à un ensemble de prestataires (ex. structures d'un district).
+   * Un tableau vide masque tout ; {@code null}/absent = aucun filtre. Le wrapper
+   * (Espace Central) résout district → ids de structures, la liste reste générique.
+   */
+  @Input() providerIds?: string[] | null;
 
   /**
    * Chargement en cours : évite d'afficher « aucune facture » avant la réponse du
@@ -102,8 +132,60 @@ export class FacturesListComponent implements OnInit, OnChanges {
   /** Années disponibles pour le sélecteur. */
   availableYears: number[] = [];
 
+  /** Mois sélectionné pour le défilement automatique (0 = aucun). */
+  selectedMonthToScroll = 0;
+
+  scrollToMonth() {
+    if (!this.selectedMonthToScroll) return;
+    const id = this.isMobile ? `month-card-${this.selectedMonthToScroll}` : `month-row-${this.selectedMonthToScroll}`;
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // Remettre à 0 pour permettre un nouveau clic sur le même mois plus tard
+    setTimeout(() => this.selectedMonthToScroll = 0, 500);
+  }
+
   /** Cache des groupes par prestataire (recalculé seulement à chaque chargement). */
-  private _providerGroups: { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }[] = [];
+  private _providerGroups: ProviderGroup[] = [];
+
+  /**
+   * Vue mensuelle multi-prestataires : clé du prestataire ouvert. La liste des
+   * prestataires est présentée en barre horizontale et un seul bloc mensuel est
+   * affiché à la fois — empiler les 12 mois de chaque pharmacie devient illisible
+   * dès qu'une région en compte beaucoup.
+   */
+  selectedProviderKey: string | null = null;
+
+  /** Recherche par nom dans la barre des prestataires (accents ignorés). */
+  providerSearch = '';
+
+  /** Filtre de statut de la barre des prestataires. */
+  providerFilter: ProviderFilterKey = 'TOUS';
+
+  /** Critère de tri de la barre des prestataires. */
+  providerSort: ProviderSortKey = 'NOM';
+
+  /** Filtres de statut proposés au-dessus de la barre des prestataires. */
+  readonly providerFilters: { key: ProviderFilterKey; label: string; statuts: string[] }[] = [
+    { key: 'TOUS',      label: 'Toutes',    statuts: [] },
+    { key: 'A_TRAITER', label: 'À traiter', statuts: ['ENVOYEE'] },
+    { key: 'VALIDEES',  label: 'Validées',  statuts: ['VALIDEE_SR', 'VALIDEE_NC'] },
+    { key: 'REJETEES',  label: 'Rejetées',  statuts: ['REJETEE_SR', 'REJETEE_NC'] },
+    { key: 'PAYEES',    label: 'Payées',    statuts: ['PAYEE'] }
+  ];
+
+  /** Nombre de prestataires par filtre (recherche appliquée) — affiché sur les puces. */
+  filterCounts: Record<string, number> = {};
+
+  /** Résultat de la recherche + du filtre + du tri : ce qu'affiche la barre. */
+  private _visibleGroups: ProviderGroup[] = [];
+
+  /** Prestataires ayant au moins une facture sur l'année affichée (avant recherche). */
+  private _yearGroups: ProviderGroup[] = [];
+
+  /** Piste scrollable de la barre horizontale (défilement par les flèches). */
+  @ViewChild('providerTrack') providerTrack?: ElementRef<HTMLElement>;
 
   /** Nom des mois. */
   readonly monthNames = [
@@ -150,21 +232,15 @@ export class FacturesListComponent implements OnInit, OnChanges {
     const statutsChange = changes['allowedStatuses'];
     const modeChange = changes['displayMode'];
     const providerChange = changes['providerId'];
+    const regionChange = changes['regionId'];
+    const providerIdsChange = changes['providerIds'];
     if ((statutsChange && !statutsChange.firstChange)
         || (modeChange && !modeChange.firstChange)
-        || (providerChange && !providerChange.firstChange)) {
+        || (providerChange && !providerChange.firstChange)
+        || (regionChange && !regionChange.firstChange)
+        || (providerIdsChange && !providerIdsChange.firstChange)) {
       this.loadFactures();
     }
-  }
-
-  /** Cartes affichées sur mobile : toute la liste (pas de pagination).
-   *  Sur desktop la pagination ne concerne que le tableau, pas cette vue. */
-  get pagedFactures(): UnifiedFacture[] {
-    const data = this.dataSource?.filteredData ?? [];
-    if (this.isMobile) return data;
-    if (!this.paginator) return data;
-    const start = this.paginator.pageIndex * this.paginator.pageSize;
-    return data.slice(start, start + this.paginator.pageSize);
   }
 
   // ----- Synthèse (basée sur les factures filtrées affichées) -----
@@ -186,8 +262,9 @@ export class FacturesListComponent implements OnInit, OnChanges {
     }
   }
 
+  /** Libellé commun à tout le projet (core/models/statuts). */
   statutLabel(s: string): string {
-    return this.statutLabels[s] ?? s;
+    return apparenceStatut(s).libelle;
   }
 
   loadFactures() {
@@ -221,6 +298,20 @@ export class FacturesListComponent implements OnInit, OnChanges {
       if (this.providerId) {
         unified = unified.filter(f => f.providerId === this.providerId);
       }
+      // Filtre région (Espace Central) : regionId porté par la facture d'origine.
+      if (this.regionId) {
+        unified = unified.filter(f => {
+          const r = f.providerType === 'PHARMACIE'
+            ? f.originalFacturePharmacie?.regionId
+            : f.originalFactureStructure?.regionId;
+          return r === this.regionId;
+        });
+      }
+      // Restriction à un ensemble de prestataires (ex. structures d'un district).
+      if (this.providerIds) {
+        const ids = new Set(this.providerIds);
+        unified = unified.filter(f => ids.has(f.providerId));
+      }
       this.factures = unified;
 
       // Vue mensuelle : calculer les années disponibles
@@ -233,9 +324,8 @@ export class FacturesListComponent implements OnInit, OnChanges {
         }
       }
 
-      this.dataSource = new MatTableDataSource(this.factures);
-      this.dataSource.paginator = this.paginator;
-      this.dataSource.sort = this.sort;
+      this.dataSource.data = this.factures;
+      if (this.sort) this.dataSource.sort = this.sort;
       this.dataSource.filterPredicate = this.customFilterPredicate();
 
       // Recalculer le cache des groupes (vue mensuelle)
@@ -272,9 +362,7 @@ export class FacturesListComponent implements OnInit, OnChanges {
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.dataSource.filter = filterValue.trim().toLowerCase();
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
+    this.pg?.aller(0);
   }
 
   onYearChange() {
@@ -611,28 +699,173 @@ export class FacturesListComponent implements OnInit, OnChanges {
   }
 
   /** Regroupe les factures chargées par prestataire pour la vue mensuelle. */
-  get providerGroups(): { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }[] {
+  get providerGroups(): ProviderGroup[] {
     return this._providerGroups;
   }
 
   /** Recalcule le cache des groupes par prestataire (appelé une seule fois par chargement). */
   private buildProviderGroups(): void {
-    const groupsMap = new Map<string, { providerId: string; providerNom: string; providerType: string; regime?: string; factures: UnifiedFacture[] }>();
+    const groupsMap = new Map<string, ProviderGroup>();
     this.factures.forEach(f => {
       const regimeSuffix = f.regime ? `_${f.regime}` : '';
       const key = (f.providerId || 'default') + regimeSuffix;
-      let nom = f.providerNom || 'Prestataire';
-      if (f.regime) {
-        nom = `${nom} - Régime ${f.regime}`;
-      }
+      const nomPrestataire = f.providerNom || 'Prestataire';
+      const nom = f.regime ? `${nomPrestataire} - Régime ${f.regime}` : nomPrestataire;
       const type = f.providerType;
-      
+
       if (!groupsMap.has(key)) {
-        groupsMap.set(key, { providerId: key, providerNom: nom, providerType: type, regime: f.regime, factures: [] });
+        groupsMap.set(key, { providerId: key, providerNom: nom, nomPrestataire, providerType: type, regime: f.regime, factures: [] });
       }
       groupsMap.get(key)!.factures.push(f);
     });
-    this._providerGroups = Array.from(groupsMap.values()).sort((a, b) => a.providerNom.localeCompare(b.providerNom));
+    this._providerGroups = Array.from(groupsMap.values()).sort((a, b) => a.providerNom.localeCompare(b.providerNom, 'fr'));
+    this.applyProviderFilters();
+  }
+
+  /** Prestataires affichés dans la barre horizontale (recherche + filtre + tri). */
+  get visibleProviderGroups(): ProviderGroup[] {
+    return this._visibleGroups;
+  }
+
+  /** Nombre de prestataires ayant facturé sur l'année affichée (dénominateur de l'en-tête). */
+  get yearProviderCount(): number {
+    return this._yearGroups.length;
+  }
+
+  /** Au moins un critère de recherche / filtre est actif. */
+  get providerFiltersActifs(): boolean {
+    return this.providerSearch.trim().length > 0 || this.providerFilter !== 'TOUS' || this.providerSort !== 'NOM';
+  }
+
+  /** Recalcule la barre après une frappe, un changement de filtre ou de tri. */
+  onProviderFilterChange(): void {
+    this.applyProviderFilters();
+  }
+
+  /** Remet la barre à zéro (recherche vidée, tous les statuts, tri par nom). */
+  resetProviderFilters(): void {
+    this.providerSearch = '';
+    this.providerFilter = 'TOUS';
+    this.providerSort = 'NOM';
+    this.applyProviderFilters();
+  }
+
+  /**
+   * Applique recherche, filtre de statut et tri, puis garde la sélection cohérente :
+   * un prestataire masqué par les filtres ne peut pas rester ouvert en dessous, la
+   * barre bascule alors sur le premier résultat.
+   */
+  private applyProviderFilters(): void {
+    const term = this.sansAccent(this.providerSearch.trim());
+
+    // La grille ne montre que l'année sélectionnée : un prestataire sans facture cette
+    // année-là n'a rien à faire dans la barre (il afficherait « 0 facture »).
+    this._yearGroups = this._providerGroups.filter(g => this.groupCount(g) > 0);
+
+    let list = term
+      ? this._yearGroups.filter(g => this.sansAccent(g.providerNom).includes(term))
+      : this._yearGroups;
+
+    // Compteurs des puces : calculés sur le résultat de la recherche, avant le filtre
+    // de statut — chaque puce annonce ainsi ce qu'elle donnerait si on la cliquait.
+    const base = list;
+    this.filterCounts = {};
+    for (const f of this.providerFilters) {
+      this.filterCounts[f.key] = f.statuts.length
+        ? base.filter(g => this.groupStatutCount(g, f.statuts) > 0).length
+        : base.length;
+    }
+
+    const statuts = this.providerFilters.find(f => f.key === this.providerFilter)?.statuts ?? [];
+    if (statuts.length) {
+      list = list.filter(g => this.groupStatutCount(g, statuts) > 0);
+    }
+
+    const parNom = (a: ProviderGroup, b: ProviderGroup) => a.providerNom.localeCompare(b.providerNom, 'fr');
+    const trie = [...list];
+    switch (this.providerSort) {
+      case 'MONTANT':   trie.sort((a, b) => this.groupTotal(b) - this.groupTotal(a) || parNom(a, b)); break;
+      case 'FACTURES':  trie.sort((a, b) => this.groupCount(b) - this.groupCount(a) || parNom(a, b)); break;
+      case 'A_TRAITER': trie.sort((a, b) => this.groupPending(b) - this.groupPending(a) || parNom(a, b)); break;
+      default:          trie.sort(parNom);
+    }
+    this._visibleGroups = trie;
+
+    // La sélection suit toujours ce qui est visible (et ne laisse jamais la zone vide).
+    if (!trie.some(g => g.providerId === this.selectedProviderKey)) {
+      this.selectedProviderKey = trie[0]?.providerId ?? null;
+    }
+    if (this.providerTrack) this.providerTrack.nativeElement.scrollLeft = 0;
+  }
+
+  /** Minuscules sans accents : « Médina » se retrouve en tapant « medina ». */
+  private sansAccent(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  trackByProvider(_: number, g: ProviderGroup): string {
+    return g.providerId;
+  }
+
+  /** Groupe dont les 12 mois sont affichés sous la barre horizontale. */
+  get selectedGroup(): ProviderGroup | null {
+    return this._providerGroups.find(g => g.providerId === this.selectedProviderKey) ?? null;
+  }
+
+  selectProvider(key: string): void {
+    this.selectedProviderKey = key;
+  }
+
+  /** Défilement de la barre horizontale par les flèches (desktop). */
+  scrollProviders(direction: -1 | 1): void {
+    const el = this.providerTrack?.nativeElement;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(240, el.clientWidth * 0.8), behavior: 'smooth' });
+  }
+
+  /** Factures du groupe pour l'année affichée (la grille ne montre que celle-ci). */
+  private groupYearFactures(g: ProviderGroup): UnifiedFacture[] {
+    return g.factures.filter(f => f.annee === this.selectedYear);
+  }
+
+  /** Nombre de factures du prestataire sur l'année affichée. */
+  groupCount(g: ProviderGroup): number {
+    return this.groupYearFactures(g).length;
+  }
+
+  /** Montant total facturé par le prestataire sur l'année affichée. */
+  groupTotal(g: ProviderGroup): number {
+    return this.groupYearFactures(g).reduce((sum, f) => sum + (f.montantTotal || 0), 0);
+  }
+
+  /** Factures encore à traiter (envoyées, sans décision) sur l'année affichée. */
+  groupPending(g: ProviderGroup): number {
+    return this.groupYearFactures(g).filter(f => f.statut === 'ENVOYEE').length;
+  }
+
+  /** Factures du prestataire dans l'un des statuts donnés, sur l'année affichée. */
+  groupStatutCount(g: ProviderGroup, statuts: string[]): number {
+    return this.groupYearFactures(g).filter(f => statuts.includes(f.statut)).length;
+  }
+
+  /**
+   * Initiales affichées dans la pastille de la vignette. Le mot « pharmacie », présent
+   * dans presque tous les noms, est ignoré : sans ça toutes les pastilles afficheraient
+   * la même lettre.
+   */
+  groupInitials(g: ProviderGroup): string {
+    const mots = g.nomPrestataire
+      .split(/[\s'’\-_.]+/)
+      .filter(m => m.length > 1 && !/^(pharmacie|pharmacies|pharma|centre|poste|de|du|des|la|le|les)$/i.test(m));
+    const source = mots.length ? mots : [g.nomPrestataire];
+    return source.slice(0, 2).map(m => m.charAt(0).toUpperCase()).join('') || '?';
+  }
+
+  readonly moisAnnee = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+  /** Facture d'un mois : celle du pharmacien connecté, ou celle du prestataire ouvert. */
+  factureDuMois(month: number, groupFactures: UnifiedFacture[] | null): UnifiedFacture | null {
+    return groupFactures ? this.getFactureForMonthAndGroup(month, groupFactures) : this.getFactureForMonth(month);
   }
 
   /** Retourne la facture pour un mois donné et un groupe de factures spécifique (ou null). */

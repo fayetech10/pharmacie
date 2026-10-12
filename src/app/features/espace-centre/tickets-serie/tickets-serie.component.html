@@ -1,0 +1,143 @@
+<div class="card anim-etape">
+  <div class="section-header">
+    <div class="section-title-group">
+      <div class="section-icon"><mat-icon>receipt</mat-icon></div>
+      <div>
+        <h2>Ajouter des tickets de caisse</h2>
+        <p>Pour chaque ticket : l'identifiant et la date retrouvent le patient, puis photographiez le ticket.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="fermer.emit()">
+      <mat-icon>close</mat-icon> Fermer
+    </button>
+  </div>
+
+  <div class="section-body flex flex-col gap-4">
+    <!-- 1. Le patient : identifiant du régime + date de prise en charge -->
+    <form (ngSubmit)="rechercher()" class="grid gap-3 grid-cols-2 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] md:items-end">
+      <label class="col-span-2 md:col-span-1 flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Régime
+        <select name="regime" [(ngModel)]="regime" (ngModelChange)="changerRegime()" [disabled]="envoi"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option value="">— Choisir le régime —</option>
+          <option *ngFor="let r of regimes" [value]="r">{{ libelleRegime(r) }}</option>
+        </select>
+      </label>
+      <label class="col-span-2 md:col-span-1 flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        {{ libelleIdentifiant }}
+        <input #champIdentifiant name="identifiant" [(ngModel)]="identifiant" autocomplete="off"
+               autocapitalize="characters" [disabled]="envoi || !regime"
+               class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-mono tracking-wide text-text-primary">
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Date de prise en charge
+        <input type="date" name="date" [(ngModel)]="date" [max]="aujourdhui" [disabled]="envoi"
+               class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+      </label>
+      <button type="submit" class="btn btn-primary h-11 self-end" [disabled]="!pretARechercher || rechercheEnCours || envoi">
+        <mat-spinner *ngIf="rechercheEnCours" diameter="18" class="!m-0"></mat-spinner>
+        <mat-icon *ngIf="!rechercheEnCours">search</mat-icon> Rechercher
+      </button>
+    </form>
+
+    <!-- Résultat de la recherche -->
+    <ng-container *ngIf="recherche as r">
+      <div *ngIf="!r.visites.length" role="alert"
+           class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0 !text-xl !w-5 !h-5">search_off</mat-icon>
+        <span *ngIf="r.autresDates.length">Aucun patient enregistré par le BCSU à cette date avec cet identifiant. Il est
+          connu le <strong>{{ datesFr(r.autresDates) }}</strong> : vérifiez la date du ticket.</span>
+        <span *ngIf="!r.autresDates.length">Aucun patient enregistré par le BCSU ce mois-ci avec cet identifiant.
+          Vérifiez l'identifiant ; un patient non vu au BCSU ne peut pas recevoir de ticket.</span>
+      </div>
+
+      <!-- Plusieurs patients (deux enfants d'un même accompagnant) : on choisit. -->
+      <div *ngIf="r.visites.length > 1" class="flex flex-col gap-2">
+        <span class="text-[13px] font-semibold text-text-secondary">Plusieurs patients correspondent : choisissez celui du ticket.</span>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" *ngFor="let v of r.visites" (click)="choisir(v)" [disabled]="envoi"
+                  class="inline-flex items-center gap-2 min-h-11 px-3 py-2 rounded-lg border text-left text-[13.5px] font-semibold cursor-pointer"
+                  [ngClass]="choix?.dossierId === v.dossierId ? 'border-primary bg-primary-light text-primary ring-2 ring-primary-200'
+                    : 'border-border bg-white text-text-primary hover:border-primary-200'">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">{{ choix?.dossierId === v.dossierId ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+            {{ v.patient }}
+            <span class="font-normal text-text-secondary">· {{ v.tickets }} ticket(s)</span>
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- 2. Le patient choisi, ses tickets, et la photo du suivant -->
+    <div *ngIf="choix as v" class="flex flex-col gap-4 p-4 rounded-lg border border-border">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="min-w-0">
+          <strong class="block text-[15px]">{{ v.patient }}</strong>
+          <span class="text-[12.5px] text-text-secondary">Prise en charge du {{ dateFr(v.date) }}
+            <ng-container *ngIf="v.lettreGarantieNumero"> · lettre <span class="font-mono">{{ v.lettreGarantieNumero }}</span></ng-container>
+            · {{ v.prestations }} prestation(s) · facture <span class="font-mono">{{ v.factureNumero }}</span></span>
+        </div>
+        <app-status-badge famille="dossier" [statut]="v.statut"></app-status-badge>
+      </div>
+      <p *ngIf="v.statut !== 'COMPLET' && !v.prestations" class="m-0 text-[12.5px] text-amber-800">
+        Ce patient n'a pas encore de prestation : il restera « à compléter » jusqu'à l'import de la facture du mois.
+      </p>
+
+      <div class="grid gap-4 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div class="relative">
+          <app-photo-piece [libelle]="'Ticket n°' + (v.tickets + 1)" [obligatoire]="v.tickets === 0" [galerie]="true"
+                           aide="Le ticket entier, à plat, lisible." cadrage="document" [desactive]="envoi"
+                           [image]="photo" (imageChange)="onPhoto($event)"></app-photo-piece>
+          <div *ngIf="envoi" class="flex items-center gap-2 mt-2 text-[13px] text-text-secondary">
+            <mat-spinner diameter="18"></mat-spinner> Enregistrement du ticket…
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 min-w-0">
+          <span class="text-[13px] font-semibold text-text-secondary">Tickets de ce patient ({{ tickets.length }})</span>
+          <p *ngIf="!tickets.length" class="m-0 text-[13px] text-text-muted italic">Aucun ticket pour l'instant.</p>
+          <ul *ngIf="tickets.length" class="m-0 p-0 list-none flex flex-col gap-1.5">
+            <li *ngFor="let t of tickets; let i = index"
+                class="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg bg-field text-[13px]">
+              <span class="min-w-0">Ticket n°{{ i + 1 }} <span class="text-text-secondary">· {{ t.createdAt | date:'dd/MM à HH:mm' }}</span></span>
+              <span class="inline-flex gap-1 shrink-0">
+                <button type="button" class="btn btn-ghost btn-sm" (click)="voir(t)">Voir</button>
+                <button type="button" class="btn btn-ghost btn-sm text-warn" [disabled]="envoi" (click)="retirer(t, i)">Retirer</button>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap justify-end gap-2 pt-3 border-t border-border-light">
+        <button type="button" class="btn btn-primary" [disabled]="envoi" (click)="patientSuivant()">
+          <mat-icon>skip_next</mat-icon> Ticket suivant
+        </button>
+      </div>
+    </div>
+
+    <!-- Récapitulatif de la série -->
+    <div *ngIf="serie.length" class="flex flex-col gap-1.5">
+      <span class="text-[13px] font-semibold text-text-secondary">{{ serie.length }} ticket(s) ajouté(s) dans cette série</span>
+      <ul class="m-0 p-0 list-none flex flex-col gap-1 text-[13px]">
+        <li *ngFor="let s of serie" class="flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-success">check_circle</mat-icon>
+          <span class="min-w-0">{{ s.patient }} · {{ dateFr(s.date) }} · ticket n°{{ s.numero }}</span>
+          <span class="ml-auto text-text-muted">{{ s.heure | date:'HH:mm' }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket en grand -->
+<div class="modal-overlay" *ngIf="apercu" (click)="apercu = null">
+  <div class="modal-card max-w-2xl" role="dialog" aria-modal="true" aria-label="Ticket de caisse" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="text-base font-bold text-text-primary m-0">Ticket de caisse</h2>
+      <button type="button" class="close-btn" (click)="apercu = null" aria-label="Fermer"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="modal-body">
+      <img [src]="apercu" alt="Ticket de caisse" class="w-full h-auto rounded-lg border border-border">
+    </div>
+  </div>
+</div>

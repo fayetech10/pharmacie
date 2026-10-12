@@ -22,11 +22,11 @@
       </div>
     </div>
     <div class="sf-filters">
-      <select class="sf-select" [(ngModel)]="filterYear">
+      <select class="sf-select" [(ngModel)]="filterYear" (ngModelChange)="onFiltreChange()">
         <option [ngValue]="0">Toutes les années</option>
         <option *ngFor="let y of anneesDispo" [ngValue]="y">{{ y }}</option>
       </select>
-      <select class="sf-select" [(ngModel)]="filterStatut">
+      <select class="sf-select" [(ngModel)]="filterStatut" (ngModelChange)="onFiltreChange()">
         <option value="">Tous les statuts</option>
         <option *ngFor="let s of statuts" [value]="s">{{ statutLabel(s) }}</option>
       </select>
@@ -76,19 +76,30 @@
       <p>Cette structure n'a aucune facture pour les filtres sélectionnés.</p>
     </div>
 
-    <!-- Une section par régime -->
-    <div class="sf-regime-block" *ngFor="let rg of regimeGroups">
-      <div class="sf-regime-head">
+    <!-- Commande de pliage globale (une structure peut cumuler plusieurs régimes) -->
+    <div class="sf-expand-bar" *ngIf="regimeGroups.length > 1">
+      <button type="button" class="sf-expand-btn" (click)="tousDeplies ? toutReplier() : toutDeplier()">
+        {{ tousDeplies ? 'Tout replier' : 'Tout déplier' }}
+      </button>
+    </div>
+
+    <!-- Une section repliable par régime -->
+    <div class="sf-regime-block" *ngFor="let rg of regimeGroups" [class.open]="estDeplie(rg.regime)">
+      <button type="button" class="sf-regime-head" (click)="basculerRegime(rg.regime)"
+              [attr.aria-expanded]="estDeplie(rg.regime)">
         <div class="sf-regime-title">
+          <mat-icon class="sf-caret">{{ estDeplie(rg.regime) ? 'expand_more' : 'chevron_right' }}</mat-icon>
           <mat-icon>category</mat-icon>
           <span>{{ rg.regimeLabel }}</span>
         </div>
         <div class="sf-regime-meta">
           {{ rg.nbFactures }} facture(s) · <strong>{{ rg.total | number:'1.0-0':'fr' }} F</strong>
         </div>
-      </div>
+      </button>
 
-      <!-- Puis un bloc par mois -->
+      <!-- Puis un bloc par mois — rendu seulement si le régime est déplié
+           (ne pas construire des centaines de lignes invisibles). -->
+      <ng-container *ngIf="estDeplie(rg.regime)">
       <div class="sf-month" *ngFor="let g of rg.months">
         <div class="sf-month-head">
           <div class="sf-month-title">
@@ -107,32 +118,17 @@
             <span class="sf-amount">Part SEN-CSU</span>
             <span>Statut</span>
           </div>
-          <div class="sf-row sf-row--fact2 sf-row--clickable" *ngFor="let f of getPaginatedFactures(g)" (click)="openDetail(f)">
+          <div class="sf-row sf-row--fact2 sf-row--clickable" *ngFor="let f of g.factures | paginer: pgM.page : pgM.taille" (click)="openDetail(f)">
             <span class="sf-num"><strong>{{ f.numero }}</strong></span>
             <span>{{ nbBeneficiaires(f) }} bénéficiaire(s)</span>
             <span class="sf-amount"><strong>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong></span>
-            <span><span class="sf-badge" [ngClass]="'st-' + f.statut">{{ statutLabel(f.statut) }}</span></span>
+            <span><app-status-badge [statut]="f.statut"></app-status-badge></span>
           </div>
         </div>
 
-        <!-- Pagination for MonthGroup -->
-        <div class="sf-pagination" *ngIf="g.factures.length > (g.pageSize || 10)">
-          <span class="sf-pagination-info">
-            {{ ((g.currentPage || 1) - 1) * (g.pageSize || 10) + 1 }}–{{ Math.min((g.currentPage || 1) * (g.pageSize || 10), g.factures.length) }} sur {{ g.factures.length }}
-          </span>
-          <div class="sf-pagination-btns">
-            <button class="sf-page-btn" [disabled]="(g.currentPage || 1) <= 1" (click)="goToPage(g, (g.currentPage || 1) - 1)">
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <ng-container *ngFor="let p of getPageNumbers(g)">
-              <button class="sf-page-btn" [class.active]="p === g.currentPage" (click)="goToPage(g, p)">{{ p }}</button>
-            </ng-container>
-            <button class="sf-page-btn" [disabled]="(g.currentPage || 1) >= getTotalPages(g)" (click)="goToPage(g, (g.currentPage || 1) + 1)">
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </div>
-        </div>
+        <app-pagination #pgM class="px-1" [total]="g.factures.length"></app-pagination>
       </div>
+      </ng-container>
     </div>
   </ng-container>
 </div>

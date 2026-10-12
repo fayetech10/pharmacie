@@ -7,7 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { RegionalDashboardComponent } from './regional-dashboard/regional-dashboard.component';
 import { FacturesListComponent } from '../factures/factures-list/factures-list.component';
 import { RegionalStructuresFacturesComponent } from '../regional-factures/regional-structures-factures.component';
-import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
+import { ImportFacturesComponent } from '../regional-factures/import-factures/import-factures.component';
+import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RegionService } from '../../core/services/region.service';
 
@@ -26,11 +27,12 @@ interface StatutGroup {
 @Component({
   selector: 'app-espace-region',
   standalone: true,
-  imports: [CommonModule, MatTabsModule, MatIconModule, RegionalDashboardComponent, FacturesListComponent, RegionalStructuresFacturesComponent],
+  imports: [CommonModule, MatTabsModule, MatIconModule, RegionalDashboardComponent, FacturesListComponent,
+    RegionalStructuresFacturesComponent, ImportFacturesComponent],
   templateUrl: './espace-region.component.html'
 })
 export class EspaceRegionComponent implements OnInit {
-  /** 0 = Tableau de bord · 1 = Factures Pharmacies · 2 = Factures Structures. */
+  /** 0 = Tableau de bord · 1 = Factures Pharmacies · 2 = Factures Structures · 3 = Import des factures. */
   selectedTab = 0;
 
   /** Sous-filtre de statut, indépendant par type de prestataire. */
@@ -72,7 +74,7 @@ export class EspaceRegionComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         const tab = +(params.get('tab') ?? 0);
-        this.selectedTab = tab >= 0 && tab <= 2 ? tab : 0;
+        this.selectedTab = tab >= 0 && tab <= 3 ? tab : 0;
 
         // Statut transmis par le tableau de bord (clic sur un item du parcours) :
         // pré-positionne le filtre segmenté de l'onglet ouvert, pour arriver
@@ -123,17 +125,30 @@ export class EspaceRegionComponent implements OnInit {
     return (this.statusGroups.find(g => g.key === key) ?? this.statusGroups[0]).statuts;
   }
 
-  get pharmaAllowed(): string[] { return this.groupStatuts(this.pharmaStatut); }
-  get structAllowed(): string[] { return this.groupStatuts(this.structStatut); }
+  /**
+   * Aucun filtre de statut : les deux listes affichent tout.
+   *
+   * <p>Référence <b>constante et partagée</b>, et surtout pas un {@code []} neuf à chaque
+   * appel. Angular compare les {@code @Input} par référence : un littéral recréé à chaque
+   * cycle de détection passe pour un changement, déclenche le {@code ngOnChanges} de
+   * l'enfant, donc {@code loadFactures()} — une requête HTTP — dont la réponse relance un
+   * cycle, qui recrée le tableau… en boucle infinie. C'est ce qui gelait l'onglet
+   * « Factures pharmacies » en inondant l'API. Même piège côté structures, où
+   * {@code rebuild()} ne fait que du calcul : la page ramait sans planter.</p>
+   */
+  private static readonly AUCUN_FILTRE: string[] = [];
+
+  get pharmaAllowed(): string[] { return EspaceRegionComponent.AUCUN_FILTRE; }
+  get structAllowed(): string[] { return EspaceRegionComponent.AUCUN_FILTRE; }
 
   selectPharmaStatut(key: StatutGroupKey) {
     this.pharmaStatut = key;
-    this.markSeenFor(key);
+    this.markSeenFor(key, false);
   }
 
   selectStructStatut(key: StatutGroupKey) {
     this.structStatut = key;
-    this.markSeenFor(key);
+    this.markSeenFor(key, true);
   }
 
   /** Retire le filtre prestataire, en conservant l'onglet et le filtre de statut. */
@@ -147,20 +162,36 @@ export class EspaceRegionComponent implements OnInit {
     });
   }
 
-  /** Total du badge de notification d'un groupe de statuts. */
-  badgeCount(group: StatutGroup): number {
+  /**
+   * Total du badge de notification d'un groupe de statuts, pour les factures des
+   * pharmacies ou pour celles des structures — comptées à part (voir FactureCountService).
+   */
+  badgeCount(group: StatutGroup, structure = false): number {
     if (!group.badgeStatuts) return 0;
-    return group.badgeStatuts.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
+    const cles = structure ? statutsStructure(group.badgeStatuts) : group.badgeStatuts;
+    return cles.reduce((sum, s) => sum + (this.counts[s] || 0), 0);
   }
 
-  private markSeenFor(key: StatutGroupKey) {
+  private markSeenFor(key: StatutGroupKey, structure: boolean) {
     const group = this.statusGroups.find(g => g.key === key);
-    if (group?.statuts.length) this.factureCount.markSeen(group.statuts);
+    if (group?.statuts.length) {
+      this.factureCount.markSeen(structure ? statutsStructure(group.statuts) : group.statuts);
+    }
   }
 
-  /** Marque les factures de l'onglet/statut actif comme vues → badge effacé. */
+  /** Ce qu'annonce le badge d'un onglet de factures : reçues + décisions du niveau central. */
+  private static readonly NOTIFIABLES = ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'];
+
+  /**
+   * Ouvrir un onglet de factures marque « vues » toutes celles que son badge annonçait —
+   * et seulement celles de sa famille : consulter les factures des structures ne doit pas
+   * effacer le badge des pharmacies, ni l'inverse.
+   */
   private markActiveTabSeen(): void {
-    if (this.selectedTab === 1) this.markSeenFor(this.pharmaStatut);
-    else if (this.selectedTab === 2) this.markSeenFor(this.structStatut);
+    if (this.selectedTab === 1) {
+      this.factureCount.markSeen(EspaceRegionComponent.NOTIFIABLES);
+    } else if (this.selectedTab === 2) {
+      this.factureCount.markSeen(statutsStructure(EspaceRegionComponent.NOTIFIABLES));
+    }
   }
 }

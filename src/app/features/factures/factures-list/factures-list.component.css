@@ -4,22 +4,9 @@
 @media (max-width: 768px){
   .filter-strip { display: none; }
   .page-head { display: none; }
-}/* ============================================================
-   VUE MENSUELLE — affichage calendrier (Janvier → Décembre)
-   ============================================================ */
+}
 
-/* En-tête : titre + sélecteur d'année */
-/* Card contenant l'en-tête et les mois (fond blanc global + lignes séparatrices) */
-.monthly-card {
-  @apply bg-card border border-border rounded-lg shadow-sm overflow-hidden mb-6;
-
-}.monthly-header {
-  @apply flex items-center justify-between py-5 px-6 border-b border-border-light mb-0;
-
-}.monthly-title {
-  @apply text-xl font-extrabold text-text-primary m-0;
-  letter-spacing: -0.02em;
-}.year-select {
+.year-select {
   @apply border border-border rounded text-sm font-semibold text-text-primary;
   height: 40px;
   padding: 0 32px 0 14px;
@@ -30,172 +17,11 @@
   font-family: inherit;
   cursor: pointer;
   transition: all var(--transition);
-}.year-select:focus {
-  @apply bg-white;
+}
+
+.year-select:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--ring);
-}/* Grille des 12 mois */
-.monthly-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--sp-4);
-  padding: var(--sp-6);
-}
-
-@media (max-width: 1024px) {
-  .monthly-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 768px) {
-  .monthly-grid { grid-template-columns: repeat(2, 1fr); padding: var(--sp-4); gap: var(--sp-3); }
-}
-@media (max-width: 480px) {
-  .monthly-grid { grid-template-columns: 1fr; }
-}
-
-.month-tile {
-  background: var(--field-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--sp-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  transition: all var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.month-tile.has-facture {
-  background: #fff;
-  cursor: pointer;
-}
-
-.month-tile.has-facture:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-  border-color: var(--primary-200);
-}
-
-.month-tile.current {
-  box-shadow: 0 0 0 2px var(--primary);
-}
-
-.tile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.month-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text-primary);
-  text-transform: capitalize;
-}
-
-.tile-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-}
-
-.icon-VALIDEE_NC, .icon-VALIDEE_SR { color: var(--success); }
-.icon-BROUILLON { color: var(--text-secondary); }
-.icon-ENVOYEE { color: #2563EB; }
-.icon-PAYEE { color: #D97706; }
-.icon-REJETEE_NC, .icon-REJETEE_SR { color: var(--warn); }
-
-.tile-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.tile-empty {
-  color: var(--text-muted);
-  font-size: 13.5px;
-  text-align: center;
-  padding: var(--sp-2) 0;
-}
-
-.tile-amount {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.tile-patients {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.tile-footer {
-  margin-top: var(--sp-3);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tile-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: rgba(255, 255, 255, 0.95);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  opacity: 0;
-  transition: opacity 0.2s;
-  backdrop-filter: blur(2px);
-}
-
-.month-tile:hover .tile-actions {
-  opacity: 1;
-}
-
-@media (max-width: 768px) {
-  /* Sur mobile, on affiche les actions en bas au lieu de les masquer (pas de hover possible) */
-  .tile-actions {
-    position: relative;
-    opacity: 1;
-    background: transparent;
-    backdrop-filter: none;
-    margin-top: var(--sp-2);
-    justify-content: flex-start;
-  }
-}
-
-.btn-action-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-action-icon:hover {
-  background: var(--primary);
-  color: #fff;
-  transform: scale(1.05);
-}
-
-.btn-action-icon mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+  box-shadow: none;
 }
 
 .month-statut-badge {
@@ -206,32 +32,44 @@
   border: none !important;
   font-weight: 700 !important;
 
-}.month-statut-badge::before {
+}
+
+.month-statut-badge::before {
 
   display: none !important;
 
-}.month-amount {
+}
+
+.month-amount {
   @apply text-primary font-extrabold;
   font-size: 14.5px;
   font-variant-numeric: tabular-nums;
-}/* Actions (boutons alignés à droite) */
+}
+
+/* Actions (boutons alignés à droite) */
 .month-actions {
   @apply flex items-center shrink-0 flex-wrap justify-end;
   gap: 8px;
-}.month-actions .btn {
+}
+
+.month-actions .btn {
   @apply text-[13px] font-medium rounded-md bg-white;
   height: 34px;
   padding: 0 12px;
   border: 1px solid #d1d5db;
   color: #374151;
   transition: all 0.2s;
-}.month-actions .btn:hover {
+}
+
+.month-actions .btn:hover {
 
   background: #f9fafb;
   border-color: #9ca3af;
   color: #111827;
 
-}/* Bouton Envoyer en bleu solide */
+}
+
+/* Bouton Envoyer en bleu solide */
 .month-actions .btn-envoyer {
 
   background: #1976d2 !important; /* Bleu primaire */
@@ -239,10 +77,14 @@
   border: none !important;
   font-weight: 600 !important;
 
-}.month-actions .btn-envoyer:hover {
+}
+
+.month-actions .btn-envoyer:hover {
   @apply shadow-sm;
   background: #1565c0 !important;
-}/* ---- Responsive ---- */
+}
+
+/* ---- Responsive ---- */
 @media (max-width: 900px){
   .month-row {
     flex-direction: column;
@@ -253,25 +95,14 @@
     width: 100%;
     justify-content: flex-start;
   }
-}@media (max-width: 768px){
-  .monthly-header {
-    padding: var(--sp-4);
-  }
-  .monthly-title {
-    font-size: 18px;
-  }
+}
+
+@media (max-width: 768px){
   .month-row {
     padding: var(--sp-3) var(--sp-4);
   }
   .month-row--has-facture {
     padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) - 2px);
-  }
-  .month-name {
-    font-size: 14px;
-    min-width: 70px;
-  }
-  .month-name--active {
-    font-size: 15px;
   }
   .month-actions .btn {
     height: 34px;
@@ -279,34 +110,30 @@
     font-size: 12px;
   }
   /* Densité mobile : sections pharmacie resserrées, pleine largeur */
-  .pharmacy-group-list { gap: var(--sp-3); }
   .pharmacy-section-card { border-radius: var(--radius); }
   .pharmacy-section-header { padding: var(--sp-3) var(--sp-4); }
-}/* ============================================================
+}
+
+/* ============================================================
    GROUPEMENT PAR PHARMACIE — vue mensuelle multi-pharmacies
    ============================================================ */
-.pharmacy-group-list {
-  @apply flex flex-col gap-6;
-
-}.pharmacy-section-card {
+.pharmacy-section-card {
   @apply bg-card border border-border rounded-lg shadow-sm overflow-hidden;
   /* Important pour les coins arrondis et le survol */;
-}.pharmacy-section-header {
+}
+
+.pharmacy-section-header {
   @apply flex items-center justify-between border-b border-border-light mb-0;
   /* Pour pousser le selecteur d'année à droite */
   padding: var(--sp-5) var(--sp-6);
-}.pharma-title-block {
+}
+
+.pharma-title-block {
   @apply flex items-center gap-3;
 
-}.pharma-icon {
-  @apply rounded-sm flex items-center justify-center;
-  color: var(--primary) !important;
-  background: var(--primary-light);
-  padding: 6px;
-  width: 36px !important;
-  height: 36px !important;
-  font-size: 24px !important;
-}.pharmacy-section-title {
+}
+
+.pharmacy-section-title {
   @apply text-[17px] font-bold text-text-primary m-0;
 
 }

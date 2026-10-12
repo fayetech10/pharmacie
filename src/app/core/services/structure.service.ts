@@ -1,10 +1,34 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { StructureSanitaire, StructureSanitaireRequest, FactureStructure, FactureStructureRequest, ImportResult, LigneFactureStructure } from '../models/structure.model';
+import { StructureSanitaire, StructureSanitaireRequest, FactureStructure, FactureStructureRequest, ImportResult, LigneFactureStructure, AccesCompte, TypePiece, ResultatImportFactures, RapportRapprochement, RechercheTicket, TicketResume,
+  VisiteTicket } from '../models/structure.model';
 import { LettreGarantie } from '../models/bcsu.model';
 import { FactureStatutLight } from '../models/facture.model';
 import { HttpParams } from '@angular/common/http';
+
+/** La facture que représente un fichier d'import, choisie à l'écran. */
+export interface ChoixImportFacture {
+  structureId: string;
+  regime: string;
+  mois: number;
+  annee: number;
+  /** Statut de la facture dans l'ancienne application. */
+  statut: string;
+  /** Facultatif : à défaut, le « N° Référence facture » du fichier. */
+  numeroOrigine?: string;
+}
+
+/** Paramètres renseignés seulement (le modèle se préremplit de ce qui est déjà choisi). */
+function paramsImport(choix: Partial<ChoixImportFacture>): HttpParams {
+  let params = new HttpParams();
+  Object.entries(choix).forEach(([cle, valeur]) => {
+    if (valeur !== null && valeur !== undefined && String(valeur).trim() !== '') {
+      params = params.set(cle, String(valeur).trim());
+    }
+  });
+  return params;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +54,14 @@ export class StructureService {
   deleteStructure(id: string): Observable<void> {
     return this.api.delete<void>(`/structures-sanitaires/${id}`);
   }
+  /** Active / désactive la structure ; son compte de connexion suit (une structure désactivée ne se connecte plus). */
+  basculerActivation(id: string, actif: boolean): Observable<StructureSanitaire> {
+    return this.api.put<StructureSanitaire>(`/structures-sanitaires/${id}/activation?actif=${actif}`, {});
+  }
+  /** Nouveau mot de passe temporaire pour le compte de la structure (créé s'il n'existe pas). */
+  reinitialiserMotDePasse(id: string): Observable<AccesCompte> {
+    return this.api.post<AccesCompte>(`/structures-sanitaires/${id}/reinitialiser-mot-de-passe`, {});
+  }
   /** Postes de santé polarisés (rattachés) par une structure sanitaire. */
   getPostes(structureId: string): Observable<StructureSanitaire[]> {
     return this.api.get<StructureSanitaire[]>(`/structures-sanitaires/${structureId}/postes`, { skipLoading: true });
@@ -43,6 +75,76 @@ export class StructureService {
   /** Modèle Excel à remplir pour l'import des structures (EPS, CS, PS). */
   downloadModeleImportPostes(): Observable<Blob> {
     return this.api.getBlob('/structures-sanitaires/import-postes-template');
+  }
+
+  // ----- Reprise des factures de l'ancienne application (Service Régional) -----
+  /**
+   * Modèle Excel d'un régime : la facture de ce régime telle que l'application l'exporte,
+   * préremplie de ce qui est déjà choisi (structure, période, n° d'origine).
+   */
+  telechargerModeleImportFactures(choix: Partial<ChoixImportFacture> & { regime: string }): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/import/modele?${paramsImport(choix).toString()}`);
+  }
+  /**
+   * Import d'une facture déjà générée (un fichier = une facture, au format du régime) pour une
+   * structure de la région. Tout ou rien. `simulation` : contrôle et aperçu, rien n'est enregistré.
+   */
+  importerFactures(choix: ChoixImportFacture, fichier: File, simulation: boolean): Observable<ResultatImportFactures> {
+    const formData = new FormData();
+    formData.append('fichier', fichier);
+    const params = paramsImport(choix).set('simulation', simulation);
+    return this.api.post<ResultatImportFactures>(`/factures-structure/import?${params.toString()}`, formData);
+  }
+
+  // ─── Import de fin de mois d'un centre / EPS (prestations des patients du BCSU) ───
+
+  /** Modèle Excel du régime pour le mois, prérempli des patients enregistrés par le BCSU. */
+  telechargerModeleRapprochement(regime: string, mois: number, annee: number): Observable<Blob> {
+    const params = new HttpParams().set('regime', regime).set('mois', mois).set('annee', annee);
+    return this.api.getBlob(`/factures-structure/rapprochement/modele?${params.toString()}`);
+  }
+
+  /** Rapprochement du fichier avec les patients du BCSU. `simulation` : aperçu, rien n'est enregistré. */
+  importerRapprochement(regime: string, mois: number, annee: number, fichier: File,
+                        simulation: boolean): Observable<RapportRapprochement> {
+    const formData = new FormData();
+    formData.append('fichier', fichier);
+    const params = new HttpParams().set('regime', regime).set('mois', mois).set('annee', annee)
+      .set('simulation', simulation);
+    return this.api.post<RapportRapprochement>(`/factures-structure/rapprochement?${params.toString()}`, formData);
+  }
+
+  /** Rapport du dernier import confirmé de la facture du mois (null s'il n'y en a pas). */
+  dernierRapprochement(regime: string, mois: number, annee: number): Observable<RapportRapprochement | null> {
+    const params = new HttpParams().set('regime', regime).set('mois', mois).set('annee', annee);
+    return this.api.get<RapportRapprochement | null>(`/factures-structure/rapprochement/dernier?${params.toString()}`,
+      { skipLoading: true });
+  }
+
+  // ─── Tickets de caisse en série (centre / EPS) ───
+
+  /** Visites du BCSU pour un identifiant du régime et une date de prise en charge (« aaaa-mm-jj »). */
+  rechercherVisitesTicket(regime: string, identifiant: string, date: string): Observable<RechercheTicket> {
+    const params = new HttpParams().set('regime', regime).set('identifiant', identifiant).set('date', date);
+    return this.api.get<RechercheTicket>(`/factures-structure/tickets/visites?${params.toString()}`, { skipLoading: true });
+  }
+
+  /** Ajoute un ticket au dossier (un de plus, jamais à la place d'un autre). */
+  ajouterTicket(factureId: string, dossierId: string, image: string): Observable<VisiteTicket> {
+    return this.api.post<VisiteTicket>(`/factures-structure/${factureId}/dossiers/${dossierId}/tickets`, { image });
+  }
+
+  ticketsDossier(factureId: string, dossierId: string): Observable<TicketResume[]> {
+    return this.api.get<TicketResume[]>(`/factures-structure/${factureId}/dossiers/${dossierId}/tickets`, { skipLoading: true });
+  }
+
+  ticketImage(factureId: string, dossierId: string, ticketId: string): Observable<{ image: string }> {
+    return this.api.get<{ image: string }>(
+      `/factures-structure/${factureId}/dossiers/${dossierId}/tickets/${ticketId}`, { skipLoading: true, cacheFirst: true });
+  }
+
+  retirerTicket(factureId: string, dossierId: string, ticketId: string): Observable<VisiteTicket> {
+    return this.api.delete<VisiteTicket>(`/factures-structure/${factureId}/dossiers/${dossierId}/tickets/${ticketId}`);
   }
 
   /** Export Excel des structures avec leurs identifiants de connexion. */
@@ -80,8 +182,8 @@ export class StructureService {
   getFacture(id: string): Observable<FactureStructure> {
     return this.api.get<FactureStructure>(`/factures-structure/${id}`);
   }
-  createFacture(req: FactureStructureRequest): Observable<FactureStructure> {
-    return this.api.post<FactureStructure>('/factures-structure', req);
+  createFacture(req: FactureStructureRequest, options?: { silencieux?: boolean }): Observable<FactureStructure> {
+    return this.api.post<FactureStructure>('/factures-structure', req, options);
   }
   updateFacture(id: string, req: FactureStructureRequest): Observable<FactureStructure> {
     return this.api.put<FactureStructure>(`/factures-structure/${id}`, req);
@@ -102,6 +204,23 @@ export class StructureService {
     return this.api.post<FactureStructure>(`/factures-structure/${id}/rejeter`, { commentaire: motif });
   }
   /** Centre de Santé : valide la facture d'un poste (SOUMISE_CS → ENVOYEE). */
+  /**
+   * Pointe « vérifié » (ou dépointe) les dossiers d'un patient pendant le contrôle de la
+   * facture — centre de rattachement ou service régional, selon le compte connecté.
+   */
+  pointerPatient(factureId: string, dossierIds: string[], verifie: boolean): Observable<FactureStructure> {
+    return this.api.post<FactureStructure>(`/factures-structure/${factureId}/verification`, { dossierIds, verifie });
+  }
+
+  /**
+   * Rejet « par ligne » : marque (ou annule) le rejet d'un patient pendant le contrôle, avec son
+   * motif — district ou service régional selon le compte. Le renvoi effectif de la facture se
+   * fait ensuite par rejeterFacture / rejeterFacturePoste.
+   */
+  rejeterPatient(factureId: string, dossierIds: string[], motif: string, rejete: boolean): Observable<FactureStructure> {
+    return this.api.post<FactureStructure>(`/factures-structure/${factureId}/rejet-lignes`, { dossierIds, motif, rejete });
+  }
+
   validerFacturePoste(id: string, commentaire?: string): Observable<FactureStructure> {
     return this.api.post<FactureStructure>(`/factures-structure/${id}/valider-poste`, { commentaire });
   }
@@ -135,6 +254,27 @@ export class StructureService {
     return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/lignes/${index}`);
   }
 
+  // ----- Dossiers patients (poste de santé) -----
+
+  /** Complète / corrige un patient : prestations remplacées en bloc, pièces, coordonnées. */
+  modifierDossier(factureId: string, dossierId: string, req: FactureStructureRequest): Observable<FactureStructure> {
+    return this.api.put<FactureStructure>(`/factures-structure/${factureId}/dossiers/${dossierId}`, req);
+  }
+  supprimerDossier(factureId: string, dossierId: string): Observable<FactureStructure> {
+    return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/dossiers/${dossierId}`);
+  }
+  /** Photo justificative d'un dossier, lue à la demande. */
+  getPiece(factureId: string, dossierId: string, type: TypePiece): Observable<{ type: TypePiece; libelle: string; image: string }> {
+    return this.api.get<{ type: TypePiece; libelle: string; image: string }>(
+      `/factures-structure/${factureId}/dossiers/${dossierId}/pieces/${type}`, { skipLoading: true });
+  }
+  attestationSoinsImage(factureId: string, dossierId: string): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation`);
+  }
+  ficheAssureImage(factureId: string, dossierId: string): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure`);
+  }
+
   exportFactureExcel(id: string): Observable<Blob> {
     return this.api.getBlob(`/factures-structure/${id}/export/excel`);
   }
@@ -145,6 +285,11 @@ export class StructureService {
 
   exportFacturePdf(id: string): Observable<Blob> {
     return this.api.getBlob(`/factures-structure/${id}/export/pdf`);
+  }
+
+  /** 0-5 ans : page de garde (facture) + liste nominative dans un seul PDF. */
+  exportEnfantsPdf(id: string): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/${id}/export/enfants-pdf`);
   }
 
   exportGroupeExcel(structureId: string, regime: string, mois: number, annee: number): Observable<Blob> {

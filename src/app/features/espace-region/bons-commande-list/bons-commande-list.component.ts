@@ -1,3 +1,4 @@
+import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { Component, OnInit, ViewChild, ElementRef, DestroyRef, inject, Input } from '@angular/core';
 import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { CommonModule } from '@angular/common';
@@ -8,6 +9,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BcsuService } from '../../../core/services/bcsu.service';
 import { BonCommande, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 /**
  * Liste (lecture seule) des bons de commande émis par les agents BCSU,
  * utilisée dans l'Espace Régional pour la supervision.
@@ -15,11 +18,13 @@ import { BonCommande, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models
 @Component({
   selector: 'app-bons-commande-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent, StatusBadgeComponent],
   templateUrl: './bons-commande-list.component.html'
 })
 export class BonsCommandeListComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
+  readonly mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre',
+    'Octobre', 'Novembre', 'Décembre'];
   readonly regimeOptions = REGIME_OPTIONS;
 
   @Input() filterBcsuId: string | null = null;

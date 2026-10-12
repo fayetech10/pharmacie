@@ -1,0 +1,103 @@
+<div class="fade-in">
+  <!-- ═══════════ Accueil : indicateurs et activités, comme le poste de santé ═══════════ -->
+  <div *ngIf="selectedTab === 0" class="flex flex-col gap-5">
+    <div class="page-head">
+      <div>
+        <h1>{{ structureNom }}</h1>
+        <p>Espace centre de santé · mis à jour à {{ derniereMiseAJour | date:'HH:mm' }}</p>
+      </div>
+      <div class="page-head-actions print:hidden">
+        <button type="button" class="btn btn-outline btn-sm" (click)="chargerStatistiques()">
+          <mat-icon>refresh</mat-icon> Actualiser
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" (click)="imprimerRapport()">
+          <mat-icon>print</mat-icon> Imprimer
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" [class.animate-pulse]="chargementStats">
+      <app-indicateur icone="receipt_long" teinte="primary" [cliquable]="true" (click)="changerOnglet(3)"
+                      [valeur]="chargementStats ? '…' : stats.facturesCentreTotal"
+                      libelle="Factures du centre"></app-indicateur>
+      <app-indicateur icone="task_alt" teinte="emerald"
+                      [valeur]="chargementStats ? '…' : stats.facturesValideesSr"
+                      libelle="Factures validées"></app-indicateur>
+      <app-indicateur icone="account_balance" teinte="indigo"
+                      [valeur]="chargementStats ? '…' : ((stats.montantGlobalCsu | number:'1.0-0':'fr') + ' F')"
+                      libelle="Total CSU consolidé"></app-indicateur>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <app-tuile-activite icone="verified_user" teinte="primary" titre="Facturation CSU"
+                          description="Identifier un patient (Espace PS) ou reprendre une lettre de garantie."
+                          (click)="changerOnglet(2)"></app-tuile-activite>
+      <app-tuile-activite icone="point_of_sale" teinte="purple" titre="Facturation Hors CSU"
+                          description="Encaisser les prestations non couvertes par la CSU."
+                          (click)="changerOnglet(4)"></app-tuile-activite>
+      <app-tuile-activite icone="tune" teinte="slate" titre="Paramétrage"
+                          description="Les prestations et services du centre, et leurs prix."
+                          (click)="changerOnglet(5)"></app-tuile-activite>
+    </div>
+  </div>
+
+  <!-- Retour à l'accueil, sur chaque activité (comme au poste) -->
+  <button type="button" *ngIf="selectedTab > 0" (click)="changerOnglet(0)"
+          class="inline-flex items-center gap-1.5 mb-4 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer print:hidden">
+    <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Accueil
+  </button>
+
+  <!-- Onglet 1 (factures des postes) retiré le 08/10/2026 : leur contrôle est réservé au district. -->
+
+  <!-- Onglet 2: Facturation CSU — Espace PS (identification directe) ou lettre de garantie BCSU -->
+  <div *ngIf="selectedTab === 2" class="pt-2">
+    <div class="flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Mode de saisie">
+      <button type="button" role="tab" [attr.aria-selected]="modeSaisie === 'espace-ps'" (click)="choisirModeSaisie('espace-ps')"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
+              [ngClass]="modeSaisie === 'espace-ps' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
+        <mat-icon class="!w-4 !h-4 !text-base">badge</mat-icon> Identification directe (Espace PS)
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="modeSaisie === 'lettre'" (click)="choisirModeSaisie('lettre')"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
+              [ngClass]="modeSaisie === 'lettre' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
+        <mat-icon class="!w-4 !h-4 !text-base">qr_code_scanner</mat-icon> Sur lettre de garantie
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="modeSaisie === 'import'" (click)="choisirModeSaisie('import')"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
+              [ngClass]="modeSaisie === 'import' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
+        <mat-icon class="!w-4 !h-4 !text-base">upload_file</mat-icon> Importer la facture du mois
+      </button>
+    </div>
+    <app-facturation-csu-poste *ngIf="modeSaisie === 'espace-ps'"></app-facturation-csu-poste>
+    <app-facture-structure-form *ngIf="modeSaisie === 'lettre'"></app-facture-structure-form>
+    <app-import-facture-centre *ngIf="modeSaisie === 'import'"></app-import-facture-centre>
+  </div>
+
+  <!-- Onglet 3: Mes factures — vue mensuelle de l'Espace PS, ou liste détaillée historique -->
+  <div *ngIf="selectedTab === 3" class="pt-2">
+    <div class="flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Affichage des factures">
+      <button type="button" role="tab" [attr.aria-selected]="vueFactures === 'mois'" (click)="choisirVueFactures('mois')"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
+              [ngClass]="vueFactures === 'mois' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
+        <mat-icon class="!w-4 !h-4 !text-base">calendar_month</mat-icon> Par mois (12 mois)
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="vueFactures === 'liste'" (click)="choisirVueFactures('liste')"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
+              [ngClass]="vueFactures === 'liste' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
+        <mat-icon class="!w-4 !h-4 !text-base">view_list</mat-icon> Liste détaillée
+      </button>
+    </div>
+    <app-mes-factures-poste *ngIf="vueFactures === 'mois'"></app-mes-factures-poste>
+    <app-factures-structure-list *ngIf="vueFactures === 'liste'"></app-factures-structure-list>
+  </div>
+
+  <!-- Onglet 4: Hors CSU -->
+  <div *ngIf="selectedTab === 4" class="pt-2">
+    <app-hors-csu></app-hors-csu>
+  </div>
+
+  <!-- Onglet 5: Paramètres -->
+  <div *ngIf="selectedTab === 5" class="pt-2">
+    <app-parametres-structure></app-parametres-structure>
+  </div>
+</div>

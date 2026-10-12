@@ -1,0 +1,206 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Mes factures</h1>
+    </div>
+  </div>
+
+  <!-- Rappel : factures d'un mois clôturé non parties faute de dossiers complets.
+       L'envoi mensuel est automatique ; seules ces factures incomplètes attendent l'agent. -->
+  <div *ngIf="facturesEnAttente.length"
+       class="flex items-start gap-2.5 mb-4 py-3 px-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[13px]">
+    <mat-icon class="shrink-0 !text-xl !w-5 !h-5 text-amber-600">pending_actions</mat-icon>
+    <div class="min-w-0">
+      <strong>{{ facturesEnAttente.length }} facture(s) d'un mois déjà clôturé</strong> n'ont pas été envoyées
+      automatiquement : il reste des dossiers patients « à compléter ». Complétez-les puis envoyez-les
+      ({{ destinationEnvoi }}) depuis le menu de chaque facture.
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        <button type="button" *ngFor="let f of facturesEnAttente" (click)="consulter(f)"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-amber-300 text-amber-900 text-[12px] font-semibold cursor-pointer hover:bg-amber-100">
+          {{ libelleRegime(f.regime) }} · {{ moisNoms[f.mois] }} {{ f.annee }}
+          <span class="text-amber-700">({{ aCompleter(f) }})</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Centres / EPS : factures d'un mois écoulé pas encore transmises. Elles ne partent jamais
+       seules (import de fin de mois, puis transmission par la structure). -->
+  <div *ngIf="facturesATransmettre.length"
+       class="flex items-start gap-2.5 mb-4 py-3 px-4 rounded-lg bg-primary-light border border-primary-200 text-primary text-[13px]">
+    <mat-icon class="shrink-0 !text-xl !w-5 !h-5">send</mat-icon>
+    <div class="min-w-0">
+      <strong>{{ facturesATransmettre.length }} facture(s) d'un mois écoulé</strong> ne sont pas encore transmises :
+      elles ne partent pas seules à la clôture du mois. Complétez-les (import de fin de mois), puis transmettez-les
+      depuis leur détail.
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        <button type="button" *ngFor="let f of facturesATransmettre" (click)="consulter(f)"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-primary-200 text-primary text-[12px] font-semibold cursor-pointer hover:bg-primary-light">
+          {{ libelleRegime(f.regime) }} · {{ moisNoms[f.mois] }} {{ f.annee }}
+          <app-status-badge famille="etape" [statut]="f.etape" [sansIcone]="true"></app-status-badge>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patients enregistrés hors ligne, pas encore partis -->
+  <app-saisies-en-attente></app-saisies-en-attente>
+
+  <div *ngIf="donneesHorsLigne" role="status"
+       class="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+    <mat-icon class="shrink-0 !text-xl !w-5 !h-5">cloud_off</mat-icon>
+    <span>Pas de connexion : les factures sont affichées telles qu'à votre dernière connexion. Les consulter en détail,
+      les modifier ou les exporter demande le réseau.</span>
+  </div>
+
+  <!-- Filtres -->
+  <div class="card">
+    <div class="section-body grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Régime
+        <select [(ngModel)]="regime" (ngModelChange)="construire()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option *ngFor="let r of regimes" [ngValue]="r">
+            {{ libelleRegime(r) }}{{ nombreFactures(r) ? ' (' + nombreFactures(r) + ')' : '' }}
+          </option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Année
+        <select [(ngModel)]="annee" (ngModelChange)="changerAnnee()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option *ngFor="let a of annees" [ngValue]="a">{{ a }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Mois
+        <select [(ngModel)]="moisFiltre" (ngModelChange)="construire()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option [ngValue]="0">Tous les mois</option>
+          <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div *ngIf="chargement" class="card">
+    <div class="section-body flex items-center justify-center gap-3 py-10">
+      <mat-spinner diameter="26"></mat-spinner><span class="text-text-secondary">Chargement…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!chargement" class="card table-card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>calendar_month</mat-icon></div>
+        <div>
+          <h2>{{ libelleRegime(regime) }} — {{ annee }}</h2>
+          <p>{{ totalAnnee.patients }} patient(s) · {{ totalAnnee.montant | number:'1.0-0':'fr' }} F facturés ·
+             {{ totalAnnee.sencsu | number:'1.0-0':'fr' }} F à la charge de la SEN-CSU</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table desktop -->
+    <div class="overflow-x-auto desktop-only">
+      <table class="premium-table w-full">
+        <thead>
+          <tr>
+            <th>Mois</th>
+            <th class="text-center">Patients</th>
+            <th class="text-right">Montant</th>
+            <th class="text-right">Part SEN-CSU</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of lignes" [class.cursor-pointer]="!!l.facture" (click)="l.facture && consulter(l.facture)"
+              class="transition-colors hover:bg-primary-light/40">
+            <td>
+              <span class="font-semibold">{{ l.libelle }}</span>
+              <ng-container *ngIf="l.facture as f">
+                <app-status-badge *ngIf="f.etape" class="ml-1" famille="etape" [statut]="f.etape"></app-status-badge>
+                <span *ngIf="aCompleter(f)" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-amber-50 text-amber-800">
+                  {{ aCompleter(f) }} à compléter
+                </span>
+                <span class="block text-[11.5px] text-text-muted font-mono mt-0.5">{{ f.numero }}</span>
+              </ng-container>
+            </td>
+            <ng-container *ngIf="l.facture as f; else aucune">
+              <td class="text-center">{{ patients(f) }}</td>
+              <td class="text-right font-semibold">{{ f.montantTotal | number:'1.0-0':'fr' }} F</td>
+              <td class="text-right">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+              <!-- Sur ordinateur, les actions en clair (sans icône) ; le menu ⋮ reste aux cartes mobiles -->
+              <td class="text-right whitespace-nowrap" (click)="$event.stopPropagation()">
+                <span class="inline-flex items-center justify-end gap-1">
+                  <button type="button" class="btn btn-outline btn-sm" (click)="consulter(f)" [disabled]="enCours(f)">Consulter</button>
+                  <button type="button" *ngIf="estModifiable(f.statut)" class="btn btn-ghost btn-sm" (click)="modifier(f)"
+                          [disabled]="enCours(f)">Modifier</button>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="excel(f)" [disabled]="enCours(f)">Excel</button>
+                  <button type="button" *ngIf="aUnPdf(f.regime)" class="btn btn-ghost btn-sm" (click)="pdf(f)"
+                          [disabled]="enCours(f)">PDF</button>
+                </span>
+              </td>
+            </ng-container>
+            <ng-template #aucune>
+              <td colspan="4" class="text-text-muted italic">Aucune facture</td>
+            </ng-template>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cartes mobiles -->
+    <div class="m-cards">
+      <div class="m-card" *ngFor="let l of lignes" [class.cursor-pointer]="!!l.facture"
+           (click)="l.facture && consulter(l.facture)" role="button" tabindex="0">
+        <div class="m-card-top">
+          <span class="m-title">{{ l.libelle }} {{ annee }}</span>
+          <ng-container *ngIf="l.facture as f">
+            <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+          </ng-container>
+          <span *ngIf="!l.facture" class="text-[12.5px] italic text-text-muted">Aucune facture</span>
+        </div>
+        <ng-container *ngIf="l.facture as f">
+          <div class="m-row">
+            <span>{{ patients(f) }} patient(s)</span>
+            <strong>{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
+          </div>
+          <div class="m-row">
+            <span>Part SEN-CSU</span>
+            <span>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+          </div>
+          <div *ngIf="aCompleter(f)" class="text-[12.5px] font-semibold text-amber-800">{{ aCompleter(f) }} dossier(s) à compléter</div>
+          <div *ngIf="f.etape"><app-status-badge famille="etape" [statut]="f.etape"></app-status-badge></div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions d'une facture, regroupées sous les trois points (cartes mobiles) -->
+  <ng-template #boutonActions let-f>
+    <button type="button" class="btn btn-ghost btn-sm !px-2" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+            (click)="$event.stopPropagation()"
+            [disabled]="enCours(f)" aria-label="Actions de la facture" title="Actions">
+      <mat-icon class="!m-0">{{ enCours(f) ? 'hourglass_top' : 'more_vert' }}</mat-icon>
+    </button>
+  </ng-template>
+
+  <mat-menu #menuFacture="matMenu" xPosition="before">
+    <ng-template matMenuContent let-f="f">
+      <button mat-menu-item *ngIf="estModifiable(f.statut)" (click)="modifier(f)">
+        <mat-icon>edit</mat-icon><span>Modifier</span>
+      </button>
+      <button mat-menu-item (click)="consulter(f)">
+        <mat-icon>visibility</mat-icon><span>Consulter</span>
+      </button>
+      <button mat-menu-item (click)="excel(f)">
+        <mat-icon>table_view</mat-icon><span>Excel</span>
+      </button>
+      <button mat-menu-item *ngIf="aUnPdf(f.regime)" (click)="pdf(f)">
+        <mat-icon>picture_as_pdf</mat-icon><span>PDF</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+</div>

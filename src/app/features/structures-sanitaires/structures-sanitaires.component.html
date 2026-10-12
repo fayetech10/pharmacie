@@ -2,9 +2,8 @@
   <div class="page-head">
     <div>
       <h1>Paramétrage structures sanitaires</h1>
-      <p>Créez et gérez les structures et leur agent, rattachées à un BCSU</p>
     </div>
-    <div class="page-head-actions flex items-center gap-2" *ngIf="selectedTab === 0">
+    <div class="page-head-actions flex items-center gap-2" *ngIf="peutGerer">
       <input type="file" accept=".xlsx" hidden #importPostesInput (change)="onImportFileSelected($event)">
 
       <button class="btn btn-primary flex-1 md:flex-none" (click)="openAdd()">
@@ -17,19 +16,21 @@
       </button>
 
       <mat-menu #actionsMenu="matMenu" xPosition="before">
-        <button mat-menu-item (click)="telechargerModeleImport()">
-          <mat-icon>download</mat-icon>
-          <span>Télécharger le modèle</span>
-        </button>
-        <button mat-menu-item (click)="importPostesInput.click()" [disabled]="importing">
-          <mat-icon>upload_file</mat-icon>
-          <span>{{ importing ? 'Import en cours…' : 'Importer des structures' }}</span>
-        </button>
+        <ng-container *ngIf="peutSupprimerImporter">
+          <button mat-menu-item (click)="telechargerModeleImport()">
+            <mat-icon>download</mat-icon>
+            <span>Télécharger le modèle</span>
+          </button>
+          <button mat-menu-item (click)="importPostesInput.click()" [disabled]="importing">
+            <mat-icon>upload_file</mat-icon>
+            <span>{{ importing ? 'Import en cours…' : 'Importer des structures' }}</span>
+          </button>
+        </ng-container>
         <button mat-menu-item (click)="exporterIdentifiants()">
           <mat-icon>table_view</mat-icon>
           <span>Exporter les identifiants</span>
         </button>
-        <button mat-menu-item (click)="purgerBrouillons()" [disabled]="purging">
+        <button mat-menu-item *ngIf="peutSupprimerImporter" (click)="purgerBrouillons()" [disabled]="purging">
           <mat-icon>delete_sweep</mat-icon>
           <span>{{ purging ? 'Purge en cours…' : 'Purger les brouillons' }}</span>
         </button>
@@ -38,188 +39,353 @@
   </div>
 
   <!-- Résultat de l'import des postes de santé -->
-  <div *ngIf="importResult" class="mb-4 py-3.5 px-4 rounded-[10px] bg-[#f0fdf4] border border-[#bbf7d0]">
+  <div *ngIf="importResult" class="mb-4 py-3.5 px-4 rounded-[10px] bg-emerald-50 border border-emerald-200">
     <div class="flex justify-between items-center gap-2.5">
       <strong>Import des postes de santé : {{ importResult.importes }} importé(s), {{ importResult.echecs }} échec(s)</strong>
       <button class="btn btn-outline" type="button" (click)="fermerImportResult()"><mat-icon>close</mat-icon></button>
     </div>
-    <ul *ngIf="importResult.erreurs.length" class="mt-2 mb-0 pl-[18px] text-[#b91c1c] text-[13px]">
+    <ul *ngIf="importResult.erreurs.length" class="mt-2 mb-0 pl-[18px] text-red-700 text-[13px]">
       <li *ngFor="let e of importResult.erreurs">{{ e }}</li>
     </ul>
   </div>
 
-  <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
-    <!-- 🏥 Gestion des structures sanitaires -->
-    <mat-tab label="Structures">
-      <div class="pt-2 md:pt-6">
-
-  <!-- Tableau (desktop / tablette large) -->
-  <div class="glass-table-container desktop-only">
-    <table mat-table [dataSource]="structures" class="premium-table">
-      <ng-container matColumnDef="nom">
-        <th mat-header-cell *matHeaderCellDef> Structure </th>
-        <td mat-cell *matCellDef="let s">
-          <div><strong>{{ s.nom }}</strong><br><small>{{ s.code }} · {{ s.email || '—' }}</small></div>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="type">
-        <th mat-header-cell *matHeaderCellDef> Type </th>
-        <td mat-cell *matCellDef="let s">
-          <span class="inline-block py-[3px] px-2.5 rounded-full text-xs font-semibold" [ngClass]="typeBadgeClass(s)">
-            {{ typeDe(s) === 'PS' ? 'Poste de santé' : (typeDe(s) === 'EPS' ? 'Hôpital (EPS)' : 'Centre de santé') }}
-          </span>
-          <div *ngIf="typeDe(s) === 'PS'" class="text-[11px] text-[#64748b] mt-[3px]">
-            Rattaché à : {{ getStructureNom(s.structureRattachementId) }}
-          </div>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="region">
-        <th mat-header-cell *matHeaderCellDef> Région </th>
-        <td mat-cell *matCellDef="let s"> {{ getRegionNom(s.regionId) }} </td>
-      </ng-container>
-      <ng-container matColumnDef="bcsu">
-        <th mat-header-cell *matHeaderCellDef> BCSU rattaché </th>
-        <td mat-cell *matCellDef="let s"> {{ getBcsuNom(s.bcsuId) }} </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef> </th>
-        <td mat-cell *matCellDef="let s">
-          <div class="action-group">
-            <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
-            <button class="action-btn danger" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
-          </div>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="['nom', 'type', 'region', 'bcsu', 'actions']"></tr>
-      <tr mat-row *matRowDef="let row; columns: ['nom', 'type', 'region', 'bcsu', 'actions'];"></tr>
-    </table>
-    <div class="empty-state" *ngIf="structures.length === 0">
-      <mat-icon>local_hospital</mat-icon>
-      <p>Aucune structure enregistrée</p>
+  <!-- Skeleton Loader pendant le chargement -->
+  <div *ngIf="loading" class="space-y-3 animate-pulse mb-6">
+    <div *ngFor="let i of [1,2,3,4]" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
+      <div class="space-y-2 flex-1">
+        <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+      </div>
+      <div class="h-6 bg-gray-200 rounded w-20"></div>
     </div>
   </div>
 
-  <!-- Cartes mobiles (≤ 768px) -->
-  <div class="m-cards" *ngIf="structures.length">
-    <div class="m-card clickable" *ngFor="let s of structures"
-         (click)="openEdit(s)" role="button" tabindex="0"
-         (keydown.enter)="openEdit(s)" [attr.aria-label]="'Modifier ' + s.nom">
-      <div class="m-card-top">
-        <div class="min-w-0">
-          <div class="m-title">{{ s.nom }}</div>
-          <div class="m-sub break-words">{{ s.code }} · {{ s.email || '—' }}</div>
-        </div>
-        <div class="m-actions" (click)="$event.stopPropagation()">
-          <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
-          <button class="action-btn danger" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
-        </div>
-      </div>
-      <div class="m-row">
+<!-- Tableau (desktop / tablette large) -->
+<div class="glass-table-container desktop-only">
+  <table mat-table [dataSource]="structures | paginer: pg.page : pg.taille" class="premium-table">
+    <ng-container matColumnDef="nom">
+      <th mat-header-cell *matHeaderCellDef> Structure </th>
+      <td mat-cell *matCellDef="let s">
+        <div><strong>{{ s.nom }}</strong><br><small>{{ s.code }} · {{ s.email || '—' }}</small></div>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="type">
+      <th mat-header-cell *matHeaderCellDef> Type </th>
+      <td mat-cell *matCellDef="let s">
         <span class="inline-block py-[3px] px-2.5 rounded-full text-xs font-semibold" [ngClass]="typeBadgeClass(s)">
           {{ typeDe(s) === 'PS' ? 'Poste de santé' : (typeDe(s) === 'EPS' ? 'Hôpital (EPS)' : 'Centre de santé') }}
         </span>
-        <span *ngIf="getRegionNom(s.regionId) !== '-'"><mat-icon class="inline-ic">map</mat-icon>{{ getRegionNom(s.regionId) }}</span>
-      </div>
-      <div class="m-row" *ngIf="typeDe(s) === 'PS'">
-        <span class="text-[12px] text-text-muted">Rattaché à : {{ getStructureNom(s.structureRattachementId) }}</span>
-      </div>
-      <div class="m-row" *ngIf="getBcsuNom(s.bcsuId) !== '-'">
-        <span><mat-icon class="inline-ic">badge</mat-icon>{{ getBcsuNom(s.bcsuId) }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- État vide (mobile) -->
-  <div class="empty-state md:!hidden" *ngIf="structures.length === 0">
+        <div *ngIf="typeDe(s) === 'PS'" class="text-[11px] text-text-secondary mt-[3px]">
+          Rattaché à : {{ getStructureNom(s.structureRattachementId) }}
+        </div>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="region">
+      <th mat-header-cell *matHeaderCellDef> Région </th>
+      <td mat-cell *matCellDef="let s"> {{ getRegionNom(s.regionId) }} </td>
+    </ng-container>
+    <!-- District : une structure sans district sort de toute consolidation — le vide
+         est donc signalé, pas rendu par un tiret indistinct. -->
+    <ng-container matColumnDef="district">
+      <th mat-header-cell *matHeaderCellDef> District </th>
+      <td mat-cell *matCellDef="let s">
+        <ng-container *ngIf="getDistrictNom(s.districtId) as nom; else sansDistrict">{{ nom }}</ng-container>
+        <span *ngIf="s.siegeDistrict" title="Ce centre exerce aussi les fonctions du district"
+              class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Siège</span>
+        <ng-template #sansDistrict>
+          <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-warn"
+                title="Sans district, cette structure n'apparaît dans aucune consolidation">
+            <mat-icon class="!text-[15px] !w-[15px] !h-[15px]">error_outline</mat-icon>
+            Non défini
+          </span>
+        </ng-template>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="bcsu">
+      <th mat-header-cell *matHeaderCellDef> BCSU rattaché </th>
+      <td mat-cell *matCellDef="let s"> {{ getBcsuNom(s.bcsuId) }} </td>
+    </ng-container>
+    <!-- Statut : la structure ET son compte de connexion (le serveur les fait aller de pair). -->
+    <ng-container matColumnDef="statut">
+      <th mat-header-cell *matHeaderCellDef> Statut </th>
+      <td mat-cell *matCellDef="let s">
+        <span class="inline-flex items-center gap-1.5 text-[13px] font-medium" [ngClass]="s.actif ? 'text-primary' : 'text-text-muted'">
+          <span class="w-2 h-2 rounded-full" [ngClass]="s.actif ? 'bg-primary' : 'bg-slate-400'"></span>
+          {{ s.actif ? 'Actif' : 'Désactivé' }}
+        </span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef> </th>
+      <td mat-cell *matCellDef="let s">
+        <div class="action-group">
+          <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
+          <button class="action-btn" (click)="reinitialiserMotDePasse(s)" [disabled]="actionEnCours === s.id"
+                  title="Réinitialiser le mot de passe"><mat-icon>lock_reset</mat-icon></button>
+          <button class="action-btn" (click)="basculerActivation(s)" [disabled]="actionEnCours === s.id"
+                  [title]="s.actif ? 'Désactiver' : 'Réactiver'">
+            <mat-icon>{{ s.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+          </button>
+          <button class="action-btn danger" *ngIf="peutSupprimerImporter" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+        </div>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+    <tr mat-row *matRowDef="let row; columns: colonnes;"></tr>
+  </table>
+  <div class="empty-state" *ngIf="structures.length === 0">
     <mat-icon>local_hospital</mat-icon>
     <p>Aucune structure enregistrée</p>
   </div>
+</div>
 
+<!-- Cartes mobiles (≤ 768px) -->
+<div class="m-cards" *ngIf="structures.length">
+  <div class="m-card" *ngFor="let s of structures | paginer: pg.page : pg.taille" [class.clickable]="peutGerer"
+       (click)="peutGerer && openEdit(s)" [attr.role]="peutGerer ? 'button' : null"
+       [attr.tabindex]="peutGerer ? 0 : null"
+       (keydown.enter)="peutGerer && openEdit(s)" [attr.aria-label]="peutGerer ? 'Modifier ' + s.nom : null">
+    <div class="m-card-top">
+      <div class="min-w-0">
+        <div class="m-title">{{ s.nom }}</div>
+        <div class="m-sub break-words">{{ s.code }} · {{ s.email || '—' }}</div>
       </div>
-    </mat-tab>
+      <div class="m-actions" *ngIf="peutGerer" (click)="$event.stopPropagation()">
+        <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
+        <button class="action-btn" (click)="reinitialiserMotDePasse(s)" [disabled]="actionEnCours === s.id"
+                title="Réinitialiser le mot de passe"><mat-icon>lock_reset</mat-icon></button>
+        <button class="action-btn" (click)="basculerActivation(s)" [disabled]="actionEnCours === s.id"
+                [title]="s.actif ? 'Désactiver' : 'Réactiver'">
+          <mat-icon>{{ s.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+        </button>
+        <button class="action-btn danger" *ngIf="peutSupprimerImporter" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+      </div>
+    </div>
+    <div class="m-row">
+      <span class="inline-block py-[3px] px-2.5 rounded-full text-xs font-semibold" [ngClass]="typeBadgeClass(s)">
+        {{ typeDe(s) === 'PS' ? 'Poste de santé' : (typeDe(s) === 'EPS' ? 'Hôpital (EPS)' : 'Centre de santé') }}
+      </span>
+      <span *ngIf="!s.actif" class="inline-flex items-center gap-1 font-semibold text-text-muted">
+        <mat-icon class="inline-ic">block</mat-icon>Désactivé
+      </span>
+      <span *ngIf="getRegionNom(s.regionId) !== '-'"><mat-icon class="inline-ic">map</mat-icon>{{ getRegionNom(s.regionId) }}</span>
+      <span *ngIf="getDistrictNom(s.districtId) as nom"><mat-icon class="inline-ic">account_tree</mat-icon>{{ nom }}</span>
+      <span *ngIf="s.siegeDistrict" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Siège du district</span>
+      <span *ngIf="!s.districtId" class="inline-flex items-center gap-1 font-semibold text-warn">
+        <mat-icon class="inline-ic">error_outline</mat-icon>District non défini
+      </span>
+    </div>
+    <div class="m-row" *ngIf="typeDe(s) === 'PS'">
+      <span class="text-[12px] text-text-muted">Rattaché à : {{ getStructureNom(s.structureRattachementId) }}</span>
+    </div>
+    <div class="m-row" *ngIf="getBcsuNom(s.bcsuId) !== '-'">
+      <span><mat-icon class="inline-ic">badge</mat-icon>{{ getBcsuNom(s.bcsuId) }}</span>
+    </div>
+  </div>
+</div>
 
-    <!-- 🏥 Factures des structures : une ligne par structure, clic → factures par mois → détail -->
-    <mat-tab label="🏥 Factures">
-      <ng-template matTabContent>
-        <div class="pt-2 md:pt-6">
-          <app-structures-factures></app-structures-factures>
+<app-pagination #pg [total]="structures.length"></app-pagination>
+
+<!-- État vide (mobile) -->
+<div class="empty-state md:!hidden" *ngIf="structures.length === 0">
+  <mat-icon>local_hospital</mat-icon>
+  <p>Aucune structure enregistrée</p>
+</div>
+
+  <!-- ═══ Formulaire structure ═══ -->
+  <div class="modal-overlay" *ngIf="showModal" (keydown.escape)="close()">
+    <div class="modal-card !max-w-[760px]" role="dialog" aria-modal="true" aria-labelledby="titre-structure">
+
+      <!-- En-tête : le type choisi donne l'icône ; en modification, le code (non modifiable) -->
+      <div class="flex items-start gap-3.5 px-6 pt-5 pb-4 border-b border-border-light shrink-0">
+        <span class="w-11 h-11 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+          <mat-icon>{{ typeCourant.icone }}</mat-icon>
+        </span>
+        <div class="flex-1 min-w-0">
+          <h2 id="titre-structure" class="m-0 text-[18px] font-bold text-text-primary">
+            {{ isEditMode ? 'Modifier la structure' : 'Nouvelle structure sanitaire' }}
+          </h2>
+          <p class="m-0 mt-0.5 text-[13px] text-text-secondary">
+            <ng-container *ngIf="isEditMode">
+              {{ typeCourant.label }} · code
+              <span class="font-mono font-semibold text-text-primary">{{ form.get('code')?.value }}</span>
+            </ng-container>
+            <ng-container *ngIf="!isEditMode">Le code (ex. DKCS01) est attribué automatiquement.</ng-container>
+          </p>
         </div>
-      </ng-template>
-    </mat-tab>
-
-  </mat-tab-group>
-
-  <div class="modal-overlay" *ngIf="showModal">
-    <mat-card class="modal-card">
-      <div class="modal-header">
-        <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} une structure</h2>
         <button class="close-btn" (click)="close()" type="button" aria-label="Fermer"><mat-icon>close</mat-icon></button>
       </div>
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <div class="modal-body">
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="flex-grow" *ngIf="!isEditMode">
-              <mat-label>Type de structure</mat-label>
-              <mat-select formControlName="typeStructure">
-                <mat-option *ngFor="let t of typesStructure" [value]="t.code">{{ t.label }} ({{ t.code }})</mat-option>
-              </mat-select>
-              <mat-hint>Code généré automatiquement (ex: DKCS01)</mat-hint>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="flex-grow" *ngIf="isEditMode">
-              <mat-label>Code</mat-label>
-              <input matInput formControlName="code" readonly>
-              <mat-hint>Code d'identification — utilisé dans les numéros LG/BC</mat-hint>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="flex-grow">
-              <mat-label>Nom</mat-label>
-              <input matInput formControlName="nom" placeholder="Ex: Hôpital régional">
-            </mat-form-field>
-          </div>
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Adresse</mat-label>
-            <input matInput formControlName="adresse">
-          </mat-form-field>
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="flex-grow">
-              <mat-label>Téléphone</mat-label>
-              <input matInput formControlName="telephone">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="flex-grow">
-              <mat-label>Email (compte agent)</mat-label>
-              <input matInput type="email" formControlName="email">
-            </mat-form-field>
-          </div>
-          <!-- Poste de santé : rattachement à un centre de santé / EPS obligatoire -->
-          <mat-form-field appearance="outline" class="w-100" *ngIf="isPosteSante">
-            <mat-label>Structure sanitaire de rattachement (CS / EPS)</mat-label>
-            <mat-select formControlName="structureRattachementId">
-              <mat-option *ngFor="let s of structuresRattachement" [value]="s.id">{{ s.nom }} ({{ s.code }})</mat-option>
-            </mat-select>
-            <mat-hint>Les factures envoyées par le poste seront visibles dans cette structure</mat-hint>
-          </mat-form-field>
 
-          <mat-form-field appearance="outline" class="w-100" *ngIf="!isServiceRegional">
-            <mat-label>Région</mat-label>
-            <mat-select formControlName="regionId">
-              <mat-option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="w-100" *ngIf="!isServiceRegional">
-            <mat-label>BCSU rattaché</mat-label>
-            <mat-select formControlName="bcsuId">
-              <mat-option *ngFor="let u of bcsuUsers" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.email }})</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="w-100" *ngIf="!isEditMode">
-            <mat-label>Mot de passe agent (défaut: password123)</mat-label>
-            <input matInput type="password" formControlName="password">
-          </mat-form-field>
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="modal-body !pt-5 space-y-7">
+
+          <!-- 1. Type (création seulement : il fixe le code et le circuit de facturation) -->
+          <section *ngIf="!isEditMode">
+            <h3 class="m-0 mb-3 flex items-center gap-3 text-[12px] font-bold tracking-wide uppercase text-text-muted">
+              Type de structure <span class="flex-1 h-px bg-border-light"></span>
+            </h3>
+            <div class="grid gap-2.5 sm:grid-cols-3" role="radiogroup" aria-label="Type de structure">
+              <button type="button" *ngFor="let t of typesStructure" role="radio"
+                      [attr.aria-checked]="typeCourant.code === t.code" (click)="choisirType(t.code)"
+                      class="text-left p-3.5 rounded-lg cursor-pointer transition-colors border-2 border-solid flex sm:flex-col gap-3 sm:gap-2.5 items-start"
+                      [ngClass]="typeCourant.code === t.code ? 'border-primary bg-primary-light' : 'border-border-light bg-white hover:border-border'">
+                <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                      [ngClass]="typeCourant.code === t.code ? 'bg-primary text-white' : 'bg-field text-text-secondary'">
+                  <mat-icon class="!text-[20px] !w-5 !h-5">{{ t.icone }}</mat-icon>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[14px] font-semibold text-text-primary">{{ t.label }}</span>
+                  <span class="block text-[12px] text-text-muted leading-snug mt-0.5">{{ t.description }}</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 2. Identité -->
+          <section>
+            <h3 class="m-0 mb-3 flex items-center gap-3 text-[12px] font-bold tracking-wide uppercase text-text-muted">
+              Identité <span class="flex-1 h-px bg-border-light"></span>
+            </h3>
+            <label class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+              <span>Nom de la structure <span class="text-warn">*</span></span>
+              <input type="text" formControlName="nom" autocomplete="off"
+                     [placeholder]="typeCourant.code === 'PS' ? 'Ex : Poste de santé de Médina' : 'Ex : Centre de santé de Mbour'"
+                     class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+              <span *ngIf="invalide('nom')" class="text-[12px] font-medium text-warn">Le nom est obligatoire.</span>
+            </label>
+          </section>
+
+          <!-- 3. Rattachement -->
+          <section>
+            <h3 class="m-0 mb-3 flex items-center gap-3 text-[12px] font-bold tracking-wide uppercase text-text-muted">
+              Rattachement <span class="flex-1 h-px bg-border-light"></span>
+            </h3>
+
+            <div class="space-y-4">
+              <!-- Poste : le centre d'abord — district et région en découlent -->
+              <label *ngIf="isPosteSante" class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Centre de rattachement <span class="text-warn">*</span></span>
+                <select formControlName="structureRattachementId"
+                        class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+                  <option value="" disabled>Choisir un centre de santé ou un EPS…</option>
+                  <option *ngFor="let s of structuresRattachement" [value]="s.id">
+                    {{ s.nom }} ({{ s.code }}){{ getDistrictNom(s.districtId) ? ' — ' + getDistrictNom(s.districtId) : '' }}
+                  </option>
+                </select>
+              </label>
+
+              <div *ngIf="districtDuCentre"
+                   class="flex items-center gap-3 p-3.5 rounded-lg bg-primary-light text-[13px] text-text-primary">
+                <mat-icon class="text-primary shrink-0">account_tree</mat-icon>
+                <span>
+                  District <strong>{{ getDistrictNom(centreChoisi?.districtId) }}</strong>
+                  <span class="text-text-secondary"> · région {{ getRegionNom(centreChoisi?.regionId || '') }}</span>
+                </span>
+              </div>
+
+              <!-- Centre de santé siège du district : il EST le district qui polarise ses postes.
+                   Sans district choisi, le district est créé à partir de ce centre. -->
+              <label *ngIf="estCentreSante" class="flex items-start gap-3 p-3 rounded-lg bg-field cursor-pointer">
+                <input type="checkbox" formControlName="siegeDistrict" class="mt-0.5 w-4 h-4 shrink-0 accent-[var(--primary)]">
+                <span class="flex flex-col gap-0.5">
+                  <span class="text-[13px] font-semibold text-text-primary">Siège du district</span>
+                  <span class="text-[12px] font-normal text-text-muted">
+                    Ce centre est le district : il polarise les postes de santé, fait la consolidation district
+                    et contrôle (validation, rejet, pointage) leurs factures. Inutile de le rattacher à un district :
+                    il est créé à partir de ce centre. Un seul siège par district. Le compte du centre doit se
+                    reconnecter pour en bénéficier.
+                  </span>
+                </span>
+              </label>
+
+              <div *ngIf="afficherDistrict" class="grid gap-4 sm:grid-cols-2">
+                <label *ngIf="!isServiceRegional" class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                  <span>Région <span class="text-warn">*</span></span>
+                  <select formControlName="regionId" class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+                    <option value="" disabled>Choisir une région…</option>
+                    <option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</option>
+                  </select>
+                </label>
+                <!-- District : sans lui, la structure n'apparaît dans aucune consolidation. -->
+                <label class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                  <span>{{ siegeCoche ? 'District existant (facultatif)' : 'District sanitaire' }} <span *ngIf="districtObligatoire" class="text-warn">*</span></span>
+                  <select formControlName="districtId" class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+                    <option value="">{{ siegeCoche ? '— Créer le district à partir de ce centre —' : (districtObligatoire ? 'Choisir un district…' : '— Aucun —') }}</option>
+                    <option *ngFor="let d of districtsDeLaRegion" [value]="d.id">{{ d.nom }}</option>
+                  </select>
+                  <span class="text-[12px] font-normal text-text-muted">{{ aideDistrict }}</span>
+                </label>
+              </div>
+
+
+              <label *ngIf="!isServiceRegional" class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Agent BCSU rattaché</span>
+                <select formControlName="bcsuId" class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+                  <option value="">— Aucun —</option>
+                  <option *ngFor="let u of bcsuUsers" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.email }})</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <!-- 4. Coordonnées -->
+          <section>
+            <h3 class="m-0 mb-3 flex items-center gap-3 text-[12px] font-bold tracking-wide uppercase text-text-muted">
+              Coordonnées <span class="flex-1 h-px bg-border-light"></span>
+            </h3>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Adresse</span>
+                <input type="text" formControlName="adresse" placeholder="Quartier, commune"
+                       class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+              </label>
+              <label class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Téléphone</span>
+                <input type="tel" formControlName="telephone" placeholder="77 000 00 00"
+                       class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+              </label>
+            </div>
+          </section>
+
+          <!-- 5. Accès de l'agent : l'email et le mot de passe sont les deux moitiés du même objet -->
+          <section>
+            <h3 class="m-0 mb-3 flex items-center gap-3 text-[12px] font-bold tracking-wide uppercase text-text-muted">
+              Accès de l'agent <span class="flex-1 h-px bg-border-light"></span>
+            </h3>
+            <div class="grid gap-4" [ngClass]="{ 'sm:grid-cols-2': !isEditMode }">
+              <label class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Email de connexion</span>
+                <input type="email" formControlName="email" placeholder="agent@sencsu.sn" autocomplete="off"
+                       class="h-11 w-full px-3 rounded-lg text-[14px] font-normal text-text-primary">
+                <span *ngIf="invalide('email')" class="text-[12px] font-medium text-warn">Adresse email invalide.</span>
+              </label>
+              <label *ngIf="!isEditMode" class="flex flex-col gap-1.5 text-[13px] font-semibold text-text-secondary">
+                <span>Mot de passe</span>
+                <span class="relative">
+                  <input [type]="voirMotDePasse ? 'text' : 'password'" formControlName="password" autocomplete="new-password"
+                         class="h-11 w-full pl-3 pr-11 rounded-lg text-[14px] font-normal text-text-primary">
+                  <button type="button" (click)="voirMotDePasse = !voirMotDePasse"
+                          class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 inline-flex items-center justify-center rounded-lg border-0 bg-transparent cursor-pointer text-text-muted hover:text-text-primary"
+                          [attr.aria-label]="voirMotDePasse ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+                    <mat-icon class="!text-[20px] !w-5 !h-5">{{ voirMotDePasse ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                </span>
+              </label>
+            </div>
+          </section>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" type="button" (click)="close()">Annuler</button>
-          <button class="btn btn-primary" type="submit" [disabled]="form.invalid">Enregistrer</button>
+
+        <div class="modal-footer !justify-between items-center">
+          <span class="hidden sm:inline text-[12px] text-text-muted"><span class="text-warn">*</span> Champs obligatoires</span>
+          <div class="flex gap-3 w-full sm:w-auto">
+            <button class="btn btn-outline" type="button" (click)="close()">Annuler</button>
+            <button class="btn btn-primary" type="submit">
+              <mat-icon>{{ isEditMode ? 'check' : 'add' }}</mat-icon>
+              {{ isEditMode ? 'Enregistrer' : 'Créer la structure' }}
+            </button>
+          </div>
         </div>
       </form>
-    </mat-card>
+    </div>
   </div>
 </div>

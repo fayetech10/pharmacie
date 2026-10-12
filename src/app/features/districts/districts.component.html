@@ -1,0 +1,170 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Districts sanitaires</h1>
+    </div>
+    <div class="page-head-actions flex items-center gap-2">
+      <input type="file" #fichierImport class="hidden" accept=".xlsx,.xls" (change)="importer($event)">
+      <button class="btn btn-outline" type="button" (click)="fichierImport.click()">
+        <mat-icon>upload_file</mat-icon> Importer Excel
+      </button>
+      <button class="btn btn-primary" type="button" (click)="nouveau()">
+        <mat-icon>add</mat-icon> Nouveau district
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-strip">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreRegion" (change)="charger()" [disabled]="!!regionImposee">
+      <option value="">Toutes les régions</option>
+      <option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</option>
+    </select>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="card" *ngIf="edition">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>account_tree</mat-icon></div>
+        <div>
+          <h2>{{ edition.id ? 'Modifier le district' : 'Nouveau district' }}</h2>
+          <p>Le rattachement à une région est obligatoire.</p>
+        </div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="grid gap-3 md:grid-cols-3">
+        <!-- Code attribué automatiquement ({RÉGION}DT{NN}) : jamais saisi, affiché une fois créé. -->
+        <div class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Code
+          <span *ngIf="edition.id" class="h-10 px-3 flex items-center rounded-lg bg-field font-mono font-semibold text-text-primary">{{ edition.code }}</span>
+          <span *ngIf="!edition.id" class="h-10 px-3 flex items-center rounded-lg bg-field text-[13px] font-normal text-text-muted">
+            Attribué automatiquement
+          </span>
+        </div>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary md:col-span-2">
+          Nom
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.nom" placeholder="Ex : District sanitaire Dakar Centre">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Région
+          <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                  [(ngModel)]="edition.regionId" [disabled]="!!regionImposee">
+            <option [ngValue]="undefined">— Choisir —</option>
+            <option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Téléphone
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.telephone">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Email
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="edition.email">
+        </label>
+      </div>
+
+      <!-- Création seulement : le district est aussi un centre de santé (il le polarise lui-même). -->
+      <div *ngIf="!edition.id" class="mt-4 flex flex-col gap-3">
+        <label class="flex items-start gap-3 p-3 rounded-lg bg-field cursor-pointer">
+          <input type="checkbox" [(ngModel)]="avecCentre" class="mt-0.5 w-4 h-4 shrink-0 accent-[var(--primary)]">
+          <span class="flex flex-col gap-0.5">
+            <span class="text-[13px] font-semibold text-text-primary">C'est aussi un centre de santé</span>
+            <span class="text-[12px] font-normal text-text-muted">
+              Crée en même temps le centre de santé, siège de ce district : il facture comme un centre et
+              exerce les fonctions du district (consolidation, contrôle des factures des postes). Son compte
+              de connexion sert pour les deux — aucun compte district séparé.
+            </span>
+          </span>
+        </label>
+        <label *ngIf="avecCentre" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary md:w-1/2">
+          Nom du centre de santé
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal"
+                 [(ngModel)]="nomCentre" [placeholder]="nomCentrePropose">
+          <span class="text-[12px] font-normal text-text-muted">Laissez vide pour « {{ nomCentrePropose }} ».</span>
+        </label>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-primary" type="button" (click)="enregistrer()" [disabled]="enregistrement">
+          <mat-icon>check</mat-icon> {{ enregistrement ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+        <button class="btn btn-ghost" type="button" (click)="annulerEdition()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card table-card">
+    <div class="section-body">
+      <div class="empty-state" *ngIf="!chargement && districts.length === 0">
+        <mat-icon>account_tree</mat-icon>
+        <p>Aucun district. Créez-en un ou importez la liste depuis un classeur Excel.</p>
+      </div>
+
+      <div *ngFor="let d of districts | paginer: pgD.page : pgD.taille; trackBy: trackDistrict"
+           class="border-b border-border-light last:border-0">
+        <div class="flex items-center gap-3 py-3 cursor-pointer" (click)="basculer(d)">
+          <mat-icon class="text-text-muted">
+            {{ estDeplie(d) ? 'expand_more' : 'chevron_right' }}
+          </mat-icon>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-[14px]">{{ d.nom }}</div>
+            <div class="text-[12.5px] text-text-secondary">
+              {{ d.code }} · {{ d.regionNom || 'Région non renseignée' }}
+            </div>
+          </div>
+          <span class="status-badge">{{ d.actif ? 'Actif' : 'Désactivé' }}</span>
+          <button class="btn btn-ghost btn-sm" type="button"
+                  (click)="modifier(d); $event.stopPropagation()" title="Modifier">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button class="btn btn-ghost btn-sm" type="button"
+                  (click)="acces(d); $event.stopPropagation()" title="Accès de connexion du district">
+            <mat-icon>key</mat-icon>
+          </button>
+          <button class="btn btn-ghost btn-sm" type="button"
+                  (click)="basculerActivation(d); $event.stopPropagation()"
+                  [title]="d.actif ? 'Désactiver' : 'Réactiver'">
+            <mat-icon>{{ d.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+          </button>
+        </div>
+
+        <!-- Structures rattachées : le périmètre que la consolidation couvrira -->
+        <div class="pl-9 pb-4" *ngIf="estDeplie(d)">
+          <div class="text-[12.5px] text-text-muted mb-2" *ngIf="structuresDe(d).length === 0">
+            Aucune structure rattachée à ce district.
+          </div>
+          <div class="overflow-x-auto" *ngIf="structuresDe(d).length > 0">
+            <table class="w-full border-collapse text-[13px]">
+              <thead>
+                <tr class="text-left text-text-secondary border-b border-border-light">
+                  <th class="py-1.5">Code</th>
+                  <th class="py-1.5">Structure</th>
+                  <th class="py-1.5">Type</th>
+                  <th class="py-1.5">Rattachée à</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of structuresDe(d) | paginer: pgSd.page : pgSd.taille" class="border-b border-border-light last:border-0">
+                  <td class="py-1.5 font-mono text-[12px]">{{ s.code }}</td>
+                  <td class="py-1.5">{{ s.nom }}</td>
+                  <td class="py-1.5">{{ s.typeStructure || '—' }}</td>
+                  <td class="py-1.5 text-text-secondary">{{ s.structureRattachementNom || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <app-pagination #pgSd [total]="structuresDe(d).length"></app-pagination>
+        </div>
+      </div>
+      <app-pagination #pgD [total]="districts.length"></app-pagination>
+    </div>
+  </div>
+
+</div>

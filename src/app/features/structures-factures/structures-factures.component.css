@@ -255,16 +255,42 @@
   margin-bottom: 20px;
 }
 
+/* En-tête de régime : bouton de pliage occupant toute la largeur.
+   Les régimes sont repliés par défaut — une structure peut en cumuler beaucoup,
+   chacun avec douze mois de factures. */
 .sf-regime-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  width: 100%;
   padding: 14px 18px;
   background: var(--primary-light);
-  border-bottom: 1px solid var(--primary-200);
+  border: 0;
+  border-bottom: 1px solid transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition);
 }
+.sf-regime-block.open .sf-regime-head { border-bottom-color: var(--primary-200); }
+.sf-regime-head:hover { background: var(--primary-100); }
+.sf-caret { color: var(--primary); }
+
+/* Barre « Tout déplier / replier » */
+.sf-expand-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.sf-expand-btn {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.sf-expand-btn:hover { text-decoration: underline; }
 
 .sf-regime-title {
   display: flex;
@@ -375,56 +401,3 @@
   }
 }
 
-/* ─── NOUVEAU: Pagination ─── */
-.sf-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: white;
-  border-top: 1px solid var(--border-light);
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-  box-shadow: var(--shadow-sm);
-}
-.sf-pagination-info {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-.sf-pagination-btns {
-  display: flex;
-  gap: 4px;
-}
-.sf-page-btn {
-  min-width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: white;
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-.sf-page-btn:hover:not(:disabled) {
-  background: var(--border-light);
-}
-.sf-page-btn.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-.sf-page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #F8FAFC;
-}
-.sf-page-btn mat-icon {
-  font-size: 18px !important;
-  width: 18px !important;
-  height: 18px !important;
-}

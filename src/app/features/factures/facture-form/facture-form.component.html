@@ -1,158 +1,339 @@
-<div class="ff-page fade-in">
+<div class="fade-in">
 
-  <!-- ===================== EN-TÊTE DE CONTEXTE ===================== -->
-  <header class="ff-head">
-    <div class="ff-head-text hidden md:block">
-      <h1>{{ facture ? ('Facture · ' + getMonthName(facture.mois) + ' ' + facture.annee) : 'Nouvelle facture du mois' }}</h1>
-      <p>Ajoutez un patient et ses médicaments, puis enregistrez. Répétez pour chaque patient.</p>
+  <a *ngIf="isEditMode && facture" [routerLink]="['/dashboard/factures', facture.id]"
+     class="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg no-underline">
+    <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Retour à la facture
+  </a>
+
+  <div class="page-head">
+    <div>
+      <h1>{{ isEditMode ? 'Corriger la facture' : 'Facturation pharmacie' }}</h1>
     </div>
-
-    <!-- Synthèse facture + envoi (visibles dès qu'il y a des lignes) -->
-    <div class="ff-head-summary" *ngIf="facture && factureLignesCount > 0">
-      <div class="ff-mini-stats">
-        <div class="ff-mini">
-          <span class="ff-mini-val">{{ facturePatientsCount }}</span>
-          <span class="ff-mini-lbl">patient(s)</span>
-        </div>
-        <div class="ff-mini">
-          <span class="ff-mini-val">{{ factureLignesCount }}</span>
-          <span class="ff-mini-lbl">ligne(s)</span>
-        </div>
-        <div class="ff-mini ff-mini--amount">
-          <span class="ff-mini-val">{{ facture.montantTotal | number:'1.0-0':'fr' }} F</span>
-          <span class="ff-mini-lbl">total</span>
-        </div>
-      </div>
-      <button class="btn btn-primary ff-send" (click)="envoyerFacture()">
+    <div class="page-head-actions" *ngIf="facture && factureLignesCount > 0">
+      <button type="button" class="btn btn-primary" (click)="envoyerFacture()">
         <mat-icon>send</mat-icon> Envoyer la facture
       </button>
     </div>
-  </header>
+  </div>
 
-  <div class="ff-layout-grid">
-    <div class="ff-layout-main">
-      <!-- ===================== CARTE DE SAISIE (3 ÉTAPES) ===================== -->
-      <div class="ff-card">
+  <!-- ═══════════ Bandeau : facture du mois et règle de prise en charge ═══════════ -->
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 py-3 px-4 rounded-lg border border-border bg-white">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <span class="w-9 h-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+        <mat-icon class="!text-xl !w-5 !h-5">local_pharmacy</mat-icon>
+      </span>
+      <div class="min-w-0">
+        <div class="text-[12px] text-text-secondary leading-tight">Facture du mois</div>
+        <div class="text-[14.5px] font-bold text-text-primary leading-tight">
+          {{ facture ? getMonthName(facture.mois) + ' ' + facture.annee : '…' }}
+        </div>
+      </div>
+    </div>
+    <app-status-badge *ngIf="facture?.statut as statut" [statut]="statut" famille="facture"></app-status-badge>
+    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-light text-primary text-[12px] font-semibold">
+      <mat-icon class="!text-sm !w-3.5 !h-3.5">shield</mat-icon>Prise en charge SEN-CSU 50 %
+    </span>
+    <span *ngIf="rattacheBon"
+          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold"
+          [ngClass]="bonLimitAtteinte ? 'bg-amber-50 text-amber-800' : 'bg-field text-text-secondary'">
+      <mat-icon class="!text-sm !w-3.5 !h-3.5">receipt_long</mat-icon>
+      <span class="font-mono">{{ rattacheBon.numero }}</span> · {{ lignesDisponibles - patientLignes.length }} ligne(s) disponible(s)
+    </span>
+    <span *ngIf="facture && factureLignesCount > 0" class="text-[12.5px] text-text-secondary sm:ml-auto">
+      {{ facturePatientsCount }} patient(s) · {{ factureLignesCount }} ligne(s) ·
+      <strong class="text-text-primary">{{ facture.montantTotal | number:'1.0-0':'fr' }} F</strong>
+    </span>
+  </div>
 
-    <!-- Mobile Stepper Progress Header -->
-    <div class="ff-stepper-progress md:hidden flex items-center justify-between px-6 py-4 border-b border-[var(--border-light)] bg-[var(--field-bg)]">
-      <span class="text-xs font-semibold text-[var(--text-secondary)]">Étape {{ currentStep }} sur 3</span>
-      <div class="flex gap-1">
-        <span class="w-8 h-1.5 rounded-full" [class.bg-[var(--primary)]]="currentStep >= 1" [class.bg-slate-200]="currentStep < 1"></span>
-        <span class="w-8 h-1.5 rounded-full" [class.bg-[var(--primary)]]="currentStep >= 2" [class.bg-slate-200]="currentStep < 2"></span>
-        <span class="w-8 h-1.5 rounded-full" [class.bg-[var(--primary)]]="currentStep >= 3" [class.bg-slate-200]="currentStep < 3"></span>
+  <!-- ═══════════ Étapes ═══════════ -->
+  <ol class="flex items-center gap-1 sm:gap-2 mb-4 overflow-x-auto pb-1 list-none p-0" aria-label="Étapes de la saisie">
+    <li *ngFor="let e of etapes; let i = index; let dernier = last" class="flex items-center gap-1 sm:gap-2 shrink-0">
+      <button type="button" (click)="allerA(i + 1)" [disabled]="!peutAller(i + 1)"
+              class="flex items-center gap-1.5 px-1 py-1 rounded-lg bg-transparent border-0 cursor-pointer disabled:cursor-default"
+              [attr.aria-current]="i + 1 === currentStep ? 'step' : null">
+        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11.5px] font-bold shrink-0"
+              [ngClass]="i + 1 < currentStep ? 'bg-primary text-white'
+                : i + 1 === currentStep ? 'bg-primary-light text-primary ring-2 ring-primary-200' : 'bg-field text-text-muted'">
+          <mat-icon *ngIf="i + 1 < currentStep" class="!text-sm !w-3.5 !h-3.5">check</mat-icon>
+          <ng-container *ngIf="i + 1 >= currentStep">{{ i + 1 }}</ng-container>
+        </span>
+        <span class="text-[12.5px] font-semibold whitespace-nowrap"
+              [ngClass]="i + 1 === currentStep ? 'inline text-text-primary' : 'hidden sm:inline text-text-secondary'">{{ e }}</span>
+      </button>
+      <span *ngIf="!dernier" class="w-4 sm:w-8 h-px bg-border"></span>
+    </li>
+  </ol>
+
+  <!-- ═══════════ 1. Patient ═══════════ -->
+  <div *ngIf="currentStep === 1" class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>badge</mat-icon></div>
+        <div>
+          <h2>Identification du patient</h2>
+        </div>
       </div>
     </div>
 
-    <!-- ÉTAPE 1 — MÉDICAMENTS -->
-    <section class="ff-step" [class.hidden]="currentStep !== 1" class="md:block ff-step">
-      <div class="ff-step-head">
-        <span class="ff-step-num">1</span>
-        <div class="ff-step-titles">
-          <h2>Médicaments</h2>
-          <p>Recherchez, ajustez la quantité, puis ajoutez</p>
-        </div>
-        <span class="ff-count" *ngIf="patientLignes.length">{{ patientLignes.length }}</span>
+    <div class="section-body flex flex-col gap-4">
+
+      <!-- Confirmation du patient précédent -->
+      <div *ngIf="dernierEnregistrement" role="status"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg bg-success-light text-success text-[13.5px]">
+        <mat-icon class="shrink-0">task_alt</mat-icon>
+        <span class="flex-1 min-w-0">
+          <strong class="block">Patient enregistré{{ dernierEnregistrement.nom ? ' : ' + dernierEnregistrement.nom : '' }}</strong>
+          {{ dernierEnregistrement.lignes }} médicament(s) pour {{ dernierEnregistrement.total | number:'1.0-0':'fr' }} F
+          ont rejoint la facture. Saisissez le patient suivant.
+        </span>
+        <button type="button" (click)="dernierEnregistrement = null" aria-label="Masquer"
+                class="w-8 h-8 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-success hover:bg-white/60">
+          <mat-icon class="!text-lg !w-[18px] !h-[18px]">close</mat-icon>
+        </button>
       </div>
 
-      <!-- Recherche de Bon de Commande : affiche le bon (lignes vides) comme le formulaire papier -->
-      <div class="ff-grid-1 mb-6 border-b border-[var(--border-light)] pb-4">
-        <div class="ff-field" *ngIf="!rattacheBon">
-          <label class="ff-label">Scanner le QR code du Bon de Commande ou saisir son numéro (BC)</label>
-          <div class="flex gap-2">
-            <input type="text" class="ff-input" placeholder="Ex: BC-DKCS01-001-26" [(ngModel)]="searchBcNumero" (keyup.enter)="rechercherEtPrefiltrerBon(searchBcNumero)">
-            <button type="button" class="btn btn-outline" (click)="rechercherEtPrefiltrerBon(searchBcNumero)">
-              <mat-icon>search</mat-icon> Rechercher
-            </button>
-            <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
+      <!-- Recherche du bon de commande -->
+      <form *ngIf="!rattacheBon" (ngSubmit)="rechercherEtPrefiltrerBon(searchBcNumero)"
+            class="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <label class="flex flex-col gap-1 flex-1 text-[13px] font-semibold text-text-secondary">
+          N° du bon de commande <span class="font-normal text-text-muted">(facultatif)</span>
+          <input name="numeroBon" [(ngModel)]="searchBcNumero" autocomplete="off" autocapitalize="characters"
+                 placeholder="Ex. BC-DKCS01-0001"
+                 class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-mono tracking-wide uppercase text-text-primary">
+        </label>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary h-12 flex-1 sm:flex-none">
+            <mat-icon>search</mat-icon> Rechercher
+          </button>
+          <app-qr-scanner (scanned)="onQrScanne($event)"></app-qr-scanner>
+        </div>
+      </form>
+
+      <!-- Bon de commande rattaché -->
+      <div *ngIf="rattacheBon" class="rounded-lg border border-primary-200 bg-primary-light p-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <mat-icon class="text-primary shrink-0">receipt_long</mat-icon>
+          <div class="min-w-0 flex-1">
+            <strong class="block text-[14.5px] text-text-primary">
+              Bon de commande <span class="font-mono">{{ rattacheBon.numero }}</span>
+            </strong>
+            <span class="block text-[12.5px] text-text-secondary">Médicaments du circuit d'officine — prise en charge 50 %</span>
           </div>
+          <button type="button" class="btn btn-sm btn-outline" (click)="detacherBon()">
+            <mat-icon>link_off</mat-icon> Détacher
+          </button>
         </div>
-
-
+        <dl class="grid gap-x-6 sm:grid-cols-2 m-0 mt-3">
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Date d'émission</dt>
+            <dd class="m-0 font-semibold text-right">{{ rattacheBon.createdAt | date:'dd/MM/yyyy' }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Bénéficiaire</dt>
+            <dd class="m-0 font-semibold text-right">{{ rattacheBon.patientPrenom }} {{ rattacheBon.patientNom }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Régime</dt>
+            <dd class="m-0 font-semibold text-right">{{ regimeLabels[rattacheBon.regime] }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Lettre de garantie</dt>
+            <dd class="m-0 font-semibold font-mono text-right">{{ rattacheBon.lettreGarantieNumero }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Prise en charge CSU</dt>
+            <dd class="m-0 font-semibold text-right text-primary">{{ rattacheBon.montantTotalSencsu | number:'1.0-0':'fr' }} F</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-2 border-b border-primary-200 text-[13.5px]">
+            <dt class="text-text-secondary">Lignes du bon</dt>
+            <dd class="m-0 font-semibold text-right">
+              {{ (rattacheBon.lignesUtilisees ?? 0) + patientLignes.length }} / {{ rattacheBon.nombreLignes }} utilisée(s)
+            </dd>
+          </div>
+        </dl>
+        <p *ngIf="(rattacheBon.lignesUtilisees ?? 0) > 0" class="flex items-start gap-1.5 m-0 mt-2 text-[12.5px] text-text-secondary">
+          <mat-icon class="!text-base !w-4 !h-4 shrink-0">info</mat-icon>
+          {{ rattacheBon.lignesUtilisees }} ligne(s) déjà servie(s) dans une autre pharmacie —
+          {{ lignesDisponibles }} disponible(s) ici.
+        </p>
       </div>
 
-      <!-- Ligne d'ajout de médicament -->
-      <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()" class="ff-add">
-        <div class="ff-field ff-add-med">
-          <label class="ff-label" for="ff-med">Médicament</label>
-          <div class="ff-input-clear">
-            <input id="ff-med" type="text" class="ff-input" formControlName="medicament"
+      <!-- Identité du patient -->
+      <form [formGroup]="patientForm" class="grid gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          <span>Nom et prénom <span class="text-warn">*</span></span>
+          <input formControlName="patientNomPrenom" autocomplete="name" placeholder="Ex. Ousmane Diop"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-base md:text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          <span>Numéro matricule <span class="text-warn">*</span></span>
+          <input formControlName="patientMatricule" autocomplete="off" placeholder="Ex. PAT-2026-987"
+                 (blur)="onMatriculeBlur()"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-base md:text-[14px] font-mono font-normal text-text-primary">
+        </label>
+      </form>
+
+      <div class="flex flex-wrap justify-between gap-3 mt-2">
+        <span class="flex-1"></span>
+        <button type="button" class="btn btn-primary" (click)="nextStep()" [disabled]="!canGoNext()">
+          Médicaments <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 2. Médicaments ═══════════ -->
+  <div *ngIf="currentStep === 2" class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>medication</mat-icon></div>
+        <div>
+          <h2>Médicaments</h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+
+      <!-- Toutes les lignes disponibles du bon sont remplies -->
+      <div *ngIf="bonLimitAtteinte" role="alert"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">warning_amber</mat-icon>
+        <div>
+          <strong class="block">Toutes les lignes disponibles de ce bon sont remplies</strong>
+          Aucun autre médicament ne peut être ajouté. Si le patient a besoin d'autres médicaments, il peut se rendre
+          dans une autre pharmacie avec ce bon de commande.
+        </div>
+      </div>
+
+      <!-- Saisie d'un médicament -->
+      <form [formGroup]="medicamentForm" (ngSubmit)="ajouterMedicamentLigne()"
+            class="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1fr)_auto_140px_auto] md:items-end">
+        <div class="col-span-2 md:col-span-1 flex flex-col gap-1 min-w-0">
+          <label for="ff-med" class="text-[13px] font-semibold text-text-secondary">Médicament</label>
+          <div class="relative">
+            <input id="ff-med" type="text" formControlName="medicament"
                    (input)="onMedicamentInput($event)" (focus)="onMedicamentFocus()"
                    (blur)="onMedicamentBlur()" (keydown)="onMedicamentKeydown($event)"
                    role="combobox" aria-autocomplete="list" [attr.aria-expanded]="showSuggestions"
                    autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
-                   style="text-transform: uppercase;" placeholder="Rechercher un médicament…"
-                   [readonly]="isMedicamentSelected">
-            <button type="button" class="ff-clear" *ngIf="isMedicamentSelected"
-                    (click)="clearMedicamentSelection()" aria-label="Effacer la sélection">
-              <mat-icon>close</mat-icon>
+                   placeholder="Rechercher un médicament…" [readonly]="isMedicamentSelected"
+                   class="w-full h-11 pl-3 pr-10 rounded-lg border border-border bg-field-bg text-base md:text-[14px] uppercase text-text-primary">
+            <button type="button" *ngIf="isMedicamentSelected" (click)="clearMedicamentSelection()"
+                    aria-label="Effacer la sélection"
+                    class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-text-muted hover:bg-warn-light hover:text-warn">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">close</mat-icon>
             </button>
 
-            <!-- Suggestions inline : pas d'overlay CDK → aucun bug de clavier/tap sur iPhone -->
-            <ul class="ff-suggest" *ngIf="showSuggestions && suggestions.length > 0" role="listbox">
+            <!-- Suggestions inline, au-dessus du champ : pas d'overlay CDK, pas d'occlusion par le clavier sur iPhone -->
+            <ul *ngIf="showSuggestions && suggestions.length > 0" role="listbox"
+                class="absolute left-0 right-0 bottom-[calc(100%_+_4px)] z-50 m-0 p-1 list-none max-h-[240px] overflow-y-auto rounded-lg border border-border bg-white shadow-lg">
               <li *ngFor="let med of suggestions; let i = index" role="option" [attr.aria-selected]="i === activeIndex">
-                <button type="button" class="ff-suggest-item" [class.active]="i === activeIndex"
-                        (mousedown)="$event.preventDefault()" (click)="selectMedicament(med)">
-                  <span class="ff-suggest-name">{{ med.nom }}</span>
-                  <span *ngIf="med.statut === 'EXCLU'" class="ff-suggest-tag">Non éligible</span>
-                  <span *ngIf="med.statut === 'NON_REPERTORIE'" class="ff-suggest-tag ff-suggest-tag--nr">À valider</span>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="selectMedicament(med)"
+                        class="flex items-center gap-2 w-full py-2.5 px-3 rounded-md border-0 text-left text-[14px] font-medium text-text-primary cursor-pointer hover:bg-primary-light active:bg-primary-light"
+                        [ngClass]="i === activeIndex ? 'bg-primary-light' : 'bg-transparent'">
+                  <span class="flex-1 min-w-0 uppercase break-words">{{ med.nom }}</span>
+                  <span *ngIf="med.statut === 'EXCLU'"
+                        class="shrink-0 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold">Non éligible</span>
+                  <span *ngIf="med.statut === 'NON_REPERTORIE'"
+                        class="shrink-0 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">À valider</span>
                 </button>
               </li>
             </ul>
           </div>
-          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('exclu')">
+          <span *ngIf="medicamentForm.get('medicament')?.hasError('exclu')" class="text-[12px] font-semibold text-warn">
             Ce médicament n'est pas éligible.
-          </div>
-          <div class="ff-err" *ngIf="medicamentForm.get('medicament')?.hasError('notFound') && !medicamentNonRepertorie">
-            Saisissez au moins 2 caractères, puis sélectionnez un médicament de la liste.
-          </div>
+          </span>
+          <span *ngIf="medicamentForm.get('medicament')?.hasError('notFound') && !medicamentNonRepertorie"
+                class="text-[12px] text-text-secondary">
+            Saisissez au moins 2 caractères, puis choisissez un médicament de la liste.
+          </span>
         </div>
 
-        <div class="ff-field ff-add-qty">
-          <label class="ff-label">Quantité</label>
-          <div class="ff-stepper">
-            <button type="button" class="ff-step-btn" (click)="adjustQuantite(-1)" aria-label="Diminuer la quantité">
-              <mat-icon>remove</mat-icon>
+        <div class="flex flex-col gap-1">
+          <span class="text-[13px] font-semibold text-text-secondary">Quantité</span>
+          <div class="flex items-stretch h-11 rounded-lg border border-border bg-white overflow-hidden">
+            <button type="button" (click)="adjustQuantite(-1)" aria-label="Diminuer la quantité"
+                    class="w-11 inline-flex items-center justify-center bg-field border-0 cursor-pointer text-primary hover:bg-primary-light">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">remove</mat-icon>
             </button>
-            <input type="number" class="ff-input ff-qty-input" formControlName="quantite"
-                   inputmode="numeric" min="1" aria-label="Quantité">
-            <button type="button" class="ff-step-btn" (click)="adjustQuantite(1)" aria-label="Augmenter la quantité">
-              <mat-icon>add</mat-icon>
+            <input type="number" formControlName="quantite" inputmode="numeric" min="1" aria-label="Quantité"
+                   class="w-14 min-w-0 flex-1 md:flex-none text-center !rounded-none text-base md:text-[14px] font-semibold text-text-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+            <button type="button" (click)="adjustQuantite(1)" aria-label="Augmenter la quantité"
+                    class="w-11 inline-flex items-center justify-center bg-field border-0 cursor-pointer text-primary hover:bg-primary-light">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">add</mat-icon>
             </button>
           </div>
         </div>
 
-        <div class="ff-field ff-add-prix">
-          <label class="ff-label" for="ff-prix">Prix unit.</label>
-          <div class="ff-input-suffix">
-            <input id="ff-prix" type="number" class="ff-input" formControlName="prixUnitaire"
-                   inputmode="numeric" min="0" placeholder="0">
-            <span class="ff-suffix">F</span>
-          </div>
-        </div>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Prix unitaire
+          <span class="relative">
+            <input type="number" formControlName="prixUnitaire" inputmode="numeric" min="0" placeholder="0"
+                   class="w-full h-11 pl-3 pr-8 rounded-lg border border-border bg-field-bg text-base md:text-[14px] font-normal text-right text-text-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-text-muted pointer-events-none">F</span>
+          </span>
+        </label>
 
-        <button class="btn btn-primary ff-add-btn" type="submit" [disabled]="medicamentForm.invalid || bonLimitAtteinte">
+        <button type="submit" class="btn btn-primary h-11 col-span-2 md:col-span-1"
+                [disabled]="medicamentForm.invalid || bonLimitAtteinte">
           <mat-icon>add</mat-icon> Ajouter
         </button>
       </form>
 
-      <!-- Équivalences : mêmes DCI, le moins cher en premier -->
-      <div class="ff-equiv" *ngIf="equivalents.length > 0">
-        <div class="ff-equiv-head">
-          <mat-icon>swap_horiz</mat-icon>
-          <span class="ff-equiv-title">Équivalences</span>
-          <span class="ff-equiv-sub">même molécule — le moins cher en premier</span>
+      <!-- Médicament exclu : blocage -->
+      <div *ngIf="excludedInfo" role="alert" class="p-4 rounded-lg border-2 border-red-300 bg-red-50 text-red-800">
+        <div class="flex items-start gap-3">
+          <mat-icon class="shrink-0">block</mat-icon>
+          <div class="min-w-0 text-[13px]">
+            <strong class="block text-[14px]">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</strong>
+            <span class="block mt-1"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
+            <span *ngIf="excludedInfo.description" class="block"><strong>Description :</strong> {{ excludedInfo.description }}</span>
+          </div>
         </div>
-        <ul class="ff-equiv-list">
+      </div>
+
+      <!-- Médicament non répertorié : l'avertissement complet (contrôle SEN-CSU, classes exclues)
+           est présenté dans la modale de confirmation ouverte par ce bouton. -->
+      <div *ngIf="medicamentNonRepertorie && !excludedInfo"
+           class="flex flex-wrap items-center gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">new_releases</mat-icon>
+        <span class="flex-1 min-w-[200px]">
+          « {{ medicamentNonRepertorie }} » n'est pas répertorié. Vous pouvez l'ajouter : il sera signalé à la SEN-CSU pour validation.
+        </span>
+        <button type="button" class="btn btn-sm btn-warning" (click)="ajouterMedicamentNonRepertorie()"
+                [disabled]="medicamentForm.get('quantite')?.invalid || medicamentForm.get('prixUnitaire')?.invalid || bonLimitAtteinte">
+          <mat-icon>add_circle</mat-icon> Ajouter comme non répertorié
+        </button>
+      </div>
+
+      <!-- Quantité ≥ 2 : rappel du traitement mensuel -->
+      <div *ngIf="medicamentForm.get('quantite')?.value >= 2"
+           class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0 !text-xl !w-5 !h-5">info</mat-icon>
+        <span><strong>Plus d'une boîte :</strong> vérifiez le respect du traitement mensuel.</span>
+      </div>
+
+      <!-- Équivalences : même molécule, la moins chère en premier -->
+      <div *ngIf="equivalents.length > 0" class="rounded-lg border border-border bg-white overflow-hidden">
+        <div class="flex flex-wrap items-center gap-2 py-2.5 px-4 bg-field border-b border-border">
+          <mat-icon class="text-primary !text-lg !w-[18px] !h-[18px]">swap_horiz</mat-icon>
+          <strong class="text-[13.5px]">Équivalences</strong>
+          <span class="text-[12px] text-text-secondary">même molécule — la moins chère en premier</span>
+        </div>
+        <ul class="list-none m-0 p-0 divide-y divide-border-light">
           <li *ngFor="let e of equivalents; let first = first">
-            <button type="button" class="ff-equiv-item" (click)="choisirEquivalent(e)"
-                    [attr.aria-label]="'Choisir ' + e.nom">
-              <span class="ff-equiv-name">
-                {{ e.nom }}
-                <span class="ff-equiv-badge" *ngIf="first && e.prixReference != null">le moins cher</span>
+            <button type="button" (click)="choisirEquivalent(e)" [attr.aria-label]="'Choisir ' + e.nom"
+                    class="flex items-center gap-3 w-full py-2.5 px-4 bg-transparent border-0 text-left cursor-pointer hover:bg-field">
+              <span class="flex-1 min-w-0">
+                <span class="block text-[13.5px] font-semibold text-text-primary">
+                  {{ e.nom }}
+                  <span *ngIf="first && e.prixReference != null"
+                        class="inline-block ml-1.5 px-2 py-0.5 rounded-full bg-success-light text-success text-[11px] font-bold">la moins chère</span>
+                </span>
+                <span *ngIf="e.dci" class="block text-[12px] text-text-secondary">{{ e.dci }}</span>
               </span>
-              <span class="ff-equiv-dci" *ngIf="e.dci">{{ e.dci }}</span>
-              <span class="ff-equiv-prix">
+              <span class="shrink-0 text-[13px] font-bold whitespace-nowrap">
                 {{ e.prixReference != null ? (e.prixReference | number:'1.0-0':'fr') + ' F' : 'Prix non renseigné' }}
               </span>
             </button>
@@ -160,278 +341,250 @@
         </ul>
       </div>
 
-      <!-- Alerte médicament exclu -->
-      <div class="ff-alert ff-alert--danger" *ngIf="excludedInfo">
-        <mat-icon>block</mat-icon>
-        <div>
-          <span class="ff-alert-title">« {{ excludedInfo.nom }} » est exclu de la couverture CSU</span>
-          <span class="ff-alert-line"><strong>Motif :</strong> {{ excludedInfo.motif || 'Non précisé' }}</span>
-          <span class="ff-alert-line" *ngIf="excludedInfo.description"><strong>Description :</strong> {{ excludedInfo.description }}</span>
-        </div>
+      <!-- Médicaments préparés pour ce patient -->
+      <div *ngIf="patientLignes.length === 0"
+           class="flex flex-col items-center gap-2 py-8 rounded-lg border border-dashed border-border bg-field text-center text-text-muted">
+        <mat-icon class="!text-[30px] !w-[30px] !h-[30px]">medication</mat-icon>
+        <span class="text-[13px] text-text-secondary">Aucun médicament ajouté pour ce patient.</span>
       </div>
 
-      <!-- Médicament non répertorié : l'avertissement complet (contrôle SEN-CSU, classes
-           exclues) est présenté dans une MODALE de confirmation — le pharmacien clique sur
-           « Confirmer » pour l'ajouter. Ici, uniquement le bouton déclencheur. -->
-      <div class="ff-nr-prompt" *ngIf="medicamentNonRepertorie && !excludedInfo">
-        <button type="button" class="btn btn-primary ff-nr-add"
-                (click)="ajouterMedicamentNonRepertorie()"
-                [disabled]="medicamentForm.get('quantite')?.invalid || medicamentForm.get('prixUnitaire')?.invalid || bonLimitAtteinte">
-          <mat-icon>add_circle</mat-icon>
-          Ajouter « {{ medicamentNonRepertorie }} » (non répertorié)
-        </button>
-      </div>
-
-      <!-- Avertissement limite mensuelle quantité >= 2 -->
-      <div class="ff-alert ff-alert--warn" *ngIf="medicamentForm.get('quantite')?.value >= 2">
-        <mat-icon>warning</mat-icon>
-        <div>
-          <span class="ff-alert-title">Limite mensuelle atteinte ou dépassée</span>
-          <span class="ff-alert-line">Plus d'une boite : Vérifier le respect du traitement mensuel.</span>
-        </div>
-      </div>
-
-      <!-- État vide -->
-      <div class="ff-empty" *ngIf="patientLignes.length === 0">
-        <mat-icon>medication</mat-icon>
-        <p>Aucun médicament ajouté pour ce patient</p>
-      </div>
-
-      <!-- Liste des médicaments préparés (cartes : zéro scroll horizontal) -->
-      <div class="ff-lines" *ngIf="patientLignes.length > 0">
-        <div class="ff-line" *ngFor="let pl of patientLignes; let i = index">
-          <div class="ff-line-main">
-            <span class="ff-line-name">{{ pl.medicament }}</span>
-            <span class="ff-line-meta">{{ pl.quantite }} × {{ pl.prixUnitaire | number:'1.0-0':'fr' }} F</span>
-            <span class="ligne-tag tag-nr" *ngIf="pl.ajouteParPharmacien">Non répertorié · à valider SEN-CSU</span>
+      <ul *ngIf="patientLignes.length > 0"
+          class="list-none m-0 p-0 rounded-lg border border-border divide-y divide-border-light overflow-hidden">
+        <li *ngFor="let pl of patientLignes; let i = index" class="flex items-center gap-3 py-2.5 px-3 bg-white">
+          <div class="flex-1 min-w-0">
+            <span class="block text-[14px] font-bold text-text-primary break-words">{{ pl.medicament }}</span>
+            <span class="block text-[12.5px] text-text-secondary">{{ pl.quantite }} × {{ pl.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+            <span *ngIf="pl.ajouteParPharmacien"
+                  class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11.5px] font-semibold">
+              <mat-icon class="!text-sm !w-3.5 !h-3.5">new_releases</mat-icon> Non répertorié · à valider SEN-CSU
+            </span>
           </div>
-          <div class="ff-line-amounts">
-            <strong class="ff-line-total">{{ pl.quantite * pl.prixUnitaire | number:'1.0-0':'fr' }} F</strong>
-            <span class="ff-line-split">CSU {{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }} F</span>
+          <div class="shrink-0 text-right">
+            <span class="block text-[14.5px] font-bold text-text-primary">{{ pl.quantite * pl.prixUnitaire | number:'1.0-0':'fr' }} F</span>
+            <span class="block text-[11.5px] font-semibold text-primary">SEN-CSU {{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }} F</span>
           </div>
-          <button class="ff-edit" type="button" (click)="modifierMedicamentTemp(i)"
-                  matTooltip="Modifier ce médicament" aria-label="Modifier ce médicament">
+          <button type="button" (click)="modifierMedicamentTemp(i)" matTooltip="Modifier ce médicament"
+                  aria-label="Modifier ce médicament"
+                  class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-text-muted hover:bg-primary-light hover:text-primary">
             <mat-icon>edit</mat-icon>
           </button>
-          <button class="ff-del" type="button" (click)="retirerMedicamentTemp(i)" aria-label="Retirer ce médicament">
-            <mat-icon>delete</mat-icon>
+          <button type="button" (click)="retirerMedicamentTemp(i)" aria-label="Retirer ce médicament"
+                  class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-text-muted hover:bg-warn-light hover:text-warn">
+            <mat-icon>delete_outline</mat-icon>
           </button>
-        </div>
+        </li>
+      </ul>
 
-        <!-- Total courant du patient -->
-        <div class="ff-line-foot">
-          <span>Total patient</span>
-          <div class="ff-line-foot-amounts">
-            <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>
-            <span>dont CSU {{ patientCsu | number:'1.0-0':'fr' }} F</span>
-          </div>
-        </div>
+      <ng-container *ngTemplateOutlet="totaux"></ng-container>
+
+      <div class="flex flex-wrap justify-between gap-3 mt-2">
+        <button type="button" class="btn btn-outline" (click)="prevStep()">
+          <mat-icon>arrow_back</mat-icon> Patient
+        </button>
+        <span class="flex-1"></span>
+        <button type="button" class="btn btn-primary" (click)="nextStep()" [disabled]="!canGoNext()">
+          Dossier et validation <mat-icon>arrow_forward</mat-icon>
+        </button>
       </div>
-    </section>
-
-    <!-- ÉTAPE 2 — PATIENT -->
-    <section class="ff-step" [class.hidden]="currentStep !== 2" class="md:block ff-step">
-      <div class="ff-step-head">
-        <span class="ff-step-num">2</span>
-        <div class="ff-step-titles">
-          <h2>Patient</h2>
-          <p>Identité du bénéficiaire CSU</p>
-        </div>
-      </div>
-      <form [formGroup]="patientForm" class="ff-grid-2">
-        <div class="ff-field">
-          <label class="ff-label" for="ff-nom">Nom &amp; prénom <span class="ff-req">*</span></label>
-          <input id="ff-nom" type="text" class="ff-input" formControlName="patientNomPrenom"
-                 autocomplete="name" placeholder="Ex : Diop Ousmane">
-        </div>
-        <div class="ff-field">
-          <label class="ff-label" for="ff-mat">Numéro matricule <span class="ff-req">*</span></label>
-          <input id="ff-mat" type="text" class="ff-input" formControlName="patientMatricule"
-                 placeholder="Ex : PAT-2026-987" (blur)="onMatriculeBlur()">
-        </div>
-      </form>
-    </section>
-
-    <!-- ÉTAPE 3 — DOSSIER (repliable) -->
-    <section class="ff-step ff-step--collapsible" [class.hidden]="currentStep !== 3" class="md:block ff-step ff-step--collapsible">
-      <button type="button" class="ff-step-head ff-step-toggle" (click)="toggleDossier()"
-              [attr.aria-expanded]="dossierOpen">
-        <span class="ff-step-num">3</span>
-        <div class="ff-step-titles">
-          <h2>Dossier du patient</h2>
-          <p>Pièces justificatives — optionnel</p>
-        </div>
-        <span class="ff-count ff-count--soft" *ngIf="photosCount">{{ photosCount }}/3</span>
-        <mat-icon class="ff-chevron" [class.open]="dossierOpen">expand_more</mat-icon>
-      </button>
-
-      <div class="ff-dossier" *ngIf="dossierOpen">
-        <p class="ff-dossier-hint" *ngIf="!bonCommandeAuto">Prenez en photo les pièces (appareil photo ou fichier).</p>
-        <p class="ff-dossier-hint" *ngIf="bonCommandeAuto">Le bon de commande est constitué automatiquement — ajoutez seulement le ticket de caisse et l'ordonnance.</p>
-
-        <!-- Bon de commande constitué automatiquement depuis le bon rattaché (pas de photo à prendre) -->
-        <div class="ff-bc-auto" *ngIf="bonCommandeAuto && photos.bonCommande">
-          <div class="ff-bc-auto-head">
-            <mat-icon>task_alt</mat-icon>
-            <div class="ff-bc-auto-titles">
-              <span class="ff-bc-auto-title">Bon de commande — constitué automatiquement</span>
-              <span class="ff-bc-auto-sub">Depuis {{ rattacheBonNumero }} · aucune photo à prendre</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ff-photos">
-          <div class="ff-photo" *ngFor="let p of manualPhotoFields">
-            <span class="ff-photo-label">{{ p.label }}</span>
-            <div class="ff-photo-drop" *ngIf="!photos[p.key]; else preview">
-              <input type="file" accept="image/*" capture="environment" hidden
-                     #photoInput (change)="onPhotoSelected(p.key, $event)">
-              <button type="button" class="ff-photo-btn" (click)="photoInput.click()">
-                <mat-icon>photo_camera</mat-icon>
-                <span>Prendre une photo</span>
-              </button>
-            </div>
-            <ng-template #preview>
-              <div class="ff-photo-preview">
-                <img [src]="photos[p.key]" [alt]="p.label" (click)="openViewer(photos[p.key]!)">
-                <button type="button" class="ff-photo-remove" (click)="removePhoto(p.key)" aria-label="Supprimer la photo">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-            </ng-template>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Mobile Navigation Actions (Wizard controls) -->
-    <div class="ff-stepper-actions md:hidden flex items-center justify-between px-6 py-4 border-t border-[var(--border-light)] bg-[var(--field-bg)]">
-      <button type="button" class="btn btn-outline" (click)="prevStep()" [disabled]="currentStep === 1">
-        <mat-icon>arrow_back</mat-icon> Retour
-      </button>
-      <button type="button" class="btn btn-primary" (click)="nextStep()" *ngIf="currentStep < 3" [disabled]="!canGoNext()">
-        Suivant <mat-icon>arrow_forward</mat-icon>
-      </button>
-    </div>
-
-    <!-- ACTION PRINCIPALE : enregistrer le patient.
-         Desktop : toujours visible (toutes les étapes sont affichées d'un bloc).
-         Mobile  : visible uniquement à l'étape 3 du wizard. -->
-    <div class="ff-commit" [class.ff-commit--active]="currentStep === 3">
-      <div class="ff-commit-total" *ngIf="patientLignes.length > 0">
-        <span class="ff-commit-cap">Total patient</span>
-        <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong>
-      </div>
-      <button class="btn btn-primary ff-commit-btn"
-              [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting"
-              (click)="enregistrerPatientFacture()">
-        <mat-icon *ngIf="!isSubmitting">person_add</mat-icon>
-        <mat-icon *ngIf="isSubmitting" class="ff-spin">autorenew</mat-icon>
-        {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer ce patient' }}
-      </button>
     </div>
   </div>
 
-  <!-- ===================== LIGNES DÉJÀ ENREGISTRÉES (correction) ===================== -->
-  <div class="ff-card" *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0">
-    <div class="ff-step-head ff-step-head--plain">
-      <div class="ff-step-titles">
-        <h2>Lignes de la facture</h2>
-        <p>{{ facture.lignes.length }} ligne(s) enregistrée(s)</p>
+  <!-- ═══════════ 3. Dossier et validation ═══════════ -->
+  <div *ngIf="currentStep === 3" class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>fact_check</mat-icon></div>
+        <div>
+          <h2>Dossier et validation</h2>
+        </div>
       </div>
     </div>
 
-    <div class="ff-alert ff-alert--warn" *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'">
-      <mat-icon>build</mat-icon>
+    <div class="section-body flex flex-col gap-5">
+      <div class="grid gap-x-6 sm:grid-cols-2">
+        <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Patient</span>
+          <strong class="text-right">{{ patientForm.get('patientNomPrenom')?.value }}</strong>
+        </div>
+        <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Matricule</span>
+          <strong class="font-mono">{{ patientForm.get('patientMatricule')?.value }}</strong>
+        </div>
+        <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Bon de commande</span>
+          <strong class="font-mono">{{ rattacheBonNumero || '—' }}</strong>
+        </div>
+        <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
+          <span class="text-text-secondary">Médicaments</span>
+          <strong>{{ patientLignes.length }}</strong>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-[13.5px] border-collapse">
+          <thead>
+            <tr class="text-left text-[11.5px] uppercase tracking-wide text-text-secondary border-b border-border">
+              <th class="py-2 pr-2">Médicament</th>
+              <th class="py-2 px-2 text-center">Qté</th>
+              <th class="py-2 px-2 text-right">Prix</th>
+              <th class="py-2 px-2 text-right">Montant</th>
+              <th class="py-2 px-2 text-right">SEN-CSU</th>
+              <th class="py-2 pl-2 text-right">Patient</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pl of patientLignes" class="border-b border-border-light">
+              <td class="py-2 pr-2">
+                {{ pl.medicament }}
+                <span *ngIf="pl.ajouteParPharmacien" class="block text-[11.5px] text-amber-800">Non répertorié — à valider SEN-CSU</span>
+              </td>
+              <td class="py-2 px-2 text-center">{{ pl.quantite }}</td>
+              <td class="py-2 px-2 text-right">{{ pl.prixUnitaire | number:'1.0-0':'fr' }}</td>
+              <td class="py-2 px-2 text-right font-semibold">{{ pl.quantite * pl.prixUnitaire | number:'1.0-0':'fr' }}</td>
+              <td class="py-2 px-2 text-right">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+              <td class="py-2 pl-2 text-right">{{ (pl.quantite * pl.prixUnitaire) / 2 | number:'1.0-0':'fr' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-container *ngTemplateOutlet="totaux"></ng-container>
+
+      <!-- Pièces justificatives -->
+      <div class="flex flex-col gap-3">
+        <div>
+          <h3 class="m-0 text-[14px] font-bold text-text-primary">Pièces justificatives</h3>
+          
+        </div>
+
+        <div *ngIf="bonCommandeAuto && photos.bonCommande"
+             class="flex flex-wrap items-center gap-3 py-3 px-4 rounded-lg bg-success-light text-success text-[13px]">
+          <mat-icon class="shrink-0">task_alt</mat-icon>
+          <span class="flex-1 min-w-[200px]">
+            <strong class="block">Bon de commande — constitué automatiquement</strong>
+            Depuis {{ rattacheBonNumero }} · aucune photo à prendre
+          </span>
+          <button type="button" class="btn btn-sm btn-outline" (click)="openViewer(photos.bonCommande!)">
+            <mat-icon>visibility</mat-icon> Aperçu
+          </button>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <app-photo-piece *ngFor="let p of manualPhotoFields"
+                           [libelle]="p.label" [obligatoire]="false" [galerie]="true" [tailleMaxKo]="50"
+                           aide="À plat, en entier, bien éclairé."
+                           [image]="photos[p.key]" (imageChange)="onPhoto(p.key, $event)"></app-photo-piece>
+        </div>
+
+        <div class="flex flex-wrap gap-2 text-[12.5px]">
+          <span *ngFor="let p of photoFields" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full"
+                [ngClass]="photos[p.key] ? 'bg-success-light text-success' : 'bg-field text-text-secondary'">
+            <mat-icon class="!text-sm !w-3.5 !h-3.5">{{ photos[p.key] ? 'check' : 'remove' }}</mat-icon>
+            {{ p.label }} {{ photos[p.key] ? '' : '(facultatif, absent)' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap justify-between gap-3">
+        <button type="button" class="btn btn-outline" (click)="prevStep()">
+          <mat-icon>arrow_back</mat-icon> Médicaments
+        </button>
+        <span class="flex-1"></span>
+        <button type="button" class="btn btn-primary" (click)="enregistrerPatientFacture()"
+                [disabled]="patientForm.invalid || patientLignes.length === 0 || isSubmitting">
+          <mat-spinner *ngIf="isSubmitting" diameter="18" class="!m-0"></mat-spinner>
+          <mat-icon *ngIf="!isSubmitting">task_alt</mat-icon>
+          {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer ce patient' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bandeau de totaux du patient en cours (circuit d'officine : 50 / 50) -->
+  <ng-template #totaux>
+    <div class="grid gap-2 sm:grid-cols-3 p-4 rounded-lg bg-field">
       <div>
-        <span class="ff-alert-title">Facture à corriger</span>
-        <span class="ff-alert-line">Supprimez les lignes rejetées puis ressaisissez-les correctement ci-dessus, puis cliquez sur « Envoyer la facture ».</span>
+        <div class="text-[12px] text-text-secondary">Total des médicaments</div>
+        <div class="text-[18px] font-bold">{{ patientTotal | number:'1.0-0':'fr' }} F</div>
+      </div>
+      <div>
+        <div class="text-[12px] text-text-secondary">Part SEN-CSU (50 %)</div>
+        <div class="text-[18px] font-bold text-primary">{{ bonMontantTiersPayant | number:'1.0-0':'fr' }} F</div>
+      </div>
+      <div>
+        <div class="text-[12px] text-text-secondary">Part patient (50 %)</div>
+        <div class="text-[18px] font-bold">{{ bonMontantPatient | number:'1.0-0':'fr' }} F</div>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- ═══════════ Lignes déjà enregistrées (correction d'une facture) ═══════════ -->
+  <div *ngIf="isEditMode && facture && facture.lignes && facture.lignes.length > 0" class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>receipt_long</mat-icon></div>
+        <div>
+          <h2>Lignes de la facture</h2>
+          <p>{{ facture.lignes.length }} ligne(s) enregistrée(s)</p>
+        </div>
       </div>
     </div>
 
-    <div class="ff-lines">
-      <div class="ff-line" *ngFor="let l of facture.lignes; let i = index" [class.ff-line--rejected]="l.statutLigne === 'REJETEE'">
-        <div class="ff-line-main">
-          <span class="ff-line-name">{{ l.medicament }}</span>
-          <span class="ff-line-meta">{{ l.patientNomPrenom || '—' }} · {{ l.quantite }} × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F</span>
-          <span class="ligne-tag tag-ko" *ngIf="l.statutLigne === 'REJETEE'" [title]="l.motifRejet || ''">Rejetée</span>
-          <span class="ligne-tag tag-ok" *ngIf="l.statutLigne === 'ACCEPTEE'">Acceptée</span>
-          <span class="ligne-tag tag-nr" *ngIf="l.ajouteParPharmacien" title="Ajouté par le pharmacien — à valider par la SEN-CSU">Non répertorié</span>
+    <div class="section-body flex flex-col gap-4">
+      <div *ngIf="facture.statut === 'REJETEE_SR' || facture.statut === 'REJETEE_NC'"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">build</mat-icon>
+        <div>
+          <strong class="block">Facture à corriger</strong>
+          Supprimez ou corrigez les lignes rejetées, ressaisissez-les au besoin ci-dessus, puis cliquez sur « Envoyer la facture ».
         </div>
-        <div class="ff-line-amounts">
-          <strong class="ff-line-total">{{ l.montant | number:'1.0-0':'fr' }} F</strong>
-        </div>
-        <button class="ff-edit" type="button" (click)="modifierLigne(i)"
-                matTooltip="Modifier cette ligne" aria-label="Modifier cette ligne">
-          <mat-icon>edit</mat-icon>
-        </button>
-        <button class="ff-del" type="button" (click)="supprimerLigne(i)" aria-label="Supprimer cette ligne">
-          <mat-icon>delete</mat-icon>
-        </button>
       </div>
+
+      <ul class="list-none m-0 p-0 rounded-lg border border-border divide-y divide-border-light overflow-hidden">
+        <li *ngFor="let l of facture.lignes; let i = index" class="flex items-center gap-3 py-2.5 px-3"
+            [ngClass]="l.statutLigne === 'REJETEE' ? 'bg-red-50' : 'bg-white'">
+          <div class="flex-1 min-w-0">
+            <span class="block text-[14px] font-bold text-text-primary break-words">{{ l.medicament }}</span>
+            <span class="block text-[12.5px] text-text-secondary">
+              {{ l.patientNomPrenom || '—' }} · {{ l.quantite }} × {{ l.prixUnitaire | number:'1.0-0':'fr' }} F
+            </span>
+            <span class="flex flex-wrap items-center gap-1.5 mt-1"
+                  *ngIf="l.statutLigne === 'REJETEE' || l.statutLigne === 'ACCEPTEE' || l.ajouteParPharmacien">
+              <app-status-badge *ngIf="l.statutLigne === 'REJETEE' || l.statutLigne === 'ACCEPTEE'"
+                                [statut]="l.statutLigne" famille="ligne"></app-status-badge>
+              <span *ngIf="l.ajouteParPharmacien" title="Ajouté par le pharmacien — à valider par la SEN-CSU"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11.5px] font-semibold">
+                <mat-icon class="!text-sm !w-3.5 !h-3.5">new_releases</mat-icon> Non répertorié
+              </span>
+            </span>
+            <span *ngIf="l.statutLigne === 'REJETEE' && l.motifRejet" class="block mt-1 text-[12px] text-red-700">
+              Motif : {{ l.motifRejet }}
+            </span>
+          </div>
+          <span class="shrink-0 text-[14.5px] font-bold text-text-primary">{{ l.montant | number:'1.0-0':'fr' }} F</span>
+          <button type="button" (click)="modifierLigne(i)" matTooltip="Modifier cette ligne" aria-label="Modifier cette ligne"
+                  class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-text-muted hover:bg-primary-light hover:text-primary">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button type="button" (click)="supprimerLigne(i)" aria-label="Supprimer cette ligne"
+                  class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg bg-transparent border-0 cursor-pointer text-text-muted hover:bg-warn-light hover:text-warn">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </li>
+      </ul>
     </div>
   </div>
-
-    </div> <!-- Fin .ff-layout-main -->
-
-    <!-- Colonne de droite : Bon de Commande -->
-    <aside class="ff-layout-side" *ngIf="rattacheBon">
-      <div class="bc-paper sticky-aside">
-        <div class="bc-head">
-          <div class="bc-title">BON DE COMMANDE</div>
-          <div class="bc-num">N° <strong>{{ rattacheBon.numero }}</strong></div>
-          <button type="button" class="ff-del bc-detach" (click)="detacherBon()"
-                  matTooltip="Détacher ce bon" aria-label="Détacher ce bon">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-        <div class="bc-sub">Médicament du circuit d'officine (PEC 50%)</div>
-
-        <!-- Indicateur multi-pharmacies : lignes utilisées / disponibles -->
-        <div class="bc-usage" *ngIf="rattacheBon">
-          <mat-icon>assignment</mat-icon>
-          <span>
-            Lignes : <strong>{{ (rattacheBon.lignesUtilisees ?? 0) + patientLignes.length }}</strong> / {{ rattacheBon.nombreLignes }} utilisée(s)
-            — <strong>{{ lignesDisponibles - patientLignes.length }}</strong> encore disponible(s)
-          </span>
-          <span class="bc-usage-partial" *ngIf="(rattacheBon.lignesUtilisees ?? 0) > 0">
-            (dont {{ rattacheBon.lignesUtilisees }} dans une autre pharmacie)
-          </span>
-        </div>
-
-        <div class="bc-meta">
-          <div><span>Date émission :</span> <strong>{{ rattacheBon.createdAt | date:'dd/MM/yyyy' }}</strong></div>
-          <div><span>Nom du bénéficiaire :</span> <strong>{{ rattacheBon.patientPrenom }} {{ rattacheBon.patientNom }}</strong></div>
-          <div><span>Régime :</span> <strong>{{ regimeLabels[rattacheBon.regime] }}</strong></div>
-          <div><span>Lettre de garantie :</span> <strong>{{ rattacheBon.lettreGarantieNumero }}</strong></div>
-          <div><span>Prise en charge CSU :</span> <strong style="color: var(--primary);">{{ rattacheBon.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</strong></div>
-        </div>
-
-        <!-- L'aperçu du bon de commande n'est plus rendu : seuls les totaux utiles
-             au contrôle de la saisie sont rappelés (cahier des charges). -->
-        <div class="bc-totaux">
-          <div><span>Total général :</span> <strong>{{ patientTotal | number:'1.0-0':'fr' }} F</strong></div>
-          <div><span>À payer (patient) :</span> <strong>{{ bonMontantPatient | number:'1.0-0':'fr' }} F</strong></div>
-          <div><span>À facturer (tiers payant) :</span> <strong>{{ bonMontantTiersPayant | number:'1.0-0':'fr' }} F</strong></div>
-        </div>
-        <p class="bc-hint" *ngIf="!bonLimitAtteinte">Ajoutez les médicaments ci-dessous : chaque ajout remplit une ligne du bon.</p>
-
-        <!-- Alerte : toutes les lignes disponibles sont remplies -->
-        <div class="ff-alert ff-alert--warn" *ngIf="bonLimitAtteinte">
-          <mat-icon>warning</mat-icon>
-          <div>
-            <span class="ff-alert-title">Toutes les lignes disponibles de ce bon sont remplies</span>
-            <span class="ff-alert-line">Aucun autre médicament ne peut être ajouté. Si le patient a besoin d'autres médicaments, il peut se rendre dans une autre pharmacie avec ce bon de commande.</span>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-  </div> <!-- Fin .ff-layout-grid -->
 
   <!-- Visionneuse plein écran d'une pièce justificative -->
-  <div class="img-viewer" *ngIf="viewerImage" (click)="viewerImage = null">
-    <button type="button" class="viewer-close" aria-label="Fermer l'aperçu"><mat-icon>close</mat-icon></button>
-    <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()">
+  <div *ngIf="viewerImage" (click)="viewerImage = null"
+       class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80">
+    <button type="button" aria-label="Fermer l'aperçu"
+            class="absolute top-4 right-4 w-11 h-11 inline-flex items-center justify-center rounded-full border-0 cursor-pointer bg-white/20 text-white hover:bg-white/30">
+      <mat-icon>close</mat-icon>
+    </button>
+    <img [src]="viewerImage" alt="Pièce justificative" (click)="$event.stopPropagation()"
+         class="max-w-full max-h-full rounded-lg shadow-lg">
   </div>
 </div>
+
+

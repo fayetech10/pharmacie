@@ -1,0 +1,246 @@
+<div class="flex flex-col gap-5">
+
+  <!-- ═══════════ La facture à reprendre ═══════════ -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>upload_file</mat-icon></div>
+        <div>
+          <h2>Reprise des factures de l'ancienne application</h2>
+          <p>Une facture par fichier, au format de la facture Excel de son régime.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+      <ul class="m-0 pl-5 list-disc text-[13px] text-text-secondary flex flex-col gap-1">
+        <li>Choisissez la <strong>structure</strong>, puis le <strong>régime</strong> : il décide du modèle du
+          fichier (les colonnes de la facture de ce régime).</li>
+        <li>Le fichier est la facture Excel du régime : celle de l'ancienne application si elle a ce format, ou
+          le <strong>modèle</strong> ci-dessous rempli. La lecture s'arrête à la ligne « TOTAUX ».</li>
+        <li>La facture garde son <strong>statut d'origine</strong> (payée, validée…) sans repasser par le circuit ;
+          la clôture automatique du mois ne la touche pas.</li>
+        <li>Le fichier est d'abord <strong>vérifié</strong> sans rien enregistrer, puis vous confirmez. Une facture
+          déjà présente pour la même structure, le même régime et le même mois est refusée.</li>
+      </ul>
+
+      <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          1. Structure
+          <select [(ngModel)]="structureId" (ngModelChange)="onChoix()" [disabled]="occupe || chargementStructures"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">{{ chargementStructures ? 'Chargement…' : '— Choisir une structure —' }}</option>
+            <optgroup *ngIf="postes.length" label="Postes de santé">
+              <option *ngFor="let s of postes" [value]="s.id">{{ s.nom }}</option>
+            </optgroup>
+            <optgroup *ngIf="autresStructures.length" label="Centres de santé et EPS">
+              <option *ngFor="let s of autresStructures" [value]="s.id">{{ s.nom }}</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          2. Régime de la facture
+          <select [(ngModel)]="regime" (ngModelChange)="onChoix()" [disabled]="occupe || !structureId"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">{{ structureId ? '— Choisir le régime —' : 'Choisissez d\'abord la structure' }}</option>
+            <option *ngFor="let r of regimes" [value]="r">{{ libelleRegime(r) }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div *ngIf="regime" class="grid gap-4 grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)]">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          3. Mois
+          <select [(ngModel)]="moisChoisi" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option *ngFor="let m of listeMois" [ngValue]="m">{{ mois[m] }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Année
+          <select [(ngModel)]="anneeChoisie" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option *ngFor="let a of annees" [ngValue]="a">{{ a }}</option>
+          </select>
+        </label>
+        <label class="col-span-2 md:col-span-1 flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          4. Statut dans l'ancienne application
+          <select [(ngModel)]="statut" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">— Choisir le statut —</option>
+            <option *ngFor="let s of statuts" [value]="s.cle">{{ s.libelle }}</option>
+          </select>
+        </label>
+        <label class="col-span-2 md:col-span-1 flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          N° de facture d'origine <span class="font-normal text-text-muted">(facultatif)</span>
+          <input [(ngModel)]="numeroOrigine" (change)="onChoix()" [disabled]="occupe" autocomplete="off"
+                 placeholder="Sinon : « N° Référence facture » du fichier"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal font-mono text-text-primary">
+        </label>
+      </div>
+
+      <div *ngIf="regime" class="flex flex-wrap items-center gap-2 pt-1 min-w-0">
+        <button type="button" class="btn btn-outline" [disabled]="occupe" (click)="telechargerModele()">
+          <mat-icon>download</mat-icon> Modèle « {{ libelleRegime(regime) }} »
+        </button>
+        <label class="btn btn-primary cursor-pointer !inline-flex" [class.opacity-60]="occupe || !pret"
+               [class.pointer-events-none]="occupe || !pret">
+          <mat-icon>attach_file</mat-icon> {{ fichier ? 'Changer de fichier' : '5. Choisir le fichier' }}
+          <input type="file" class="hidden" accept=".xlsx,.xls"
+                 [disabled]="occupe || !pret" (change)="onFichier($event)">
+        </label>
+        <span *ngIf="fichier" class="inline-flex items-center gap-1 min-w-0 text-[13px] text-text-primary">
+          <mat-icon class="shrink-0 !text-base !w-4 !h-4 text-text-secondary">description</mat-icon>
+          <span class="truncate">{{ fichier.name }}</span>
+        </span>
+        <span *ngIf="!pret" class="text-[12.5px] text-text-secondary">Choisissez le statut d'origine pour déposer le fichier.</span>
+      </div>
+
+      <div *ngIf="verification" class="flex items-center gap-2 text-[13px] text-text-secondary">
+        <mat-spinner diameter="18"></mat-spinner> Vérification du fichier…
+      </div>
+      <div *ngIf="importEnCours" class="flex items-center gap-2 text-[13px] text-text-secondary">
+        <mat-spinner diameter="18"></mat-spinner> Import en cours…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Aperçu (vérification : rien n'est encore enregistré) ═══════════ -->
+  <div *ngIf="apercu as a" class="card anim-etape">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>{{ a.erreurs.length ? 'rule' : 'fact_check' }}</mat-icon></div>
+        <div>
+          <h2>Vérification — {{ a.structureNom }}</h2>
+          <p>{{ a.lignesLues }} prestation(s) lue(s) dans le tableau</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+      <div *ngIf="a.erreurs.length" role="alert"
+           class="flex items-start gap-3 p-4 rounded-lg border-2 border-red-300 bg-red-50 text-red-800">
+        <mat-icon class="shrink-0">block</mat-icon>
+        <div class="min-w-0 text-[13px]">
+          <strong class="block text-[14px]">{{ a.erreurs.length }} erreur(s) : rien ne sera importé.</strong>
+          <span class="block mb-2">Corrigez le fichier (ou le choix du régime), puis choisissez-le de nouveau.</span>
+          <ul class="m-0 pl-5 list-disc flex flex-col gap-0.5">
+            <li *ngFor="let e of a.erreurs">{{ e }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div *ngIf="!a.erreurs.length"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg bg-success-light text-success text-[13.5px]">
+        <mat-icon class="shrink-0">verified</mat-icon>
+        <span>Fichier conforme. Vérifiez la facture ci-dessous, puis confirmez l'import.</span>
+      </div>
+
+      <div *ngIf="a.avertissements.length"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">info</mat-icon>
+        <div class="min-w-0">
+          <strong class="block mb-1">À vérifier (n'empêche pas l'import)</strong>
+          <ul class="m-0 pl-5 list-disc flex flex-col gap-0.5">
+            <li *ngFor="let w of a.avertissements">{{ w }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div *ngIf="a.factures.length" class="overflow-x-auto rounded-lg border border-border">
+        <table class="w-full text-[13px] border-collapse">
+          <thead>
+            <tr class="bg-field text-left">
+              <th class="py-2 px-3 font-semibold">Régime</th>
+              <th class="py-2 px-3 font-semibold">Période</th>
+              <th class="py-2 px-3 font-semibold">Statut d'origine</th>
+              <th class="py-2 px-3 font-semibold">N° d'origine</th>
+              <th class="py-2 px-3 font-semibold text-right">Visites</th>
+              <th class="py-2 px-3 font-semibold text-right">Prestations</th>
+              <th class="py-2 px-3 font-semibold text-right">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let f of a.factures; trackBy: trackFacture" class="border-t border-border-light">
+              <td class="py-2 px-3"><app-regime-badge [regime]="f.regime"></app-regime-badge></td>
+              <td class="py-2 px-3 whitespace-nowrap">{{ mois[f.mois] }} {{ f.annee }}</td>
+              <td class="py-2 px-3"><app-status-badge [statut]="f.statut"></app-status-badge></td>
+              <td class="py-2 px-3 font-mono text-text-secondary">{{ f.numeroOrigine || '—' }}</td>
+              <td class="py-2 px-3 text-right">{{ f.patients }}</td>
+              <td class="py-2 px-3 text-right">{{ f.lignes }}</td>
+              <td class="py-2 px-3 text-right font-semibold whitespace-nowrap">{{ montant(f.montantTotal) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-col-reverse gap-3 pt-4 border-t border-border-light sm:flex-row sm:items-center">
+        <button type="button" class="btn btn-outline" [disabled]="occupe" (click)="recommencer()">
+          <mat-icon>close</mat-icon> Abandonner
+        </button>
+        <button type="button" class="btn btn-primary max-sm:h-12 sm:ml-auto" [disabled]="!importable || occupe"
+                (click)="confirmer()">
+          <mat-icon>cloud_upload</mat-icon> Importer la facture
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Import terminé ═══════════ -->
+  <div *ngIf="resultat as r" class="card anim-etape">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>task_alt</mat-icon></div>
+        <div>
+          <h2>Facture importée — {{ r.structureNom }}</h2>
+          <p>{{ r.patients }} visite(s) · {{ montant(r.montantTotal) }}. Cliquez sur la facture pour l'ouvrir.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+      <div *ngIf="r.avertissements.length"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">info</mat-icon>
+        <ul class="m-0 pl-5 list-disc flex flex-col gap-0.5 min-w-0">
+          <li *ngFor="let w of r.avertissements">{{ w }}</li>
+        </ul>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-border">
+        <table class="w-full text-[13px] border-collapse">
+          <thead>
+            <tr class="bg-field text-left">
+              <th class="py-2 px-3 font-semibold">N° facture</th>
+              <th class="py-2 px-3 font-semibold">Régime</th>
+              <th class="py-2 px-3 font-semibold">Période</th>
+              <th class="py-2 px-3 font-semibold">Statut</th>
+              <th class="py-2 px-3 font-semibold">N° d'origine</th>
+              <th class="py-2 px-3 font-semibold text-right">Visites</th>
+              <th class="py-2 px-3 font-semibold text-right">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let f of r.factures; trackBy: trackFacture" (click)="ouvrir(f)"
+                class="border-t border-border-light cursor-pointer hover:bg-field">
+              <td class="py-2 px-3 font-mono font-semibold text-primary whitespace-nowrap">{{ f.numero }}</td>
+              <td class="py-2 px-3"><app-regime-badge [regime]="f.regime"></app-regime-badge></td>
+              <td class="py-2 px-3 whitespace-nowrap">{{ mois[f.mois] }} {{ f.annee }}</td>
+              <td class="py-2 px-3"><app-status-badge [statut]="f.statut"></app-status-badge></td>
+              <td class="py-2 px-3 font-mono text-text-secondary">{{ f.numeroOrigine || '—' }}</td>
+              <td class="py-2 px-3 text-right">{{ f.patients }}</td>
+              <td class="py-2 px-3 text-right font-semibold whitespace-nowrap">{{ montant(f.montantTotal) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="button" class="btn btn-outline" (click)="recommencer()">
+          <mat-icon>upload_file</mat-icon> Importer une autre facture
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

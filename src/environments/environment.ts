@@ -5,4 +5,5 @@ export const environment = {
   // depuis une IP LAN (test caméra du scanner QR sur mobile), sans CORS ni mixed-content.
   // Prod : URL absolue dans environment.prod.ts.
   apiUrl: '/api',
+  
 };

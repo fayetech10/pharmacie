@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ErreurConnexionHorsLigne } from '../../../core/hors-ligne/comptes-hors-ligne';
+import { ReseauService, estErreurReseau } from '../../../core/hors-ligne/reseau.service';
 
 @Component({
   selector: 'app-login',
@@ -38,7 +40,8 @@ export class LoginComponent {
     private fb: FormBuilder,
     private authService: AuthService,
     private confirm: ConfirmService,
-    private router: Router
+    private router: Router,
+    public reseau: ReseauService
   ) {
     this.loginForm = this.fb.group({
       // L'identifiant accepte l'email OU le username attribué à l'import (pharmacies,
@@ -53,6 +56,13 @@ export class LoginComponent {
 
     this.isLoading = true;
     this.errorMessage = '';
+    const { email, password } = this.loginForm.value;
+
+    // Sans réseau : directement la connexion hors ligne (mot de passe reconnu par l'appareil).
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      void this.connexionHorsLigne(email, password);
+      return;
+    }
 
     this.authService.login(this.loginForm.value).subscribe({
       next: (res) => {
@@ -63,14 +73,40 @@ export class LoginComponent {
           this.imposerChangementMotDePasse();
           return;
         }
+        // Poste ou centre de santé : l'appareil retient le compte pour travailler sans réseau.
+        this.authService.memoriserPourHorsLigne(email, password, res);
         this.redirigerSelonRole();
       },
       error: (err) => {
+        // Serveur injoignable (réseau coupé, Wi-Fi sans Internet) : on tente hors ligne.
+        if (estErreurReseau(err?.status)) {
+          void this.connexionHorsLigne(email, password);
+          return;
+        }
         this.isLoading = false;
         this.errorMessage = 'Identifiant ou mot de passe incorrect';
         console.error(err);
       }
     });
+  }
+
+  /** Entrée sans réseau, avec le compte que l'appareil a retenu à la dernière connexion en ligne. */
+  private async connexionHorsLigne(identifiant: string, motDePasse: string) {
+    try {
+      await this.authService.connexionHorsLigne(identifiant, motDePasse);
+      this.redirigerSelonRole();
+    } catch (err) {
+      this.isLoading = false;
+      const motif = err instanceof ErreurConnexionHorsLigne ? err.motif : 'INDISPONIBLE';
+      this.errorMessage = {
+        INCONNU: 'Pas de connexion Internet. Ce compte ne s\'est encore jamais connecté sur cet appareil : '
+          + 'connectez-vous une première fois avec Internet.',
+        EXPIRE: 'Pas de connexion Internet. La dernière connexion en ligne de ce compte date de plus de 30 jours : '
+          + 'reconnectez-vous avec Internet.',
+        MOT_DE_PASSE: 'Hors ligne : identifiant ou mot de passe incorrect.',
+        INDISPONIBLE: 'Pas de connexion Internet, et la connexion hors ligne n\'est pas disponible sur ce navigateur.'
+      }[motif];
+    }
   }
 
   /** Demande un nouveau mot de passe puis, une fois changé, entre dans l'application. */
@@ -96,7 +132,10 @@ export class LoginComponent {
       }
       this.isLoading = true;
       this.authService.changePassword(ancien, nouveau).subscribe({
-        next: () => this.redirigerSelonRole(),
+        next: (res) => {
+          this.authService.memoriserPourHorsLigne(this.loginForm.value.email, nouveau, res);
+          this.redirigerSelonRole();
+        },
         error: (err) => {
           this.isLoading = false;
           this.errorMessage = err?.error?.message || 'Impossible de changer le mot de passe.';
@@ -114,9 +153,15 @@ export class LoginComponent {
     } else if (this.authService.isServiceRegional()) {
       this.router.navigate(['/dashboard/espace-region']);
     } else if (this.authService.isAdmin()) {
-      this.router.navigate(['/dashboard/regions']);
+      this.router.navigate(['/dashboard/espace-admin']);
     } else if (this.authService.isBcsu()) {
       this.router.navigate(['/dashboard/espace-bcsu']);
+    } else if (this.authService.isDistrict()) {
+      this.router.navigate(['/dashboard/espace-district']);
+    } else if (this.authService.isPosteDeSante()) {
+      this.router.navigate(['/dashboard/espace-poste']);
+    } else if (this.authService.isCentreDeSante()) {
+      this.router.navigate(['/dashboard/espace-centre']);
     } else if (this.authService.isStructureSanitaire()) {
       this.router.navigate(['/dashboard/espace-structure']);
     } else {

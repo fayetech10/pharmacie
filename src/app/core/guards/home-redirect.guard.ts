@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
+
 /**
  * Redirige la racine du tableau de bord (`/dashboard` et `/dashboard/espace`)
  * vers l'écran d'accueil correspondant au rôle de l'utilisateur connecté.
@@ -17,8 +18,11 @@ export const homeRedirectGuard = (): UrlTree => {
   if (auth.isPharmacien()) return router.parseUrl('/dashboard/espace-pharmacie');
   if (auth.isServiceRegional()) return router.parseUrl('/dashboard/espace-region');
   if (auth.isServiceCentral()) return router.parseUrl('/dashboard/espace-central');
-  if (auth.isAdmin()) return router.parseUrl('/dashboard/regions');
+  if (auth.isAdmin()) return router.parseUrl('/dashboard/espace-admin');
   if (auth.isBcsu()) return router.parseUrl('/dashboard/espace-bcsu');
+  if (auth.isDistrict()) return router.parseUrl('/dashboard/espace-district');
+  if (auth.isPosteDeSante()) return router.parseUrl('/dashboard/espace-poste');
+  if (auth.isCentreDeSante()) return router.parseUrl('/dashboard/espace-centre');
   if (auth.isStructureSanitaire()) return router.parseUrl('/dashboard/espace-structure');
 
   // Session invalide ou rôle inconnu : déconnexion propre pour éviter les boucles de redirection.

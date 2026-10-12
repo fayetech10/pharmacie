@@ -5,7 +5,6 @@ import { MedicamentService } from '../../core/services/medicament.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { Medicament, StatutMedicament } from '../../core/models/medicament.model';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,11 +15,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-medicaments',
   standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, MatTableModule, MatPaginatorModule, MatSortModule,
+  imports: [PaginationComponent, PaginerPipe, 
+    CommonModule, ReactiveFormsModule, MatTableModule, MatSortModule,
     MatButtonModule, MatIconModule, MatCardModule, MatInputModule, MatSelectModule,
     MatFormFieldModule, MatSnackBarModule, MatMenuModule
   ],
@@ -28,7 +29,7 @@ import { MatMenuModule } from '@angular/material/menu';
 })
 export class MedicamentsComponent implements OnInit {
   displayedColumns: string[] = ['nom', 'dci', 'classeTherapeutique', 'liste', 'prixReference', 'statut', 'motif', 'actions'];
-  dataSource!: MatTableDataSource<Medicament>;
+  dataSource = new MatTableDataSource<Medicament>([]);
   medicaments: Medicament[] = [];
 
   /** Référentiel affiché : tous, éligibles ou exclusions. */
@@ -44,7 +45,8 @@ export class MedicamentsComponent implements OnInit {
   /** Médicaments non répertoriés (ajoutés par des pharmaciens), à classer par la SEN-CSU. */
   nonRepertories: Medicament[] = [];
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  /** Pagination partagée ; le tri reste porté par la source de données. */
+  @ViewChild('pg') pg?: PaginationComponent;
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
@@ -90,7 +92,7 @@ export class MedicamentsComponent implements OnInit {
         || (m.classeTherapeutique || '').toLowerCase().includes(t);
     };
     this.dataSource.filter = `${this.filtreStatut}|${this.rechercheTexte}`;
-    if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
+    this.pg?.aller(0);
   }
 
   // ----- Création / modification / suppression -----
@@ -214,14 +216,6 @@ export class MedicamentsComponent implements OnInit {
     return 'Erreur lors du classement du médicament.';
   }
 
-  /** Page courante pour la vue cartes mobile (suit le paginator). */
-  get pagedMedicaments(): Medicament[] {
-    const data = this.dataSource?.filteredData ?? [];
-    if (!this.paginator) return data.slice(0, 10);
-    const start = this.paginator.pageIndex * this.paginator.pageSize;
-    return data.slice(start, start + this.paginator.pageSize);
-  }
-
   // ----- Synthèse -----
   get sumMeds(): number { return this.dataSource?.filteredData?.length ?? 0; }
   get sumEligibles(): number { return (this.dataSource?.filteredData ?? []).filter(m => String(m.statut) === 'ELIGIBLE').length; }
@@ -230,8 +224,7 @@ export class MedicamentsComponent implements OnInit {
   loadMedicaments() {
     this.medicamentService.getAll().subscribe(data => {
       this.medicaments = data;
-      this.dataSource = new MatTableDataSource(this.medicaments);
-      this.dataSource.paginator = this.paginator;
+      this.dataSource.data = this.medicaments;
       this.dataSource.sort = this.sort;
       this.appliquerFiltres();
     });

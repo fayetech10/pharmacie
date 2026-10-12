@@ -15,8 +15,7 @@ import { Constat, Regime, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/mo
   selector: 'app-constats-bcsu',
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatCardModule, MatSnackBarModule],
-  templateUrl: './constats-bcsu.component.html',
-  styleUrls: ['./constats-bcsu.component.css']
+  templateUrl: './constats-bcsu.component.html'
 })
 export class ConstatsBcsuComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;

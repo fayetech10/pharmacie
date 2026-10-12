@@ -1,97 +1,106 @@
-<div class="flex flex-col gap-2">
-  <div class="flex items-center flex-wrap gap-2.5 mb-2">
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <input type="text" placeholder="Rechercher un bon par numéro (BC-...)"
-             [(ngModel)]="searchNumero" (keyup.enter)="rechercherParNumero()"
-             class="flex-1 min-w-[180px] h-11 border border-border rounded-sm text-sm px-3 bg-field text-text-primary focus:outline-none focus:border-primary" />
-      <button mat-flat-button color="primary" [disabled]="searching" (click)="rechercherParNumero()">Rechercher</button>
-      <button mat-stroked-button *ngIf="searchNumero" (click)="effacerRecherche()">Effacer</button>
-    </div>
+<div class="flex flex-col">
 
-    <div class="flex gap-2.5 ml-auto flex-wrap max-md:ml-0 max-md:w-full">
-      <select class="h-11 min-w-[130px] border border-[#cbd5e1] rounded-md text-sm px-2 bg-field text-text-primary max-md:flex-1" [(ngModel)]="filterMois" (ngModelChange)="load()">
-        <option [ngValue]="0">Tous les mois</option>
-        <option [ngValue]="1">Janvier</option>
-        <option [ngValue]="2">Février</option>
-        <option [ngValue]="3">Mars</option>
-        <option [ngValue]="4">Avril</option>
-        <option [ngValue]="5">Mai</option>
-        <option [ngValue]="6">Juin</option>
-        <option [ngValue]="7">Juillet</option>
-        <option [ngValue]="8">Août</option>
-        <option [ngValue]="9">Septembre</option>
-        <option [ngValue]="10">Octobre</option>
-        <option [ngValue]="11">Novembre</option>
-        <option [ngValue]="12">Décembre</option>
-      </select>
-      <select class="h-11 min-w-[130px] border border-[#cbd5e1] rounded-md text-sm px-2 bg-field text-text-primary max-md:flex-1" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
-        <option [ngValue]="0">Toutes les années</option>
-        <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
-      </select>
-      <select class="h-11 min-w-[130px] border border-[#cbd5e1] rounded-md text-sm px-2 bg-field text-text-primary max-md:flex-1" [(ngModel)]="filterRegime" (ngModelChange)="load()">
-        <option value="">Tous les régimes</option>
-        <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
-      </select>
+  <!-- Recherche et filtres, au gabarit du poste de santé -->
+  <div class="card">
+    <div class="section-body grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.3fr]">
+      <form (ngSubmit)="rechercherParNumero()" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2 lg:col-span-1">
+        N° du bon
+        <span class="flex gap-2">
+          <input name="numero" [(ngModel)]="searchNumero" placeholder="BC-…" autocomplete="off"
+                 class="flex-1 min-w-0 h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-mono font-normal text-text-primary">
+          <button type="submit" class="btn btn-primary h-11" [disabled]="searching"><mat-icon>search</mat-icon></button>
+          <button type="button" class="btn btn-ghost h-11" *ngIf="searchNumero" (click)="effacerRecherche()" aria-label="Effacer">
+            <mat-icon>close</mat-icon>
+          </button>
+        </span>
+      </form>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Mois
+        <select [(ngModel)]="filterMois" (ngModelChange)="load()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option [ngValue]="0">Tous</option>
+          <option *ngFor="let m of mois; let i = index" [ngValue]="i + 1">{{ m }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Année
+        <select [(ngModel)]="filterAnnee" (ngModelChange)="load()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option [ngValue]="0">Toutes</option>
+          <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Régime
+        <select [(ngModel)]="filterRegime" (ngModelChange)="load()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option value="">Tous les régimes</option>
+          <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
+        </select>
+      </label>
     </div>
   </div>
 
   <app-skeleton-list *ngIf="loading" [rows]="4" [cols]="6"></app-skeleton-list>
-  <div *ngIf="!loading && filteredBons.length === 0" class="p-6 text-center text-text-secondary">Aucun bon de commande trouvé.</div>
 
-  <!-- Tableau (desktop / tablette large) -->
-  <div *ngIf="!loading && filteredBons.length > 0" class="border border-[#e2e8f0] rounded-xl bg-white overflow-x-auto desktop-only">
-    <table class="w-full min-w-[720px] border-collapse text-left text-[13.5px]">
-      <thead>
-        <tr class="bg-[#f8fafc] border-b border-[#e2e8f0] font-bold text-[#475569]">
-          <th class="py-3 px-4">N° Bon</th>
-          <th class="py-3 px-4">Patient</th>
-          <th class="py-3 px-4">Lettre associée</th>
-          <th class="py-3 px-4">Date</th>
-          <th class="py-3 px-4">Montant CSU</th>
-          <th class="py-3 px-4">Statut</th>
-          <th class="py-3 px-4">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let b of filteredBons" class="border-b border-border-light text-[#334155] transition-colors hover:bg-primary-light">
-          <td class="py-3 px-4 font-semibold">{{ b.numero }}</td>
-          <td class="py-3 px-4">{{ b.patientPrenom }} {{ b.patientNom }}</td>
-          <td class="py-3 px-4">{{ b.lettreGarantieNumero }}</td>
-          <td class="py-3 px-4">{{ b.createdAt | date:'dd/MM/yyyy' }}</td>
-          <td class="py-3 px-4 font-bold text-primary">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
-          <td class="py-3 px-4">
-            <span class="text-[11px] font-bold rounded-full py-0.5 px-2 inline-block whitespace-nowrap"
-                  [ngClass]="{ 'bg-primary-light text-primary': b.statut === 'EMIS', 'bg-warn-light text-warn': b.statut === 'ANNULE', 'bg-border text-text-secondary': b.statut !== 'EMIS' && b.statut !== 'ANNULE' }">{{ b.statut }}</span>
-          </td>
-          <td class="py-3 px-4">
-            <button mat-stroked-button (click)="imprimer(b)">
-              <mat-icon>print</mat-icon> Imprimer
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Cartes mobiles (≤ 768px) -->
-  <div class="m-cards" *ngIf="!loading && filteredBons.length > 0">
-    <div class="m-card" *ngFor="let b of filteredBons">
-      <div class="m-card-top">
-        <div class="min-w-0">
-          <div class="m-title !text-[15px]">{{ b.numero }}</div>
-          <div class="m-sub">{{ b.patientPrenom }} {{ b.patientNom }}</div>
+  <div *ngIf="!loading" class="card table-card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>receipt</mat-icon></div>
+        <div>
+          <h2>{{ filteredBons.length }} bon{{ filteredBons.length > 1 ? 's' : '' }} de commande</h2>
+          <p>Émis sur lettre de garantie, servis par les pharmacies.</p>
         </div>
-        <span class="text-[11px] font-bold rounded-full py-0.5 px-2 inline-block whitespace-nowrap shrink-0"
-              [ngClass]="{ 'bg-primary-light text-primary': b.statut === 'EMIS', 'bg-warn-light text-warn': b.statut === 'ANNULE', 'bg-border text-text-secondary': b.statut !== 'EMIS' && b.statut !== 'ANNULE' }">{{ b.statut }}</span>
-      </div>
-      <div class="m-row">
-        <span *ngIf="b.lettreGarantieNumero"><mat-icon class="inline-ic">description</mat-icon>{{ b.lettreGarantieNumero }}</span>
-        <span><mat-icon class="inline-ic">event</mat-icon>{{ b.createdAt | date:'dd/MM/yyyy' }}</span>
-      </div>
-      <div class="m-foot">
-        <span class="m-amount">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
-        <button mat-stroked-button (click)="imprimer(b)"><mat-icon>print</mat-icon> Imprimer</button>
       </div>
     </div>
+
+    <div *ngIf="filteredBons.length === 0" class="py-10 text-center text-text-secondary text-[13.5px]">Aucun bon de commande trouvé.</div>
+
+    <div class="overflow-x-auto desktop-only" *ngIf="filteredBons.length > 0">
+      <table class="premium-table w-full">
+        <thead>
+          <tr>
+            <th>N° bon</th>
+            <th>Patient</th>
+            <th>Lettre associée</th>
+            <th>Date</th>
+            <th class="text-right">Montant CSU</th>
+            <th>Statut</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of filteredBons | paginer: pg.page : pg.taille">
+            <td class="font-mono font-semibold whitespace-nowrap">{{ b.numero }}</td>
+            <td>{{ b.patientPrenom }} {{ b.patientNom }}</td>
+            <td class="font-mono text-[12.5px]">{{ b.lettreGarantieNumero }}</td>
+            <td class="whitespace-nowrap">{{ b.createdAt | date:'dd/MM/yyyy' }}</td>
+            <td class="text-right font-semibold whitespace-nowrap">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
+            <td><app-status-badge [statut]="b.statut" famille="bon"></app-status-badge></td>
+            <td class="text-right">
+              <button type="button" class="btn btn-ghost btn-sm" (click)="imprimer(b)"><mat-icon>print</mat-icon> Imprimer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="m-cards" *ngIf="filteredBons.length > 0">
+      <div class="m-card" *ngFor="let b of filteredBons | paginer: pg.page : pg.taille">
+        <div class="m-card-top">
+          <span class="m-title font-mono">{{ b.numero }}</span>
+          <app-status-badge [statut]="b.statut" famille="bon"></app-status-badge>
+        </div>
+        <div class="m-row">
+          <span>{{ b.patientPrenom }} {{ b.patientNom }}</span>
+          <span>{{ b.createdAt | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="m-foot">
+          <strong>{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong>
+          <button type="button" class="btn btn-outline btn-sm" (click)="imprimer(b)"><mat-icon>print</mat-icon> Imprimer</button>
+        </div>
+      </div>
+    </div>
+    <app-pagination #pg [total]="filteredBons.length"></app-pagination>
   </div>
 </div>

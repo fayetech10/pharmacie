@@ -8,9 +8,16 @@
   <meta name="theme-color" content="#0E211B">
   <title>CSU Gestion des Factures Pharmaceutiques</title>
   <meta name="description" content="Plateforme de gestion et validation des factures pharmaceutiques CSU Sénégal">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Application installable (écran d'accueil) et utilisable hors ligne -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icones/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CSU Sénégal">
+  <!-- Polices (Inter, Caveat) et icônes Material : embarquées dans le build (angular.json,
+       « styles »), plus chargées depuis Google Fonts — sans Internet, les icônes
+       s'affichaient en toutes lettres (« edit », « delete »). -->
 </head>
 <body>
   <app-root></app-root>

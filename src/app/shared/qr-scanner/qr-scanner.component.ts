@@ -16,7 +16,7 @@ import jsQR from 'jsqr';
   standalone: true,
   imports: [CommonModule, MatIconModule],
   template: `
-    <button type="button" class="qr-btn" (click)="ouvrir()" title="Scanner un QR code">
+    <button type="button" class="btn btn-outline qr-btn" (click)="ouvrir()" title="Scanner un QR code">
       <mat-icon>qr_code_scanner</mat-icon> Scanner
     </button>
 
@@ -63,11 +63,9 @@ import jsQR from 'jsqr';
     </div>
   `,
   styles: [`
-    .qr-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
-      border: 1px solid #2f6e54; color: #2f6e54; background: #fff; border-radius: 8px;
-      cursor: pointer; font-weight: 600; }
-    .qr-btn:hover { background: #eef7f2; }
-    .qr-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    /* Bouton du thème (btn-outline) ; il prend la hauteur des champs voisins. */
+    :host { display: inline-flex; }
+    .qr-btn { height: 100%; min-height: 2.5rem; }
 
     /* Plein écran */
     .qr-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; }

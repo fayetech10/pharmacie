@@ -4,6 +4,8 @@
     <!-- Left Side: Visual/Branding Panel -->
     <aside class="login-sidebar">
       <div class="sidebar-pattern"></div>
+      <!-- Halos lumineux qui dérivent lentement derrière les logos (décor animé) -->
+      <div class="sidebar-glow" aria-hidden="true"></div>
 
       
 
@@ -55,6 +57,13 @@
         <div class="form-intro">
           <h2>Se connecter</h2>
           <p>Saisissez vos identifiants pour accéder à l'application.</p>
+        </div>
+
+        <!-- Sans réseau : la connexion hors ligne prend le relais (compte déjà utilisé sur cet appareil) -->
+        <div class="offline-banner" *ngIf="!reseau.enLigne" role="status">
+          <mat-icon>cloud_off</mat-icon>
+          <span>Pas de connexion Internet. Si vous vous êtes déjà connecté sur cet appareil, entrez vos
+            identifiants habituels : vous travaillerez hors ligne.</span>
         </div>
 
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">

@@ -20,13 +20,23 @@ export const roleGuard = (route: ActivatedRouteSnapshot) => {
     else if (path.includes('espace-pharmacie')) allowed = [Role.PHARMACIEN];
     else if (path.includes('espace-region')) allowed = [Role.SERVICE_REGIONAL];
     else if (path.includes('espace-central')) allowed = [Role.SERVICE_CENTRAL];
-    else if (path.includes('espace-structure')) allowed = [Role.STRUCTURE_SANITAIRE];
-    else allowed = [];
+    else if (path.includes('espace-structure')) {
+      allowed = [Role.STRUCTURE_SANITAIRE, Role.POSTE_SANTE, Role.CENTRE_SANTE];
+    } else if (path.includes('consolidation')) {
+      allowed = [Role.DISTRICT];
+    } else allowed = [];
   }
 
   const user = authService.getCurrentUser();
 
-  if (user && allowed.includes(user.role)) {
+  // On compare sur le rôle EFFECTIF : un compte STRUCTURE_SANITAIRE rattaché à un poste
+  // doit franchir une route déclarée pour POSTE_SANTE, et réciproquement.
+  const roleEffectif = authService.getRoleEffectif();
+  if (user && (allowed.includes(user.role) || (roleEffectif && allowed.includes(roleEffectif)))) {
+    return true;
+  }
+  // Centre de santé siège du district : il franchit aussi les routes du district.
+  if (user && allowed.includes(Role.DISTRICT) && authService.aCapaciteDistrict()) {
     return true;
   }
 
@@ -46,7 +56,11 @@ export const roleGuard = (route: ActivatedRouteSnapshot) => {
       return router.parseUrl('/dashboard/regions');
     case Role.BCSU:
       return router.parseUrl('/dashboard/espace-bcsu');
+    case Role.DISTRICT:
+      return router.parseUrl('/dashboard/consolidation');
     case Role.STRUCTURE_SANITAIRE:
+    case Role.POSTE_SANTE:
+    case Role.CENTRE_SANTE:
       return router.parseUrl('/dashboard/espace-structure');
     default:
       authService.logout();

@@ -19,6 +19,14 @@ export class BcsuService {
     return this.api.post<Patient>('/patients', req);
   }
 
+  updatePatient(id: string, req: Partial<Patient>): Observable<Patient> {
+    return this.api.put<Patient>(`/patients/${id}`, req);
+  }
+
+  deletePatient(id: string): Observable<void> {
+    return this.api.delete<void>(`/patients/${id}`);
+  }
+
   getLettresGarantie(params?: { mois?: number; annee?: number; regime?: string }): Observable<LettreGarantie[]> {
     let queryParams = new HttpParams();
     if (params) {
@@ -65,6 +73,11 @@ export class BcsuService {
     if (params?.regime) q.set('regime', params.regime);
     const qs = q.toString();
     return this.api.getBlob(`/lettres-garantie/export/excel${qs ? '?' + qs : ''}`);
+  }
+
+  /** Registre du mois de l'agent connecté (PDF) : N° des lettres de garantie, nom et prénom. */
+  exportRegistreLettresGarantiePdf(mois: number, annee: number): Observable<Blob> {
+    return this.api.getBlob(`/lettres-garantie/export/registre-mensuel?mois=${mois}&annee=${annee}`);
   }
 
   /** Paramétrage cachet/signature d'un agent (affiché sur ses lettres de garantie). */

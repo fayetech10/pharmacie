@@ -1,40 +1,46 @@
-<div class="fade-in pointages-page">
+<div class="fade-in">
   <div class="page-head">
     <div>
-      <h1>Pointages des Agents</h1>
-      <p>Suivi des présences et des horaires des agents affectés aux structures sanitaires</p>
+      <h1>Pointages des agents</h1>
     </div>
-    <span class="pointages-count">
+    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-border-light
+                 text-[12px] font-semibold text-text-secondary">
       {{ filteredPointages.length }} agent(s)
     </span>
   </div>
 
-  <mat-card class="pointages-filters">
-    <div class="filters-row">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Rechercher un agent ou une structure...</mat-label>
-        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilters()" placeholder="Ex: Awa Diop">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
+  <div class="filter-strip">
+    <mat-form-field appearance="outline" class="flex-1 min-w-[220px]">
+      <mat-label>Rechercher un agent ou une structure…</mat-label>
+      <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilters()" placeholder="Ex : Awa Diop">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline" class="date-field">
-        <mat-label>Date de pointage</mat-label>
-        <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()">
-        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
-      </mat-form-field>
-    </div>
-  </mat-card>
+    <mat-form-field appearance="outline" class="min-w-[200px]">
+      <mat-label>Région</mat-label>
+      <mat-select [(ngModel)]="selectedRegionId" (ngModelChange)="applyFilters()">
+        <mat-option value="">Toutes les régions</mat-option>
+        <mat-option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="min-w-[180px]">
+      <mat-label>Date de pointage</mat-label>
+      <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()">
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+  </div>
 
   <!-- Chargement -->
-  <div class="pointages-state" *ngIf="loading">
-    <mat-icon class="pointages-spin">autorenew</mat-icon>
+  <div class="empty-state" *ngIf="loading">
+    <mat-icon class="animate-spin">autorenew</mat-icon>
     <p>Chargement des pointages…</p>
   </div>
 
   <!-- Erreur (auparavant silencieuse : le tableau restait vide sans explication) -->
-  <div class="pointages-state pointages-state--error" *ngIf="!loading && erreur">
-    <mat-icon>cloud_off</mat-icon>
+  <div class="empty-state" *ngIf="!loading && erreur">
+    <mat-icon class="text-warn">cloud_off</mat-icon>
     <p>{{ erreur }}</p>
     <button type="button" class="btn btn-outline" (click)="loadPointages()">
       <mat-icon>refresh</mat-icon> Réessayer
@@ -42,11 +48,11 @@
   </div>
 
   <!-- Aucun pointage / aucun résultat de recherche -->
-  <div class="pointages-state" *ngIf="!loading && !erreur && filteredPointages.length === 0">
+  <div class="empty-state" *ngIf="!loading && !erreur && filteredPointages.length === 0">
     <mat-icon>fingerprint</mat-icon>
     <ng-container *ngIf="pointages.length === 0; else aucunResultat">
       <p>Aucun pointage enregistré le {{ selectedDate | date:'dd/MM/yyyy' }}.</p>
-      <p class="pointages-hint">
+      <p class="text-[13px] text-text-muted">
         Un agent apparaît ici dès qu'il enregistre son arrivée. Essayez une autre date.
       </p>
     </ng-container>
@@ -55,8 +61,13 @@
     </ng-template>
   </div>
 
-  <div class="table-wrap desktop-only" *ngIf="!loading && !erreur && filteredPointages.length > 0">
-    <table class="pointages-table">
+  <div class="glass-table-container table-scroll desktop-only"
+       *ngIf="!loading && !erreur && filteredPointages.length > 0">
+    <table class="w-full text-[13.5px]
+                  [&_thead_tr]:border-b [&_thead_tr]:border-border-strong
+                  [&_th]:py-3 [&_th]:px-4 [&_th]:text-left [&_th]:font-semibold [&_th]:text-text-secondary
+                  [&_tbody_tr]:border-b [&_tbody_tr]:border-border-light
+                  [&_td]:py-2.5 [&_td]:px-4">
       <thead>
         <tr>
           <th>Agent BCSU</th>
@@ -67,31 +78,40 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of filteredPointages" class="pointage-row clickable-row" (click)="openAgentDetail(p)">
+        <tr *ngFor="let p of filteredPointages | paginer: pg.page : pg.taille" (click)="openAgentDetail(p)"
+            class="cursor-pointer transition-colors hover:bg-primary-light/40">
           <td>
-            <div class="agent-identity">
-              <div class="agent-avatar">{{ getAgentFullName(p).charAt(0) }}</div>
-              <span class="agent-name">{{ getAgentFullName(p) }}</span>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 shrink-0 inline-flex items-center justify-center rounded-full
+                          bg-primary-light text-primary text-[13px] font-bold">
+                {{ getAgentFullName(p).charAt(0) }}
+              </div>
+              <span class="font-semibold">{{ getAgentFullName(p) }}</span>
             </div>
           </td>
-          <td><span class="structure-badge">{{ p.structureNom }}</span></td>
           <td>
-            <div class="time-block" *ngIf="getStatut(p) !== 'ABSENT'">
-              <mat-icon class="time-in">login</mat-icon>
+            <span class="inline-block px-2 py-0.5 rounded-full bg-border-light text-[12px] font-semibold">
+              {{ p.structureNom }}
+            </span>
+          </td>
+          <td>
+            <span class="inline-flex items-center gap-1.5" *ngIf="getStatut(p) !== 'ABSENT'">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px] text-primary">login</mat-icon>
               {{ p.heureArrivee | date:'HH:mm' }}
-            </div>
-            <span *ngIf="getStatut(p) === 'ABSENT'">—</span>
+            </span>
+            <span *ngIf="getStatut(p) === 'ABSENT'" class="text-text-muted">—</span>
           </td>
           <td>
-            <div class="time-block" *ngIf="p.heureDepart">
-              <mat-icon class="time-out">logout</mat-icon>
+            <span class="inline-flex items-center gap-1.5" *ngIf="p.heureDepart">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-muted">logout</mat-icon>
               {{ p.heureDepart | date:'HH:mm' }}
-            </div>
-            <span *ngIf="!p.heureDepart">—</span>
+            </span>
+            <span *ngIf="!p.heureDepart" class="text-text-muted">—</span>
           </td>
           <td>
-            <span class="status-badge" [ngClass]="getStatut(p).toLowerCase()">
-              {{ getStatut(p) === 'EN_POSTE' ? 'En poste' : getStatut(p) === 'TERMINE' ? 'Terminé' : 'Absent' }}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-semibold"
+                  [ngClass]="statutClasses(p)">
+              {{ statutLabel(p) }}
             </span>
           </td>
         </tr>
@@ -101,29 +121,38 @@
 
   <!-- Cartes mobiles (≤ 768px) -->
   <div class="m-cards" *ngIf="!loading && !erreur && filteredPointages.length > 0">
-    <div class="m-card clickable" *ngFor="let p of filteredPointages" (click)="openAgentDetail(p)"
+    <div class="m-card clickable" *ngFor="let p of filteredPointages | paginer: pg.page : pg.taille" (click)="openAgentDetail(p)"
          role="button" tabindex="0" (keydown.enter)="openAgentDetail(p)"
          [attr.aria-label]="'Voir le pointage de ' + getAgentFullName(p)">
       <div class="m-card-top">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="agent-avatar">{{ getAgentFullName(p).charAt(0) }}</div>
+          <div class="w-8 h-8 shrink-0 inline-flex items-center justify-center rounded-full
+                      bg-primary-light text-primary text-[13px] font-bold">
+            {{ getAgentFullName(p).charAt(0) }}
+          </div>
           <div class="min-w-0">
             <div class="m-title">{{ getAgentFullName(p) }}</div>
             <div class="m-sub">{{ p.structureNom }}</div>
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span class="status-badge" [ngClass]="getStatut(p).toLowerCase()">
-            {{ getStatut(p) === 'EN_POSTE' ? 'En poste' : getStatut(p) === 'TERMINE' ? 'Terminé' : 'Absent' }}
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-semibold"
+                [ngClass]="statutClasses(p)">
+            {{ statutLabel(p) }}
           </span>
           <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
         </div>
       </div>
       <div class="m-row">
-        <span *ngIf="getStatut(p) !== 'ABSENT'"><mat-icon class="inline-ic">login</mat-icon>Arrivée {{ p.heureArrivee | date:'HH:mm' }}</span>
-        <span *ngIf="p.heureDepart"><mat-icon class="inline-ic">logout</mat-icon>Départ {{ p.heureDepart | date:'HH:mm' }}</span>
+        <span *ngIf="getStatut(p) !== 'ABSENT'">
+          <mat-icon class="inline-ic">login</mat-icon>Arrivée {{ p.heureArrivee | date:'HH:mm' }}
+        </span>
+        <span *ngIf="p.heureDepart">
+          <mat-icon class="inline-ic">logout</mat-icon>Départ {{ p.heureDepart | date:'HH:mm' }}
+        </span>
         <span *ngIf="getStatut(p) === 'ABSENT'" class="text-text-muted">Aucun pointage</span>
       </div>
     </div>
   </div>
+  <app-pagination #pg [total]="filteredPointages.length"></app-pagination>
 </div>

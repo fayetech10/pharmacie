@@ -1,89 +1,209 @@
-<div class="pf">
-  <!-- Filtres régime / mois / année -->
-  <div class="pf-filters">
-    <select class="pf-select" [(ngModel)]="filterRegime" (ngModelChange)="load()">
+<div class="fade-in">
+
+  <!-- Factures d'un poste : retour à la liste des postes -->
+  <button type="button" *ngIf="posteId" (click)="retourPostes()"
+          class="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer print:hidden">
+    <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Tous les postes
+  </button>
+
+  <div class="page-head">
+    <div>
+      <h1>{{ posteId ? nomPosteCourant : 'Factures des postes de santé du district' }}</h1>
+    </div>
+    <div class="page-head-actions flex items-center gap-2">
+      <button type="button" class="btn btn-outline btn-sm" *ngIf="filtresActifs" (click)="reinitialiser()">
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Bandeau de synthèse ===== -->
+  <div class="kpi-grid" *ngIf="!loading && !posteId">
+    <div class="kpi-card">
+      <div class="kpi-icon blue"><mat-icon>medical_services</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ totalPostes }}</span>
+        <span class="kpi-label">Poste{{ totalPostes > 1 ? 's' : '' }} rattaché{{ totalPostes > 1 ? 's' : '' }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon blue"><mat-icon>receipt_long</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ totalFactures }}</span>
+        <span class="kpi-label">Facture{{ totalFactures > 1 ? 's' : '' }} reçue{{ totalFactures > 1 ? 's' : '' }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon amber"><mat-icon>payments</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ totalSencsu | number:'1.0-0':'fr' }} <small>FCFA</small></span>
+        <span class="kpi-label">Part SEN-CSU</span>
+      </div>
+    </div>
+  </div>
+  <div class="kpi-grid" *ngIf="!loading && posteId && posteCourant as p">
+    <div class="kpi-card">
+      <div class="kpi-icon blue"><mat-icon>receipt_long</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ p.nbFactures }}</span>
+        <span class="kpi-label">Facture{{ p.nbFactures > 1 ? 's' : '' }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon amber"><mat-icon>pending_actions</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ p.nbATraiter }}</span>
+        <span class="kpi-label">À valider</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon amber"><mat-icon>payments</mat-icon></div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ p.totalSencsu | number:'1.0-0':'fr' }} <small>FCFA</small></span>
+        <span class="kpi-label">Part SEN-CSU</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Filtres ===== -->
+  <div class="filter-strip">
+    <div class="relative flex-1 min-w-[220px]" *ngIf="!posteId">
+      <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted">
+        search
+      </mat-icon>
+      <input type="text" placeholder="Rechercher un poste de santé…"
+             [(ngModel)]="recherche" (ngModelChange)="appliquerFiltres()"
+             class="w-full h-10 pl-10 pr-9 rounded-lg text-[14px]">
+      <button type="button" *ngIf="recherche" aria-label="Effacer"
+              (click)="recherche = ''; appliquerFiltres()"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center
+                     justify-center rounded-full text-text-muted hover:bg-border-light">
+        <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
+      </button>
+    </div>
+
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterRegime" (ngModelChange)="load()">
       <option value="">Tous les régimes</option>
       <option *ngFor="let r of regimeOptions" [value]="r">{{ regimeLabels[r] }}</option>
     </select>
-    <select class="pf-select" [(ngModel)]="filterMois" (ngModelChange)="load()">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterMois" (ngModelChange)="load()">
       <option [ngValue]="0">Tous les mois</option>
-      <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
+      <option *ngFor="let m of mois" [ngValue]="m">{{ moisNoms[m] }}</option>
     </select>
-    <select class="pf-select" [(ngModel)]="filterAnnee" (ngModelChange)="load()">
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filterAnnee" (ngModelChange)="load()">
       <option [ngValue]="0">Toutes les années</option>
       <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
     </select>
   </div>
 
-  <div class="pf-loading" *ngIf="loading">Chargement des factures des postes de santé…</div>
-
-  <div class="pf-empty" *ngIf="!loading && postes.length === 0">
-    <mat-icon>medical_services</mat-icon>
-    <p>Aucune facture reçue des postes de santé rattachés.</p>
-    <small>Les factures envoyées par vos postes de santé polarisés apparaîtront ici.</small>
+  <!-- Chargement -->
+  <div class="space-y-4 animate-pulse my-6" *ngIf="loading">
+    <div class="kpi-grid">
+      <div *ngFor="let i of [1,2,3]" class="kpi-card flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gray-200 shrink-0"></div>
+        <div class="space-y-2 flex-1">
+          <div class="h-5 bg-gray-200 rounded w-16"></div>
+          <div class="h-3 bg-gray-200 rounded w-28"></div>
+        </div>
+      </div>
+    </div>
+    <div *ngFor="let i of [1,2]" class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-3">
+      <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+      <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+    </div>
   </div>
 
-  <!-- Un bloc par poste de santé -->
-  <mat-card class="pf-poste" *ngFor="let p of postes">
-    <div class="pf-poste-head">
-      <div class="pf-poste-title">
-        <mat-icon>medical_services</mat-icon>
-        <div>
-          <h3>{{ p.posteNom }}</h3>
-          <span>{{ p.factures.length }} facture(s) · Poste de santé rattaché</span>
-        </div>
+  <!-- ═══════════ 1. Les postes rattachés ═══════════ -->
+  <ng-container *ngIf="!loading && !posteId">
+    <div class="empty-state" *ngIf="postes.length === 0">
+      <mat-icon>medical_services</mat-icon>
+      <p *ngIf="!filtresActifs">Aucune facture reçue des postes de santé du district.</p>
+      <p *ngIf="filtresActifs">Aucun résultat pour ces filtres.</p>
+      <p class="text-[13px] text-text-muted" *ngIf="!filtresActifs">
+        Les factures envoyées par les postes de santé de votre district apparaîtront ici.
+      </p>
+      <button type="button" class="btn btn-outline" *ngIf="filtresActifs" (click)="reinitialiser()">
+        Réinitialiser les filtres
+      </button>
+    </div>
+
+    <div class="card" *ngIf="postes.length > 0">
+      <div class="section-body !p-0">
+        <button type="button" *ngFor="let p of postes | paginer: pgPostes.page : pgPostes.taille; trackBy: trackPoste" (click)="ouvrirPoste(p)"
+                [attr.aria-label]="'Voir les factures de ' + p.posteNom"
+                class="w-full flex flex-wrap items-center gap-3 px-4 sm:px-5 py-3.5 text-left bg-transparent border-0
+                       border-b border-border-light last:border-b-0 cursor-pointer transition-colors hover:bg-field">
+          <div class="section-icon shrink-0"><mat-icon>medical_services</mat-icon></div>
+          <span class="min-w-0 flex-1">
+            <strong class="block text-[15px] text-text-primary">{{ p.posteNom }}</strong>
+            <span class="block text-[13px] text-text-secondary">
+              {{ p.nbFactures }} facture{{ p.nbFactures > 1 ? 's' : '' }}
+            </span>
+          </span>
+          <span *ngIf="p.nbATraiter" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 whitespace-nowrap">
+            {{ p.nbATraiter }} à valider
+          </span>
+          <span class="text-right whitespace-nowrap">
+            <strong class="block text-[15px] text-primary">{{ p.totalSencsu | number:'1.0-0':'fr' }} F</strong>
+            <small class="block text-[12px] text-text-secondary">part SEN-CSU</small>
+          </span>
+          <mat-icon class="!text-xl !w-5 !h-5 text-text-muted shrink-0">chevron_right</mat-icon>
+        </button>
       </div>
-      <strong class="pf-poste-total">{{ p.totalSencsu | number:'1.0-0':'fr' }} F <small>SEN-CSU</small></strong>
+    </div>
+    <!-- 10 postes par page, la barre paraît au-delà -->
+    <app-pagination #pgPostes [total]="postes.length"></app-pagination>
+  </ng-container>
+
+  <!-- ═══════════ 2. Les factures du poste ═══════════ -->
+  <ng-container *ngIf="!loading && posteId">
+    <div class="empty-state" *ngIf="!posteCourant">
+      <mat-icon>receipt_long</mat-icon>
+      <p>Aucune facture de ce poste {{ filtresActifs ? 'pour ces filtres' : 'pour le moment' }}.</p>
+      <button type="button" class="btn btn-outline" (click)="retourPostes()">
+        <mat-icon>arrow_back</mat-icon> Tous les postes
+      </button>
     </div>
 
-    <div class="pf-table-wrap desktop-only">
-      <table class="pf-table">
-        <thead>
-          <tr>
-            <th>N° Facture</th>
-            <th>Période</th>
-            <th>Régime</th>
-            <th class="pf-num">Patients</th>
-            <th>Statut</th>
-            <th class="pf-num">Part SEN-CSU</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="pf-row" *ngFor="let f of p.factures" (click)="openDetail(f)">
-            <td class="pf-numero">{{ f.numero }}</td>
-            <td>{{ moisNoms[f.mois] }} {{ f.annee }}</td>
-            <td><span class="pf-chip">{{ regimeLabels[f.regime] || f.regime }}</span></td>
-            <td class="pf-num">{{ patientsCount(f) }}</td>
-            <td><span class="pf-statut" [ngClass]="'pf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span></td>
-            <td class="pf-num pf-csu">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</td>
-            <td><mat-icon class="pf-chevron">chevron_right</mat-icon></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Cartes mobiles (≤ 768px) -->
-    <div class="m-cards">
-      <div class="m-card clickable" *ngFor="let f of p.factures" (click)="openDetail(f)"
-           role="button" tabindex="0" (keydown.enter)="openDetail(f)"
-           [attr.aria-label]="'Voir la facture ' + f.numero">
-        <div class="m-card-top">
-          <div class="min-w-0">
-            <div class="m-title">{{ f.numero }}</div>
-            <div class="m-sub">{{ moisNoms[f.mois] }} {{ f.annee }}</div>
+    <!-- Factures du poste, 10 par page ; l'en-tête d'un mois précède sa première facture
+         (et se répète en haut d'une page qui commence au milieu d'un mois). -->
+    <div class="card" *ngIf="posteCourant">
+      <div class="section-body">
+        <ng-container *ngFor="let ligne of lignesPoste | paginer: pgFactures.page : pgFactures.taille; let i = index; trackBy: trackLigne">
+          <div *ngIf="i === 0 || ligne.premiereDuMois" class="flex flex-wrap items-center justify-between gap-3 mb-2"
+               [class.mt-6]="i > 0">
+            <span class="text-[13px] font-bold text-text-secondary uppercase">{{ ligne.periode.label }}</span>
+            <span class="text-[12.5px] text-text-secondary">
+              {{ ligne.periode.factures.length }} facture{{ ligne.periode.factures.length > 1 ? 's' : '' }}
+              · <strong>{{ ligne.periode.total | number:'1.0-0':'fr' }} F</strong>
+            </span>
           </div>
-          <span class="pf-statut" [ngClass]="'pf-statut--' + f.statut">{{ statutLabel(f.statut) }}</span>
-        </div>
-        <div class="m-row">
-          <span class="pf-chip">{{ regimeLabels[f.regime] || f.regime }}</span>
-          <span><mat-icon class="inline-ic">groups</mat-icon>{{ patientsCount(f) }} patient{{ patientsCount(f) > 1 ? 's' : '' }}</span>
-        </div>
-        <div class="m-foot">
-          <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
-          <mat-icon class="m-chevron !text-xl !w-5 !h-5">chevron_right</mat-icon>
-        </div>
+
+          <div *ngIf="ligne.facture as f"
+               (click)="openDetail(f)" role="button" tabindex="0" (keydown.enter)="openDetail(f)"
+               [attr.aria-label]="'Ouvrir la facture ' + f.numero"
+               class="flex flex-wrap items-center gap-3 py-2.5 px-2 -mx-2 rounded-lg border-b border-border-light
+                      last:border-b-0 cursor-pointer transition-colors hover:bg-field">
+            <app-regime-badge [regime]="f.regime"></app-regime-badge>
+            <span class="font-semibold whitespace-nowrap">{{ f.numero }}</span>
+            <span class="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px]">groups</mat-icon>{{ patientsCount(f) }}
+            </span>
+            <app-status-badge [statut]="f.statut"></app-status-badge>
+            <app-avancement-pointage [facture]="f" echelon="centre"
+                                     [enControle]="f.statut === 'SOUMISE_CS'"></app-avancement-pointage>
+            <span class="ml-auto font-bold text-primary whitespace-nowrap">
+              {{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F
+            </span>
+            <mat-icon class="!text-xl !w-5 !h-5 text-text-muted shrink-0">chevron_right</mat-icon>
+          </div>
+        </ng-container>
       </div>
     </div>
-  </mat-card>
+    <app-pagination #pgFactures [total]="lignesPoste.length"
+                    [page]="etatRetour?.page ?? 0" [taille]="etatRetour?.taille ?? 10"></app-pagination>
+  </ng-container>
 </div>

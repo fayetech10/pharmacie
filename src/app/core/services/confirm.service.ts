@@ -12,6 +12,8 @@ export interface ConfirmOptions {
   danger?: boolean;
   /** Masque le bouton d'annulation : force le pharmacien à cliquer sur le bouton de confirmation pour fermer. */
   hideCancel?: boolean;
+  /** Empêche la fermeture par Échap ou clic à l'extérieur (information à ne pas perdre). */
+  disableClose?: boolean;
 }
 
 export interface PromptOptions {
@@ -26,6 +28,8 @@ export interface PromptOptions {
   multiline?: boolean;
   initialValue?: string;
   maxLength?: number;
+  /** Saisie masquée (mot de passe). */
+  motDePasse?: boolean;
 }
 
 /**
@@ -40,6 +44,7 @@ export class ConfirmService {
   ask(options: ConfirmOptions): Observable<boolean> {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       width: '420px',
+      disableClose: options.disableClose ?? false,
       data: {
         title: options.title ?? 'Confirmation',
         message: options.message,
@@ -50,6 +55,20 @@ export class ConfirmService {
       }
     });
     return ref.afterClosed().pipe(map(result => result === true));
+  }
+
+  /**
+   * Affiche des accès (identifiant + mot de passe temporaire) que le serveur ne renverra
+   * plus jamais : seul « J'ai noté » ferme la fenêtre, pas un clic à côté.
+   */
+  afficherAcces(title: string, identifiant: string, motDePasse: string, destinataire = 'l\'utilisateur'): Observable<boolean> {
+    return this.ask({
+      title,
+      message: `Communiquez ces accès à ${destinataire} :\n\nIdentifiant : ${identifiant}\nMot de passe temporaire : ${motDePasse}\n\nLe mot de passe devra être changé à la première connexion.`,
+      confirmText: 'J\'ai noté',
+      hideCancel: true,
+      disableClose: true
+    });
   }
 
   /**
@@ -71,7 +90,8 @@ export class ConfirmService {
         required: options.required ?? false,
         multiline: options.multiline ?? false,
         initialValue: options.initialValue ?? '',
-        maxLength: options.maxLength
+        maxLength: options.maxLength,
+        motDePasse: options.motDePasse ?? false
       }
     });
     return ref.afterClosed().pipe(map(result => (typeof result === 'string' ? result : null)));

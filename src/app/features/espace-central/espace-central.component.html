@@ -1,67 +1,35 @@
-    <div class="fade-in">
-      <div class="page-head max-md:hidden">
-        <div>
-          <h1>Espace Central</h1>
-          <p>Supervisez au niveau national et effectuez les paiements</p>
-        </div>
-      </div>
-
-      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
-        <mat-tab label="Tableau de bord">
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <!-- admin-regions agit comme vue drill-down Région -> Pharmacies -->
-              <app-admin-regions></app-admin-regions>
-            </div>
-          </ng-template>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            Factures reçues
-            <span class="inline-flex items-center justify-center text-[11px] font-bold min-w-[18px] h-[18px] px-[5px] ml-1.5 rounded-full bg-primary text-white leading-none" *ngIf="counts['VALIDEE_SR']">{{ counts['VALIDEE_SR'] }}</span>
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <!-- Transmises par les services régionaux (regroupées par région/pharmacie via la colonne Pharmacie) -->
-              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['VALIDEE_SR']" [showToolbar]="false"></app-factures-list>
-            </div>
-          </ng-template>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <!-- Pas de badge : valider est l'action propre du central (pas une notification). -->
-            Factures validées
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <!-- Validées par le central : bouton Payer -> bascule en « Factures payées » -->
-              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['VALIDEE_NC']" [showPaymentButton]="true" [showToolbar]="false"></app-factures-list>
-            </div>
-          </ng-template>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <!-- Pas de badge : payer est l'action propre du central (pas une notification). -->
-            Factures payées
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['PAYEE']" [showToolbar]="false"></app-factures-list>
-            </div>
-          </ng-template>
-        </mat-tab>
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <!-- Pas de badge : rejeter est l'action propre du central (pas une notification). -->
-            Factures rejetées
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <!-- Rejetées par le central (REJETEE_NC) : récupérées par le SR pour renvoi à la pharmacie -->
-              <app-factures-list displayMode="ALL" [monthlyView]="true" [allowedStatuses]="['REJETEE_NC']" [showToolbar]="false"></app-factures-list>
-            </div>
-          </ng-template>
-        </mat-tab>
-      </mat-tab-group>
+<div class="fade-in">
+  <div class="page-head max-md:hidden">
+    <div>
+      <h1>Espace Central</h1>
+      <p>Supervisez au niveau national et effectuez les paiements</p>
     </div>
-  
+  </div>
+
+  <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab label="Tableau de bord">
+      <ng-template matTabContent>
+        <div class="pt-2 md:pt-6">
+          <!-- admin-regions agit comme vue drill-down Région -> Pharmacies -->
+          <app-admin-regions></app-admin-regions>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="Facture Structure sanitaire">
+      <ng-template matTabContent>
+        <div class="pt-2 md:pt-6">
+          <app-central-factures-structure></app-central-factures-structure>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="Facture Pharmacie">
+      <ng-template matTabContent>
+        <div class="pt-2 md:pt-6">
+          <app-central-factures-pharmacie></app-central-factures-pharmacie>
+        </div>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+</div>

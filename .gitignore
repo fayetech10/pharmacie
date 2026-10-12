@@ -14,8 +14,11 @@ tmp/
 out-tsc/
 .angular/
 
-# ---------- Vercel ----------
+# ---------- Vercel / Netlify ----------
 .vercel/
+.netlify/
+# Généré au build par scripts/environnement-netlify.js depuis la variable API_URL
+src/environments/environment.netlify.ts
 
 # ---------- Variables d'environnement / secrets ----------
 .env

@@ -11,7 +11,11 @@ import { StructureService } from '../../core/services/structure.service';
 import { RegionService, Region } from '../../core/services/region.service';
 import { FactureStructure } from '../../core/models/structure.model';
 import { Regime, REGIME_LABELS } from '../../core/models/bcsu.model';
+import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
+import { apparenceStatut } from '../../core/models/statuts';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 /** Agrégat d'une structure : toutes ses factures sur une seule ligne. */
 interface StructureSummary {
   structureId: string;
@@ -29,8 +33,6 @@ interface MonthGroup {
   label: string;
   factures: FactureStructure[];
   total: number;
-  currentPage?: number;
-  pageSize?: number;
 }
 
 /** Un régime de la structure sélectionnée, avec ses factures groupées par mois. */
@@ -51,7 +53,7 @@ interface RegimeGroup {
 @Component({
   selector: 'app-structures-factures',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatSnackBarModule],
+  imports: [PaginationComponent, PaginerPipe,  StatusBadgeComponent,CommonModule, FormsModule, MatCardModule, MatIconModule, MatSnackBarModule],
   templateUrl: './structures-factures.component.html',
   styleUrls: ['./structures-factures.component.css']
 })
@@ -71,11 +73,6 @@ export class StructuresFacturesComponent implements OnInit {
   filterYear = 0;
   filterStatut = '';
   readonly statuts = ['ENVOYEE', 'VALIDEE_SR', 'VALIDEE_NC', 'REJETEE_SR', 'REJETEE_NC', 'PAYEE'];
-  private readonly statutLabels: Record<string, string> = {
-    BROUILLON: 'Non envoyée', ENVOYEE: 'Envoyée',
-    VALIDEE_SR: 'Validée CSUR', REJETEE_SR: 'Rejetée CSUR',
-    VALIDEE_NC: 'Validée Centrale', REJETEE_NC: 'Rejetée Centrale', PAYEE: 'Payée'
-  };
 
   constructor(
     private structureService: StructureService,
@@ -143,11 +140,43 @@ export class StructuresFacturesComponent implements OnInit {
   selectStructure(s: StructureSummary) {
     this.selected = s;
     this.level = 'factures';
+    this.rafraichirRegimeGroups();
+    // Les régimes sont repliés à l'ouverture : une structure peut en cumuler beaucoup,
+    // chacun avec 12 mois de factures. Exception : s'il n'y en a qu'un, on l'ouvre.
+    this.regimesDeplies.clear();
+    if (this.regimeGroups.length === 1) {
+      this.regimesDeplies.add(this.regimeGroups[0].regime);
+    }
   }
 
   back() {
     this.level = 'structures';
     this.selected = null;
+    this.regimesDeplies.clear();
+  }
+
+  // ===== Pliage des blocs « régime » (niveau 2) =====
+  private readonly regimesDeplies = new Set<string>();
+
+  estDeplie(regime: string): boolean {
+    return this.regimesDeplies.has(regime);
+  }
+
+  basculerRegime(regime: string) {
+    if (!this.regimesDeplies.delete(regime)) this.regimesDeplies.add(regime);
+  }
+
+  toutDeplier() {
+    this.regimeGroups.forEach(g => this.regimesDeplies.add(g.regime));
+  }
+
+  toutReplier() {
+    this.regimesDeplies.clear();
+  }
+
+  get tousDeplies(): boolean {
+    const groupes = this.regimeGroups;
+    return groupes.length > 0 && groupes.every(g => this.regimesDeplies.has(g.regime));
   }
 
   // ===== Niveau 2 : factures de la structure sélectionnée, par mois =====
@@ -156,8 +185,29 @@ export class StructuresFacturesComponent implements OnInit {
     return this.facturesFiltrees.filter(f => f.structureSanitaireId === this.selected!.structureId);
   }
 
-  /** Factures de la structure séparées par régime (chacun avec ses mois). */
-  get regimeGroups(): RegimeGroup[] {
+  /**
+   * Factures de la structure sélectionnée, séparées par régime puis par mois.
+   *
+   * Champ recalculé explicitement (et non getter) : un getter est réévalué à CHAQUE cycle
+   * de détection de changement, ce qui recréait les objets « mois » et remettait donc la
+   * pagination à la page 1 dès le premier clic — en plus de regrouper les factures en
+   * permanence pour rien.
+   */
+  regimeGroups: RegimeGroup[] = [];
+
+  /** Recalcule les groupes du niveau 2 (changement de structure ou de filtre). */
+  private rafraichirRegimeGroups() {
+    this.regimeGroups = this.calculerRegimeGroups();
+  }
+
+  /** Filtres année / statut : le niveau 2 doit refléter la nouvelle sélection. */
+  onFiltreChange() {
+    if (this.level === 'factures') {
+      this.rafraichirRegimeGroups();
+    }
+  }
+
+  private calculerRegimeGroups(): RegimeGroup[] {
     const byRegime = new Map<Regime, FactureStructure[]>();
     for (const f of this.selectedFactures) {
       const arr = byRegime.get(f.regime) || [];
@@ -190,9 +240,7 @@ export class StructuresFacturesComponent implements OnInit {
           annee: f.annee,
           label: `${this.moisNoms[f.mois] || f.mois} ${f.annee}`,
           factures: [],
-          total: 0,
-          currentPage: 1,
-          pageSize: 10
+          total: 0
         };
         map.set(key, group);
       }
@@ -224,39 +272,11 @@ export class StructuresFacturesComponent implements OnInit {
   }
 
   statutLabel(s: string): string {
-    return this.statutLabels[s] ?? s;
+    return apparenceStatut(s).libelle;
   }
 
   openDetail(f: FactureStructure) {
     this.router.navigate(['/dashboard/factures-structure', f.id]);
   }
 
-  // --- Pagination pour MonthGroup ---
-  getPaginatedFactures(g: MonthGroup): FactureStructure[] {
-    const page = g.currentPage || 1;
-    const size = g.pageSize || 10;
-    const start = (page - 1) * size;
-    return g.factures.slice(start, start + size);
-  }
-
-  getTotalPages(g: MonthGroup): number {
-    const size = g.pageSize || 10;
-    return Math.ceil(g.factures.length / size);
-  }
-
-  getPageNumbers(g: MonthGroup): number[] {
-    const pages = [];
-    for (let i = 1; i <= this.getTotalPages(g); i++) {
-      pages.push(i);
-    }
-    return pages;
-  }
-
-  goToPage(g: MonthGroup, page: number) {
-    if (page >= 1 && page <= this.getTotalPages(g)) {
-      g.currentPage = page;
-    }
-  }
-
-  Math = Math;
 }

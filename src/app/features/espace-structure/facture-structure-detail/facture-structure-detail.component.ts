@@ -1,572 +1,352 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule, Router } from '@angular/router';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Observable } from 'rxjs';
+import { last } from 'rxjs/operators';
 import { StructureService } from '../../../core/services/structure.service';
 import { FactureStructure } from '../../../core/models/structure.model';
-import { REGIME_LABELS } from '../../../core/models/bcsu.model';
+import { Regime } from '../../../core/models/bcsu.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
-import { MatMenuModule } from '@angular/material/menu';
+import { factureModifiable } from '../../../core/models/statuts';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { PatientDetailComponent } from '../../patients/patient-detail/patient-detail.component';
+import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
+import {
+  LignePatientListe, ListePatientsFactureComponent, PositionListe
+} from '../../../shared/liste-patients-facture/liste-patients-facture.component';
+import { EtatListe, EtatListeService } from '../../../shared/pagination/etat-liste.service';
+import {
+  EchelonPointage, MOIS, VisiteFacture, aUnPdf, avancementPointage, cheminFacture, estContributif, estForfaitaire, exigeCartePoste,
+  libelleRegimePoste, lignesPatients, nombrePatients, telecharger, visiteCorrespond, visiteVerifiee, visitesFacture
+} from '../../espace-poste/poste-facturation';
 
+type FiltrePointage = 'tous' | 'a_verifier' | 'verifies';
+
+/**
+ * Détail d'une facture de point de soins, pour tous les rôles qui la lisent : la structure
+ * qui l'a saisie (centre), le centre qui valide celle d'un poste, le service régional et le
+ * niveau central. Même présentation que la facture du poste : en-tête et circuit de
+ * validation, bandeau des totaux, puis la liste des patients — un tableau sans en-tête, une
+ * ligne par visite (nom et prénom, date, matricule). Un clic ouvre l'écran du patient
+ * (prestations, dossier, pointage « vérifié », corrections de la structure émettrice).
+ */
 @Component({
   selector: 'app-facture-structure-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatDialogModule, MatMenuModule, StatusBadgeComponent],
-  templateUrl: './facture-structure-detail.component.html',
-  styleUrls: [
-    '../../factures/facture-detail/facture-detail.shared.css',
-    './facture-structure-detail.component.css'
-  ]
+  imports: [ListePatientsFactureComponent, CommonModule, RouterModule, FormsModule,
+    MatIconModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, StatusBadgeComponent, RegimeBadgeComponent],
+  templateUrl: './facture-structure-detail.component.html'
 })
 export class FactureStructureDetailComponent implements OnInit {
-  // Pi�ces justificatives affich�es dans le dossier patient
-  dossierPatient: any | null = null;
-  viewerImage: string | null = null;
-  zoomLevel = 1;
-  Math = Math;
-  readonly regimeLabels = REGIME_LABELS;
+  readonly libelleRegime = libelleRegimePoste;
+
   facture: FactureStructure | null = null;
-  patientGroups: any[] = [];
-  feuillesSoinsUniques: {id: string, numero: string}[] = [];
+  /** Une entrée par visite (dossier, ou lettre de garantie pour les anciennes saisies). */
+  visites: VisiteFacture[] = [];
+  /** Lignes de la liste des patients, après recherche et filtre de pointage. */
+  lignes: LignePatientListe[] = [];
   loading = true;
   busy = false;
   exporting = false;
+  recherche = '';
+  /** Page, recherche et défilement retrouvés en revenant d'un patient. */
+  etatRetour?: EtatListe;
 
-  // --- Pagination & Search ---
-  searchPatient: string = '';
-  filteredGroups: any[] = [];
-  paginatedGroups: any[] = [];
-  currentPage: number = 1;
-  pageSize: number = 10;
-
-  get totalPages(): number {
-    return Math.ceil(this.filteredGroups.length / this.pageSize);
-  }
-
-  get pageNumbers(): number[] {
-    const pages = [];
-    for (let i = 1; i <= this.totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }
+  @ViewChild(ListePatientsFactureComponent) liste?: ListePatientsFactureComponent;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
+    private location: Location,
     private structureService: StructureService,
     private snackBar: MatSnackBar,
     private confirm: ConfirmService,
     public auth: AuthService,
-    private feuilleSoinsService: FeuilleSoinsService,
-    private dialog: MatDialog
+    private etatListe: EtatListeService
   ) {}
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) this.load(id);
+    if (!id) return;
+    this.etatRetour = this.etatListe.reprendre(this.cleEtat(id));
+    this.recherche = this.etatRetour?.recherche || '';
+    this.filtrePointage = (this.etatRetour?.filtre as FiltrePointage) || 'tous';
+    this.load(id);
   }
 
   private load(id: string) {
     this.loading = true;
-    this.structureService.getFacture(id).subscribe({
-      next: (f) => { 
-        this.facture = f; 
-        this.buildPatientGroups();
-        this.loading = false; 
+    this.structureService.getFacture(id).pipe(last()).subscribe({
+      next: f => {
+        this.appliquer(f);
+        this.loading = false;
+        EtatListeService.defiler(this.etatRetour);
       },
       error: () => { this.loading = false; }
     });
   }
 
+  private appliquer(f: FactureStructure) {
+    this.facture = f;
+    this.visites = visitesFacture(f);
+    this.filtrer();
+  }
+
+  // ══════════════════════════ droits ══════════════════════════
+
   get canSend(): boolean {
-    return !!this.facture && (this.facture.statut === 'BROUILLON' || this.facture.statut === 'REJETEE_SR' || this.facture.statut === 'REJETEE_CS');
+    return !!this.facture && factureModifiable(this.facture.statut);
   }
 
-  /** La structure peut modifier/supprimer ses saisies AVANT l'envoi mensuel (ou après rejet). */
+  /** La structure émettrice peut corriger ses saisies AVANT l'envoi (ou après rejet). */
   get canEditLines(): boolean {
-    return this.auth.isStructureSanitaire() && this.canSend;
+    return this.auth.isStructureSanitaire() && this.canSend
+      && this.auth.getCurrentUser()?.structureSanitaireId === this.facture?.structureSanitaireId;
   }
 
-  /** Le Service Régional peut valider/rejeter une facture reçue (ENVOYEE). */
+  get canEnvoyer(): boolean {
+    return this.canEditLines && (this.facture?.lignes?.length || 0) > 0 && !this.facture?.nombreDossiersACompleter;
+  }
+
+  /** Le service régional valide ou rejette une facture reçue (ENVOYEE). */
   get canReview(): boolean {
     return !!this.facture && this.facture.statut === 'ENVOYEE' && this.auth.isServiceRegional();
   }
 
-  /** Le Centre de Santé peut valider/rejeter la facture d'un poste rattaché (SOUMISE_CS). */
+  /**
+   * Le DISTRICT valide ou rejette la facture d'un poste de son district (SOUMISE_CS) — rôle
+   * tenu par le centre de rattachement jusqu'au 08/10/2026.
+   */
   get canReviewPoste(): boolean {
-    return !!this.facture && this.facture.statut === 'SOUMISE_CS' && this.auth.isStructureSanitaire() && !this.auth.isPosteDeSante();
+    return !!this.facture && this.facture.statut === 'SOUMISE_CS' && this.auth.aCapaciteDistrict();
   }
 
-  valider() {
+  // ══════════════════════════ pointage des patients ══════════════════════════
+
+  /**
+   * Échelon qui pointe en ce moment : le centre pendant la validation de la facture d'un
+   * poste, le service régional pendant la sienne. Le pointage lui-même se fait sur l'écran
+   * du patient ; la liste en montre l'avancement et filtre dessus.
+   */
+  get echelonPointage(): EchelonPointage | null {
+    if (this.canReviewPoste) return 'centre';
+    if (this.canReview) return 'region';
+    return null;
+  }
+
+  /** Filtre de la liste pendant le pointage. */
+  filtrePointage: FiltrePointage = 'tous';
+  readonly filtresPointage = [
+    { cle: 'tous' as const, libelle: 'Tous' },
+    { cle: 'a_verifier' as const, libelle: 'À vérifier' },
+    { cle: 'verifies' as const, libelle: 'Vérifiés' }
+  ];
+
+  /** Avancement du pointage de l'échelon courant, en patients distincts. */
+  get pointage(): { faits: number; total: number } {
+    const echelon = this.echelonPointage;
+    return echelon ? avancementPointage(this.facture, echelon) : { faits: 0, total: 0 };
+  }
+
+  choisirFiltrePointage(filtre: FiltrePointage) {
+    this.filtrePointage = filtre;
+    this.filtrer(true);
+  }
+
+  /** Avant de valider : signaler les patients que l'échelon n'a pas pointés. */
+  private avertissementPointage(): string {
+    const { faits, total } = this.pointage;
+    const restants = total - faits;
+    return restants > 0
+      ? ` Attention : ${restants} patient(s) sur ${total} n'ont pas été pointés « vérifiés ».`
+      : (total > 0 ? ` Les ${total} patients ont été vérifiés.` : '');
+  }
+
+  // ══════════════════════════ état dérivé ══════════════════════════
+
+  get rejetee(): boolean {
+    const s = this.facture?.statut;
+    return s === 'REJETEE_CS' || s === 'REJETEE_SR' || s === 'REJETEE_NC';
+  }
+
+  get tauxSencsu(): number {
+    return estContributif(this.facture?.regime) ? 80 : 100;
+  }
+
+  get aUnPdf(): boolean {
+    return aUnPdf(this.facture?.regime);
+  }
+
+  get periode(): string {
+    return this.facture ? `${MOIS[this.facture.mois] || ''} ${this.facture.annee}` : '';
+  }
+
+  get destinationEnvoi(): string {
+    // Un poste n'envoie au district que le 0-5 ans (09/10/2026) ; les autres régimes vont au SR.
+    return this.auth.isPosteDeSante() && this.facture?.regime === 'ZERO_CINQ_ANS'
+      ? 'au district' : 'au service régional';
+  }
+
+  /** Patients distincts (un patient revenu dans le mois compte une fois). */
+  get nombrePatients(): number {
+    return nombrePatients(this.facture) || this.visites.length;
+  }
+
+  /** Nombre de dossiers patients marqués « rejetés » par l'échelon courant. */
+  get nbRejetes(): number {
+    const dossiers = this.facture?.dossiers;
+    if (!dossiers?.length) return 0;
+    if (this.canReviewPoste) return dossiers.filter(d => !!d.rejeteCentreLe).length;
+    if (this.canReview)      return dossiers.filter(d => !!d.rejeteRegionLe).length;
+    return 0;
+  }
+
+  // ══════════════════════════ liste des patients ══════════════════════════
+
+  /** Recalcule la liste affichée (chargement, recherche, filtre de pointage). */
+  filtrer(premierePage = false) {
     if (!this.facture) return;
-    this.confirm.ask({
-      title: 'Valider la facture',
-      message: 'Confirmez la validation de cette facture de structure sanitaire.',
-      confirmText: 'Valider'
-    }).subscribe(ok => {
-      if (!ok || !this.facture) return;
-      this.busy = true;
-      this.structureService.validerFacture(this.facture.id).subscribe({
-        next: (f) => { 
-          this.facture = f; 
-          this.buildPatientGroups();
-          this.busy = false; 
-          this.snackBar.open('Facture validée', 'Fermer', { duration: 3000 }); 
-        },
-        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
-      });
-    });
+    const echelon = this.echelonPointage;
+    let retenues = this.visites.filter(v => visiteCorrespond(v, this.recherche));
+    if (echelon && this.filtrePointage !== 'tous') {
+      const voulu = this.filtrePointage === 'verifies';
+      retenues = retenues.filter(v => !!v.dossier && visiteVerifiee(v, echelon) === voulu);
+    }
+    this.lignes = lignesPatients(retenues, cheminFacture('structure', this.facture.id),
+      { aCarte: exigeCartePoste(this.facture.regime), echelon });
+    if (premierePage) this.liste?.premierePage();
   }
 
-  rejeter() {
+  get messageVide(): string {
+    if (!this.visites.length) return 'Aucun patient sur cette facture.';
+    return 'Aucun patient ne correspond à ce filtre.';
+  }
+
+  private cleEtat(id: string): string {
+    return 'facture-structure:' + id;
+  }
+
+  /** Un patient s'ouvre : on note où en est la liste, pour y revenir. */
+  memoriserPosition(position: PositionListe) {
     if (!this.facture) return;
-    this.confirm.prompt({
-      title: 'Rejeter la facture',
-      message: 'Indiquez le motif du rejet. Il sera transmis à la structure pour correction.',
-      label: 'Motif du rejet',
-      placeholder: 'Ex : pièces manquantes, montant non conforme…',
-      confirmText: 'Rejeter',
-      danger: true,
-      required: true,
-      maxLength: 500
-    }).subscribe(motif => {
-      if (!motif || !this.facture) return;
-      this.busy = true;
-      this.structureService.rejeterFacture(this.facture.id, motif).subscribe({
-        next: (f) => { 
-          this.facture = f; 
-          this.buildPatientGroups();
-          this.busy = false; 
-          this.snackBar.open('Facture rejetée', 'Fermer', { duration: 3000 }); 
-        },
-        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
-      });
-    });
+    this.etatListe.memoriser(this.cleEtat(this.facture.id),
+      { ...position, recherche: this.recherche, filtre: this.filtrePointage, defilement: window.scrollY });
   }
 
-  validerPoste() {
-    if (!this.facture) return;
-    this.confirm.ask({
-      title: 'Valider la facture du poste',
-      message: 'Confirmez la validation de cette facture. Elle sera transmise au Service Régional.',
-      confirmText: 'Valider'
-    }).subscribe(ok => {
-      if (!ok || !this.facture) return;
-      this.busy = true;
-      this.structureService.validerFacturePoste(this.facture.id).subscribe({
-        next: (f) => { 
-          this.facture = f; 
-          this.buildPatientGroups();
-          this.busy = false; 
-          this.snackBar.open('Facture validée et transmise', 'Fermer', { duration: 3000 }); 
-        },
-        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
-      });
-    });
+  // ══════════════════════════ navigation et documents ══════════════════════════
+
+  retour() {
+    this.location.back();
   }
 
-  rejeterPoste() {
-    if (!this.facture) return;
-    this.confirm.prompt({
-      title: 'Rejeter la facture du poste',
-      message: 'Indiquez le motif du rejet. La facture sera renvoyée au poste de santé pour correction.',
-      label: 'Motif du rejet',
-      placeholder: 'Ex : montants erronés…',
-      confirmText: 'Rejeter',
-      danger: true,
-      required: true,
-      maxLength: 500
-    }).subscribe(motif => {
-      if (!motif || !this.facture) return;
-      this.busy = true;
-      this.structureService.rejeterFacturePoste(this.facture.id, motif).subscribe({
-        next: (f) => { 
-          this.facture = f; 
-          this.buildPatientGroups();
-          this.busy = false; 
-          this.snackBar.open('Facture rejetée et renvoyée au poste', 'Fermer', { duration: 3000 }); 
-        },
-        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
-      });
-    });
-  }
-
-  /** Télécharge l'état récapitulatif nominatif (colonnes selon le régime du classeur CS_EPS). */
   exporterExcel() {
-    if (!this.facture) return;
+    const f = this.facture!;
     this.exporting = true;
-    const numero = this.facture.numero;
-    this.structureService.exportFactureExcel(this.facture.id).subscribe({
-      next: (blob: Blob) => {
-        this.exporting = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Facture_Structure_${numero}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Export Excel téléchargé', 'Fermer', { duration: 3000 });
-      },
-      error: (err) => {
-        this.exporting = false;
-        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-      }
+    this.structureService.exportFactureExcel(f.id).subscribe({
+      next: blob => { this.exporting = false; telecharger(blob, `Facture_${f.numero}.xlsx`); },
+      error: err => { this.exporting = false; this.erreur(err); }
     });
   }
 
   exporterPdf() {
-    if (!this.facture) return;
+    const f = this.facture!;
     this.exporting = true;
-    const numero = this.facture.numero;
-    this.structureService.exportFacturePdf(this.facture.id).subscribe({
-      next: (blob: Blob) => {
-        this.exporting = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Facture_Structure_${numero}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Export PDF téléchargé', 'Fermer', { duration: 3000 });
-      },
-      error: (err) => {
-        this.exporting = false;
-        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-      }
+    this.structureService.exportFacturePdf(f.id).subscribe({
+      next: blob => { this.exporting = false; telecharger(blob, `Facture_${f.numero}.pdf`); },
+      error: err => { this.exporting = false; this.erreur(err); }
     });
   }
 
-  imprimerFeuille(id: string, numero: string) {
+  /** Tous les rǸgimes sauf 0-5 ans ont la page de garde + liste nominative. */
+  get estEnfants(): boolean {
+    return !estForfaitaire(this.facture?.regime);
+  }
+
+  exporterEnfantsPdf() {
+    const f = this.facture!;
     this.exporting = true;
-    this.feuilleSoinsService.exportPdf(id).subscribe({
-      next: (blob: Blob) => {
-        this.exporting = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Feuille_Soins_${numero}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Feuille de soins téléchargée', 'Fermer', { duration: 3000 });
-      },
-      error: (err) => {
-        this.exporting = false;
-        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-      }
+    this.structureService.exportEnfantsPdf(f.id).subscribe({
+      next: blob => { this.exporting = false; telecharger(blob, `Liste_et_facture_enfants_5ans_${f.numero}.pdf`); },
+      error: err => { this.exporting = false; this.erreur(err); }
     });
   }
+
+  // ══════════════════════════ circuit de validation ══════════════════════════
 
   envoyer() {
-    if (!this.facture) return;
-    const destination = this.auth.isPosteDeSante() ? 'au Centre de Santé rattaché' : 'au Service Régional';
     this.confirm.ask({
       title: 'Envoyer la facture',
-      message: `La facture sera transmise ${destination}. Continuer ?`,
+      message: `La facture sera transmise ${this.destinationEnvoi}. Elle ne pourra plus être modifiée, sauf rejet.`,
       confirmText: 'Envoyer'
     }).subscribe(ok => {
-      if (!ok || !this.facture) return;
-      this.busy = true;
-      this.structureService.envoyerFacture(this.facture.id).subscribe({
-        next: (f) => { 
-          this.facture = f; 
-          this.buildPatientGroups();
-          this.busy = false; 
-          this.snackBar.open(`Facture envoyée ${destination}`, 'Fermer', { duration: 3000 }); 
-        },
-        error: (err) => { this.busy = false; this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' }); }
-      });
+      if (ok) this.action(() => this.structureService.envoyerFacture(this.facture!.id), `Facture envoyée ${this.destinationEnvoi}.`);
     });
   }
 
-  private buildPatientGroups() {
-    if (!this.facture || !this.facture.lignes) {
-      this.patientGroups = [];
-      this.feuillesSoinsUniques = [];
-      return;
-    }
-
-    const groupsMap = new Map<string, any>();
-    const fdsMap = new Map<string, string>();
-
-    for (let i = 0; i < this.facture.lignes.length; i++) {
-      const ligne: any = this.facture.lignes[i];
-      // Index de la ligne dans la facture (pour modifier / supprimer la prestation).
-      ligne._index = i;
-      const key = ligne.lettreGarantieNumero || `${ligne.patientPrenom}-${ligne.patientNom}`;
-      if (!groupsMap.has(key)) {
-        groupsMap.set(key, {
-          patientId: ligne.patientId,
-          patientNom: ligne.patientNom,
-          patientPrenom: ligne.patientPrenom,
-          matricule: ligne.patientMatricule || 'Sans matricule',
-          lettreNumero: ligne.lettreGarantieNumero,
-          feuilleSoinsId: ligne.feuilleSoinsId,
-          feuilleSoinsNumero: ligne.feuilleSoinsNumero,
-          // Informations médicales du dossier (une seule fois par patient, pas par ligne).
-          numeroRegistre: ligne.numeroRegistre,
-          ircIra: ligne.ircIra,
-          indicationCbt: ligne.indicationCbt,
-          service: ligne.service,
-          diagnostique: ligne.diagnostique,
-          lignes: [],
-          documents: [],
-          montantTotal: 0,
-          montantBeneficiaire: 0,
-          montantSencsu: 0,
-          expanded: false
-        });
-      }
-
-      const group = groupsMap.get(key)!;
-      if (ligne.feuilleSoinsId) {
-        group.feuilleSoinsId = ligne.feuilleSoinsId;
-        group.feuilleSoinsNumero = ligne.feuilleSoinsNumero;
-        fdsMap.set(ligne.feuilleSoinsId, ligne.feuilleSoinsNumero || ligne.feuilleSoinsId);
-      }
-      if (!group.numeroRegistre && ligne.numeroRegistre) group.numeroRegistre = ligne.numeroRegistre;
-      if (!group.ircIra && ligne.ircIra) group.ircIra = ligne.ircIra;
-      if (!group.indicationCbt && ligne.indicationCbt) group.indicationCbt = ligne.indicationCbt;
-      group.lignes.push(ligne);
-      group.montantTotal += ligne.montant || 0;
-      group.montantBeneficiaire += ligne.montantBeneficiaire || 0;
-      group.montantSencsu += ligne.montantSencsu || 0;
-    }
-
-    if (this.facture.documentsComplementaires) {
-      for (const doc of this.facture.documentsComplementaires) {
-        if (doc.lettreGarantieNumero) {
-          const group = groupsMap.get(doc.lettreGarantieNumero);
-          if (group) {
-            group.documents.push(doc);
-          }
-        }
-      }
-    }
-
-    // Ticket de caisse enregistré au niveau de la facture (anciennes données) :
-    // il doit apparaître dans le dossier (pièces) de chaque patient concerné.
-    if (this.facture.ticketCaisse) {
-      for (const group of groupsMap.values()) {
-        const dejaPresent = group.documents.some((d: any) => (d.titre || '').toLowerCase().includes('ticket'));
-        if (!dejaPresent) {
-          group.documents.push({ titre: 'Ticket de caisse', image: this.facture.ticketCaisse });
-        }
-      }
-    }
-
-    this.patientGroups = Array.from(groupsMap.values());
-    this.feuillesSoinsUniques = Array.from(fdsMap.entries()).map(([id, numero]) => ({ id, numero }));
-    this.updatePagination();
+  valider() {
+    this.confirm.ask({
+      title: 'Valider la facture',
+      message: 'Confirmez la validation de cette facture.' + this.avertissementPointage(),
+      confirmText: 'Valider'
+    }).subscribe(ok => {
+      if (ok) this.action(() => this.structureService.validerFacture(this.facture!.id), 'Facture validée.');
+    });
   }
 
-  // ===== Modification / suppression des saisies avant envoi =====
-
-  /** Ligne en cours de modification (modale) + valeurs éditées. */
-  editingLigne: any | null = null;
-  editModel = { designation: '', quantite: 1, prixUnitaire: 0, datePriseEnCharge: '', codeActe: '' };
-
-  ouvrirModificationLigne(ligne: any, event: Event) {
-    event.stopPropagation();
-    this.editingLigne = ligne;
-    this.editModel = {
-      designation: ligne.designation || '',
-      quantite: ligne.quantite || 1,
-      prixUnitaire: ligne.prixUnitaire || 0,
-      datePriseEnCharge: ligne.datePriseEnCharge || '',
-      codeActe: ligne.codeActe || ''
-    };
+  rejeter() {
+    this.confirm.ask({
+      title: 'Renvoyer la facture à la structure',
+      message: `${this.nbRejetes} patient(s) rejeté(s) seront renvoyés à la structure pour correction. `
+        + 'Leur motif accompagne la facture.',
+      confirmText: 'Renvoyer',
+      danger: true
+    }).subscribe(ok => {
+      if (ok) this.action(() => this.structureService.rejeterFacture(this.facture!.id, ''), 'Facture renvoyée à la structure.');
+    });
   }
 
-  fermerModificationLigne() {
-    this.editingLigne = null;
+  validerPoste() {
+    this.confirm.ask({
+      title: 'Valider la facture du poste',
+      message: 'Confirmez la validation de cette facture. Elle sera transmise au service régional.'
+        + this.avertissementPointage(),
+      confirmText: 'Valider'
+    }).subscribe(ok => {
+      if (ok) this.action(() => this.structureService.validerFacturePoste(this.facture!.id), 'Facture validée et transmise.');
+    });
   }
 
-  enregistrerModificationLigne() {
-    if (!this.facture || !this.editingLigne) return;
-    if (!this.editModel.designation.trim() || this.editModel.quantite < 1 || this.editModel.prixUnitaire < 0) {
-      this.snackBar.open('Veuillez renseigner une désignation, une quantité (≥ 1) et un prix valide', 'Fermer', { duration: 4000 });
-      return;
-    }
+  rejeterPoste() {
+    this.confirm.ask({
+      title: 'Renvoyer la facture au poste',
+      message: `${this.nbRejetes} patient(s) rejeté(s) seront renvoyés au poste de santé pour correction. `
+        + 'Leur motif accompagne la facture.',
+      confirmText: 'Renvoyer',
+      danger: true
+    }).subscribe(ok => {
+      if (ok) this.action(() => this.structureService.rejeterFacturePoste(this.facture!.id, ''), 'Facture renvoyée au poste.');
+    });
+  }
+
+  /** Appel au serveur qui renvoie la facture à jour ; un seul traitement d'erreur. */
+  private action(appel: () => Observable<FactureStructure>, message: string) {
     this.busy = true;
-    this.structureService.updateFactureLigne(this.facture.id, this.editingLigne._index, {
-      designation: this.editModel.designation.trim(),
-      quantite: this.editModel.quantite,
-      prixUnitaire: this.editModel.prixUnitaire,
-      datePriseEnCharge: this.editModel.datePriseEnCharge,
-      codeActe: this.editModel.codeActe || undefined
-    }).subscribe({
-      next: (f) => {
-        this.facture = f;
-        this.buildPatientGroups();
+    appel().subscribe({
+      next: f => {
         this.busy = false;
-        this.editingLigne = null;
-        this.snackBar.open('Prestation modifiée', 'Fermer', { duration: 3000 });
+        this.appliquer(f);
+        this.snackBar.open(message, 'Fermer', { duration: 3000 });
       },
-      error: (err) => {
-        this.busy = false;
-        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-      }
+      error: err => { this.busy = false; this.erreur(err); }
     });
   }
 
-  supprimerLigne(ligne: any, event: Event) {
-    event.stopPropagation();
-    if (!this.facture) return;
-    this.confirm.ask({
-      title: 'Supprimer la prestation',
-      message: `Supprimer « ${ligne.designation} » de la facture ? Cette action est possible tant que la facture n'est pas envoyée.`,
-      confirmText: 'Supprimer',
-      danger: true
-    }).subscribe(ok => {
-      if (!ok || !this.facture) return;
-      this.busy = true;
-      this.structureService.deleteFactureLigne(this.facture.id, ligne._index).subscribe({
-        next: (f) => {
-          this.facture = f;
-          this.buildPatientGroups();
-          this.busy = false;
-          this.snackBar.open('Prestation supprimée', 'Fermer', { duration: 3000 });
-        },
-        error: (err) => {
-          this.busy = false;
-          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-        }
-      });
-    });
-  }
-
-  supprimerPatient(g: any, event: Event) {
-    event.stopPropagation();
-    if (!this.facture || !g.lettreNumero) return;
-    this.confirm.ask({
-      title: 'Supprimer la ligne du patient',
-      message: `Supprimer la saisie de ${g.patientPrenom} ${g.patientNom} (toutes ses prestations et pièces jointes) de la facture mensuelle ?`,
-      confirmText: 'Supprimer',
-      danger: true
-    }).subscribe(ok => {
-      if (!ok || !this.facture) return;
-      this.busy = true;
-      this.structureService.deleteFacturePatient(this.facture.id, g.lettreNumero).subscribe({
-        next: (f) => {
-          this.facture = f;
-          this.buildPatientGroups();
-          this.busy = false;
-          this.snackBar.open('Saisie du patient supprimée', 'Fermer', { duration: 3000 });
-        },
-        error: (err) => {
-          this.busy = false;
-          this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-        }
-      });
-    });
-  }
-
-  toggleGroup(group: any) {
-    group.expanded = !group.expanded;
-  }
-
-  onSearchChange() {
-    this.currentPage = 1;
-    this.updatePagination();
-  }
-
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePagination();
-      window.scrollTo({ top: 300, behavior: 'smooth' });
-    }
-  }
-
-  private updatePagination() {
-    const term = this.searchPatient.toLowerCase().trim();
-    if (term) {
-      this.filteredGroups = this.patientGroups.filter(g => 
-        (g.patientNom && g.patientNom.toLowerCase().includes(term)) ||
-        (g.patientPrenom && g.patientPrenom.toLowerCase().includes(term)) ||
-        (g.matricule && g.matricule.toLowerCase().includes(term)) ||
-        g.lignes.some((l: any) => l.designation && l.designation.toLowerCase().includes(term))
-      );
-    } else {
-      this.filteredGroups = [...this.patientGroups];
-    }
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    this.paginatedGroups = this.filteredGroups.slice(startIndex, startIndex + this.pageSize);
-  }
-
-  expandAll() {
-    this.filteredGroups.forEach(g => g.expanded = true);
-  }
-
-  collapseAll() {
-    this.filteredGroups.forEach(g => g.expanded = false);
-  }
-
-  // --- Viewer Methods ---
-  dossierCount(g: any): number {
-    return (g.documents ? g.documents.length : 0) + (g.feuilleSoinsId ? 1 : 0);
-  }
-
-  openViewer(src: string) {
-    this.viewerImage = src;
-    this.zoomLevel = 1;
-  }
-
-  closeViewer() {
-    this.viewerImage = null;
-    this.zoomLevel = 1;
-  }
-
-  zoomIn() {
-    this.zoomLevel = Math.min(this.zoomLevel + 0.25, 3);
-  }
-
-  zoomOut() {
-    this.zoomLevel = Math.max(this.zoomLevel - 0.25, 0.25);
-  }
-
-  resetZoom() {
-    this.zoomLevel = 1;
-  }
-  
-  openDossierDocs(g: any, event?: Event) {
-    if (event) event.stopPropagation();
-    this.dossierPatient = g;
-  }
-  
-  closeDossier() {
-    this.dossierPatient = null;
-  }
-  openDossier(group: any, event: Event) {
-    event.stopPropagation();
-    if (group.patientId) {
-      this.dialog.open(PatientDetailComponent, {
-        data: { patientId: group.patientId },
-        width: '95vw',
-        maxWidth: '1200px',
-        height: '95vh',
-        autoFocus: false
-      });
-    } else {
-      this.snackBar.open('Dossier patient indisponible (identifiant manquant).', 'Fermer', { duration: 3000 });
-    }
-  }
-
-  private readonly moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-  getMonthName(mois: number): string {
-    return this.moisNoms[mois] || '';
+  private erreur(err: any) {
+    this.snackBar.open(err?.error?.message || err?.message || 'Opération impossible.', 'Fermer',
+      { duration: 6000, panelClass: 'error-snackbar' });
   }
 }
-

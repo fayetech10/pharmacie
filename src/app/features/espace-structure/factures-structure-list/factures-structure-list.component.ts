@@ -20,9 +20,6 @@ interface FactureGroup {
   annee: number;
   factures: FactureStructure[];
   brouillons: number;
-  // Pagination
-  currentPage: number;
-  pageSize: number;
 }
 
 interface MonthGroup {
@@ -37,38 +34,20 @@ interface PatientPrestations {
   lignes: LigneFactureStructure[];
 }
 
-const STATUT_LABELS: Record<string, string> = {
-  BROUILLON: 'Non envoyée',
-  SOUMISE_CS: 'Soumise CS',
-  REJETEE_CS: 'Rejetée CS',
-  ENVOYEE: 'Envoyée',
-  VALIDEE_SR: 'Validée SR',
-  REJETEE_SR: 'Rejetée SR',
-  VALIDEE_NC: 'Validée NC',
-  REJETEE_NC: 'Rejetée NC',
-  PAYEE: 'Payée'
-};
 
-const STATUT_ICONS: Record<string, string> = {
-  BROUILLON: 'edit_note',
-  SOUMISE_CS: 'hourglass_top',
-  REJETEE_CS: 'cancel',
-  ENVOYEE: 'send',
-  VALIDEE_SR: 'task_alt',
-  REJETEE_SR: 'cancel',
-  VALIDEE_NC: 'verified',
-  REJETEE_NC: 'cancel',
-  PAYEE: 'payments'
-};
 
 import { FormsModule } from '@angular/forms';
+import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
+import { apparenceStatut, factureModifiable } from '../../../core/models/statuts';
+import { telecharger } from '../../espace-poste/poste-facturation';
 
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-factures-structure-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatSnackBarModule, SkeletonListComponent],
-  templateUrl: './factures-structure-list.component.html',
-  styleUrls: ['./factures-structure-list.component.css']
+  imports: [PaginationComponent, PaginerPipe, RegimeBadgeComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatSnackBarModule, SkeletonListComponent],
+  templateUrl: './factures-structure-list.component.html'
 })
 export class FacturesStructureListComponent implements OnInit {
   @Input() factures: FactureStructure[] = [];
@@ -80,6 +59,8 @@ export class FacturesStructureListComponent implements OnInit {
   loading = true;
   envoiEnCours: string | null = null;
   exporting: string | null = null;
+  /** Facture dont l'export Excel/PDF est en cours (sablier sur son bouton ⋮). */
+  exportFacture: string | null = null;
   expandedFactureIds = new Set<string>();
 
   filterMois = 0;
@@ -144,9 +125,7 @@ export class FacturesStructureListComponent implements OnInit {
           mois: f.mois,
           annee: f.annee,
           factures: [],
-          brouillons: 0,
-          currentPage: 1,
-          pageSize: 10
+          brouillons: 0
         };
         month.regimes.push(regimeGroup);
       }
@@ -171,10 +150,35 @@ export class FacturesStructureListComponent implements OnInit {
     this.router.navigate(['/dashboard/factures-structure', id]);
   }
 
+  /** Mêmes droits que la page de la facture, où se font les corrections (canEditLines). */
+  peutModifier(f: FactureStructure): boolean {
+    return this.auth.isStructureSanitaire() && factureModifiable(f.statut)
+      && this.auth.getCurrentUser()?.structureSanitaireId === f.structureSanitaireId;
+  }
+
+  exporterFacture(f: FactureStructure, format: 'excel' | 'pdf') {
+    this.exportFacture = f.id;
+    const export$ = format === 'excel'
+      ? this.structureService.exportFactureExcel(f.id)
+      : this.structureService.exportFacturePdf(f.id);
+    export$.subscribe({
+      next: (blob: Blob) => {
+        this.exportFacture = null;
+        telecharger(blob, `Facture_${f.numero}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+      },
+      error: (err) => {
+        this.exportFacture = null;
+        this.snackBar.open('Erreur lors de l\'export: ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
   envoyerGroupe(group: FactureGroup, event: Event) {
     event.stopPropagation();
     const key = this.cleGroupe(group);
-    const destination = this.auth.isPosteDeSante() ? 'au centre de santé rattaché' : 'au service régional';
+    // Un poste n'envoie au district que le 0-5 ans (09/10/2026) ; les autres régimes vont au SR.
+    const destination = this.auth.isPosteDeSante() && group.regime === 'ZERO_CINQ_ANS'
+      ? 'au district' : 'au service régional';
     this.confirm.ask({
       title: 'Envoyer la facture mensuelle',
       message: `Envoyer les ${group.brouillons} facture(s) en brouillon de « ${group.titre} » ${destination} ? Vous ne pourrez plus les modifier.`,
@@ -268,37 +272,12 @@ export class FacturesStructureListComponent implements OnInit {
   }
 
   statutLabel(statut: string): string {
-    return STATUT_LABELS[statut] || statut;
+    return apparenceStatut(statut).libelle;
   }
 
   statutIcon(statut: string): string {
-    return STATUT_ICONS[statut] || 'info';
+    return apparenceStatut(statut).icone;
   }
 
-  // --- Pagination pour FactureGroup ---
-  getPaginatedFactures(g: FactureGroup): FactureStructure[] {
-    const start = (g.currentPage - 1) * g.pageSize;
-    return g.factures.slice(start, start + g.pageSize);
-  }
-
-  getTotalPages(g: FactureGroup): number {
-    return Math.ceil(g.factures.length / g.pageSize);
-  }
-
-  getPageNumbers(g: FactureGroup): number[] {
-    const pages = [];
-    for (let i = 1; i <= this.getTotalPages(g); i++) {
-      pages.push(i);
-    }
-    return pages;
-  }
-
-  goToPage(g: FactureGroup, page: number) {
-    if (page >= 1 && page <= this.getTotalPages(g)) {
-      g.currentPage = page;
-    }
-  }
-
-  Math = Math;
 }
 

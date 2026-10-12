@@ -1,0 +1,25 @@
+<div class="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-6 py-12 bg-amber-50">
+  <span class="w-24 h-24 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+    <mat-icon class="!text-[56px] !w-14 !h-14">hourglass_top</mat-icon>
+  </span>
+
+  <h1 class="m-0 text-[26px] sm:text-[30px] font-bold text-amber-900">
+    Bénéficiaire en période d'observation
+  </h1>
+
+  <p class="m-0 max-w-[600px] text-[16px] leading-relaxed text-amber-800">
+    <ng-container *ngIf="data.nomComplet"><strong>{{ data.nomComplet }}</strong> </ng-container>
+    n'a pas encore terminé sa <strong>période d'observation</strong> : la prise en charge CSU
+    n'est <strong>pas encore ouverte</strong>, la facturation ne peut donc pas être effectuée.
+  </p>
+
+  <div *ngIf="data.dateDebutDroits"
+       class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-amber-300 text-amber-900">
+    <mat-icon class="!text-xl !w-5 !h-5">event_available</mat-icon>
+    <span class="text-[15px]">Ouverture des droits le <strong class="text-[17px]">{{ data.dateDebutDroits }}</strong></span>
+  </div>
+
+  <button type="button" class="btn btn-primary btn-lg mt-2" (click)="dialogRef.close()">
+    <mat-icon>check</mat-icon> J'ai compris
+  </button>
+</div>

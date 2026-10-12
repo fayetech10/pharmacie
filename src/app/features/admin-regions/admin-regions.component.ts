@@ -19,6 +19,8 @@ import { Facture, StatutFacture } from '../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 import { StatsComponent, StatsScope } from '../stats/stats.component';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 interface RegionSummary {
   region: Region;
   pharmacyCount: number;
@@ -47,7 +49,7 @@ type DrillLevel = 'regions' | 'pharmacies' | 'structures' | 'factures' | 'factur
 @Component({
   selector: 'app-admin-regions',
   standalone: true,
-  imports: [
+  imports: [PaginationComponent, PaginerPipe, 
     CommonModule,
     RouterModule,
     FormsModule,

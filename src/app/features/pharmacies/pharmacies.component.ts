@@ -6,7 +6,6 @@ import { Pharmacie, PharmacieImportResult } from '../../core/models/pharmacie.mo
 import { RegionService, Region } from '../../core/services/region.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -17,13 +16,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { ConfirmService } from '../../core/services/confirm.service';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-pharmacies',
   standalone: true,
-  imports: [
+  imports: [PaginationComponent, PaginerPipe, 
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatIconModule, 
     MatInputModule, MatButtonModule, MatSelectModule, MatTableModule, 
-    MatPaginatorModule, MatSortModule, MatMenuModule, MatSnackBarModule
+    MatSortModule, MatMenuModule, MatSnackBarModule
   ],
   templateUrl: './pharmacies.component.html'
 })
@@ -33,8 +34,20 @@ export class PharmaciesComponent implements OnInit {
   pharmacies: Pharmacie[] = [];
   regions: Region[] = [];
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  private _sort!: MatSort;
+
+  /** Pagination partagée ; le tri reste porté par la source de données. */
+  @ViewChild('pg') pg?: PaginationComponent;
+
+  @ViewChild(MatSort) set sort(matSort: MatSort) {
+    this._sort = matSort;
+    if (this.dataSource && matSort) {
+      this.dataSource.sort = matSort;
+    }
+  }
+  get sort(): MatSort {
+    return this._sort;
+  }
 
   pharmacieForm!: FormGroup;
   editMode = false;
@@ -67,21 +80,13 @@ export class PharmaciesComponent implements OnInit {
       telephone: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       regionId: ['', Validators.required],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.minLength(6)]]
     });
   }
 
   ngOnInit() {
     this.loadRegions();
     this.loadPharmacies();
-  }
-
-  /** Page courante pour la vue cartes mobile (suit le paginator). */
-  get pagedPharmacies(): Pharmacie[] {
-    const data = this.dataSource?.filteredData ?? [];
-    if (!this.paginator) return data;
-    const start = this.paginator.pageIndex * this.paginator.pageSize;
-    return data.slice(start, start + this.paginator.pageSize);
   }
 
   // ----- Synthèse -----
@@ -92,9 +97,7 @@ export class PharmaciesComponent implements OnInit {
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.dataSource.filter = filterValue.trim().toLowerCase();
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
+    this.pg?.aller(0);
   }
 
   loadRegions() {
@@ -105,8 +108,7 @@ export class PharmaciesComponent implements OnInit {
     this.pharmacieService.getAll().subscribe(data => {
       this.pharmacies = data;
       this.dataSource.data = this.pharmacies;
-      this.dataSource.paginator = this.paginator;
-      this.dataSource.sort = this.sort;
+      if (this.sort) this.dataSource.sort = this.sort;
     });
   }
 
@@ -133,7 +135,8 @@ export class PharmaciesComponent implements OnInit {
       this.pharmacieForm.get('password')?.setValidators([]);
     } else {
       this.pharmacieForm.reset();
-      this.pharmacieForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+      // Facultatif : vide, le serveur applique le mot de passe par défaut (password123).
+      this.pharmacieForm.get('password')?.setValidators([Validators.minLength(6)]);
     }
     this.pharmacieForm.get('password')?.updateValueAndValidity();
 
@@ -190,14 +193,9 @@ export class PharmaciesComponent implements OnInit {
     });
   }
 
-  /** Génère un mot de passe aléatoire et le place dans le formulaire (visible). */
-  generatePassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let pwd = '';
-    for (let i = 0; i < 10; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    this.pharmacieForm.get('password')?.setValue(pwd);
+  /** Place le mot de passe par défaut dans le formulaire (visible), comme le ferait un champ vide. */
+  utiliserMotDePasseParDefaut() {
+    this.pharmacieForm.get('password')?.setValue('password123');
     this.hidePassword = false;
   }
 

@@ -1,0 +1,34 @@
+<div class="fade-in">
+  <!-- Filtres, au gabarit du poste de santé : ils s'appliquent à tous les statuts. -->
+  <div class="card">
+    <div class="section-body grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Région
+        <select [(ngModel)]="selectedRegionId" (ngModelChange)="onRegionChange()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option value="">Toutes les régions</option>
+          <option *ngFor="let r of regions" [value]="r.id">{{ r.nom }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        District
+        <select [(ngModel)]="selectedDistrictId" (ngModelChange)="onDistrictChange()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option value="">Tous les districts</option>
+          <option *ngFor="let d of districtsFiltres" [value]="d.id">{{ d.nom }}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <app-onglets libelle="Statut des factures" [onglets]="ongletsStatut" [(selection)]="onglet"></app-onglets>
+  </div>
+
+  <ng-container *ngFor="let o of ongletsStatut">
+    <ng-container *ngIf="o.cle === onglet">
+      <app-factures-list displayMode="STRUCTURE" [monthlyView]="true"
+        [allowedStatuses]="[o.statut]" [showToolbar]="false" [providerIds]="providerIds"></app-factures-list>
+    </ng-container>
+  </ng-container>
+</div>

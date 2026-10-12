@@ -45,15 +45,10 @@
         <mat-icon class="ml-auto text-ink-text text-[18px]">unfold_more</mat-icon>
       </button>
       <mat-menu #userMenu="matMenu" xPosition="after">
-        <ng-container *ngFor="let item of topNav">
-          <button mat-menu-item
-                  [routerLink]="item.link"
-                  [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
-            <mat-icon>{{ item.icon }}</mat-icon>
-            <span>{{ item.label }}</span>
-            <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
-          </button>
-        </ng-container>
+        <button mat-menu-item *ngIf="horsLigneActif && !installation.estInstallee" (click)="installation.reproposer()">
+          <mat-icon>install_mobile</mat-icon>
+          <span>Installer l'application</span>
+        </button>
         <button mat-menu-item (click)="logout()">
           <mat-icon>logout</mat-icon>
           <span>Se déconnecter</span>
@@ -98,6 +93,10 @@
           <span class="ml-auto box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
         </button>
       </ng-container>
+      <button mat-menu-item *ngIf="horsLigneActif && !installation.estInstallee" (click)="installation.reproposer()">
+        <mat-icon>install_mobile</mat-icon>
+        <span>Installer l'application</span>
+      </button>
       <button mat-menu-item (click)="logout()">
         <mat-icon>logout</mat-icon>
         <span>Se déconnecter</span>
@@ -105,6 +104,9 @@
     </mat-menu>
   </div>
 </header>
+
+<!-- Mode hors ligne (postes et centres de santé) : installation, réseau, saisies en attente -->
+<app-bandeau-hors-ligne *ngIf="horsLigneActif"></app-bandeau-hors-ligne>
 
 <!-- Bandeau d'alerte : factures en retard (pharmacien) -->
 <div class="bg-gradient-to-r from-[#FEF2F2] to-[#FFF7ED] border-b border-[#FECACA]" *ngIf="retards.length > 0">
@@ -121,66 +123,6 @@
 <main class="w-full px-3 md:px-6 pt-4 md:pt-7 pb-4 md:pb-10">
   <router-outlet></router-outlet>
 </main>
-
-<!-- ============================================================
-     NAVIGATION BASSE MOBILE — 5 items max, « Plus » pour le reste.
-     ============================================================ -->
-<nav class="mobile-bottom-nav flex md:hidden fixed left-2.5 right-2.5 bottom-[calc(0.375rem+env(safe-area-inset-bottom))] z-[200] bg-ink-gradient rounded-2xl shadow-[0_6px_18px_-8px_rgba(7,19,16,0.5)] ring-1 ring-white/10 p-1 gap-0.5"
-     *ngIf="!authService.isPharmacien() && bottomNav.length > 0"
-     [class.nav-hidden]="navHidden"
-     aria-label="Navigation mobile">
-  <a class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-0.5 border-0 rounded-xl bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] no-underline cursor-pointer transition-all duration-200"
-     *ngFor="let item of bottomNav"
-     [class.active]="isBottomActive(item)"
-     [routerLink]="item.link"
-     [queryParams]="item.tab !== undefined ? { tab: item.tab } : null">
-    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
-    <mat-icon>{{ item.icon }}</mat-icon>
-    <span>{{ item.label }}</span>
-  </a>
-
-  <button type="button"
-          class="bn-item relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-0.5 border-0 rounded-xl bg-transparent text-ink-text text-[10px] font-medium tracking-[-0.01em] cursor-pointer transition-all duration-200"
-          *ngIf="moreNav.length > 0"
-          [class.active]="isMoreActive || isMoreOpen"
-          (click)="toggleMore()"
-          aria-label="Plus de destinations"
-          [attr.aria-expanded]="isMoreOpen">
-    <span class="bn-badge absolute top-px left-[calc(50%+4px)] box-border min-w-[15px] h-[15px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[15px] text-center" *ngIf="moreBadge > 0">{{ moreBadge }}</span>
-    <mat-icon>apps</mat-icon>
-    <span>Plus</span>
-  </button>
-</nav>
-
-<!-- Panneau « Plus » : destinations secondaires (mobile) -->
-<div class="md:hidden fixed inset-0 z-[290] bg-slate-900/45" *ngIf="isMoreOpen" (click)="isMoreOpen = false" aria-hidden="true"></div>
-<div class="more-sheet md:hidden fixed left-0 right-0 bottom-0 z-[300] bg-card rounded-t-[22px] shadow-lg pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
-     *ngIf="isMoreOpen"
-     role="dialog"
-     aria-label="Plus de destinations">
-  <div class="flex items-center justify-between px-5 pt-3 pb-1">
-    <span class="w-9 h-1 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" aria-hidden="true"></span>
-    <h2 class="text-[15px] font-bold text-text-primary m-0 pt-2">Plus de destinations</h2>
-    <button type="button" class="close-btn" (click)="isMoreOpen = false" aria-label="Fermer">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-  <nav class="px-2.5 pt-1 grid grid-cols-1 gap-0.5" aria-label="Destinations secondaires">
-    <a *ngFor="let item of moreNav"
-       [routerLink]="item.link"
-       [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
-       (click)="isMoreOpen = false"
-       class="flex items-center gap-3.5 px-3.5 py-3 rounded-xl no-underline text-text-primary transition-colors active:bg-primary-light"
-       [class.bg-primary-light]="isBottomActive(item)">
-      <span class="relative w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center shrink-0">
-        <mat-icon>{{ item.icon }}</mat-icon>
-        <span class="absolute -top-1 -right-1 box-border min-w-[16px] h-4 px-1 rounded-full bg-warn text-white text-[9.5px] font-bold leading-4 text-center" *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
-      </span>
-      <span class="flex-1 text-[14.5px] font-semibold">{{ item.label }}</span>
-      <mat-icon class="text-text-muted">chevron_right</mat-icon>
-    </a>
-  </nav>
-</div>
 
 <!-- ============================================================
      MODALES DE POINTAGE (BCSU)

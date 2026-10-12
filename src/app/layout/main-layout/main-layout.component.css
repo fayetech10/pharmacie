@@ -195,8 +195,23 @@
   overflow-x: clip;
 }
 
+/* Safari < 16 (iPhone resté sous iOS 15 ou avant) ne connaît pas `clip` : la règle ci-dessus
+   y est ignorée, un contenu trop large élargissait la page et l'iPhone la dézoomait — il
+   fallait pincer l'écran. Repli `hidden` sur <main> seulement : la topbar sticky est hors de
+   <main> et reste figée (seule la barre d'onglets du poste de santé cesse d'y être figée). */
+@supports not (overflow-x: clip) {
+  .main-content-wrapper > main {
+    overflow-x: hidden;
+  }
+}
+
 .nav-badge {
   box-shadow: 0 0 0 2px var(--ink);
+  /* Une pastille qui apparaît (nouvelle facture à traiter) se signale d'un petit rebond. */
+  animation: pastilleApparait 450ms var(--ease-pop) backwards;
+}
+@keyframes pastilleApparait {
+  from { transform: scale(0); }
 }
 
 /* ─── Bandeau d'alerte retards ─── */
@@ -205,84 +220,6 @@
   width: 22px;
   height: 22px;
   color: #EF4444;
-}
-
-/* ─── Navigation basse (mobile) ─── */
-.mobile-bottom-nav {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s ease;
-  animation: slideUpIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.mobile-bottom-nav.nav-hidden {
-  animation: none;
-  transform: translateY(calc(100% + 24px));
-  opacity: 0;
-  pointer-events: none;
-}
-.bn-item mat-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-  transition: color 0.2s ease;
-}
-.bn-item span {
-  overflow: hidden;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* Onglet actif : pastille blanche nette + icône/label en vert de marque. */
-.bn-item.active {
-  color: var(--primary);
-  font-weight: 700;
-  background: #ffffff;
-  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.20);
-}
-.bn-item.active mat-icon {
-  color: var(--primary);
-}
-.bn-item:active {
-  transform: scale(0.94);
-}
-/* Anneau du badge adapté au fond (sombre sur onglet inactif, blanc sur actif). */
-.bn-badge {
-  box-shadow: 0 0 0 2px var(--ink-deep);
-}
-.bn-item.active .bn-badge {
-  box-shadow: 0 0 0 2px #ffffff;
-}
-
-/* ─── Panneau « Plus » (bottom sheet) ─── */
-.more-sheet {
-  animation: sheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-  max-height: min(70vh, 560px);
-  overflow-y: auto;
-}
-.more-sheet .close-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  width: 34px;
-  height: 34px;
-}
-.more-sheet .close-btn:hover {
-  background: var(--border-light);
-  color: var(--text-primary);
-}
-@keyframes sheetUp {
-  from { transform: translateY(24px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-/* ─── Animations d'entrée ─── */
-@keyframes slideUpIn {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
 }
 
 /* ============================================================

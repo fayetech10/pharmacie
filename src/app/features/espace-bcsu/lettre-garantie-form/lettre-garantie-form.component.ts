@@ -1,140 +1,195 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { BcsuService } from '../../../core/services/bcsu.service';
-import { Patient, PrestationGarantie, Regime, REGIME_LABELS, REGIME_OPTIONS, tauxBeneficiaire, tauxSencsu, LettreGarantieRequest } from '../../../core/models/bcsu.model';
-import { compressImageToDataUrl } from '../../../core/utils/image-compression';
-import { ocrCni, ocrCarteAssure } from '../../../core/utils/document-ocr';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import {
+  PeriodeObservationDialogComponent
+} from '../../../shared/periode-observation-dialog/periode-observation-dialog.component';
+import { last } from 'rxjs/operators';
 
+import { BcsuService } from '../../../core/services/bcsu.service';
+import { CarteCsuService } from '../../../core/services/carte-csu.service';
+import {
+  LettreGarantie, LettreGarantieRequest, Patient, PrestationGarantie, Regime
+} from '../../../core/models/bcsu.model';
+import { CarteCsu, VerificationCarte, categorieCompatible } from '../../../core/models/carte-csu.model';
+import { LISTE_PRESTATIONS } from '../../../core/models/prestations';
+import { ocrCni, RepriseCni } from '../../../core/utils/document-ocr';
+import { renderCarteAssureToDataUrl } from '../../../core/utils/carte-assure-image';
+import { PhotoPieceComponent } from '../../../shared/photo-piece/photo-piece.component';
+import {
+  CATEGORIES_BCSU, CategoriePoste, categorieDe, controleAge, estContributif, exigeCartePoste, libelleRegimePoste
+} from '../../espace-poste/poste-facturation';
+
+type Etape = 'regime' | 'identification' | 'eligibilite' | 'termine';
 type PhotoKey = 'cniRecto' | 'cniVerso' | 'carteAssureRecto' | 'autreDocument';
 
-interface PhotoField {
-  key: PhotoKey;
-  label: string;
+/** Identité du bénéficiaire telle qu'affichée et saisie. */
+interface Beneficiaire {
+  prenom: string;
+  nom: string;
+  sexe: string;
+  /** « aaaa-mm-jj » (champ date natif). */
+  dateNaissance: string;
+  telephone: string;
+  numeroCni: string;
+  /** N° de la carte d'assuré (code d'immatriculation). */
+  numeroAssure: string;
 }
 
+const BENEFICIAIRE_VIDE: Beneficiaire = {
+  prenom: '', nom: '', sexe: '', dateNaissance: '', telephone: '', numeroCni: '', numeroAssure: ''
+};
+
+/** Date du jour au format des champs date natifs (« aaaa-mm-jj »), en heure locale. */
+function aujourdhuiIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Photos de la lettre, par champ du dossier. */
+const LIBELLES_PHOTOS: Record<PhotoKey, string> = {
+  cniRecto: 'CNI (recto)',
+  cniVerso: 'CNI (verso)',
+  carteAssureRecto: 'Carte d\'assuré',
+  autreDocument: 'Extrait de naissance'
+};
+
+/**
+ * Lettre de garantie de l'agent BCSU, en étapes séparées :
+ * Régime → Identification → Éligibilité → Validation. Le motif se choisit dans une
+ * modale ouverte depuis l'éligibilité, qui génère directement la lettre (pas de récapitulatif).
+ *
+ * <p>Mêmes règles que le poste : le code d'immatriculation des régimes à carte est
+ * contrôlé en ligne (carte expirée = blocage), le nom repris de la carte n'est plus
+ * modifiable, les photos passent le contrôle de qualité. Seule différence : l'agent sert
+ * aussi les centres et les EPS, donc la césarienne et les dialyses, et le parcours se
+ * termine par une lettre de garantie et non par une ligne de facture.</p>
+ *
+ * <p>Sert aussi à modifier une lettre ({@code /lettres-garantie/:id/edit}).</p>
+ */
 @Component({
   selector: 'app-lettre-garantie-form',
   standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, FormsModule, MatCardModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule
-  ],
-  templateUrl: './lettre-garantie-form.component.html',
-  styleUrls: ['./lettre-garantie-form.component.css']
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, MatProgressSpinnerModule,
+    MatSnackBarModule, MatDialogModule, PhotoPieceComponent],
+  templateUrl: './lettre-garantie-form.component.html'
 })
 export class LettreGarantieFormComponent implements OnInit {
-  /** Catégories du classeur CS_EPS (les régimes hérités DIALYSE / BSF_CEC sont exclus de la saisie). */
-  readonly regimeOptions = REGIME_OPTIONS;
-  readonly regimeLabels = REGIME_LABELS;
+  readonly Regime = Regime;
+  readonly categories = CATEGORIES_BCSU;
+  readonly libelleRegime = libelleRegimePoste;
+  readonly libellesPhotos = LIBELLES_PHOTOS;
+  readonly etapes: { cle: Etape; libelle: string }[] = [
+    { cle: 'identification', libelle: 'Identification' },
+    { cle: 'eligibilite', libelle: 'Éligibilité' },
+    { cle: 'termine', libelle: 'Validation' }
+  ];
 
-  patientForm!: FormGroup;
-  prestationForm!: FormGroup;
-
-  selectedPatientId: string | null = null;
-  searchQuery = '';
-  searchResults: Patient[] = [];
-  searching = false;
-
-  prestationsLignes: PrestationGarantie[] = [];
-
+  private _etape: Etape = 'regime';
   /**
-   * Pièces à photographier selon le régime (cahier BCSU) — références stables
-   * (mêmes tableaux) pour ne pas faire churner le *ngFor à chaque cycle :
-   *  - Classique / BSF-CEC : carte d'assuré, RECTO uniquement ;
-   *  - 0-5 ans : extrait de naissance uniquement ;
-   *  - autres (Sésame, Césarienne, Dialyse) : pièce d'identité (CNI).
+   * Étape courante de l'assistant. Le setter remonte en haut du formulaire à chaque
+   * changement d'étape : sinon, après un clic sur un bouton situé en bas d'une étape longue,
+   * on restait défilé tout en bas de l'étape suivante. Le template garde ses `etape = '…'`.
    */
-  private readonly PHOTOS_CARTE_ASSURE: PhotoField[] = [
-    { key: 'carteAssureRecto', label: "Carte d'assuré (recto)" }
-  ];
-  private readonly PHOTOS_EXTRAIT: PhotoField[] = [
-    { key: 'autreDocument', label: 'Extrait de naissance' }
-  ];
-  private readonly PHOTOS_CNI: PhotoField[] = [
-    { key: 'cniRecto', label: "Pièce d'identité (recto)" },
-    { key: 'cniVerso', label: "Pièce d'identité (verso)" }
-  ];
-
-  /** Liste des pièces affichées, déterminée par la liste déroulante « Régime ». */
-  get photoFields(): PhotoField[] {
-    switch (this.regime) {
-      case Regime.CONTRIBUTIF:
-      case Regime.BSF:
-      case Regime.CEC:
-      case Regime.BSF_CEC: // ancien régime combiné (données existantes)
-        return this.PHOTOS_CARTE_ASSURE;
-      case Regime.ZERO_CINQ_ANS:
-        return this.PHOTOS_EXTRAIT;
-      default: // SESAME, CESARIENNE, DIALYSE_PERITONEALE, HEMODIALYSE, NDONGO_DARA (+ ancien DIALYSE)
-        return this.PHOTOS_CNI;
-    }
+  get etape(): Etape {
+    return this._etape;
+  }
+  set etape(valeur: Etape) {
+    if (valeur === this._etape) return;
+    this._etape = valeur;
+    this.defilerEnHaut();
   }
 
-  /** Consigne affichée au-dessus des photos, selon le régime choisi. */
-  get photoHint(): string {
-    switch (this.regime) {
-      case Regime.CONTRIBUTIF:
-      case Regime.BSF:
-      case Regime.CEC:
-      case Regime.BSF_CEC:
-        return `Régime ${this.regimeLabels[this.regime]} : photographiez la carte d'assuré — recto uniquement. La lecture automatique (OCR) préremplit nom, prénom et n° d'immatriculation.`;
-      case Regime.ZERO_CINQ_ANS:
-        return "Régime Enfants 0-5 ans : photographiez l'extrait de naissance uniquement.";
-      default:
-        return "Photographiez la pièce d'identité — la lecture automatique (OCR) préremplit les informations.";
-    }
-  }
+  categorie: CategoriePoste | null = null;
+  regime: Regime | null = null;
 
-  photos: Record<PhotoKey, string | null> = {
-    cniRecto: null, cniVerso: null, carteAssureRecto: null, autreDocument: null
-  };
-  /** Titre du document « autre » (extrait de naissance pour le régime 0-5 ans). */
-  autreDocumentTitre = '';
-  /** Photo en cours de lecture OCR (affiche l'indicateur sur la vignette). */
-  ocrEnCours: PhotoKey | null = null;
+  /** Bloc « Préciser le régime », déroulé après le clic sur une catégorie à plusieurs régimes. */
+  @ViewChild('sousChoixRegime') sousChoixRegime?: ElementRef<HTMLElement>;
 
-  /** Contrôle « Régime » exposé pour la liste déroulante placée avant les photos. */
-  get regimeControl(): FormControl {
-    return this.patientForm.get('regime') as FormControl;
-  }
+  beneficiaire: Beneficiaire = { ...BENEFICIAIRE_VIDE };
+  /** Patient déjà enregistré, réutilisé plutôt que dupliqué. */
+  selectedPatientId: string | null = null;
+  motif = '';
+  /** Modale du motif, ouverte après l'éligibilité : son bouton génère la lettre. */
+  modalMotif = false;
+  /**
+   * Date de prise en charge : aujourd'hui par défaut, jamais dans le futur. Dans un centre ou
+   * un EPS, elle range le patient dans la facture de son mois et sert, avec l'identifiant du
+   * régime, à le retrouver dans le fichier de facturation que la structure importe.
+   */
+  datePriseEnCharge = aujourdhuiIso();
+  readonly aujourdhui = aujourdhuiIso();
+  /** Enfants 0-5 ans : l'adulte qui accompagne l'enfant — sa CNI est la clé de rapprochement. */
+  accompagnant = { nom: '', cni: '' };
+  /** Enfants 0-5 ans : distingue deux enfants d'un même accompagnant vus le même jour. */
+  numeroExtrait = '';
 
-  currentStep = 1; // 1: Patient, 2: Prestations, 3: Pièces
-  isSubmitting = false;
+  // ----- Contrôle d'éligibilité (régimes à carte) -----
+  codeImmatriculation = '';
+  controleEnCours = false;
+  carte: CarteCsu | null = null;
+  refus = '';
+  siteEnPanne = false;
+  verification: VerificationCarte | null = null;
+  /** Nom validé par le contrôle d'éligibilité : il n'est plus modifiable. */
+  identiteVerrouillee = false;
+  /** Carte d'assuré en cours de reconstitution depuis le contrôle (évite d'afficher la prise de photo). */
+  carteEnGeneration = false;
+
+  // ----- Pièces -----
+  photos: Record<PhotoKey, string | null> = { cniRecto: null, cniVerso: null, carteAssureRecto: null, autreDocument: null };
+  /** Recto et verso peuvent être lus en même temps : on compte les lectures en cours. */
+  private lecturesCni = 0;
+  private repriseCni = new RepriseCni();
+
+  // ----- Recherche d'un patient déjà connu (régimes sans carte) -----
+  recherche = '';
+  resultats: Patient[] = [];
+  rechercheEnCours = false;
 
   isEditMode = false;
   private editingId: string | null = null;
+  chargement = false;
+  enregistrement = false;
+  resultat: LettreGarantie | null = null;
 
   constructor(
-    private fb: FormBuilder,
     private bcsuService: BcsuService,
+    private carteCsuService: CarteCsuService,
     private router: Router,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
-  ) {
-    this.patientForm = this.fb.group({
-      nom: ['', Validators.required],
-      prenom: ['', Validators.required],
-      telephone: ['', Validators.required],
-      regime: [Regime.CONTRIBUTIF, Validators.required],
-      sexe: ['', Validators.required],
-      numeroCni: [''],
-      numeroAssure: [''],
-      dateNaissance: ['']
-    });
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog,
+    private hote: ElementRef<HTMLElement>
+  ) {}
 
-    this.prestationForm = this.fb.group({
-      designation: ['', Validators.required],
-      datePriseEnCharge: [this.today(), Validators.required],
-      montant: [0, [Validators.required, Validators.min(0)]],
-      motifCesarienne: ['']
+  /**
+   * Remonte en haut du formulaire après un changement d'étape. Différé (setTimeout) pour
+   * s'exécuter une fois la nouvelle étape rendue ; `scrollIntoView` remonte aussi un éventuel
+   * conteneur qui défile.
+   */
+  private defilerEnHaut() {
+    setTimeout(() => {
+      try {
+        this.hote.nativeElement.scrollIntoView({ block: 'start', behavior: 'auto' });
+      } catch { /* environnement sans scrollIntoView */ }
+    });
+  }
+
+  /** Avertissement plein écran quand le bénéficiaire est en période d'observation. */
+  private avertirPeriodeObservation(carte: CarteCsu) {
+    this.dialog.open(PeriodeObservationDialogComponent, {
+      width: '100vw', height: '100vh', maxWidth: '100vw',
+      panelClass: 'dialog-periode-observation',
+      data: {
+        nomComplet: [carte.prenom, carte.nom].filter(Boolean).join(' ').trim(),
+        dateDebutDroits: this.dateFr(carte.dateDebutDroits)
+      }
     });
   }
 
@@ -143,393 +198,544 @@ export class LettreGarantieFormComponent implements OnInit {
     if (id) {
       this.isEditMode = true;
       this.editingId = id;
-      this.bcsuService.getLettreGarantie(id).subscribe(lettre => {
-        this.selectedPatientId = lettre.patientId;
-        this.patientForm.patchValue({
-          nom: lettre.patientNom,
-          prenom: lettre.patientPrenom,
-          telephone: lettre.patientTelephone,
-          regime: lettre.regime,
+      this.chargerLettre(id);
+    }
+  }
+
+  // ══════════════════════════ état dérivé ══════════════════════════
+
+  get carteRequise(): boolean {
+    return exigeCartePoste(this.regime);
+  }
+
+  get contributif(): boolean {
+    return estContributif(this.regime);
+  }
+
+  /** Plan Sésame et césarienne : la CNI est la clé de rapprochement avec la facturation de la structure. */
+  get cniObligatoire(): boolean {
+    return this.regime === Regime.SESAME || this.regime === Regime.CESARIENNE;
+  }
+
+  get erreurDatePriseEnCharge(): string | null {
+    if (!this.datePriseEnCharge) return 'Indiquez la date de prise en charge.';
+    if (this.datePriseEnCharge > this.aujourdhui) return 'La date de prise en charge ne peut pas être dans le futur.';
+    return null;
+  }
+
+  get regleRegime(): string {
+    return categorieDe(this.regime, CATEGORIES_BCSU)?.regle || '';
+  }
+
+  get numeroEtape(): number {
+    return this.etapes.findIndex(e => e.cle === this.etape);
+  }
+
+  /** Pièces d'identification demandées par le régime (hors carte d'assuré). */
+  get photosIdentification(): PhotoKey[] {
+    if (this.carteRequise || !this.regime) return [];
+    return this.regime === Regime.ZERO_CINQ_ANS ? ['autreDocument'] : ['cniRecto', 'cniVerso'];
+  }
+
+  /** Toutes les pièces attendues dans la liasse du patient. */
+  get photosAttendues(): PhotoKey[] {
+    return this.carteRequise ? ['carteAssureRecto'] : this.photosIdentification;
+  }
+
+  get motifOptions(): string[] {
+    switch (this.regime) {
+      case Regime.ZERO_CINQ_ANS: return ['Consultation 0-5 ans', 'Hospitalisation', 'Soins infirmiers', 'Urgences'];
+      case Regime.SESAME: return ['Consultation', 'Hospitalisation', 'Soins infirmiers', 'Urgences'];
+      case Regime.CESARIENNE: return ['Césarienne'];
+      case Regime.HEMODIALYSE: return ['Hémodialyse'];
+      case Regime.DIALYSE_PERITONEALE: return ['Dialyse péritonéale'];
+      default: return LISTE_PRESTATIONS;
+    }
+  }
+
+  /** Conditions du régime : âge (0-5 ans, Sésame), sexe (césarienne). */
+  get erreurRegime(): string | null {
+    const naissance = this.beneficiaire.dateNaissance ? new Date(this.beneficiaire.dateNaissance) : null;
+    if ((this.regime === Regime.ZERO_CINQ_ANS || this.regime === Regime.SESAME) && !naissance) {
+      return 'La date de naissance est obligatoire : elle conditionne le contrôle d\'âge du régime.';
+    }
+    const age = controleAge(this.regime, naissance);
+    if (age) return age;
+    if (this.regime === Regime.CESARIENNE && this.beneficiaire.sexe && this.beneficiaire.sexe !== 'F') {
+      return 'Régime Césarienne : la bénéficiaire doit être de sexe féminin.';
+    }
+    return null;
+  }
+
+  get incoherenceCategorie(): string | null {
+    if (!this.carte || categorieCompatible(this.carte.categorie, this.regime) !== false) return null;
+    return `La carte est de catégorie « ${this.carte.categorie} » alors que le régime choisi est « ${this.libelleRegime(this.regime)} ». Vérifiez le régime.`;
+  }
+
+  get ageCalcule(): string {
+    if (!this.beneficiaire.dateNaissance) return '';
+    const naissance = new Date(this.beneficiaire.dateNaissance);
+    if (isNaN(naissance.getTime())) return '';
+    const aujourdhui = new Date();
+    let mois = (aujourdhui.getFullYear() - naissance.getFullYear()) * 12 + aujourdhui.getMonth() - naissance.getMonth();
+    if (aujourdhui.getDate() < naissance.getDate()) mois--;
+    if (mois < 0) return '';
+    return mois < 12 ? `${mois} mois` : `${Math.floor(mois / 12)} an${mois >= 24 ? 's' : ''}`;
+  }
+
+  /** Ce qui manque à la liasse (non bloquant : la lettre reste générable). */
+  get piecesManquantes(): PhotoKey[] {
+    return this.photosAttendues.filter(cle => !this.photos[cle]);
+  }
+
+  // ══════════════════════════ régime ══════════════════════════
+
+  choisirCategorie(categorie: CategoriePoste) {
+    this.categorie = categorie;
+    if (categorie.regimes.length === 1) {
+      this.choisirRegime(categorie.regimes[0]);
+    } else {
+      if (!this.regime || !categorie.regimes.includes(this.regime)) {
+        this.regime = null;
+      }
+      // Déroule le sous-choix et l'amène sous les yeux, sans scroll manuel.
+      setTimeout(() => this.sousChoixRegime?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
+  }
+
+  choisirRegime(regime: Regime) {
+    const changement = this.regime !== regime;
+    const ancienneCarte = exigeCartePoste(this.regime);
+    this.regime = regime;
+    this.categorie = categorieDe(regime, CATEGORIES_BCSU) || null;
+    if (changement) {
+      if (this.isEditMode) {
+        // Changer de régime change de parcours : la vérification ne vaut plus.
+        if (ancienneCarte !== this.carteRequise) this.annulerVerification();
+      } else {
+        this.reinitialiser();
+      }
+      this.motif = this.motifOptions[0] || '';
+    }
+    this.etape = 'identification';
+  }
+
+  changerDeRegime() {
+    this.etape = 'regime';
+  }
+
+  private reinitialiser() {
+    this.beneficiaire = { ...BENEFICIAIRE_VIDE };
+    this.selectedPatientId = null;
+    this.codeImmatriculation = '';
+    this.annulerVerification();
+    this.photos = { cniRecto: null, cniVerso: null, carteAssureRecto: null, autreDocument: null };
+    this.repriseCni.oublier();
+    this.recherche = '';
+    this.resultats = [];
+    this.resultat = null;
+    this.modalMotif = false;
+    this.datePriseEnCharge = aujourdhuiIso();
+    this.accompagnant = { nom: '', cni: '' };
+    this.numeroExtrait = '';
+  }
+
+  private annulerVerification() {
+    this.carte = null;
+    this.refus = '';
+    this.siteEnPanne = false;
+    this.verification = null;
+    this.identiteVerrouillee = false;
+    this.carteEnGeneration = false;
+    this.photos.carteAssureRecto = null;
+  }
+
+  // ══════════════════════════ identification ══════════════════════════
+
+  /** Contrôle du code d'immatriculation auprès du système de gestion des assurés. */
+  verifierEligibilite() {
+    const code = this.codeImmatriculation.replace(/\s+/g, '').toUpperCase();
+    if (!code) {
+      this.snackBar.open('Saisissez le code d\'immatriculation figurant sur la carte.', 'Fermer', { duration: 3000 });
+      return;
+    }
+    this.controleEnCours = true;
+    this.refus = '';
+    this.siteEnPanne = false;
+    this.carte = null;
+    this.carteCsuService.verifier(code).subscribe({
+      next: carte => {
+        this.controleEnCours = false;
+        this.carte = carte;
+        if (!carte.carteValide) {
+          this.verification = null;
+          this.refus = this.motifRefus(carte);
+          if (carte.enPeriodeObservation) {
+            this.avertirPeriodeObservation(carte);
+          }
+          return;
+        }
+        this.rattacherEtAppliquerCarte(carte);
+      },
+      error: err => {
+        this.controleEnCours = false;
+        this.siteEnPanne = err.status === 503;
+        this.refus = this.siteEnPanne ? '' : (err.error?.message || 'Le contrôle d\'éligibilité a échoué.');
+      }
+    });
+  }
+
+  private motifRefus(carte: CarteCsu): string {
+    if (!carte.carteActive) {
+      return `Carte non valide (${(carte.etat || 'inactive').toLowerCase()}) — La prise en charge ne peut pas être accordée.`;
+    }
+    if (carte.enPeriodeObservation) {
+      return `Bénéficiaire en période d'observation : la prise en charge ne sera ouverte que le `
+        + `${this.dateFr(carte.dateDebutDroits)} — La prise en charge ne peut pas être accordée.`;
+    }
+    if (carte.dateDebut && new Date(carte.dateDebut) > new Date()) {
+      return `Carte pas encore valide (adhésion le ${this.dateFr(carte.dateDebut)}) — La prise en charge ne peut pas être accordée.`;
+    }
+    return `Carte expirée${carte.dateFin ? ' le ' + this.dateFr(carte.dateFin) : ''} — La prise en charge ne peut pas être accordée.`;
+  }
+
+  /**
+   * Un patient déjà enregistré avec ce n° d'assuré est réutilisé (pas de doublon).
+   * Correspondance exacte uniquement : la recherche floue pourrait renvoyer un homonyme.
+   */
+  private rattacherEtAppliquerCarte(carte: CarteCsu) {
+    const code = carte.codeImmatriculation.toUpperCase();
+    this.bcsuService.searchPatients(code).subscribe({
+      next: patients => {
+        const existant = (patients || []).find(p => (p.numeroAssure || '').trim().toUpperCase() === code);
+        this.appliquerCarte(carte, existant ?? null);
+      },
+      error: () => this.appliquerCarte(carte, null)
+    });
+  }
+
+  /** La carte, source officielle, fait foi pour le nom ; le reste reste corrigeable. */
+  private appliquerCarte(carte: CarteCsu, existant: Patient | null) {
+    this.verification = 'VERIFIEE';
+    this.identiteVerrouillee = true;
+    this.codeImmatriculation = carte.codeImmatriculation;
+    const b = this.beneficiaire;
+    this.beneficiaire = {
+      prenom: carte.prenom || b.prenom,
+      nom: carte.nom || b.nom,
+      sexe: carte.sexe || existant?.sexe || b.sexe,
+      dateNaissance: (carte.dateNaissance || existant?.dateNaissance || b.dateNaissance || '').substring(0, 10),
+      telephone: b.telephone || carte.telephone || existant?.telephone || '',
+      numeroCni: carte.numeroPiece || existant?.numeroCni || b.numeroCni,
+      numeroAssure: carte.codeImmatriculation
+    };
+    this.selectedPatientId = existant?.id || null;
+
+    // Les données vérifiées constituent la carte d'assuré de la liasse.
+    this.carteEnGeneration = true;
+    renderCarteAssureToDataUrl(carte)
+      .then(image => { if (this.carte === carte) this.photos.carteAssureRecto = image; })
+      .catch(() => this.snackBar.open(
+        'La carte d\'assuré n\'a pas pu être générée : photographiez-la ci-dessous.', 'Fermer', { duration: 5000 }))
+      .finally(() => { if (this.carte === carte) this.carteEnGeneration = false; });
+
+    this.snackBar.open(existant ? 'Patient déjà connu : son dossier sera complété.' : 'Informations reprises de la carte CSU.',
+      'Fermer', { duration: 3500 });
+    this.etape = 'eligibilite';
+  }
+
+  /** Système de vérification injoignable : seule dérogation, consignée sur la lettre. */
+  continuerSansVerification() {
+    this.verification = 'NON_VERIFIEE_PANNE';
+    this.identiteVerrouillee = false;
+    this.beneficiaire.numeroAssure = this.codeImmatriculation.replace(/\s+/g, '').toUpperCase();
+    this.siteEnPanne = false;
+    this.etape = 'eligibilite';
+  }
+
+  changerDeCarte() {
+    this.annulerVerification();
+    this.selectedPatientId = null;
+    this.beneficiaire = { ...BENEFICIAIRE_VIDE, telephone: this.beneficiaire.telephone };
+    this.etape = 'identification';
+  }
+
+  onPhoto(cle: PhotoKey, image: string | null) {
+    this.photos[cle] = image;
+  }
+
+  get ocrEnCours(): boolean {
+    return this.lecturesCni > 0;
+  }
+
+  /**
+   * CNI : lecture automatique, puis recherche d'un patient déjà connu avec ce numéro. Elle ne
+   * touche pas à ce que l'agent a saisi ; la bande MRZ du verso corrige une lecture du recto.
+   */
+  async lireCni(fichier: File) {
+    this.lecturesCni++;
+    try {
+      const lu = await ocrCni(fichier);
+      const repris = this.repriseCni.appliquer(this.beneficiaire, lu);
+      this.snackBar.open(repris.length
+        ? `Lu sur la CNI : ${repris.join(', ')}. Vérifiez et complétez.`
+        : 'Lecture automatique sans résultat : saisissez les informations.', 'Fermer', { duration: 4500 });
+      if (lu.numeroCni && !this.selectedPatientId) this.chercherPatient(lu.numeroCni, true);
+    } catch {
+      this.snackBar.open('Lecture automatique impossible : saisissez les informations.', 'Fermer', { duration: 4000 });
+    } finally {
+      this.lecturesCni--;
+    }
+  }
+
+  onRecherche() {
+    this.chercherPatient(this.recherche, false);
+  }
+
+  /** Patient déjà connu : par saisie (liste de choix) ou par n° de CNI lu (reprise directe). */
+  private chercherPatient(terme: string, repriseDirecte: boolean) {
+    if ((terme || '').trim().length < 2) {
+      this.resultats = [];
+      return;
+    }
+    this.rechercheEnCours = true;
+    this.bcsuService.searchPatients(terme.trim()).subscribe({
+      next: patients => {
+        this.rechercheEnCours = false;
+        if (repriseDirecte) {
+          const meme = (patients || []).find(p => (p.numeroCni || '').trim() === terme.trim());
+          if (meme) this.selectionnerPatient(meme);
+          return;
+        }
+        this.resultats = patients || [];
+      },
+      error: () => { this.rechercheEnCours = false; }
+    });
+  }
+
+  selectionnerPatient(patient: Patient) {
+    this.selectedPatientId = patient.id || null;
+    const b = this.beneficiaire;
+    this.beneficiaire = {
+      prenom: patient.prenom || b.prenom,
+      nom: patient.nom || b.nom,
+      sexe: patient.sexe || b.sexe,
+      dateNaissance: (patient.dateNaissance || b.dateNaissance || '').substring(0, 10),
+      telephone: patient.telephone || b.telephone,
+      numeroCni: patient.numeroCni || b.numeroCni,
+      numeroAssure: patient.numeroAssure || b.numeroAssure
+    };
+    this.resultats = [];
+    this.recherche = `${patient.prenom} ${patient.nom}`;
+    this.snackBar.open('Patient déjà connu : son dossier sera complété.', 'Fermer', { duration: 3000 });
+  }
+
+  oublierPatient() {
+    this.selectedPatientId = null;
+    this.recherche = '';
+  }
+
+  /** Identification par pièce (régimes sans carte) : on passe à l'écran patient. */
+  validerIdentification() {
+    const erreur = this.erreurIdentite();
+    if (erreur) {
+      this.snackBar.open(erreur, 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.etape = 'eligibilite';
+  }
+
+  private erreurIdentite(): string | null {
+    const b = this.beneficiaire;
+    if (!b.prenom.trim() || !b.nom.trim()) return 'Le prénom et le nom du bénéficiaire sont obligatoires.';
+    if (this.carteRequise && !b.numeroAssure.trim()) return 'Le code d\'immatriculation est obligatoire.';
+    if (this.cniObligatoire && !b.numeroCni.trim()) {
+      return 'Le n° de CNI est obligatoire : c\'est lui qui rapproche le patient du fichier de facturation de la structure.';
+    }
+    if (this.regime === Regime.ZERO_CINQ_ANS && !this.accompagnant.cni.trim()) {
+      return 'Le n° de CNI de l\'accompagnant est obligatoire : c\'est lui qui rapproche l\'enfant du fichier de facturation de la structure.';
+    }
+    return this.erreurRegime;
+  }
+
+  // ══════════════════════════ éligibilité → motif (modale) ══════════════════════════
+
+  ouvrirMotif() {
+    const erreur = this.erreurIdentite();
+    if (erreur) {
+      this.snackBar.open(erreur, 'Fermer', { duration: 4000 });
+      return;
+    }
+    if (!this.beneficiaire.telephone.trim() || !this.beneficiaire.sexe) {
+      this.snackBar.open('Le téléphone et le sexe du bénéficiaire sont obligatoires.', 'Fermer', { duration: 4000 });
+      return;
+    }
+    if (!this.motif) this.motif = this.motifOptions[0] || '';
+    this.modalMotif = true;
+  }
+
+  fermerMotif() {
+    if (!this.enregistrement) this.modalMotif = false;
+  }
+
+  allerA(etape: Etape) {
+    if (etape === 'termine' || this.etape === 'termine') return;
+    const cible = this.etapes.findIndex(e => e.cle === etape);
+    if (cible >= 0 && cible < this.numeroEtape) this.etape = etape;
+  }
+
+  // ══════════════════════════ enregistrement ══════════════════════════
+
+  enregistrer() {
+    const erreur = this.erreurIdentite();
+    if (erreur || !this.regime) {
+      this.snackBar.open(erreur || 'Choisissez le régime.', 'Fermer', { duration: 5000 });
+      return;
+    }
+    if (!this.motif) {
+      this.snackBar.open('Choisissez le motif de prise en charge.', 'Fermer', { duration: 3000 });
+      return;
+    }
+    if (this.erreurDatePriseEnCharge) {
+      this.snackBar.open(this.erreurDatePriseEnCharge, 'Fermer', { duration: 4000 });
+      return;
+    }
+    const b = this.beneficiaire;
+    const enfant = this.regime === Regime.ZERO_CINQ_ANS;
+    const prestations: PrestationGarantie[] = [{
+      designation: this.motif,
+      datePriseEnCharge: this.datePriseEnCharge,
+      montant: 0,
+      montantBeneficiaire: 0,
+      montantSencsu: 0
+    }];
+    const requete: LettreGarantieRequest = {
+      patientId: this.selectedPatientId || undefined,
+      nom: b.nom.trim(),
+      prenom: b.prenom.trim(),
+      telephone: b.telephone.trim(),
+      regime: this.regime,
+      sexe: b.sexe || undefined,
+      numeroCni: b.numeroCni.trim() || undefined,
+      numeroAssure: b.numeroAssure.trim() || undefined,
+      dateNaissance: b.dateNaissance || undefined,
+      prestations,
+      cniRecto: this.photos.cniRecto || undefined,
+      cniVerso: this.photos.cniVerso || undefined,
+      carteAssureRecto: this.photos.carteAssureRecto || undefined,
+      autreDocument: this.photos.autreDocument || undefined,
+      autreDocumentTitre: this.photos.autreDocument ? 'Extrait de naissance' : undefined,
+      // Mention du dossier : carte vérifiée, ou non vérifiée pour cause de panne du site.
+      verificationCarte: this.carteRequise ? (this.verification ?? undefined) : undefined,
+      datePriseEnCharge: this.datePriseEnCharge,
+      accompagnantNom: enfant ? this.accompagnant.nom.trim() || undefined : undefined,
+      accompagnantCni: enfant ? this.accompagnant.cni.trim() || undefined : undefined,
+      numeroExtraitNaissance: enfant ? this.numeroExtrait.trim() || undefined : undefined
+    };
+
+    this.enregistrement = true;
+    const appel = this.isEditMode && this.editingId
+      ? this.bcsuService.updateLettreGarantie(this.editingId, requete)
+      : this.bcsuService.createLettreGarantie(requete);
+    appel.subscribe({
+      next: lettre => {
+        this.enregistrement = false;
+        this.modalMotif = false;
+        if (this.isEditMode) {
+          this.snackBar.open('Lettre de garantie modifiée.', 'Fermer', { duration: 3000 });
+          this.router.navigate(['/dashboard/lettres-garantie', lettre.id]);
+          return;
+        }
+        this.resultat = lettre;
+        this.etape = 'termine';
+      },
+      error: err => {
+        this.enregistrement = false;
+        this.snackBar.open(err.error?.message || 'Enregistrement impossible.', 'Fermer',
+          { duration: 7000, panelClass: 'error-snackbar' });
+      }
+    });
+  }
+
+  // ══════════════════════════ après validation ══════════════════════════
+
+  voirLettre() {
+    if (this.resultat) this.router.navigate(['/dashboard/lettres-garantie', this.resultat.id]);
+  }
+
+  patientSuivant() {
+    const regime = this.regime;
+    this.reinitialiser();
+    this.regime = null;
+    if (regime) this.choisirRegime(regime);
+  }
+
+  autreRegime() {
+    this.reinitialiser();
+    this.regime = null;
+    this.categorie = null;
+    this.etape = 'regime';
+  }
+
+  patientsEnregistres() {
+    this.router.navigate(['/dashboard/espace-bcsu'], { queryParams: { tab: 2 } });
+  }
+
+  annulerModification() {
+    if (this.editingId) this.router.navigate(['/dashboard/lettres-garantie', this.editingId]);
+  }
+
+  // ══════════════════════════ modification d'une lettre ══════════════════════════
+
+  private chargerLettre(id: string) {
+    this.chargement = true;
+    this.bcsuService.getLettreGarantie(id).pipe(last()).subscribe({
+      next: lettre => {
+        this.chargement = false;
+        this.regime = lettre.regime;
+        this.categorie = categorieDe(lettre.regime, CATEGORIES_BCSU) || null;
+        this.selectedPatientId = lettre.patientId || null;
+        this.verification = (lettre.verificationCarte as VerificationCarte) || null;
+        this.identiteVerrouillee = this.verification === 'VERIFIEE';
+        this.motif = lettre.prestations?.[0]?.designation || this.motifOptions[0] || '';
+        this.beneficiaire = {
+          prenom: lettre.patientPrenom || '',
+          nom: lettre.patientNom || '',
           sexe: lettre.patientSexe || '',
+          dateNaissance: (lettre.patientDateNaissance || '').substring(0, 10),
+          telephone: lettre.patientTelephone || '',
           numeroCni: lettre.cniNumeroOcr || '',
-          numeroAssure: lettre.patientNumeroAssure || '',
-          dateNaissance: lettre.patientDateNaissance || ''
-        });
-        this.prestationsLignes = [...lettre.prestations];
-        // Pas de nettoyage ici : les pièces d'un dossier existant sont préservées
-        // telles quelles, même si les règles par régime ont évolué depuis.
+          numeroAssure: lettre.patientNumeroAssure || ''
+        };
+        this.codeImmatriculation = lettre.patientNumeroAssure || '';
+        this.datePriseEnCharge = (lettre.datePriseEnCharge || lettre.prestations?.[0]?.datePriseEnCharge
+          || (lettre.createdAt || '').substring(0, 10) || aujourdhuiIso()).substring(0, 10);
+        this.accompagnant = { nom: lettre.accompagnantNom || '', cni: lettre.accompagnantCni || '' };
+        this.numeroExtrait = lettre.numeroExtraitNaissance || '';
         this.photos = {
           cniRecto: lettre.cniRecto || null,
           cniVerso: lettre.cniVerso || null,
           carteAssureRecto: lettre.carteAssureRecto || null,
           autreDocument: lettre.autreDocument || null
         };
-        this.autreDocumentTitre = lettre.autreDocumentTitre || '';
-      });
-    }
-  }
-
-  private today(): string {
-    return new Date().toISOString().substring(0, 10);
-  }
-
-  get regime(): Regime {
-    return this.patientForm.get('regime')?.value;
-  }
-
-  private readonly SEXE_OPTIONS_ADULTE = [
-    { value: 'M', label: 'Homme (H)' },
-    { value: 'F', label: 'Femme (F)' }
-  ];
-  private readonly SEXE_OPTIONS_ENFANT = [
-    { value: 'M', label: 'Masculin (M)' },
-    { value: 'F', label: 'Féminin (F)' }
-  ];
-
-  /**
-   * Options de sexe. Valeurs stockées de façon canonique ("M"/"F") ; le libellé s'adapte
-   * au régime : le classeur CS_EPS utilise H/F partout sauf pour les enfants de 0-5 ans (M/F).
-   */
-  get sexeOptions(): { value: string; label: string }[] {
-    const enfants = this.regime === Regime.ZERO_CINQ_ANS;
-    return enfants ? this.SEXE_OPTIONS_ENFANT : this.SEXE_OPTIONS_ADULTE;
-  }
-
-  /** Intitulé du champ Sexe selon le régime (H/F ou M/F pour les enfants). */
-  get sexeLabel(): string {
-    return this.regime === Regime.ZERO_CINQ_ANS ? 'Sexe (M/F)' : 'Sexe (H/F)';
-  }
-
-  /** Libellé des photos jointes pour l'écran de validation. */
-  get photosJointesLabel(): string {
-    const parts: string[] = [];
-    if (this.photos.carteAssureRecto) parts.push("Carte d'assuré (recto)");
-    if (this.photos.autreDocument) parts.push(this.autreDocumentTitre || 'Extrait de naissance');
-    if (this.photos.cniRecto) parts.push("Pièce d'identité (recto)");
-    if (this.photos.cniVerso) parts.push("Pièce d'identité (verso)");
-    return parts.join(', ') || 'Aucune';
-  }
-
-  get isCesarienne(): boolean {
-    return this.regime === Regime.CESARIENNE;
-  }
-
-  /** Âge (années entières) calculé à partir de la date de naissance saisie, ou null. */
-  private get ageEnAnnees(): number | null {
-    const dob = this.patientForm?.get('dateNaissance')?.value;
-    if (!dob) return null;
-    const birthDate = new Date(dob);
-    if (isNaN(birthDate.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age < 0 ? null : age;
-  }
-
-  /**
-   * Contrôles d'éligibilité par régime (cahier des charges) :
-   *  - Enfants 0-5 ans : âge entre 0 et 5 ans (date de naissance obligatoire) ;
-   *  - Sésame : 60 ans ou plus (date de naissance obligatoire) ;
-   *  - Césarienne : bénéficiaire de sexe féminin.
-   * Renvoie le message d'erreur à afficher, ou null si le dossier est conforme.
-   */
-  get erreurRegime(): string | null {
-    const age = this.ageEnAnnees;
-    if (this.regime === Regime.ZERO_CINQ_ANS) {
-      if (age === null) return "Régime Enfants 0-5 ans : la date de naissance est obligatoire pour contrôler l'âge.";
-      if (age >= 6) return `Régime Enfants 0-5 ans : l'âge du bénéficiaire (${age} ans) doit être compris entre 0 et 5 ans.`;
-    }
-    if (this.regime === Regime.SESAME) {
-      if (age === null) return "Régime Sésame : la date de naissance est obligatoire pour contrôler l'âge.";
-      if (age < 60) return `Régime Sésame : le bénéficiaire doit avoir au moins 60 ans (âge calculé : ${age} ans).`;
-    }
-    if (this.regime === Regime.CESARIENNE) {
-      const sexe = this.patientForm?.get('sexe')?.value;
-      if (sexe && sexe !== 'F') return 'Régime Césarienne : le bénéficiaire doit être de sexe féminin.';
-    }
-    return null;
-  }
-
-  nextStep() {
-    if (this.currentStep < 2 && this.canGoNext()) {
-      this.currentStep++;
-    }
-  }
-
-  prevStep() {
-    if (this.currentStep > 1) this.currentStep--;
-  }
-
-  canGoNext(): boolean {
-    if (this.currentStep === 1) return this.patientForm.valid && !this.erreurRegime;
-    return true;
-  }
-
-  get ageCalcule(): string {
-    const dob = this.patientForm?.get('dateNaissance')?.value;
-    if (!dob) return '';
-    const birthDate = new Date(dob);
-    if (isNaN(birthDate.getTime())) return '';
-    
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    if (age < 0) return '';
-    if (age === 0) {
-      let months = today.getMonth() - birthDate.getMonth();
-      if (months < 0) {
-        months += 12;
-        age--;
-      }
-      if (today.getDate() < birthDate.getDate()) {
-         months--;
-      }
-      if (months < 0) months += 12;
-      return `${months} mois`;
-    }
-    return `${age} an${age > 1 ? 's' : ''}`;
-  }
-
-  // ===== Recherche patient =====
-  onSearchInput(event: Event) {
-    const query = (event.target as HTMLInputElement).value;
-    this.searchQuery = query;
-    if (query.length < 2) {
-      this.searchResults = [];
-      return;
-    }
-    this.searching = true;
-    this.bcsuService.searchPatients(query).subscribe({
-      next: (res) => { this.searchResults = res; this.searching = false; },
-      error: () => { this.searching = false; }
-    });
-  }
-
-  selectPatient(patient: Patient) {
-    this.selectedPatientId = patient.id || null;
-    this.patientForm.patchValue({
-      nom: patient.nom,
-      prenom: patient.prenom,
-      telephone: patient.telephone,
-      regime: patient.regime,
-      sexe: patient.sexe || '',
-      numeroCni: patient.numeroCni || '',
-      numeroAssure: patient.numeroAssure || '',
-      dateNaissance: patient.dateNaissance || ''
-    });
-    this.searchResults = [];
-    this.searchQuery = `${patient.prenom} ${patient.nom}`;
-    // Le régime du patient sélectionné peut changer les pièces demandées.
-    this.nettoyerPhotosHorsRegime();
-  }
-
-  clearSelectedPatient() {
-    this.selectedPatientId = null;
-    this.searchQuery = '';
-    this.patientForm.reset({ regime: Regime.CONTRIBUTIF });
-    this.nettoyerPhotosHorsRegime();
-  }
-
-
-  // ===== Photos =====
-  /**
-   * Changement de régime par l'agent : les photos qui ne correspondent plus aux
-   * pièces demandées sont retirées (on ne soumet jamais un document du mauvais type).
-   */
-  onRegimeChange() {
-    this.nettoyerPhotosHorsRegime();
-  }
-
-  private nettoyerPhotosHorsRegime() {
-    const visibles = new Set(this.photoFields.map(f => f.key));
-    (Object.keys(this.photos) as PhotoKey[]).forEach(k => {
-      if (!visibles.has(k)) this.photos[k] = null;
-    });
-    if (!visibles.has('autreDocument')) this.autreDocumentTitre = '';
-  }
-
-  onPhotoSelected(key: PhotoKey, event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.snackBar.open('Veuillez sélectionner une image', 'Fermer', { duration: 3000 });
-      input.value = '';
-      return;
-    }
-    compressImageToDataUrl(file, 50 * 1024)
-      .then(dataUrl => {
-        this.photos[key] = dataUrl;
-        // Extrait de naissance (régime 0-5 ans) : le titre du document est connu.
-        if (key === 'autreDocument' && !this.autreDocumentTitre) {
-          this.autreDocumentTitre = 'Extrait de naissance';
-        }
-        // L'OCR travaille sur le fichier original (meilleure résolution que la version compressée).
-        if (key === 'cniRecto' || key === 'cniVerso') {
-          this.lancerOcrCni(key, file);
-        } else if (key === 'carteAssureRecto') {
-          this.lancerOcrCarteAssure(key, file);
-        }
-      })
-      .catch(() => this.snackBar.open("Impossible de traiter l'image", 'Fermer', { duration: 3000 }));
-    input.value = '';
-  }
-
-  /** Ne remplit que les champs encore vides : la saisie de l'agent reste prioritaire. */
-  private patchChampsVides(valeurs: Record<string, string | undefined>): string[] {
-    const remplis: string[] = [];
-    for (const [champ, valeur] of Object.entries(valeurs)) {
-      const ctrl = this.patientForm.get(champ);
-      if (valeur && ctrl && !ctrl.value) {
-        ctrl.setValue(valeur);
-        remplis.push(champ);
-      }
-    }
-    return remplis;
-  }
-
-  private lancerOcrCni(key: PhotoKey, file: File) {
-    this.ocrEnCours = key;
-    this.snackBar.open('Lecture automatique de la CNI (OCR)...', 'Fermer', { duration: 3000 });
-    ocrCni(file)
-      .then(res => {
-        if (res.numeroCni) {
-          this.rechercherPatientEtRemplir(res.numeroCni, res, 'CNI');
-        } else {
-          this.appliquerOcr(res, 'CNI');
-        }
-      })
-      .catch(() => this.snackBar.open('La lecture automatique a échoué : saisissez les informations manuellement', 'Fermer', { duration: 5000 }))
-      .finally(() => { this.ocrEnCours = null; });
-  }
-
-  /** Carte d'assuré (régimes Classique / BSF / CEC) : nom, prénom, n° d'immatriculation. */
-  private lancerOcrCarteAssure(key: PhotoKey, file: File) {
-    this.ocrEnCours = key;
-    this.snackBar.open("Lecture automatique de la carte d'assuré (OCR)...", 'Fermer', { duration: 3000 });
-    ocrCarteAssure(file)
-      .then(res => {
-        if (res.numeroAssure) {
-          this.rechercherPatientEtRemplir(res.numeroAssure, res, "carte d'assuré");
-        } else {
-          this.appliquerOcr(res, "carte d'assuré");
-        }
-      })
-      .catch(() => this.snackBar.open('La lecture automatique a échoué : saisissez les informations manuellement', 'Fermer', { duration: 5000 }))
-      .finally(() => { this.ocrEnCours = null; });
-  }
-
-  private rechercherPatientEtRemplir(numeroId: string, ocrData: any, type: string) {
-    this.bcsuService.searchPatients(numeroId).subscribe({
-      next: (patients) => {
-        if (patients && patients.length > 0) {
-          this.appliquerPatient(patients[0], ocrData, type);
-        } else {
-          // Aucun patient trouvé par ID, on tente par le nom et prénom
-          if (ocrData.nom && ocrData.prenom) {
-            const queryNom = `${ocrData.prenom} ${ocrData.nom}`;
-            this.bcsuService.searchPatients(queryNom).subscribe({
-              next: (patientsNom) => {
-                if (patientsNom && patientsNom.length > 0) {
-                  this.appliquerPatient(patientsNom[0], ocrData, type);
-                } else {
-                  this.appliquerOcr(ocrData, type);
-                }
-              },
-              error: () => this.appliquerOcr(ocrData, type)
-            });
-          } else {
-            this.appliquerOcr(ocrData, type);
-          }
-        }
+        this.etape = 'eligibilite';
       },
-      error: (err) => {
-        console.error('Erreur lors de la recherche du patient par ID', err);
-        this.appliquerOcr(ocrData, type);
+      error: err => {
+        this.chargement = false;
+        this.snackBar.open(err.error?.message || 'Lettre de garantie introuvable.', 'Fermer', { duration: 4000 });
       }
     });
   }
 
-  private appliquerPatient(patient: Patient, ocrData: any, type: string) {
-    this.selectPatient(patient);
-    this.patchChampsVides({
-      nom: ocrData.nom, prenom: ocrData.prenom, dateNaissance: ocrData.dateNaissance, numeroCni: ocrData.numeroCni, numeroAssure: ocrData.numeroAssure, sexe: ocrData.sexe
-    });
-    this.snackBar.open("Patient existant trouvé à partir du document. Formulaire prérempli.", "Fermer", { duration: 5000 });
+  // ══════════════════════════ utilitaires ══════════════════════════
+
+  dateFr(iso?: string | null): string {
+    if (!iso) return '';
+    const [a, m, j] = iso.substring(0, 10).split('-');
+    return `${j}/${m}/${a}`;
   }
 
-  private appliquerOcr(res: any, type: string) {
-    const remplis = this.patchChampsVides({
-      nom: res.nom, prenom: res.prenom, dateNaissance: res.dateNaissance, numeroCni: res.numeroCni, numeroAssure: res.numeroAssure, sexe: res.sexe
-    });
-    this.snackBar.open(
-      remplis.length
-        ? `OCR ${type} : ${remplis.length} champ(s) rempli(s) automatiquement — vérifiez et complétez si besoin`
-        : 'Lecture OCR incomplète : veuillez saisir les informations manuellement',
-      'Fermer', { duration: 5000 });
-  }
-
-
-
-  removePhoto(key: PhotoKey) {
-    this.photos[key] = null;
-  }
-
-  // ===== Enregistrement =====
-  enregistrer() {
-    if (this.patientForm.invalid) return;
-    const erreur = this.erreurRegime;
-    if (erreur) {
-      this.snackBar.open(erreur, 'Fermer', { duration: 6000, panelClass: 'error-snackbar' });
-      return;
-    }
-    this.isSubmitting = true;
-    const val = this.patientForm.value;
-
-    const req: LettreGarantieRequest = {
-      patientId: this.selectedPatientId || undefined,
-      nom: val.nom,
-      prenom: val.prenom,
-      telephone: val.telephone,
-      regime: val.regime,
-      sexe: val.sexe || undefined,
-      numeroCni: val.numeroCni || undefined,
-      numeroAssure: val.numeroAssure || undefined,
-      dateNaissance: val.dateNaissance || undefined,
-      prestations: this.prestationsLignes,
-      cniRecto: this.photos.cniRecto || undefined,
-      cniVerso: this.photos.cniVerso || undefined,
-      carteAssureRecto: this.photos.carteAssureRecto || undefined,
-      autreDocument: this.photos.autreDocument || undefined,
-      autreDocumentTitre: this.photos.autreDocument ? (this.autreDocumentTitre || 'Extrait de naissance') : undefined
-    };
-
-    const obs = this.isEditMode && this.editingId
-      ? this.bcsuService.updateLettreGarantie(this.editingId, req)
-      : this.bcsuService.createLettreGarantie(req);
-
-    obs.subscribe({
-      next: (lettre) => {
-        this.isSubmitting = false;
-        this.snackBar.open(this.isEditMode ? 'Dossier modifié' : 'Dossier enregistré et LG générée : ' + lettre.numero, 'Fermer', { duration: 3000 });
-        // Après émission d'une nouvelle LG : retour à la liste « Patients enregistrés »
-        // (onglet 1 de l'espace BCSU). En modification, on revient au détail de la lettre.
-        if (this.isEditMode) {
-          this.router.navigate(['/dashboard/lettres-garantie', lettre.id]);
-        } else {
-          this.router.navigate(['/dashboard/espace-bcsu'], { queryParams: { tab: 1 } });
-        }
-      },
-      error: (err) => {
-        this.isSubmitting = false;
-        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
-      }
-    });
+  libelleSexe(sexe: string): string {
+    return sexe === 'M' ? 'Masculin' : sexe === 'F' ? 'Féminin' : '—';
   }
 }

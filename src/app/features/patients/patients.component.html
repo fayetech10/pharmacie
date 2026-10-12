@@ -1,215 +1,144 @@
-<div class="fade-in p-6 max-md:p-4">
+<div class="fade-in">
+
   <div class="page-head">
     <div>
-      <h1>Bénéficiaires (Patients)</h1>
-      <p>Recherchez un bénéficiaire, consultez son dossier consolidé (Lettres, Bons, Factures) et délivrez-lui un bon de commande</p>
+      <h1>Patients enregistrés</h1>
     </div>
     <div class="page-head-actions">
-      <button mat-stroked-button color="primary" [disabled]="exporting || filteredPatients.length === 0"
-              (click)="exporter()">
-        <mat-icon>table_view</mat-icon>
-        {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
+      <button type="button" class="btn btn-outline" [disabled]="exporting || filteredPatients.length === 0" (click)="exporter()">
+        <mat-icon>table_view</mat-icon> {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
       </button>
     </div>
   </div>
 
-  <!-- Statistiques d'enregistrement -->
-  <div class="grid grid-cols-3 gap-3 max-md:gap-2 mb-6" *ngIf="!loading">
-    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
-      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-primary-light text-primary items-center justify-center shrink-0">
-        <mat-icon>groups</mat-icon>
-      </div>
-      <div class="min-w-0">
-        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ patients.length }}</div>
-        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Bénéficiaires</div>
-      </div>
-    </div>
-    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
-      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-[#EFF6FF] text-[#1D4ED8] items-center justify-center shrink-0">
-        <mat-icon>event_available</mat-icon>
-      </div>
-      <div class="min-w-0">
-        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ countThisMonth }}</div>
-        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Ce mois-ci</div>
-      </div>
-    </div>
-    <div class="flex items-center gap-3 max-md:gap-2.5 bg-card border border-border rounded-lg shadow-sm p-4 max-md:p-3">
-      <div class="hidden xs:flex w-11 h-11 rounded-[10px] bg-[#FFFBEB] text-[#B45309] items-center justify-center shrink-0">
-        <mat-icon>calendar_month</mat-icon>
-      </div>
-      <div class="min-w-0">
-        <div class="text-[22px] max-md:text-lg font-extrabold text-text-primary leading-none">{{ countThisYear }}</div>
-        <div class="text-[12.5px] max-md:text-[11px] leading-tight text-text-secondary font-semibold mt-1">Cette année</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Barre de recherche + filtres -->
-  <div class="bg-card border border-border rounded-lg shadow-sm p-4 mb-6">
-    <div class="flex gap-4 items-center flex-wrap">
-      <!-- Recherche -->
-      <mat-form-field appearance="outline" class="flex-[2] min-w-[250px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
-        <mat-label>Rechercher par nom, prénom, téléphone, CNI ou numéro d'assuré…</mat-label>
-        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="resetPage()" placeholder="Ex: Ousmane Diop ou 176…">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-
-      <!-- Filtre par régime -->
-      <mat-form-field appearance="outline" class="flex-1 min-w-[180px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
-        <mat-label>Régime</mat-label>
-        <mat-select [(ngModel)]="selectedRegime" (ngModelChange)="resetPage()">
-          <mat-option value="">Tous les régimes</mat-option>
-          <mat-option *ngFor="let r of regimeValues" [value]="r">
-            {{ regimeLabels[r] }} ({{ getRegimeCount(r) }})
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <!-- Filtre par mois d'enregistrement -->
-      <mat-form-field appearance="outline" class="flex-1 min-w-[150px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
-        <mat-label>Mois</mat-label>
-        <mat-select [(ngModel)]="filterMois" (ngModelChange)="resetPage()">
-          <mat-option [value]="0">Tous les mois</mat-option>
-          <mat-option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">
-            {{ moisNoms[m] }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <!-- Filtre par année d'enregistrement -->
-      <mat-form-field appearance="outline" class="flex-1 min-w-[130px] -mb-4 max-md:flex-[1_1_100%] max-md:min-w-0">
-        <mat-label>Année</mat-label>
-        <mat-select [(ngModel)]="filterAnnee" (ngModelChange)="resetPage()">
-          <mat-option [value]="0">Toutes</mat-option>
-          <mat-option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <!-- Bouton clear -->
-      <button *ngIf="hasActiveFilters"
-              mat-icon-button
-              class="!text-warn"
-              (click)="clearFilters()"
-              aria-label="Réinitialiser les filtres"
-              title="Réinitialiser les filtres">
-        <mat-icon>filter_alt_off</mat-icon>
-      </button>
-    </div>
-  </div>
-
-  <!-- Résumé filtré -->
-  <div *ngIf="!loading && hasActiveFilters" class="mb-4 text-[13px] text-text-secondary flex items-center gap-1.5">
-    <mat-icon class="!text-base !w-4 !h-4">filter_list</mat-icon>
-    {{ filteredPatients.length }} résultat{{ filteredPatients.length > 1 ? 's' : '' }} sur {{ patients.length }}
-  </div>
-
-  <div *ngIf="loading" class="flex items-center justify-center gap-2 p-12 text-text-secondary">
-    <mat-icon class="animate-spin">sync</mat-icon> Chargement des patients…
-  </div>
-
-  <div *ngIf="!loading && filteredPatients.length === 0" class="text-center py-16 px-6 text-text-secondary border-2 border-dashed border-border rounded-lg">
-    <mat-icon class="!text-5xl !w-12 !h-12 mb-4 text-text-muted">person_off</mat-icon>
-    <h3 class="font-bold m-0 mb-2 text-text-primary">Aucun bénéficiaire trouvé</h3>
-    <p class="m-0 mb-4 text-sm">Ajustez vos termes de recherche ou vos filtres.</p>
-    <button *ngIf="hasActiveFilters" mat-stroked-button color="primary" (click)="clearFilters()">
-      <mat-icon>filter_alt_off</mat-icon> Réinitialiser les filtres
-    </button>
-  </div>
-
-  <!-- Tableau (desktop / tablette large) -->
-  <div class="bg-card border border-border rounded-lg overflow-x-auto shadow-sm mb-4 desktop-only" *ngIf="!loading && filteredPatients.length > 0">
-    <table class="w-full border-collapse text-left text-[13.5px]">
-      <thead>
-        <tr class="bg-field border-b border-border">
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Bénéficiaire</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Téléphone</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">N° CNI/N° Assuré</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Date de naissance</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Régime</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap">Enregistré le</th>
-          <th class="py-3 px-4 font-bold text-text-secondary whitespace-nowrap text-right w-[120px]">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="cursor-pointer transition-colors hover:bg-primary-light focus-visible:bg-primary-light focus-visible:outline-none" *ngFor="let p of pagedPatients" (click)="openPatientDossier(p.id!)"
-            tabindex="0" role="button" [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom"
-            (keydown.enter)="openPatientDossier(p.id!)">
-          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">
-            <div class="flex items-center gap-3">
-              <div class="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-primary to-primary-hover text-white flex items-center justify-center text-sm font-extrabold uppercase shrink-0">{{ p.prenom.charAt(0) }}{{ p.nom.charAt(0) }}</div>
-              <div class="min-w-0">
-                <span class="block font-bold text-text-primary whitespace-nowrap">{{ p.prenom }} {{ p.nom }}</span>
-                <span class="block text-[11.5px] text-text-muted font-medium" *ngIf="sexeLabel(p)">{{ sexeLabel(p) }}</span>
-              </div>
-            </div>
-          </td>
-          <td class="py-3 px-4 align-middle border-b border-border-light font-medium text-text-secondary">{{ p.telephone || '—' }}</td>
-          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">
-            <ng-container *ngIf="p.numeroCni">{{ p.numeroCni }}</ng-container>
-            <ng-container *ngIf="p.numeroCni && p.numeroAssure"> / </ng-container>
-            <ng-container *ngIf="p.numeroAssure">{{ p.numeroAssure }}</ng-container>
-            <ng-container *ngIf="!p.numeroCni && !p.numeroAssure">—</ng-container>
-          </td>
-          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light whitespace-nowrap">
-            <ng-container *ngIf="p.dateNaissance; else noDob">
-              {{ p.dateNaissance | date:'dd/MM/yyyy' }}<span class="text-text-muted" *ngIf="age(p) !== null"> · {{ age(p) }} ans</span>
-            </ng-container>
-            <ng-template #noDob>—</ng-template>
-          </td>
-          <td class="py-3 px-4 text-text-primary align-middle border-b border-border-light">
-            <span class="whitespace-nowrap" [ngStyle]="getRegimeBadgeStyle(p.regime)">
-              {{ regimeLabels[p.regime] }}
-            </span>
-          </td>
-          <td class="py-3 px-4 align-middle border-b border-border-light whitespace-nowrap text-text-secondary">{{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
-          <td class="py-3 px-4 align-middle border-b border-border-light text-right w-[120px]">
-            <span class="text-[12.5px] font-bold text-primary inline-flex items-center gap-1">
-              Consulter <mat-icon class="!text-base !w-4 !h-4">chevron_right</mat-icon>
-            </span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Cartes mobiles (≤ 768px) -->
-  <div class="m-cards" *ngIf="!loading && filteredPatients.length > 0">
-    <div class="m-card clickable" *ngFor="let p of pagedPatients" (click)="openPatientDossier(p.id!)"
-         tabindex="0" role="button" (keydown.enter)="openPatientDossier(p.id!)"
-         [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom">
-      <div class="m-card-top">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-primary to-primary-hover text-white flex items-center justify-center text-sm font-extrabold uppercase shrink-0">{{ p.prenom.charAt(0) }}{{ p.nom.charAt(0) }}</div>
-          <div class="min-w-0">
-            <div class="m-title">{{ p.prenom }} {{ p.nom }}</div>
-            <div class="m-sub" *ngIf="p.telephone"><mat-icon class="inline-ic">call</mat-icon>{{ p.telephone }}</div>
-          </div>
-        </div>
-        <span class="whitespace-nowrap" [ngStyle]="getRegimeBadgeStyle(p.regime)">{{ regimeLabels[p.regime] }}</span>
-      </div>
-      <div class="m-row" *ngIf="sexeLabel(p) || p.numeroCni || p.numeroAssure || p.dateNaissance">
-        <span *ngIf="sexeLabel(p)"><mat-icon class="inline-ic">wc</mat-icon>{{ sexeLabel(p) }}</span>
-        <span *ngIf="p.numeroCni || p.numeroAssure"><mat-icon class="inline-ic">badge</mat-icon>{{ p.numeroCni || p.numeroAssure }}</span>
-        <span *ngIf="p.dateNaissance"><mat-icon class="inline-ic">cake</mat-icon>{{ p.dateNaissance | date:'dd/MM/yyyy' }}<ng-container *ngIf="age(p) !== null"> · {{ age(p) }} ans</ng-container></span>
-      </div>
-      <div class="m-foot">
-        <span class="text-[12px] text-text-muted inline-flex items-center gap-1" *ngIf="p.createdAt">
-          <mat-icon class="inline-ic">schedule</mat-icon>Enregistré le {{ p.createdAt | date:'dd/MM/yyyy' }}
+  <!-- Filtres : toujours visibles, comme « Mes factures » du poste -->
+  <div class="card">
+    <div class="section-body grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1.3fr_1fr_1fr]">
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2 lg:col-span-1">
+        Recherche
+        <span class="relative">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
+          <input type="search" [(ngModel)]="searchQuery" (ngModelChange)="resetPage()"
+                 placeholder="Nom, téléphone, CNI ou n° d'assuré…"
+                 class="h-11 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
         </span>
-        <span class="text-[12.5px] font-bold text-primary inline-flex items-center gap-1">Consulter <mat-icon class="!text-base !w-4 !h-4 !text-primary">chevron_right</mat-icon></span>
-      </div>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Régime
+        <select [(ngModel)]="selectedRegime" (ngModelChange)="resetPage()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option value="">Tous les régimes</option>
+          <option *ngFor="let r of regimeValues" [value]="r">{{ regimeLabels[r] }} ({{ getRegimeCount(r) }})</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Année
+        <select [(ngModel)]="filterAnnee" (ngModelChange)="resetPage()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option [ngValue]="0">Toutes</option>
+          <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+        Mois
+        <select [(ngModel)]="filterMois" (ngModelChange)="resetPage()"
+                class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <option [ngValue]="0">Tous</option>
+          <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ moisNoms[m] }}</option>
+        </select>
+      </label>
     </div>
   </div>
 
-  <div class="mt-4 bg-card border border-border rounded-lg px-2">
-    <mat-paginator
-      [length]="filteredPatients.length"
-      [pageIndex]="pageIndex"
-      [pageSize]="pageSize"
-      [pageSizeOptions]="pageSizeOptions"
-      showFirstLastButtons
-      (page)="onPageChange($event)"
-      aria-label="Pagination des patients">
-    </mat-paginator>
+  <div *ngIf="loading" class="card">
+    <div class="section-body flex items-center justify-center gap-3 py-10">
+      <mat-spinner diameter="26"></mat-spinner><span class="text-text-secondary">Chargement des bénéficiaires…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="card table-card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>groups</mat-icon></div>
+        <div>
+          <h2>{{ filteredPatients.length }} bénéficiaire{{ filteredPatients.length > 1 ? 's' : '' }}
+            <span *ngIf="hasActiveFilters" class="font-normal text-text-secondary"> sur {{ patients.length }}</span></h2>
+          <p>{{ countThisMonth }} enregistré(s) ce mois-ci · {{ countThisYear }} cette année</p>
+        </div>
+      </div>
+      <button type="button" *ngIf="hasActiveFilters" class="btn btn-ghost btn-sm ml-auto" (click)="clearFilters()">
+        <mat-icon>filter_alt_off</mat-icon> Réinitialiser
+      </button>
+    </div>
+
+    <div *ngIf="filteredPatients.length === 0" class="flex flex-col items-center gap-2 py-12 px-6 text-center text-text-secondary">
+      <mat-icon class="!text-4xl !w-10 !h-10 text-text-muted">person_off</mat-icon>
+      <strong class="text-text-primary">Aucun bénéficiaire trouvé</strong>
+      <span class="text-[13px]">Ajustez la recherche ou les filtres.</span>
+    </div>
+
+    <!-- Table desktop -->
+    <div class="overflow-x-auto desktop-only" *ngIf="filteredPatients.length > 0">
+      <table class="premium-table w-full">
+        <thead>
+          <tr>
+            <th>Bénéficiaire</th>
+            <th>Téléphone</th>
+            <th>N° CNI / n° d'assuré</th>
+            <th>Date de naissance</th>
+            <th>Régime</th>
+            <th>Enregistré le</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of filteredPatients | paginer: pg.page : pg.taille" class="cursor-pointer" (click)="openPatientDossier(p.id!)"
+              tabindex="0" (keydown.enter)="openPatientDossier(p.id!)"
+              [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom">
+            <td>
+              <span class="block font-semibold text-text-primary whitespace-nowrap">{{ p.prenom }} {{ p.nom }}</span>
+              <span class="block text-[11.5px] text-text-muted" *ngIf="sexeLabel(p)">{{ sexeLabel(p) }}</span>
+            </td>
+            <td class="whitespace-nowrap">{{ p.telephone || '—' }}</td>
+            <td class="font-mono text-[12.5px]">
+              {{ p.numeroCni || '' }}<ng-container *ngIf="p.numeroCni && p.numeroAssure"> / </ng-container>{{ p.numeroAssure || '' }}
+              <ng-container *ngIf="!p.numeroCni && !p.numeroAssure">—</ng-container>
+            </td>
+            <td class="whitespace-nowrap">
+              <ng-container *ngIf="p.dateNaissance; else sansNaissance">
+                {{ p.dateNaissance | date:'dd/MM/yyyy' }}<span class="text-text-muted" *ngIf="age(p) !== null"> · {{ age(p) }} ans</span>
+              </ng-container>
+              <ng-template #sansNaissance>—</ng-template>
+            </td>
+            <td><app-regime-badge [regime]="p.regime"></app-regime-badge></td>
+            <td class="whitespace-nowrap">{{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
+            <td class="text-right whitespace-nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" (click)="$event.stopPropagation(); openPatientDossier(p.id!)">
+                <mat-icon>folder_shared</mat-icon> Dossier
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cartes mobiles -->
+    <div class="m-cards" *ngIf="filteredPatients.length > 0">
+      <div class="m-card clickable" *ngFor="let p of filteredPatients | paginer: pg.page : pg.taille" (click)="openPatientDossier(p.id!)"
+           tabindex="0" role="button" (keydown.enter)="openPatientDossier(p.id!)"
+           [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom">
+        <div class="m-card-top">
+          <span class="m-title">{{ p.prenom }} {{ p.nom }}</span>
+          <app-regime-badge [regime]="p.regime"></app-regime-badge>
+        </div>
+        <div class="m-row">
+          <span>{{ p.telephone || '—' }}</span>
+          <span>Enregistré le {{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <app-pagination #pg class="px-4 pb-2" [total]="filteredPatients.length" [taille]="20"
+                    [tailles]="[10, 20, 50, 100]"></app-pagination>
   </div>
 </div>

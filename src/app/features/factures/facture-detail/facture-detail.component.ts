@@ -3,52 +3,45 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Facture, LigneFacture, LigneDecisionRequest, StatutFacture, StatutLigne } from '../../../core/models/facture.model';
+import { Facture } from '../../../core/models/facture.model';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
-import { ConfirmService } from '../../../core/services/confirm.service';
-import { of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import {
+  LignePatientListe, ListePatientsFactureComponent, PositionListe
+} from '../../../shared/liste-patients-facture/liste-patients-facture.component';
+import { EtatListe, EtatListeService } from '../../../shared/pagination/etat-liste.service';
+import {
+  PatientPharmacie, lignesPatientsPharmacie, patientPharmacieCorrespond, patientsFacturePharmacie
+} from '../facture-patients';
 
-interface PatientGroup {
-  nom?: string;
-  matricule?: string;
-  ticketCaisse?: string;
-  bonCommande?: string;
-  ordonnance?: string;
-  lignes: { ligne: LigneFacture; index: number }[];
-  expanded?: boolean;
-}
-
+/**
+ * Détail d'une facture de pharmacie : en-tête, circuit de validation, totaux, puis la liste
+ * des patients au gabarit commun à toutes les factures — un tableau sans en-tête, une ligne
+ * par patient (nom, nombre de médicaments, matricule). Un clic ouvre l'écran du patient
+ * (médicaments, dossier, corrections du pharmacien).
+ */
 @Component({
   selector: 'app-facture-detail',
   standalone: true,
-  imports: [
+  imports: [ListePatientsFactureComponent,
     CommonModule,
     RouterModule,
     FormsModule,
-    MatCardModule,
-    MatButtonModule,
     MatIconModule,
-    MatTableModule,
+    MatMenuModule,
+    MatProgressSpinnerModule,
     MatDialogModule,
     MatSnackBarModule,
-    MatTooltipModule,
-    MatMenuModule,
     StatusBadgeComponent
   ],
-  templateUrl: './facture-detail.component.html',
-  styleUrls: ['./facture-detail.shared.css', './facture-detail.component.css']
+  templateUrl: './facture-detail.component.html'
 })
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
@@ -56,170 +49,21 @@ export class FactureDetailComponent implements OnInit {
   loading = true;
   loadError = false;
 
-  // Expose Math to template
-  Math = Math;
-
-  // Pièces justificatives affichées dans le dossier patient
-  readonly photoFields: { key: 'ticketCaisse' | 'bonCommande' | 'ordonnance'; label: string; icon: string }[] = [
-    { key: 'ticketCaisse', label: 'Ticket de caisse', icon: 'receipt_long' },
-    { key: 'bonCommande', label: 'Bon de commande', icon: 'description' },
-    { key: 'ordonnance', label: 'Ordonnance', icon: 'clinical_notes' }
-  ];
-  dossierPatient: PatientGroup | null = null;
-  viewerImage: string | null = null;
-  zoomLevel = 1;
-
   @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild(ListePatientsFactureComponent) liste?: ListePatientsFactureComponent;
 
   /**
-   * Lignes regroupées par patient (le nom n'apparaît qu'une fois — rowspan).
+   * Patients de la facture (le nom n'apparaît qu'une fois) et lignes de la liste.
    *
-   * IMPORTANT : c'est un CHAMP recalculé via setFacture(), surtout PAS un getter.
-   * Un getter renverrait de nouveaux tableaux à chaque cycle de détection de
-   * changements ; combiné au champ [(ngModel)] du motif de rejet, cela créait une
-   * boucle infinie (NgModel reprogramme un microtask → nouveau rendu → nouvelles
-   * références → input recréé → …) qui figeait l'onglet dès l'ouverture du rejet
-   * d'une ligne.
+   * IMPORTANT : ce sont des CHAMPS recalculés via setFacture() / filtrer(), surtout PAS des
+   * getters : de nouveaux tableaux à chaque cycle de détection de changements ont déjà figé
+   * l'onglet (boucle avec un [(ngModel)]).
    */
-  patientGroups: PatientGroup[] = [];
-
-  private buildPatientGroups(): PatientGroup[] {
-    const groups: PatientGroup[] = [];
-    const byKey = new Map<string, PatientGroup>();
-    (this.facture?.lignes || []).forEach((ligne, index) => {
-      const key = (ligne.patientMatricule || '') + '|' + (ligne.patientNomPrenom || '');
-      let g = byKey.get(key);
-      if (!g) {
-        g = {
-          nom: ligne.patientNomPrenom,
-          matricule: ligne.patientMatricule,
-          lignes: [],
-          expanded: false
-        };
-        byKey.set(key, g);
-        groups.push(g);
-      }
-      // Les pièces sont dupliquées sur les lignes du patient, mais PAS forcément sur
-      // la première : quand les médicaments d'un même patient sont ajoutés en
-      // plusieurs fois, seules certaines lignes portent les photos. On récupère donc
-      // chaque pièce depuis la première ligne qui la possède.
-      if (!g.ticketCaisse && ligne.ticketCaisse) g.ticketCaisse = ligne.ticketCaisse;
-      if (!g.bonCommande && ligne.bonCommande) g.bonCommande = ligne.bonCommande;
-      if (!g.ordonnance && ligne.ordonnance) g.ordonnance = ligne.ordonnance;
-      g.lignes.push({ ligne, index });
-    });
-    return groups;
-  }
-
-  trackGroup(_i: number, g: PatientGroup): string {
-    return (g.matricule || '') + '|' + (g.nom || '');
-  }
-
-  trackLigne(_i: number, item: { ligne: LigneFacture; index: number }): number {
-    return item.index;
-  }
-
-  dossierCount(g: PatientGroup): number {
-    return [g.ticketCaisse, g.bonCommande, g.ordonnance].filter(p => !!p).length;
-  }
-
-  groupTotal(g: PatientGroup): number {
-    return g.lignes.reduce((sum, item) => sum + (item.ligne.montant || 0), 0);
-  }
-
-  openDossier(g: PatientGroup) {
-    this.dossierPatient = g;
-  }
-
-  closeDossier() {
-    this.dossierPatient = null;
-  }
-
-  openViewer(src: string) {
-    this.viewerImage = src;
-    this.zoomLevel = 1;
-  }
-
-  closeViewer() {
-    this.viewerImage = null;
-    this.zoomLevel = 1;
-  }
-
-  zoomIn() {
-    this.zoomLevel = Math.min(this.zoomLevel + 0.25, 3);
-  }
-
-  zoomOut() {
-    this.zoomLevel = Math.max(this.zoomLevel - 0.25, 0.25);
-  }
-
-  resetZoom() {
-    this.zoomLevel = 1;
-  }
-
-  toggleGroup(g: PatientGroup) {
-    g.expanded = !g.expanded;
-  }
-
-  // --- Pagination & Search ---
-  searchPatient: string = '';
-  filteredGroups: PatientGroup[] = [];
-  paginatedGroups: PatientGroup[] = [];
-  currentPage: number = 1;
-  pageSize: number = 10;
-
-  get totalPages(): number {
-    return Math.ceil(this.filteredGroups.length / this.pageSize);
-  }
-
-  get pageNumbers(): number[] {
-    const pages = [];
-    for (let i = 1; i <= this.totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }
-
-  onSearchChange() {
-    this.currentPage = 1;
-    this.updatePagination();
-  }
-
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePagination();
-      // Scroll smoothly to top of patients section
-      window.scrollTo({ top: 300, behavior: 'smooth' });
-    }
-  }
-
-  private updatePagination() {
-    // 1. Filter
-    const term = this.searchPatient.toLowerCase().trim();
-    if (term) {
-      this.filteredGroups = this.patientGroups.filter(g => 
-        (g.nom && g.nom.toLowerCase().includes(term)) ||
-        (g.matricule && g.matricule.toLowerCase().includes(term)) ||
-        // Search by medication name as well
-        g.lignes.some(l => l.ligne.medicament.toLowerCase().includes(term))
-      );
-    } else {
-      this.filteredGroups = [...this.patientGroups];
-    }
-
-    // 2. Paginate
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    this.paginatedGroups = this.filteredGroups.slice(startIndex, startIndex + this.pageSize);
-  }
-
-  expandAll() {
-    this.filteredGroups.forEach(g => g.expanded = true);
-  }
-
-  collapseAll() {
-    this.filteredGroups.forEach(g => g.expanded = false);
-  }
+  patients: PatientPharmacie[] = [];
+  lignesListe: LignePatientListe[] = [];
+  searchPatient = '';
+  /** Page, recherche et défilement retrouvés en revenant d'un patient. */
+  etatRetour?: EtatListe;
 
   constructor(
     private route: ActivatedRoute,
@@ -227,87 +71,31 @@ export class FactureDetailComponent implements OnInit {
     private factureService: FactureService,
     public authService: AuthService,
     private dialog: MatDialog,
-    private confirm: ConfirmService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private etatListe: EtatListeService
   ) {}
 
-  /**
-   * Les lignes ne sont modifiables/supprimables que par le pharmacien propriétaire,
-   * et tant que la facture n'est pas partie (ou après un rejet du service régional).
-   * Aligné sur la règle backend de FactureService.updateFacture.
-   */
-  get canEditLignes(): boolean {
-    if (!this.authService.isPharmacien() || !this.facture) return false;
-    return this.facture.statut === 'BROUILLON' || this.facture.statut === 'REJETEE_SR';
+  /** Recalcule la liste affichée (chargement, recherche). */
+  filtrer(premierePage = false) {
+    if (!this.facture) return;
+    const retenus = this.patients.filter(p => patientPharmacieCorrespond(p, this.searchPatient));
+    this.lignesListe = lignesPatientsPharmacie(retenus, this.facture.id);
+    if (premierePage) this.liste?.premierePage();
   }
 
-  /** Modifie la quantité puis le prix unitaire d'une ligne, et persiste la facture. */
-  modifierLigne(item: { ligne: LigneFacture; index: number }) {
-    if (!this.canEditLignes) return;
-    this.confirm.prompt({
-      title: `Modifier « ${item.ligne.medicament} »`,
-      label: 'Quantité',
-      initialValue: String(item.ligne.quantite ?? 1),
-      required: true,
-      confirmText: 'Suivant'
-    }).pipe(
-      switchMap(qte => {
-        if (qte === null) return of(null);
-        const quantite = Number(qte);
-        if (!Number.isFinite(quantite) || quantite <= 0) {
-          this.snackBar.open('Quantité invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
-          return of(null);
-        }
-        return this.confirm.prompt({
-          title: `Modifier « ${item.ligne.medicament} »`,
-          label: 'Prix unitaire (FCFA)',
-          initialValue: String(item.ligne.prixUnitaire ?? 0),
-          required: true,
-          confirmText: 'Enregistrer'
-        }).pipe(map(prix => prix === null ? null : { quantite, prix: Number(prix) }));
-      })
-    ).subscribe(res => {
-      if (!res) return;
-      if (!Number.isFinite(res.prix) || res.prix < 0) {
-        this.snackBar.open('Prix unitaire invalide', 'Fermer', { duration: 3000, panelClass: 'error-snackbar' });
-        return;
-      }
-      const lignes = [...(this.facture!.lignes || [])];
-      lignes[item.index] = {
-        ...lignes[item.index],
-        quantite: res.quantite,
-        prixUnitaire: res.prix,
-        montant: res.quantite * res.prix
-      };
-      this.persisterLignes(lignes, 'Ligne modifiée');
-    });
+  get messageVide(): string {
+    return this.searchPatient ? `Aucun patient ne correspond à « ${this.searchPatient} ».` : 'Aucune ligne dans cette facture.';
   }
 
-  /** Retire une ligne de la facture après confirmation. */
-  supprimerLigne(item: { ligne: LigneFacture; index: number }) {
-    if (!this.canEditLignes) return;
-    this.confirm.ask({
-      title: 'Supprimer cette ligne',
-      message: `Retirer « ${item.ligne.medicament} » de la facture ?`,
-      confirmText: 'Supprimer',
-      danger: true
-    }).subscribe(ok => {
-      if (!ok) return;
-      const lignes = (this.facture!.lignes || []).filter((_, i) => i !== item.index);
-      this.persisterLignes(lignes, 'Ligne supprimée');
-    });
+  private cleEtat(id: string): string {
+    return 'facture-pharmacie:' + id;
   }
 
-  private persisterLignes(lignes: LigneFacture[], message: string) {
-    const f = this.facture!;
-    this.factureService.update(f.id!, { mois: f.mois, annee: f.annee, lignes } as any).subscribe({
-      next: (maj) => {
-        this.setFacture(maj);
-        this.snackBar.open(message, 'Fermer', { duration: 2500 });
-      },
-      error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message),
-        'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
-    });
+  /** Un patient s'ouvre : on note où en est la liste, pour y revenir. */
+  memoriserPosition(position: PositionListe) {
+    if (!this.facture) return;
+    this.etatListe.memoriser(this.cleEtat(this.facture.id),
+      { ...position, recherche: this.searchPatient, defilement: window.scrollY });
   }
 
   private destroyRef = inject(DestroyRef);
@@ -317,15 +105,18 @@ export class FactureDetailComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         const id = params.get('id');
-        if (id) this.loadFacture(id);
+        if (!id) return;
+        this.etatRetour = this.etatListe.reprendre(this.cleEtat(id));
+        this.searchPatient = this.etatRetour?.recherche || '';
+        this.loadFacture(id);
       });
   }
 
-  /** Affecte la facture courante et reconstruit (une seule fois) les groupes patients. */
+  /** Affecte la facture courante et reconstruit (une seule fois) la liste des patients. */
   private setFacture(f: Facture) {
     this.facture = f;
-    this.patientGroups = this.buildPatientGroups();
-    this.updatePagination();
+    this.patients = patientsFacturePharmacie(f);
+    this.filtrer();
   }
 
   loadFacture(id: string) {
@@ -335,6 +126,7 @@ export class FactureDetailComponent implements OnInit {
       next: (data: Facture) => {
         this.setFacture(data);
         this.loading = false;
+        EtatListeService.defiler(this.etatRetour);
       },
       error: (e: any) => {
         this.loading = false;

@@ -1,0 +1,372 @@
+<div class="fade-in">
+
+  <!-- Retour à la facture, parcours des patients et actions sur la visite -->
+  <div class="flex flex-wrap items-center gap-2 mb-3 print:hidden">
+    <button type="button" (click)="retour()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer">
+      <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Retour à la facture
+    </button>
+
+    <div *ngIf="!chargement && visite && visites.length > 1" class="inline-flex items-center gap-1 text-[12.5px] text-text-secondary">
+      <button type="button" class="btn btn-ghost btn-sm !px-1.5" [disabled]="!precedente" (click)="allerA(precedente)"
+              aria-label="Patient précédent" title="Patient précédent">
+        <mat-icon class="!m-0">chevron_left</mat-icon>
+      </button>
+      <span class="tabular-nums">Patient {{ position }} / {{ visites.length }}</span>
+      <button type="button" class="btn btn-ghost btn-sm !px-1.5" [disabled]="!suivante" (click)="allerA(suivante)"
+              aria-label="Patient suivant" title="Patient suivant">
+        <mat-icon class="!m-0">chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <div *ngIf="!chargement && visite && !edition" class="ml-auto flex flex-wrap items-center gap-1.5">
+      <!-- Pointage du contrôle -->
+      <button *ngIf="echelonPointage" type="button" class="btn btn-sm" (click)="pointer()" [disabled]="occupe || estRejete(echelonPointage)"
+              [ngClass]="estVerifie(echelonPointage) ? 'bg-success text-white border-success' : 'btn-outline'"
+              [attr.title]="infoVerification(echelonPointage) || 'Marquer ce patient comme vérifié et conforme'"
+              [attr.aria-pressed]="estVerifie(echelonPointage)">
+        <mat-icon>{{ estVerifie(echelonPointage) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+        {{ estVerifie(echelonPointage) ? 'Vérifié' : 'Vérifier' }}
+      </button>
+      <!-- Rejet par ligne (patient) : la facture repart à la structure pour correction. -->
+      <button *ngIf="echelonPointage" type="button" class="btn btn-sm" (click)="rejeter()" [disabled]="occupe"
+              [ngClass]="estRejete(echelonPointage) ? '!bg-red-600 !text-white !border-red-600' : 'btn-outline'"
+              [attr.title]="estRejete(echelonPointage) ? 'Patient rejeté — cliquer pour annuler' : 'Rejeter ce patient (motif requis)'"
+              [attr.aria-pressed]="estRejete(echelonPointage)">
+        <mat-icon>{{ estRejete(echelonPointage) ? 'cancel' : 'block' }}</mat-icon>
+        {{ estRejete(echelonPointage) ? 'Rejeté' : 'Rejeter' }}
+      </button>
+      <button *ngIf="echelonPointage && suivante" type="button" class="btn btn-outline btn-sm" (click)="allerA(suivante)">
+        Suivant <mat-icon>arrow_forward</mat-icon>
+      </button>
+      <ng-container *ngIf="peutModifierDossier">
+        <button type="button" class="btn btn-outline btn-sm" (click)="editer()">
+          <mat-icon>edit</mat-icon> Modifier
+        </button>
+        <button type="button" *ngIf="aCompleter" class="btn btn-primary btn-sm" (click)="editer()">
+          <mat-icon>edit_note</mat-icon> Compléter
+        </button>
+      </ng-container>
+    </div>
+  </div>
+
+  <div *ngIf="chargement" class="card">
+    <div class="section-body flex items-center justify-center gap-3 py-10">
+      <mat-spinner diameter="26"></mat-spinner><span class="text-text-secondary">Chargement du patient…</span>
+    </div>
+  </div>
+
+  <!-- Visite absente de la facture (retirée entre-temps, lien périmé) -->
+  <div *ngIf="!chargement && facture && !visite" class="card">
+    <div class="section-body flex flex-col items-center gap-3 py-10 text-center">
+      <mat-icon class="!text-4xl !w-10 !h-10 text-text-muted">person_off</mat-icon>
+      <p class="m-0 text-[14px] text-text-secondary">Ce patient ne figure plus sur la facture.</p>
+      <button type="button" class="btn btn-outline btn-sm" (click)="retour()">
+        <mat-icon>arrow_back</mat-icon> Retour à la facture
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!chargement && facture && visite as v">
+
+    <!-- Patient rejeté « par ligne » : le motif reste affiché à la structure qui corrige. -->
+    <div *ngIf="!echelonPointage && rejetDuPatient as r"
+         class="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg bg-red-50 text-red-800 text-[13px]">
+      <mat-icon class="shrink-0 !text-xl !w-5 !h-5">block</mat-icon>
+      <span><strong>Patient rejeté par {{ r.par }}</strong><ng-container *ngIf="r.motif"> : {{ r.motif }}</ng-container>
+        — corrigez ce patient puis renvoyez la facture.</span>
+    </div>
+
+    <!-- Assistant : modifier / compléter cette visite (Espace PS) -->
+    <div *ngIf="edition && peutModifierDossier && v.dossier" class="mb-5">
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <h2 class="m-0 text-[16px] font-bold">{{ aCompleter ? 'Compléter' : 'Modifier' }} : {{ v.nomComplet }}</h2>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="fermerEdition()">
+          <mat-icon>close</mat-icon> Fermer
+        </button>
+      </div>
+      <app-facturation-csu-poste [integre]="true" [factureId]="facture.id" [dossierId]="v.dossier.id"
+                                 (termine)="editionTerminee($event)" (annule)="fermerEdition()"></app-facturation-csu-poste>
+    </div>
+
+    <!-- =========== Identité (en-tête compact, toujours visible) =========== -->
+    <div class="card mb-4" [ngClass]="{ '!border-success': estVerifie(echelonPointage) }">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>person</mat-icon></div>
+          <div class="min-w-0">
+            <h2 class="flex flex-wrap items-center gap-2">
+              <span>{{ v.nomComplet }}</span>
+              <mat-icon *ngIf="v.dossier?.identiteVerrouillee" class="!text-base !w-4 !h-4 text-success"
+                        title="Identité validée par le contrôle d'éligibilité">verified_user</mat-icon>
+              <app-status-badge *ngIf="v.dossier" [statut]="v.dossier.statut" famille="dossier" [sansIcone]="true"></app-status-badge>
+              <span *ngIf="aCarte && v.verificationCarte === 'NON_VERIFIEE_PANNE'"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800">Carte non vérifiée</span>
+              <span *ngIf="v.nombre > 1" title="Ce patient est venu plusieurs fois dans le mois"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Visite {{ v.rang }}/{{ v.nombre }}</span>
+              <span *ngIf="echelonPointage !== 'centre' && estVerifie('centre')" [attr.title]="infoVerification('centre')"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">
+                <mat-icon class="!text-[13px] !w-[13px] !h-[13px]">check</mat-icon>Vérifié par le district
+              </span>
+              <span *ngIf="echelonPointage !== 'region' && estVerifie('region')" [attr.title]="infoVerification('region')"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">
+                <mat-icon class="!text-[13px] !w-[13px] !h-[13px]">check</mat-icon>Vérifié par le SR
+              </span>
+              <span *ngIf="estRejete('centre')" title="Patient rejeté par le district"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700">
+                <mat-icon class="!text-[13px] !w-[13px] !h-[13px]">block</mat-icon>Rejeté par le district
+              </span>
+              <span *ngIf="estRejete('region')" title="Patient rejeté par le service régional"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700">
+                <mat-icon class="!text-[13px] !w-[13px] !h-[13px]">block</mat-icon>Rejeté par le SR
+              </span>
+            </h2>
+            <p>
+              {{ libelleRegime(facture.regime) }} – facture {{ facture.numero }} – {{ periode }}
+              <ng-container *ngIf="contexte === 'structure' && facture.structureNom"> – {{ facture.structureNom }}</ng-container>
+            </p>
+          </div>
+        </div>
+        <!-- Boutons : Informations + Dossier + Fiche bénéficiaire -->
+        <div class="ml-auto flex gap-2 print:hidden">
+          <button type="button" class="btn btn-ghost btn-sm" (click)="afficherIdentite = !afficherIdentite"
+                  title="Afficher / Masquer les informations du patient">
+            <mat-icon>{{ afficherIdentite ? 'visibility_off' : 'visibility' }}</mat-icon>
+            Informations
+          </button>
+          <button type="button" *ngIf="dossierAffiche" class="btn btn-outline btn-sm" (click)="afficherDossier = true"
+                  title="Ouvrir le dossier patient (documents justificatifs)">
+            <mat-icon>folder_shared</mat-icon> Dossier
+          </button>
+          <button type="button" *ngIf="v.patientId" class="btn btn-ghost btn-sm" (click)="ouvrirFicheBeneficiaire()"
+                  title="Fiche du bénéficiaire (lettres, bons, factures)">
+            <mat-icon>badge</mat-icon> Fiche
+          </button>
+        </div>
+      </div>
+
+      <div class="section-body flex flex-col gap-4">
+        <div *ngIf="aCompleter && !edition"
+             class="flex items-start gap-2 py-2.5 px-3 rounded-lg bg-amber-50 text-amber-800 text-[13px]">
+          <mat-icon class="shrink-0 !text-xl !w-5 !h-5">pending_actions</mat-icon>
+          <span>Ce dossier est à compléter : il bloque l'envoi de la facture tant qu'il n'est pas complet.</span>
+        </div>
+
+        <!-- Informations du patient (masquées par défaut) -->
+        <ng-container *ngIf="afficherIdentite">
+          <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+            <div *ngFor="let i of identite" class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary break-words" [class.font-mono]="i.mono">{{ i.valeur }}</dd>
+            </div>
+          </dl>
+
+          <div *ngIf="carte.length">
+            <h3 class="m-0 mb-2 pb-1.5 border-b border-border-light text-[12px] font-semibold uppercase tracking-wide text-text-muted">Carte CSU</h3>
+            <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+              <div *ngFor="let i of carte" class="min-w-0">
+                <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+                <dd class="m-0 mt-0.5 text-[14px] text-text-primary break-words">{{ i.valeur }}</dd>
+              </div>
+            </dl>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <div class="grid gap-4 items-start"
+         [ngClass]="aColonneLaterale ? 'lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-1'">
+
+      <!-- =========== Prestations =========== -->
+      <div class="card min-w-0">
+        <div class="section-header">
+          <div class="section-title-group">
+            <div class="section-icon"><mat-icon>medical_services</mat-icon></div>
+            <div>
+              <h2>Prestations</h2>
+              <p>Visite du {{ dateFr(v.date) }} – {{ v.lignes.length }} prestation(s)</p>
+            </div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="overflow-x-auto">
+            <table class="w-full text-[13px] border-collapse">
+              <thead>
+                <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
+                  <th class="py-1.5 pr-2 whitespace-nowrap">Date</th>
+                  <th class="py-1.5 px-2">Prestation</th>
+                  <th class="py-1.5 px-2 text-center">Qté</th>
+                  <ng-container *ngIf="!forfaitaire">
+                    <th class="py-1.5 px-2 text-right">Prix</th>
+                    <th class="py-1.5 px-2 text-right">Montant</th>
+                    <th class="py-1.5 px-2 text-right">SEN-CSU ({{ tauxSencsu }} %)</th>
+                    <th class="py-1.5 pl-2 text-right">Patient ({{ 100 - tauxSencsu }} %)</th>
+                  </ng-container>
+                  <th *ngIf="peutCorrigerLignes" class="py-1.5 pl-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ligne of v.lignes" class="border-b border-border-light">
+                  <td class="py-2 pr-2 whitespace-nowrap text-text-secondary">{{ dateFr(ligne.datePriseEnCharge) }}</td>
+                  <td class="py-2 px-2">
+                    {{ ligne.designation }}
+                    <span *ngIf="ligne.service" class="text-[11.5px] text-text-secondary"> – {{ ligne.service }}</span>
+                    <span *ngIf="ligne.codeActe" class="block text-[11.5px] text-text-secondary">{{ ligne.codeActe }}</span>
+                  </td>
+                  <td class="py-2 px-2 text-center">{{ ligne.quantite }}</td>
+                  <ng-container *ngIf="!forfaitaire">
+                    <td class="py-2 px-2 text-right">{{ ligne.prixUnitaire | number:'1.0-0':'fr' }}</td>
+                    <td class="py-2 px-2 text-right font-semibold">{{ ligne.montant | number:'1.0-0':'fr' }}</td>
+                    <td class="py-2 px-2 text-right">{{ ligne.montantSencsu | number:'1.0-0':'fr' }}</td>
+                    <td class="py-2 pl-2 text-right">{{ ligne.montantBeneficiaire | number:'1.0-0':'fr' }}</td>
+                  </ng-container>
+                  <td *ngIf="peutCorrigerLignes" class="py-1 pl-2 text-right whitespace-nowrap">
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="corrigerLigne(ligne)" title="Modifier la prestation"
+                            [attr.aria-label]="'Modifier ' + ligne.designation">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="supprimerLigne(ligne)" title="Supprimer la prestation"
+                            [attr.aria-label]="'Supprimer ' + ligne.designation" [disabled]="occupe">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="v.lignes.length === 0">
+                  <td class="py-3 pr-2 whitespace-nowrap text-text-secondary">{{ dateFr(v.date) }}</td>
+                  <td [attr.colspan]="forfaitaire ? 2 : 6" class="py-3 px-2 text-text-muted italic">Aucune prestation : dossier à compléter.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Totaux de la visite -->
+          <div *ngIf="v.lignes.length" class="mt-4 p-4 rounded-lg bg-field">
+            <div *ngIf="forfaitaire" class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="text-[13px] font-semibold text-text-secondary">Forfait enfant de moins de 5 ans (100 % SEN-CSU)</span>
+              <strong class="text-[16px] text-text-primary tabular-nums">{{ v.total | number:'1.0-0':'fr' }} F</strong>
+            </div>
+            <div *ngIf="!forfaitaire" class="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Total</div>
+                <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ v.total | number:'1.0-0':'fr' }} F</div>
+              </div>
+              <div>
+                <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">SEN-CSU ({{ tauxSencsu }} %)</div>
+                <div class="mt-0.5 text-[16px] font-bold text-primary tabular-nums">{{ v.sencsu | number:'1.0-0':'fr' }} F</div>
+              </div>
+              <div>
+                <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Patient ({{ 100 - tauxSencsu }} %)</div>
+                <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ v.patient | number:'1.0-0':'fr' }} F</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="aColonneLaterale" class="flex flex-col gap-4 min-w-0">
+        <!-- =========== Visites du mois =========== -->
+        <div *ngIf="visitesDuPatient.length > 1" class="card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <div class="section-icon"><mat-icon>event_repeat</mat-icon></div>
+              <div>
+                <h2>Visites du mois</h2>
+                <p>{{ visitesDuPatient.length }} visites de ce patient sur la facture</p>
+              </div>
+            </div>
+          </div>
+          <div class="section-body flex flex-col gap-1.5">
+            <ng-container *ngFor="let autre of visitesDuPatient">
+              <div *ngIf="autre === v"
+                   class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-light text-primary text-[13px] font-semibold">
+                <mat-icon class="!text-base !w-4 !h-4">event</mat-icon>
+                <span class="flex-1">Visite du {{ dateFr(autre.date) }}</span>
+                <span class="text-[12px]">affichée</span>
+              </div>
+              <a *ngIf="autre !== v" [routerLink]="lienVisite(autre)" [queryParams]="modeFacture"
+                 [replaceUrl]="true" [state]="etatNavigation"
+                 class="flex items-center gap-2 px-3 py-2 rounded-lg bg-field hover:bg-border-light text-[13px] text-text-primary no-underline">
+                <mat-icon class="!text-base !w-4 !h-4 text-text-secondary">event</mat-icon>
+                <span class="flex-1 font-semibold">Visite du {{ dateFr(autre.date) }}</span>
+                <app-status-badge *ngIf="autre.dossier?.statut === 'A_COMPLETER'" statut="A_COMPLETER" famille="dossier"
+                                  [sansIcone]="true"></app-status-badge>
+                <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-muted">chevron_right</mat-icon>
+              </a>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Retrait de la visite -->
+        <button type="button" *ngIf="peutRetirer && !edition" class="btn btn-ghost btn-sm self-start text-red-700"
+                (click)="retirer()" [disabled]="occupe">
+          <mat-icon>person_remove</mat-icon> Retirer ce patient de la facture
+        </button>
+      </div>
+    </div>
+
+    <!-- =========== Modale Dossier patient =========== -->
+    <div class="modal-overlay" *ngIf="afficherDossier && dossierAffiche" (click)="afficherDossier = false">
+      <div class="modal-card sm:w-[80vw] sm:max-w-[80vw] sm:h-[80vh]" role="dialog" aria-labelledby="titre-dossier" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-text-secondary">folder_shared</mat-icon>
+            <h2 id="titre-dossier" class="text-base font-bold text-text-primary m-0">Dossier patient</h2>
+          </div>
+          <button type="button" class="close-btn" (click)="afficherDossier = false" aria-label="Fermer">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="modal-body">
+          <app-dossier-patient-contenu [facture]="facture" [dossier]="dossierAffiche"
+                                       [documents]="v.documents" [feuilleSoins]="v.feuilleSoins">
+          </app-dossier-patient-contenu>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========== Correction d'une prestation (structure émettrice) =========== -->
+    <div class="modal-overlay" *ngIf="ligneEditee" (click)="ligneEditee = null">
+      <div class="modal-card max-w-lg" role="dialog" aria-labelledby="titre-modif-ligne" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2 id="titre-modif-ligne" class="text-base font-bold text-text-primary m-0">Modifier la prestation</h2>
+          <button type="button" class="close-btn" (click)="ligneEditee = null" aria-label="Fermer"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="modal-body grid gap-3 sm:grid-cols-2">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2">
+            Prestation
+            <input [(ngModel)]="modeleLigne.designation"
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Quantité
+            <input type="number" min="1" [(ngModel)]="modeleLigne.quantite"
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Prix unitaire (F)
+            <input type="number" min="0" [(ngModel)]="modeleLigne.prixUnitaire"
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Date de prise en charge
+            <input type="date" [(ngModel)]="modeleLigne.datePriseEnCharge"
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Code acte <span class="font-normal text-text-muted">(facultatif)</span>
+            <input [(ngModel)]="modeleLigne.codeActe"
+                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          </label>
+
+        </div>
+        <div class="modal-footer flex justify-end gap-2">
+          <button type="button" class="btn btn-outline" (click)="ligneEditee = null">Annuler</button>
+          <button type="button" class="btn btn-primary" [disabled]="occupe" (click)="enregistrerLigne()">
+            <mat-icon>save</mat-icon> Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

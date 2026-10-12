@@ -2,11 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
+import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
+import { RegimeBadgeComponent } from '../../shared/regime-badge/regime-badge.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { versIsoDate } from '../../core/utils/date-formulaire';
 import { FeuilleSoinsService } from '../../core/services/feuille-soins.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -14,6 +14,7 @@ import { FeuilleSoins, StatutFeuilleSoins, STATUT_FEUILLE_LABELS } from '../../c
 import { Regime, REGIME_LABELS } from '../../core/models/bcsu.model';
 
 interface LignePriseEnCharge {
+  /** « yyyy-MM-dd » (champ date natif). */
   date: string;
   designation: string;
   montant: number;
@@ -23,8 +24,8 @@ interface LignePriseEnCharge {
   selector: 'app-feuille-soins-detail',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, RouterModule, MatCardModule,
-    MatButtonModule, MatIconModule, MatInputModule, MatSnackBarModule
+    CommonModule, FormsModule, RouterModule, MatIconModule, MatSnackBarModule,
+    StatusBadgeComponent, RegimeBadgeComponent
   ],
   templateUrl: './feuille-soins-detail.component.html',
   styleUrls: ['./feuille-soins-detail.component.css']
@@ -41,16 +42,6 @@ export class FeuilleSoinsDetailComponent implements OnInit {
   loading = true;
   busy = false;
 
-  /** Tonalité sémantique du badge de statut (classe CSS scoped). */
-  statutTone(statut: StatutFeuilleSoins): string {
-    switch (statut) {
-      case StatutFeuilleSoins.FACTUREE: return 'success';
-      case StatutFeuilleSoins.DEPOSEE_STRUCTURE: return 'warn';
-      case StatutFeuilleSoins.ANNULEE: return 'danger';
-      case StatutFeuilleSoins.EMISE: return 'info';
-      default: return 'neutral';
-    }
-  }
 
   /** Structure sanitaire : saisie de la prise en charge. */
   editionPriseEnCharge = false;
@@ -110,6 +101,7 @@ export class FeuilleSoinsDetailComponent implements OnInit {
     switch (this.feuille?.regime) {
       case Regime.CONTRIBUTIF: return 0;
       case Regime.NDONGO_DARA: return 2;
+      case Regime.ELEVES: return 2;
       case Regime.CESARIENNE: return 3;
       case Regime.ZERO_CINQ_ANS: return 4;
       case Regime.BSF: case Regime.BSF_CEC: return 5;
@@ -157,13 +149,18 @@ export class FeuilleSoinsDetailComponent implements OnInit {
     if (!this.feuille) return;
     this.diagnosticStructure = this.feuille.diagnostic || '';
     this.lignes = this.feuille.prestations.length
-      ? this.feuille.prestations.map(p => ({ date: p.date, designation: p.designation, montant: p.montant }))
+      ? this.feuille.prestations.map(p => ({ date: (p.date || '').substring(0, 10), designation: p.designation, montant: p.montant }))
       : [this.nouvelleLigne()];
     this.editionPriseEnCharge = true;
   }
 
   private nouvelleLigne(): LignePriseEnCharge {
-    return { date: new Date().toISOString().substring(0, 10), designation: '', montant: 0 };
+    const d = new Date();
+    return {
+      date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      designation: '',
+      montant: 0
+    };
   }
 
   ajouterLigne() {
@@ -187,7 +184,7 @@ export class FeuilleSoinsDetailComponent implements OnInit {
     this.busy = true;
     this.feuilleService.remplirPriseEnCharge(this.feuille.id, {
       diagnostic: this.diagnosticStructure || undefined,
-      prestations: this.lignes.map(l => ({ date: l.date, designation: l.designation.trim(), montant: Number(l.montant) || 0 }))
+      prestations: this.lignes.map(l => ({ date: versIsoDate(l.date)!, designation: l.designation.trim(), montant: Number(l.montant) || 0 }))
     }).subscribe({
       next: (feuille) => {
         this.busy = false;

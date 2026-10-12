@@ -1,6 +1,6 @@
 /* Une seule famille (Inter) : recommandation « dashboards / admin » du design system
-   — rendu suisse, neutre et fonctionnel — et une police de moins à télécharger. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+   — rendu suisse, neutre et fonctionnel — et une police de moins à télécharger.
+   Hébergée localement (@fontsource/inter, déclaré dans angular.json « styles »). */
 
 /* Tailwind CSS — base/components/utilities.
    (preflight désactivé dans tailwind.config.js : le reset reste maison.) */
@@ -90,6 +90,10 @@
 
   /* Anneau de focus — un seul token pour tout le projet (accessibilité clavier). */
   --ring: 0 0 0 3px rgba(4, 120, 87, 0.18);
+  /* Focus des CHAMPS DE SAISIE : AUCUN indicateur (choix explicite).
+     Le champ garde exactement la même apparence au clic — ni anneau, ni contour, ni
+     changement de fond. Pour rétablir un repère discret : 0 0 0 3px rgba(16,24,40,.10). */
+  --ring-field: none;
 
   /* Rayons & rythme — resserrés : un rayon plus court lit « précis » */
   --radius-sm: 6px;
@@ -110,6 +114,42 @@
 * { box-sizing: border-box; }
 
 html, body { height: 100%; }
+
+/* ============================================================
+   MOBILE — iPhone, Android, tous navigateurs
+   Sur iPhone, Safari zoomait la page tout seul (champ touché, double appui, contenu
+   trop large) et il fallait pincer l'écran pour retrouver la mise en page mobile.
+   ============================================================ */
+html {
+  /* Safari iOS grossit le texte en paysage : la mise en page doit rester celle prévue. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Pas de zoom au double appui (deux appuis rapprochés sur un bouton zoomaient la page).
+     Le zoom au pincement, lui, reste permis (accessibilité). */
+  touch-action: manipulation;
+}
+
+/* Un mot trop long (n° de facture, e-mail, nom de fichier) passe à la ligne au lieu
+   d'élargir la page. */
+body { overflow-wrap: break-word; }
+
+/* Preflight Tailwind désactivé : on remet la règle qui empêche une image ou une vidéo
+   de dépasser son conteneur. En couche « base » : les classes w-* / h-* priment. */
+@layer base {
+  img, video { max-width: 100%; height: auto; }
+}
+
+/* Safari iOS zoome automatiquement sur tout champ dont le texte fait moins de 16px, et la
+   page RESTE zoomée ensuite. Sur écran tactile, les champs passent donc à 16px (rendu
+   inchangé à la souris). `!important` : plus fort que les utilitaires text-[14px] et que
+   le 14px imposé aux champs Angular Material. */
+@media (pointer: coarse), (max-width: 767.98px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
 
 body {
   margin: 0;
@@ -133,10 +173,15 @@ h1 { letter-spacing: -0.025em; }
 
 /* Focus clavier visible et homogène sur tout le projet (règle a11y n°1).
    `:focus-visible` n'apparaît qu'à la navigation clavier, jamais au clic souris. */
-:where(a, button, [role='button'], input, select, textarea, [tabindex]):focus-visible {
+:where(a, button, [role='button'], [tabindex]):focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* Les CHAMPS DE SAISIE sont volontairement exclus du liseré vert ci-dessus : pour un
+   champ texte, `:focus-visible` s'active AUSSI au clic souris (le navigateur considère
+   qu'il attend une saisie clavier) — d'où un contour vert au moindre clic. Leur focus
+   est signalé autrement : fond blanc + anneau gris neutre (voir plus bas). */
+input:focus, select:focus, textarea:focus { outline: none !important; }
 
 /* ============================================================
    CHAMPS DE FORMULAIRE — design « rempli », sans bordure (tout le projet).
@@ -165,20 +210,13 @@ textarea:hover:not(:focus) {
   background-color: var(--field-fill-hover) !important;
 }
 
-/* Focus : fond blanc net + anneau émeraude (remplace la bordure). */
+/* Focus : le champ ne change pas d'apparence (ni fond blanc, ni anneau, ni contour). */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']):focus,
 select:focus,
 textarea:focus {
-  background-color: #FFFFFF !important;
-  box-shadow: var(--ring) !important;
-}
-
-/* On retire le liseré natif UNIQUEMENT au focus souris ; la navigation clavier
-   (`:focus-visible`) conserve son liseré émeraude appuyé défini plus haut. */
-input:focus:not(:focus-visible),
-select:focus:not(:focus-visible),
-textarea:focus:not(:focus-visible) {
-  outline: none;
+  background-color: var(--field-fill) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 input::placeholder,
@@ -210,8 +248,10 @@ input[readonly], textarea[readonly] {
   background-color: var(--field-fill-hover) !important;
 }
 .mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
-  background-color: #FFFFFF !important;
-  box-shadow: var(--ring);
+  /* Focus : apparence inchangée. !important pour qu'aucun composant ne réintroduise
+     un fond blanc ou un anneau coloré. */
+  background-color: var(--field-fill) !important;
+  box-shadow: none !important;
 }
 /* L'input DANS un champ Material reste transparent : le fond/anneau sont
    portés par le conteneur (évite le double-fond). */
@@ -222,11 +262,16 @@ input[readonly], textarea[readonly] {
   box-shadow: none !important;
 }
 
+/* Accessibilité : animations coupées pour qui les a réduites dans son système (tout le projet).
+   Les délais aussi : sans cela, un élément d'une cascade resterait invisible le temps de son
+   retard. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }
@@ -322,7 +367,8 @@ input[readonly], textarea[readonly] {
     @apply inline-flex items-center justify-center gap-2 h-10 px-4 border border-transparent text-sm font-semibold cursor-pointer whitespace-nowrap no-underline;
     border-radius: var(--radius-sm);
     font-family: inherit;
-    transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+    transition: background-color var(--transition), border-color var(--transition), color var(--transition),
+                box-shadow var(--transition), transform 120ms ease;
   }
   .btn:disabled { @apply opacity-[0.55] cursor-not-allowed; }
   /* Retour au clic sans déplacement de la mise en page (pas de scale sur la boîte). */
@@ -334,7 +380,11 @@ input[readonly], textarea[readonly] {
 
   /* Aplat franc : ni ombre portée, ni biseau interne. */
   .btn-primary { @apply bg-primary text-white; }
-  .btn-primary:hover:not(:disabled) { @apply bg-primary-hover; }
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-primary-hover;
+    /* Halo émeraude au survol : l'action principale se signale sans bouger. */
+    box-shadow: 0 6px 16px -6px rgba(4, 120, 87, 0.55);
+  }
 
   .btn-outline { @apply bg-white text-text-primary border-border; }
   .btn-outline:hover:not(:disabled) { @apply border-primary text-primary bg-primary-light; }
@@ -362,6 +412,39 @@ input[readonly], textarea[readonly] {
   .action-btn.success:hover { @apply bg-success-light text-success; }
   .action-btn.danger:hover { @apply bg-warn-light text-warn; }
   .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  /* Action en cours : bouton inerte, sans l'effet de survol qui laisserait croire le contraire. */
+  .action-btn:disabled { @apply opacity-40 cursor-not-allowed pointer-events-none; }
+}
+
+/* ============================================================
+   ACTIONS DE LIGNE — révélées au survol
+   ============================================================
+   Les icônes Modifier / Supprimer d'un TABLEAU n'apparaissent qu'au survol de la
+   ligne : elles alourdissaient la lecture en s'affichant sur chaque ligne à la fois.
+
+   Trois choix à ne pas défaire :
+
+   1. « tr » et pas « .action-group » seul. La même classe sert aussi dans les CARTES
+      mobiles (voir le .m-foot d'admin-regions) : une règle non scopée y rendrait les
+      actions invisibles alors qu'un doigt ne survole rien.
+
+   2. « opacity » et pas « display:none » ni « visibility:hidden ». L'opacité garde la
+      cellule à sa taille — sinon la colonne s'élargit au survol et toute la ligne
+      sursaute — ET laisse les boutons dans l'ordre de tabulation, donc atteignables au
+      clavier. `:focus-within` les rend alors visibles pour qui navigue sans souris.
+
+   3. Le garde « hover: hover ». Sur un écran tactile il n'y a pas de survol : sans ce
+      garde, les boutons resteraient invisibles en permanence et seraient introuvables.
+   ============================================================ */
+@media (hover: hover) and (pointer: fine) {
+  tr .action-group {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  tr:hover .action-group,
+  tr .action-group:focus-within {
+    opacity: 1;
+  }
 }
 
 @layer components {
@@ -402,9 +485,11 @@ input[readonly], textarea[readonly] {
 /* ============================================================
    KPI (cartes indicateurs)
    ============================================================ */
+/* minmax(0, 1fr) et non 1fr : une colonne « 1fr » ne descend jamais sous la largeur de son
+   contenu — un montant long élargissait la grille au-delà de l'écran du téléphone. */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--sp-4);
   margin-bottom: var(--sp-6);
 }
@@ -418,7 +503,12 @@ input[readonly], textarea[readonly] {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.kpi-card:hover {
+  border-color: var(--primary-200);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 .kpi-icon {
   width: 34px;
@@ -455,9 +545,10 @@ input[readonly], textarea[readonly] {
   margin-top: 3px;
 }
 
-@media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .kpi-value { overflow-wrap: anywhere; }
   .kpi-card { padding: var(--sp-4); gap: var(--sp-3); flex-direction: column; align-items: flex-start; }
   .kpi-icon { width: 38px; height: 38px; }
   .kpi-value { font-size: 18px; }
@@ -505,8 +596,7 @@ input[readonly], textarea[readonly] {
 .search-box input::placeholder { color: var(--text-muted); }
 .search-box input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--ring);
+  box-shadow: none;
 }
 .filter-field { min-width: 150px; }
 
@@ -605,7 +695,7 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
 }
 .modal-card {
   width: 100%;
-  max-width: 560px;
+  max-width: 600px;
   background: #fff;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -616,7 +706,11 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   flex-direction: column;
   padding: 0 !important;
 }
-.modal-card form { display: flex; flex-direction: column; min-height: 0; }
+/* flex:1 + min-height:0 : le formulaire remplit la carte et, surtout, PEUT rétrécir
+   sous la hauteur de son contenu — sinon un formulaire haut (ex. structures : 4 sections)
+   déborde des 92vh et se fait tronquer par l'overflow:hidden de la carte (pied « Enregistrer »
+   coupé). C'est le corps qui défile, pas la carte. */
+.modal-card form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .modal-header {
   background: #F8FAFC;
   padding: 18px var(--sp-6);
@@ -641,7 +735,10 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   transition: all var(--transition);
 }
 .close-btn:hover { background: var(--border-light); color: var(--text-primary); }
-.modal-body { padding: var(--sp-6); overflow-y: auto; }
+/* flex:1 + min-height:0 : indispensable pour que ce conteneur défile au lieu de pousser
+   le pied hors de la carte. Sans min-height:0, un flex-item refuse de rétrécir sous la
+   taille de son contenu → débordement puis troncature. */
+.modal-body { padding: var(--sp-6); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 .modal-footer {
   padding: var(--sp-4) var(--sp-6);
   border-top: 1px solid var(--border);
@@ -947,7 +1044,9 @@ mat-icon.inline-ic {
 .mat-mdc-tab .mdc-tab-indicator { display: none !important; }
 .mat-mdc-tab .mdc-tab__ripple::before { border-radius: var(--radius-sm); }
 @media (max-width: 768px) {
-  .mat-mdc-tab-header { margin: 0 calc(-1 * var(--sp-4)); padding: 0 var(--sp-4); }
+  /* Pleine largeur : marge négative ÉGALE à la marge de la page mobile (px-3 = 12px).
+     À 16px, la barre dépassait de 4px de chaque côté de l'écran et l'iPhone dézoomait. */
+  .mat-mdc-tab-header { margin: 0 calc(-1 * var(--sp-3)); padding: 0 var(--sp-3); }
   .mat-mdc-tab { padding: 0 14px !important; height: 38px !important; }
   .mat-mdc-tab .mdc-tab__text-label { font-size: 13px; }
 }
@@ -966,6 +1065,17 @@ mat-icon.inline-ic {
   --mat-option-selected-state-label-text-color: var(--primary);
   --mdc-list-item__primary-text-color: var(--primary);
 }
+/* Listes déroulantes lisibles par tous (saisie médicale) : options en 16px, hautes de 48px
+   pour viser au doigt. Classe posée sur <mat-autocomplete class="liste-lisible">, que
+   Material reporte sur le panneau. */
+.liste-lisible.mat-mdc-autocomplete-panel { max-height: min(60vh, 384px); }
+.liste-lisible .mat-mdc-option {
+  min-height: 48px;
+  --mat-option-label-text-size: 16px;
+  --mat-option-label-text-line-height: 1.35;
+  font-size: 16px;
+  line-height: 1.35;
+}
 .mat-mdc-progress-spinner { --mdc-circular-progress-active-indicator-color: var(--primary); }
 .mat-mdc-tab-group, .mat-mdc-tab-nav-bar { --mdc-tab-indicator-active-indicator-color: var(--primary); }
 .mat-mdc-icon-button { --mat-mdc-button-ripple-color: var(--primary); }
@@ -975,12 +1085,76 @@ mat-icon.inline-ic {
 .mat-mdc-snack-bar-container.error-snackbar .mdc-snackbar__surface { background: var(--warn) !important; }
 
 /* ============================================================
-   ANIMATIONS & DIVERS
+   ANIMATIONS — discrètes et rapides : elles accompagnent l'agent, ne le font jamais attendre.
+   - Seules `opacity` et `transform` sont animées : fluide même sur un téléphone modeste.
+   - Les entrées s'appliquent toutes seules (classes et composants existants), sans retoucher
+     chaque écran : page (.fade-in), indicateurs, tuiles, cartes mobiles, étapes, modales.
+   - Remplissage `backwards`, jamais `forwards` : une fois jouée, l'animation rend la main aux
+     transform des survols et des appuis (.kpi-card:hover, .m-card:active…).
+   - Coupées pour qui a demandé à réduire les animations (voir prefers-reduced-motion).
    ============================================================ */
-.fade-in { animation: fadeIn 0.3s ease; }
+:root {
+  /* Sortie douce : l'élément arrive vite puis se pose. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Léger rebond, pour ce qui doit attirer l'œil (succès, pastille). */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Page : montée en fondu. */
+.fade-in { animation: entreePage 360ms var(--ease-out) backwards; }
+@keyframes entreePage {
+  from { opacity: 0; transform: translateY(8px); }
+}
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Collections (indicateurs, tuiles d'activité, synthèses, cartes mobiles) : les éléments
+   arrivent en cascade, 45 ms d'écart, plafonné au 9e (personne n'attend une longue liste).
+   `.anim-cascade` étend l'effet à toute autre grille. */
+:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *,
+app-indicateur,
+app-tuile-activite {
+  --rang: 0;
+  animation: entreeElement 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--rang) * 45ms);
+}
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(2) { --rang: 1; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(3) { --rang: 2; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(4) { --rang: 3; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(5) { --rang: 4; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(6) { --rang: 5; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(7) { --rang: 6; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(8) { --rang: 7; }
+:is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(n+9) { --rang: 8; }
+@keyframes entreeElement {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+}
+
+/* Parcours en étapes (facturation, lettre de garantie) : chaque étape glisse en place. */
+.anim-etape { animation: entreeEtape 320ms var(--ease-out) backwards; }
+@keyframes entreeEtape {
+  from { opacity: 0; transform: translateX(14px); }
+}
+
+/* Succès (patient enregistré, facture validée) : l'icône apparaît avec un léger rebond. */
+.anim-pop { animation: pop 520ms var(--ease-pop) 80ms backwards; }
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.5); }
+}
+
+/* Modales maison : la carte se pose au centre ; en bas d'écran sur mobile (voir plus haut),
+   elle monte comme une feuille. */
+.modal-card { animation: entreeModale 280ms var(--ease-out) backwards; }
+@keyframes entreeModale {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+@media (max-width: 768px) {
+  .modal-card { animation-name: entreeFeuille; }
+}
+@keyframes entreeFeuille {
+  from { transform: translateY(40px); opacity: 0.4; }
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -990,12 +1164,13 @@ mat-icon.inline-ic {
 
 button, a { transition: all var(--transition); }
 
-/* Anneau de focus accessible */
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Anneau de focus accessible (boutons, liens…). Les champs de saisie en sont exclus :
+   ils ne doivent jamais afficher de contour vert, même au clic (voir plus haut). */
+:focus-visible:not(input):not(select):not(textarea) { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* Bandeau de synthèse réutilisable (listes : factures, pharmacies, utilisateurs, médicaments) */
-.summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-.summary-strip.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.summary-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.summary-strip.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .sum-pill {
   display: flex; align-items: center; gap: 12px;
   background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
@@ -1023,16 +1198,28 @@ button, a { transition: all var(--transition); }
   font-feature-settings: 'tnum' 1;
 }
 
-/* Accessibilité : respect des préférences de mouvement réduit (tout le projet) */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+
+
+/* ============================================================
+   Modale plein écran (ex. avertissement période d'observation)
+   ============================================================ */
+.dialog-periode-observation .mat-mdc-dialog-surface,
+.dialog-periode-observation .mdc-dialog__surface {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  max-width: 100vw !important;
+  overflow: auto;
 }
 
+/* Caméra intégrée (photo des pièces) : plein écran noir, sans marge ni coin arrondi */
+.dialog-camera .mat-mdc-dialog-surface,
+.dialog-camera .mdc-dialog__surface {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  max-width: 100vw !important;
+  background: #000 !important;
+  overflow: hidden;
+}
 
 /* ============================================================
    TABLES UNIFIÉES (.glass-table-container / .premium-table)
@@ -1081,6 +1268,28 @@ button, a { transition: all var(--transition); }
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-light);
   transition: background-color var(--transition);
+}
+
+/* Tableaux HTML simples (sans mat-table) : mêmes cellules que les tableaux Material.
+   Sans cette règle, leurs cellules collaient au bord de la carte (« Mes factures »,
+   patients, bons de commande…). :where() ramène la spécificité à zéro : les utilitaires
+   Tailwind posés sur une cellule (text-right, px-…) gardent la main. */
+:where(.premium-table > thead > tr > th:not(.mat-header-cell)) {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 20px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+:where(.premium-table > tbody > tr > td:not(.mat-cell)) {
+  padding: 13px 20px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
 }
 
 /* Chiffres alignés verticalement dans les colonnes de données. */

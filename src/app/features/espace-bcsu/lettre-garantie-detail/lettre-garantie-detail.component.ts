@@ -1,3 +1,5 @@
+import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
+import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +18,7 @@ import { sharePdfOnWhatsApp } from '../../../core/utils/whatsapp-share';
 @Component({
   selector: 'app-lettre-garantie-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule],
+  imports: [StatusBadgeComponent, RegimeBadgeComponent, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule],
   templateUrl: './lettre-garantie-detail.component.html',
   styleUrls: ['./lettre-garantie-detail.component.css']
 })
@@ -35,6 +37,15 @@ export class LettreGarantieDetailComponent implements OnInit {
   nombreLignesBon = 3;
   /** Service Régional : consultation seule (pas d'émission/annulation/génération de bon). */
   isSR = false;
+
+  /** Classes Tailwind du badge de statut (le JIT scanne aussi les `.ts`). */
+  statutClasses(statut: string): string {
+    switch (statut) {
+      case 'EMISE':   return 'bg-primary-light text-primary';
+      case 'ANNULEE': return 'bg-warn-light text-warn';
+      default:        return 'bg-border-light text-text-secondary';
+    }
+  }
 
   constructor(
     private route: ActivatedRoute,

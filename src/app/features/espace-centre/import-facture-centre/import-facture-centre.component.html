@@ -1,0 +1,279 @@
+<div class="flex flex-col gap-5">
+
+  <!-- ═══════════ Le régime, le mois, le fichier ═══════════ -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>upload_file</mat-icon></div>
+        <div>
+          <h2>Importer la facture du mois</h2>
+          <p>Les prestations de votre logiciel, rapprochées des patients enregistrés par le BCSU.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+      <ul class="m-0 pl-5 list-disc text-[13px] text-text-secondary flex flex-col gap-1">
+        <li>Choisissez le <strong>régime</strong> et le <strong>mois</strong>, puis téléchargez le <strong>modèle</strong> :
+          il liste déjà les patients enregistrés par le BCSU.</li>
+        <li>Complétez pour chacun la prestation, la quantité et le prix unitaire, puis déposez le fichier.</li>
+        <li>Chaque ligne est rapprochée par l'identifiant du régime et la date de prise en charge. Vous voyez d'abord
+          un <strong>aperçu</strong> : rien n'est enregistré avant votre confirmation.</li>
+        <li>Après correction, réimportez le fichier : les prestations déjà importées sont remplacées, sans doublon.</li>
+      </ul>
+
+      <div class="grid gap-4 grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <label class="col-span-2 md:col-span-1 flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          1. Régime
+          <select [(ngModel)]="regime" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">— Choisir le régime —</option>
+            <option *ngFor="let r of regimes" [value]="r">{{ libelleRegime(r) }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          2. Mois
+          <select [(ngModel)]="moisChoisi" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option *ngFor="let m of listeMois" [ngValue]="m">{{ mois[m] }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Année
+          <select [(ngModel)]="anneeChoisie" (ngModelChange)="onChoix()" [disabled]="occupe"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option *ngFor="let a of annees" [ngValue]="a">{{ a }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div *ngIf="regime" class="flex flex-wrap items-center gap-2 pt-1 min-w-0">
+        <button type="button" class="btn btn-outline" [disabled]="occupe" (click)="telechargerModele()">
+          <mat-icon>download</mat-icon> Modèle « {{ libelleRegime(regime) }} » · {{ periode }}
+        </button>
+        <label class="btn btn-primary cursor-pointer !inline-flex" [class.opacity-60]="occupe || !pret"
+               [class.pointer-events-none]="occupe || !pret">
+          <mat-icon>attach_file</mat-icon> {{ fichier ? 'Changer de fichier' : '3. Choisir le fichier' }}
+          <input type="file" class="hidden" accept=".xlsx,.xls,.csv" [disabled]="occupe || !pret" (change)="onFichier($event)">
+        </label>
+        <span *ngIf="fichier" class="inline-flex items-center gap-1 min-w-0 text-[13px] text-text-primary">
+          <mat-icon class="shrink-0 !text-base !w-4 !h-4 text-text-secondary">description</mat-icon>
+          <span class="truncate">{{ fichier.name }}</span>
+        </span>
+        <button type="button" class="btn btn-ghost sm:ml-auto" [disabled]="occupe" (click)="voirDernierImport()">
+          <mat-icon>history</mat-icon> Dernier import
+        </button>
+        <button type="button" class="btn btn-ghost" [disabled]="occupe" (click)="modeTickets = true">
+          <mat-icon>receipt</mat-icon> Ajouter des tickets
+        </button>
+      </div>
+
+      <div *ngIf="verification" class="flex items-center gap-2 text-[13px] text-text-secondary">
+        <mat-spinner diameter="18"></mat-spinner> Rapprochement du fichier…
+      </div>
+      <div *ngIf="importEnCours" class="flex items-center gap-2 text-[13px] text-text-secondary">
+        <mat-spinner diameter="18"></mat-spinner> Import en cours…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Tickets de caisse en série ═══════════ -->
+  <app-tickets-serie *ngIf="modeTickets" [regime]="regime" (fermer)="modeTickets = false"></app-tickets-serie>
+
+  <!-- ═══════════ Rapport de rapprochement ═══════════ -->
+  <div *ngIf="rapport as r" class="card anim-etape">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>{{ r.simulation ? 'fact_check' : 'task_alt' }}</mat-icon></div>
+        <div>
+          <h2>
+            <ng-container *ngIf="rapportArchive">Dernier import</ng-container>
+            <ng-container *ngIf="!rapportArchive">{{ r.simulation ? 'Aperçu du rapprochement' : 'Import enregistré' }}</ng-container>
+            — {{ libelleRegime(r.regime) }}, {{ mois[r.mois] }} {{ r.annee }}
+          </h2>
+          <p>
+            {{ r.fichier || 'Fichier' }} · {{ r.lignesLues }} ligne(s) lue(s)
+            <ng-container *ngIf="rapportArchive"> · le {{ r.date | date:'dd/MM/yyyy à HH:mm' }}<ng-container *ngIf="r.utilisateurNom">, par {{ r.utilisateurNom }}</ng-container></ng-container>
+            <ng-container *ngIf="r.factureNumero"> · facture <span class="font-mono">{{ r.factureNumero }}</span></ng-container>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body flex flex-col gap-4">
+      <div *ngIf="r.erreurs.length" role="alert"
+           class="flex items-start gap-3 p-4 rounded-lg border-2 border-red-300 bg-red-50 text-red-800">
+        <mat-icon class="shrink-0">block</mat-icon>
+        <div class="min-w-0 text-[13px]">
+          <strong class="block text-[14px]">Le fichier ne peut pas être importé.</strong>
+          <ul class="m-0 mt-1 pl-5 list-disc flex flex-col gap-0.5">
+            <li *ngFor="let e of r.erreurs">{{ e }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Les quatre catégories du rapport (spécification §4). -->
+      <div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-lg border border-border p-3">
+          <div class="flex items-center gap-1.5 text-[12.5px] font-semibold text-success">
+            <mat-icon class="!text-base !w-4 !h-4">link</mat-icon> Rapprochées
+          </div>
+          <div class="text-[22px] font-bold text-text-primary">{{ r.rapprochees.length }}</div>
+          <div class="text-[12px] text-text-secondary">{{ r.prestationsImportees }} prestation(s) · {{ montant(r.montantImporte) }}</div>
+        </div>
+        <div class="rounded-lg border border-border p-3">
+          <div class="flex items-center gap-1.5 text-[12.5px] font-semibold text-amber-700">
+            <mat-icon class="!text-base !w-4 !h-4">link_off</mat-icon> Sans patient BCSU
+          </div>
+          <div class="text-[22px] font-bold text-text-primary">{{ r.sansCorrespondance.length }}</div>
+          <div class="text-[12px] text-text-secondary">identifiant ou date inconnus</div>
+        </div>
+        <div class="rounded-lg border border-border p-3">
+          <div class="flex items-center gap-1.5 text-[12.5px] font-semibold text-primary">
+            <mat-icon class="!text-base !w-4 !h-4">hourglass_empty</mat-icon> Patients sans prestation
+          </div>
+          <div class="text-[22px] font-bold text-text-primary">{{ r.sansPrestations.length }}</div>
+          <div class="text-[12px] text-text-secondary">enregistrés par le BCSU</div>
+        </div>
+        <div class="rounded-lg border border-border p-3">
+          <div class="flex items-center gap-1.5 text-[12.5px] font-semibold text-warn">
+            <mat-icon class="!text-base !w-4 !h-4">error_outline</mat-icon> Anomalies
+          </div>
+          <div class="text-[22px] font-bold text-text-primary">{{ r.anomalies.length }}</div>
+          <div class="text-[12px] text-text-secondary">ligne(s) non importée(s)</div>
+        </div>
+      </div>
+
+      <div *ngIf="r.avertissements.length"
+           class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+        <mat-icon class="shrink-0">info</mat-icon>
+        <ul class="m-0 pl-5 list-disc flex flex-col gap-0.5 min-w-0">
+          <li *ngFor="let w of r.avertissements">{{ w }}</li>
+        </ul>
+      </div>
+
+      <!-- Rapprochées -->
+      <div *ngIf="r.rapprochees.length" class="flex flex-col gap-2">
+        <h3 class="m-0 text-[14px] font-bold text-text-primary">Visites rapprochées</h3>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13px] border-collapse">
+            <thead>
+              <tr class="bg-field text-left">
+                <th class="py-2 px-3 font-semibold">Patient</th>
+                <th class="py-2 px-3 font-semibold">Identifiant</th>
+                <th class="py-2 px-3 font-semibold">Date</th>
+                <th class="py-2 px-3 font-semibold">Lettre</th>
+                <th class="py-2 px-3 font-semibold text-right">Prestations</th>
+                <th class="py-2 px-3 font-semibold text-right">Montant</th>
+                <th class="py-2 px-3 font-semibold">Lignes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of r.rapprochees" class="border-t border-border-light">
+                <td class="py-2 px-3 font-semibold">{{ v.patient }}</td>
+                <td class="py-2 px-3 font-mono">{{ v.cle }}</td>
+                <td class="py-2 px-3 whitespace-nowrap">{{ dateFr(v.date) }}</td>
+                <td class="py-2 px-3 font-mono text-text-secondary">{{ v.lettreGarantieNumero || '—' }}</td>
+                <td class="py-2 px-3 text-right">{{ v.prestations }}</td>
+                <td class="py-2 px-3 text-right font-semibold whitespace-nowrap">{{ montant(v.montant) }}</td>
+                <td class="py-2 px-3 text-text-secondary">{{ lignesFr(v.lignes) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sans correspondance BCSU -->
+      <div *ngIf="r.sansCorrespondance.length" class="flex flex-col gap-2">
+        <h3 class="m-0 text-[14px] font-bold text-text-primary">Lignes sans patient enregistré par le BCSU</h3>
+        <p class="m-0 text-[12.5px] text-text-secondary">Non importées. Vérifiez l'identifiant et la date ; si le patient n'a
+          pas été vu au BCSU, il doit y être enregistré avant de pouvoir être facturé.</p>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13px] border-collapse">
+            <thead>
+              <tr class="bg-field text-left">
+                <th class="py-2 px-3 font-semibold">Lignes</th>
+                <th class="py-2 px-3 font-semibold">Patient (fichier)</th>
+                <th class="py-2 px-3 font-semibold">Identifiant</th>
+                <th class="py-2 px-3 font-semibold">Date</th>
+                <th class="py-2 px-3 font-semibold">Constat</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of r.sansCorrespondance" class="border-t border-border-light">
+                <td class="py-2 px-3 text-text-secondary">{{ lignesFr(s.lignes) }}</td>
+                <td class="py-2 px-3">{{ s.patient || '—' }}</td>
+                <td class="py-2 px-3 font-mono">{{ s.cle }}</td>
+                <td class="py-2 px-3 whitespace-nowrap">{{ dateFr(s.date) }}</td>
+                <td class="py-2 px-3">
+                  <span *ngIf="s.cleConnue" class="text-amber-800">Identifiant connu du BCSU, à une autre date :
+                    <strong>{{ datesFr(s.datesConnues) }}</strong></span>
+                  <span *ngIf="!s.cleConnue" class="text-text-secondary">Identifiant inconnu du BCSU ce mois-ci</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Patients BCSU sans prestations -->
+      <div *ngIf="r.sansPrestations.length" class="flex flex-col gap-2">
+        <h3 class="m-0 text-[14px] font-bold text-text-primary">Patients enregistrés par le BCSU, sans prestation</h3>
+        <p class="m-0 text-[12.5px] text-text-secondary">Leur dossier reste « à compléter » : la facture ne pourra pas être
+          transmise tant qu'ils n'ont pas de prestation.</p>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13px] border-collapse">
+            <thead>
+              <tr class="bg-field text-left">
+                <th class="py-2 px-3 font-semibold">Patient</th>
+                <th class="py-2 px-3 font-semibold">Identifiant</th>
+                <th class="py-2 px-3 font-semibold">Date</th>
+                <th class="py-2 px-3 font-semibold">Lettre</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of r.sansPrestations" class="border-t border-border-light">
+                <td class="py-2 px-3 font-semibold">{{ p.patient }}</td>
+                <td class="py-2 px-3 font-mono">{{ p.cle }}</td>
+                <td class="py-2 px-3 whitespace-nowrap">{{ dateFr(p.date) }}</td>
+                <td class="py-2 px-3 font-mono text-text-secondary">{{ p.lettreGarantieNumero || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Anomalies -->
+      <div *ngIf="r.anomalies.length" class="flex flex-col gap-2">
+        <h3 class="m-0 text-[14px] font-bold text-text-primary">Anomalies</h3>
+        <ul class="m-0 p-0 list-none flex flex-col gap-1 text-[13px]">
+          <li *ngFor="let a of r.anomalies" class="flex items-start gap-2">
+            <span class="shrink-0 min-w-[64px] font-semibold text-warn">Ligne {{ a.ligne }}</span>
+            <span class="min-w-0">{{ a.motif }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="flex flex-col-reverse gap-3 pt-4 border-t border-border-light sm:flex-row sm:items-center">
+        <button type="button" class="btn btn-outline" [disabled]="occupe" (click)="abandonner()">
+          <mat-icon>close</mat-icon> {{ r.simulation && !rapportArchive ? 'Abandonner' : 'Fermer' }}
+        </button>
+        <button type="button" class="btn btn-outline sm:ml-auto" *ngIf="r.factureId" [disabled]="occupe" (click)="ouvrirFacture()">
+          <mat-icon>receipt_long</mat-icon> Ouvrir la facture
+        </button>
+        <button type="button" class="btn btn-primary max-sm:h-12" *ngIf="r.simulation && !rapportArchive"
+                [disabled]="!r.applicable || occupe" (click)="confirmer()">
+          <mat-icon>cloud_upload</mat-icon> Confirmer l'import
+        </button>
+        <!-- Après l'import : les tickets de caisse complètent les dossiers (spécification §5). -->
+        <button type="button" class="btn btn-primary max-sm:h-12" *ngIf="!r.simulation && !rapportArchive && !modeTickets"
+                [disabled]="occupe" (click)="modeTickets = true">
+          <mat-icon>receipt</mat-icon> Ajouter des tickets
+        </button>
+      </div>
+      <p *ngIf="r.simulation && !rapportArchive && !r.applicable && !r.erreurs.length" class="m-0 text-[12.5px] text-text-secondary text-right">
+        Aucune ligne n'a pu être rapprochée d'un patient du BCSU : il n'y a rien à importer.
+      </p>
+    </div>
+  </div>
+</div>

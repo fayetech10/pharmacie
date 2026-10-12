@@ -90,8 +90,10 @@ export class ApiService {
     return request$;
   }
 
-  post<T>(path: string, body: any): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}${path}`, body).pipe(
+  /** `silencieux` : envoi en arrière-plan (synchronisation hors ligne), sans le voile de chargement. */
+  post<T>(path: string, body: any, options?: { silencieux?: boolean }): Observable<T> {
+    return this.http.post<T>(`${this.baseUrl}${path}`, body,
+      { context: new HttpContext().set(SKIP_LOADING, !!options?.silencieux) }).pipe(
       tap(() => this.invalidateCache())
     );
   }

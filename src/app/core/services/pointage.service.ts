@@ -13,6 +13,8 @@ export interface Pointage {
   heureDepart: string;
   derniereConnexion: string;
   structureNom: string;
+  /** Région de l'agent — pour le filtre régional (écrans admin / central). */
+  regionId?: string;
 }
 
 @Injectable({

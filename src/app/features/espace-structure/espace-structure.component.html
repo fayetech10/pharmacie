@@ -9,5 +9,14 @@
     <div *ngSwitchCase="2" class="pt-2 md:pt-4">
       <app-postes-factures></app-postes-factures>
     </div>
+    <!-- Module Hors CSU (§8) : patients payants, caisse, situations. -->
+    <div *ngSwitchCase="3" class="pt-2 md:pt-4">
+      <app-hors-csu></app-hors-csu>
+    </div>
+    <!-- Référentiel propre à la structure : alimente la caisse Hors CSU ET la liste
+         « Dépositaire » du formulaire de facturation. -->
+    <div *ngSwitchCase="4" class="pt-2 md:pt-4">
+      <app-parametres-structure></app-parametres-structure>
+    </div>
   </div>
 </div>

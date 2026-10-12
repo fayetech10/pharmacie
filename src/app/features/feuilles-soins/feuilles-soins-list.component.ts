@@ -2,22 +2,23 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
+import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
+import { RegimeBadgeComponent } from '../../shared/regime-badge/regime-badge.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FeuilleSoinsService } from '../../core/services/feuille-soins.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeuilleSoins, StatutFeuilleSoins, STATUT_FEUILLE_LABELS } from '../../core/models/feuille-soins.model';
 import { REGIME_LABELS, REGIME_OPTIONS } from '../../core/models/bcsu.model';
 
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-feuilles-soins-list',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule, RouterModule, MatCardModule,
-    MatButtonModule, MatIconModule, MatInputModule, MatSnackBarModule
+  imports: [PaginationComponent, PaginerPipe, 
+    CommonModule, FormsModule, RouterModule, MatIconModule, MatSnackBarModule,
+    StatusBadgeComponent, RegimeBadgeComponent
   ],
   templateUrl: './feuilles-soins-list.component.html'
 })
@@ -25,6 +26,8 @@ export class FeuillesSoinsListComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
   readonly regimeOptions = REGIME_OPTIONS;
   readonly statutLabels = STATUT_FEUILLE_LABELS;
+  readonly mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre',
+    'Octobre', 'Novembre', 'Décembre'];
 
   feuilles: FeuilleSoins[] = [];
   loading = true;
@@ -106,27 +109,7 @@ export class FeuillesSoinsListComponent implements OnInit {
     });
   }
 
-  /** Tonalité sémantique du badge de statut (classe CSS scoped). */
-  statutTone(statut: StatutFeuilleSoins): string {
-    switch (statut) {
-      case StatutFeuilleSoins.FACTUREE: return 'success';
-      case StatutFeuilleSoins.DEPOSEE_STRUCTURE: return 'warn';
-      case StatutFeuilleSoins.ANNULEE: return 'danger';
-      case StatutFeuilleSoins.EMISE: return 'info';
-      default: return 'neutral';
-    }
-  }
 
-  /** Couleurs du badge de statut (portées en classes Tailwind — le JIT scanne aussi les .ts). */
-  badgeClass(statut: StatutFeuilleSoins): string {
-    switch (this.statutTone(statut)) {
-      case 'success': return 'bg-[#DCFCE7] text-[#15803D]';
-      case 'warn': return 'bg-[#FEF3C7] text-[#92400E]';
-      case 'danger': return 'bg-[#FEE2E2] text-[#B91C1C]';
-      case 'info': return 'bg-primary-light text-primary';
-      default: return 'bg-[#F1F5F9] text-text-secondary';
-    }
-  }
 
   open(id: string) {
     this.router.navigate(['/dashboard/feuilles-soins', id]);

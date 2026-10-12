@@ -1,11 +1,16 @@
-import { Component, OnInit, DestroyRef, inject, NgZone } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
-import { FactureCountService, StatutCounts } from '../../core/services/facture-count.service';
+import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
+
+/** Ce que le service régional doit voir : factures reçues + décisions du niveau central. */
+const NOTIFIABLES_REGION = ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'];
+/** Ce que le niveau central doit voir : factures validées et transmises par les régions. */
+const NOTIFIABLES_CENTRAL = ['VALIDEE_SR'];
 import { FactureEventsService } from '../../core/services/facture-events.service';
 import { LoginResponse } from '../../core/models/user.model';
 import { Facture } from '../../core/models/facture.model';
@@ -16,6 +21,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ApiService } from '../../core/services/api.service';
 import { PointageUiService } from '../../core/services/pointage-ui.service';
 import { RegionService } from '../../core/services/region.service';
+import { BandeauHorsLigneComponent } from '../../shared/bandeau-hors-ligne/bandeau-hors-ligne.component';
+import { InstallationService } from '../../core/hors-ligne/installation.service';
 
 interface NavItem {
   label: string;
@@ -28,9 +35,6 @@ interface NavItem {
   group?: string;
 }
 
-/** Nombre maximal d'items dans la barre basse mobile (item « Plus » inclus). */
-const BOTTOM_NAV_LIMIT = 5;
-
 @Component({
   selector: 'app-main-layout',
   standalone: true,
@@ -40,7 +44,8 @@ const BOTTOM_NAV_LIMIT = 5;
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    BandeauHorsLigneComponent
   ],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.css']
@@ -53,19 +58,10 @@ export class MainLayoutComponent implements OnInit {
   counts: StatutCounts = {};
   regionName: string | null = null;
 
-  /** Masque la navigation mobile quand l'utilisateur défile vers le bas. */
-  navHidden = false;
-  /** Panneau « Plus » (destinations secondaires) de la barre basse mobile. */
-  isMoreOpen = false;
-  private lastScrollY = 0;
-  private readonly scrollThreshold = 10;
-
   // Modales de pointage (BCSU)
   showArriveeModal = false;
   showDepartModal = false;
 
-  bottomNav: NavItem[] = [];
-  moreNav: NavItem[] = [];
   topNav: NavItem[] = [];
   topNavGroups: { name: string; items: NavItem[] }[] = [];
 
@@ -96,12 +92,12 @@ export class MainLayoutComponent implements OnInit {
       return ['VALIDEE_SR', 'REJETEE_SR', 'VALIDEE_NC', 'REJETEE_NC', 'PAYEE'];
     }
     if (this.authService.isServiceRegional()) {
-      // Reçues des pharmacies (ENVOYEE) + décisions du central (VALIDEE_NC / REJETEE_NC).
-      return ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'];
+      // Reçues (ENVOYEE) + décisions du central (VALIDEE_NC / REJETEE_NC), pharmacies ET structures.
+      return [...NOTIFIABLES_REGION, ...statutsStructure(NOTIFIABLES_REGION)];
     }
     if (this.authService.isServiceCentral()) {
       // Transmises par les SR (VALIDEE_SR). Ses propres validations/paiements/rejets n'alertent pas.
-      return ['VALIDEE_SR'];
+      return [...NOTIFIABLES_CENTRAL, ...statutsStructure(NOTIFIABLES_CENTRAL)];
     }
     return [];
   }
@@ -150,6 +146,8 @@ export class MainLayoutComponent implements OnInit {
    */
   private buildTopNav(): NavItem[] {
     if (this.authService.isPharmacien()) {
+      // « Tableau de bord » retiré : il pointait vers /dashboard/espace-pharmacie, exactement
+      // comme « Facturation » (l'espace pharmacie n'a qu'une vue, le formulaire de facturation).
       return [
         { label: 'Facturation', icon: 'post_add', link: '/dashboard/espace-pharmacie', group: 'Facturation' },
         { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-pharmacie/factures', statuts: this.notifiableStatuts, group: 'Facturation' }
@@ -158,10 +156,14 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isServiceRegional()) {
       return [
         { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0, group: 'Général' },
-        { label: 'Factures pharmacies', icon: 'receipt_long', link: '/dashboard/espace-region', tab: 1, statuts: ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'], group: 'Facturation' },
-        { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/espace-region', tab: 2, group: 'Facturation' },
+        // Un badge par famille : une facture de structure ne s'affiche plus chez les pharmacies.
+        { label: 'Factures pharmacies', icon: 'receipt_long', link: '/dashboard/espace-region', tab: 1, statuts: NOTIFIABLES_REGION, group: 'Facturation' },
+        { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/espace-region', tab: 2, statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },
+        // Reprise des factures de l'ancienne application (09/10/2026).
+        { label: 'Import des factures', icon: 'upload_file', link: '/dashboard/espace-region', tab: 3, group: 'Facturation' },
         { label: 'Paramétrage pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de santé' },
         { label: 'Paramétrage structures sanitaires', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de santé' },
+        { label: 'Districts sanitaires', icon: 'account_tree', link: '/dashboard/districts', group: 'Réseau de santé' },
         { label: 'Patients', icon: 'group', link: '/dashboard/patients', group: 'Dossiers patients' },
         { label: 'Agents BCSU', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Gestion agents' },
         { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion agents' },
@@ -171,43 +173,77 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isServiceCentral()) {
       return [
         { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-central', tab: 0, group: 'Général' },
-        { label: 'Factures reçues', icon: 'move_to_inbox', link: '/dashboard/espace-central', tab: 1, statuts: ['VALIDEE_SR'], group: 'Facturation' },
-        { label: 'Factures validées', icon: 'task_alt', link: '/dashboard/espace-central', tab: 2, group: 'Facturation' },
-        { label: 'Factures payées', icon: 'paid', link: '/dashboard/espace-central', tab: 3, group: 'Facturation' },
+        { label: 'Facture Structure sanitaire', icon: 'request_quote', link: '/dashboard/espace-central', tab: 1, statuts: statutsStructure(NOTIFIABLES_CENTRAL), group: 'Facturation' },
+        { label: 'Facture Pharmacie', icon: 'receipt_long', link: '/dashboard/espace-central', tab: 2, statuts: NOTIFIABLES_CENTRAL, group: 'Facturation' },
         { label: 'Paramétrage pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de santé' },
         { label: 'Paramétrage structures sanitaires', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de santé' },
-        { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/structures-sanitaires', tab: 1, group: 'Réseau de santé' },
         { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion agents' }
       ];
     }
     if (this.authService.isBcsu()) {
-      // Les 4 onglets de l'espace BCSU deviennent des entrées de premier niveau.
+      // Organisé comme le poste de santé : un accueil à tuiles, puis une entrée par activité.
       return [
-        { label: 'Enregistrement', icon: 'note_add', link: '/dashboard/espace-bcsu', tab: 0, group: 'Guichet' },
-        { label: 'Patients enregistrés', icon: 'group', link: '/dashboard/espace-bcsu', tab: 1, group: 'Guichet' },
-        { label: 'Constats', icon: 'fact_check', link: '/dashboard/espace-bcsu', tab: 2, group: 'Suivi' },
-        { label: 'Paramétrage', icon: 'settings', link: '/dashboard/espace-bcsu', tab: 3, group: 'Suivi' }
+        { label: 'Accueil', icon: 'space_dashboard', link: '/dashboard/espace-bcsu', tab: 0, group: 'Général' },
+        { label: 'Nouvelle lettre de garantie', icon: 'note_add', link: '/dashboard/espace-bcsu', tab: 1, group: 'Guichet' },
+        { label: 'Patients enregistrés', icon: 'group', link: '/dashboard/espace-bcsu', tab: 2, group: 'Guichet' },
+        { label: 'Constats', icon: 'fact_check', link: '/dashboard/espace-bcsu', tab: 3, group: 'Suivi' },
+        { label: 'Paramétrage', icon: 'tune', link: '/dashboard/espace-bcsu', tab: 4, group: 'Configuration' }
+      ];
+    }
+    if (this.authService.isPosteDeSante()) {
+      return [
+        { label: 'Accueil du poste', icon: 'space_dashboard', link: '/dashboard/espace-poste', tab: 0, group: 'Général' },
+        { label: 'Facturation CSU', icon: 'note_add', link: '/dashboard/espace-poste', tab: 1, group: 'Facturation CSU' },
+        { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-poste', tab: 2, group: 'Facturation CSU' },
+        { label: 'Facturation Hors CSU', icon: 'point_of_sale', link: '/dashboard/espace-poste', tab: 3, group: 'Hors CSU' },
+        { label: 'Paramétrage', icon: 'tune', link: '/dashboard/espace-poste', tab: 4, group: 'Configuration' }
+      ];
+    }
+    if (this.authService.isCentreDeSante()) {
+      // Centre siège du district : double casquette — il gagne les écrans du district.
+      const siege = this.authService.aCapaciteDistrict()
+        ? [
+            { label: 'Consolidation district', icon: 'stacked_bar_chart', link: '/dashboard/espace-district', tab: 0, group: 'District' },
+            { label: 'Factures des postes de santé', icon: 'medical_services', link: '/dashboard/espace-district', tab: 2, group: 'District' }
+          ]
+        : [];
+      return [
+        { label: 'Tableau de bord Centre', icon: 'space_dashboard', link: '/dashboard/espace-centre', tab: 0, group: 'Général' },
+        { label: 'Facturation CSU', icon: 'note_add', link: '/dashboard/espace-centre', tab: 2, group: 'Facturation' },
+        { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-centre', tab: 3, group: 'Facturation' },
+        { label: 'Hors CSU (patients payants)', icon: 'point_of_sale', link: '/dashboard/espace-centre', tab: 4, group: 'Caisse' },
+        { label: 'Paramètres', icon: 'settings', link: '/dashboard/espace-centre', tab: 5, group: 'Configuration' },
+        // Écrans du district : seulement si ce centre est le siège de son district.
+        ...siege
       ];
     }
     if (this.authService.isStructureSanitaire()) {
-      const items: NavItem[] = [
+      return [
         { label: 'Nouvelle facturation', icon: 'note_add', link: '/dashboard/espace-structure', tab: 0, group: 'Facturation' },
-        { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-structure', tab: 1, group: 'Facturation' }
+        { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-structure', tab: 1, group: 'Facturation' },
+        { label: 'Hors CSU (patients payants)', icon: 'point_of_sale', link: '/dashboard/espace-structure', tab: 3, group: 'Caisse' },
+        { label: 'Paramètres', icon: 'settings', link: '/dashboard/espace-structure', tab: 4, group: 'Configuration' }
       ];
-      // L'onglet « postes de santé » n'existe que pour les CS/EPS de rattachement.
-      if (!this.authService.isPosteDeSante()) {
-        items.push({ label: 'Factures postes de santé polarisés', icon: 'medical_services', link: '/dashboard/espace-structure', tab: 2, group: 'Facturation' });
-      }
-      return items;
     }
-    // ADMIN : toutes les destinations, sans menu intermédiaire.
+    if (this.authService.isDistrict()) {
+      return [
+        { label: 'Tableau de bord District', icon: 'space_dashboard', link: '/dashboard/espace-district', tab: 0, group: 'Général' },
+        { label: 'Consolidation district', icon: 'stacked_bar_chart', link: '/dashboard/espace-district', tab: 0, group: 'Pilotage' },
+        { label: 'Structures sanitaires', icon: 'local_hospital', link: '/dashboard/espace-district', tab: 1, group: 'Réseau de santé' },
+        // Contrôle des factures des postes de santé : réservé au district (08/10/2026).
+        { label: 'Factures des postes de santé', icon: 'medical_services', link: '/dashboard/espace-district', tab: 2, group: 'Contrôle' }
+      ];
+    }
+    // ADMIN : toutes les destinations avec tableau de bord en tête
     return [
+      { label: 'Tableau de bord Admin', icon: 'space_dashboard', link: '/dashboard/espace-admin', group: 'Général' },
       { label: 'Régions', icon: 'map', link: '/dashboard/regions', group: 'Administration' },
+      { label: 'Districts sanitaires', icon: 'account_tree', link: '/dashboard/districts', group: 'Administration' },
       { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Administration' },
       { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments', group: 'Administration' },
+      { label: 'Référentiel des prestations', icon: 'price_change', link: '/dashboard/referentiel', group: 'Administration' },
       { label: 'Paramétrage pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de santé' },
       { label: 'Paramétrage structures sanitaires', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de santé' },
-      { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/structures-sanitaires', tab: 1, group: 'Réseau de santé' },
       { label: 'Patients', icon: 'group', link: '/dashboard/patients', group: 'Dossiers patients' },
       { label: 'Feuilles de soins', icon: 'description', link: '/dashboard/feuilles-soins', group: 'Dossiers patients' }
     ];
@@ -233,40 +269,25 @@ export class MainLayoutComponent implements OnInit {
         && (path === other.link || path.startsWith(other.link + '/')));
   }
 
-  /**
-   * Éléments de navigation mobile, ordonnés « flux de travail d'abord »
-   * (les destinations de gestion passent dans le panneau « Plus »).
-   */
-  private get allBottomNav(): NavItem[] {
-    return [];
-  }
-
-  /** Badge agrégé du bouton « Plus » (notifications des destinations repliées). */
-  get moreBadge(): number {
-    return this.moreNav.reduce((sum, item) => sum + this.navBadge(item), 0);
-  }
-
-  /** Le bouton « Plus » est actif quand la page courante est une destination repliée. */
-  get isMoreActive(): boolean {
-    const path = this.currentUrl.split('?')[0];
-    return this.moreNav.some(item => item.link === path);
-  }
-
   constructor(
     public authService: AuthService,
+    public installation: InstallationService,
     private factureService: FactureService,
     private factureCount: FactureCountService,
     private factureEvents: FactureEventsService,
     private router: Router,
-    private zone: NgZone,
     private api: ApiService,
     private snackBar: MatSnackBar,
     private pointageUi: PointageUiService,
     private regionService: RegionService
   ) {}
 
+  /** Postes et centres de santé : facturation possible hors ligne (enfants 0-5 ans, Plan Sésame). */
+  horsLigneActif = false;
+
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
+    this.horsLigneActif = this.authService.isPosteDeSante() || this.authService.isCentreDeSante();
     if (this.currentUser?.regionId) {
       this.regionService.getAll().subscribe(regions => {
         const region = regions.find(r => r.id === this.currentUser?.regionId);
@@ -280,12 +301,6 @@ export class MainLayoutComponent implements OnInit {
     this.topNav = this.buildTopNav();
     this.topNavGroups = this.buildTopNavGroups();
 
-    const all = this.allBottomNav;
-    this.bottomNav = all.length <= BOTTOM_NAV_LIMIT ? all : all.slice(0, BOTTOM_NAV_LIMIT - 1);
-    this.moreNav = all.length <= BOTTOM_NAV_LIMIT ? [] : all.slice(BOTTOM_NAV_LIMIT - 1);
-
-    this.setupScrollBehavior();
-
     let lastPath = this.currentUrl.split('?')[0];
     this.router.events
       .pipe(
@@ -294,10 +309,6 @@ export class MainLayoutComponent implements OnInit {
       )
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
-        // Toute navigation referme le panneau « Plus » et réaffiche la barre.
-        this.isMoreOpen = false;
-        this.navHidden = false;
-        this.lastScrollY = 0;
         // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
         const path = this.currentUrl.split('?')[0];
         if (path !== lastPath) {
@@ -335,59 +346,6 @@ export class MainLayoutComponent implements OnInit {
       .subscribe(() => (this.showDepartModal = true));
   }
 
-  /**
-   * Auto-masquage de la navigation mobile au défilement.
-   * Un SEUL écouteur (capture, passif) enregistré HORS zone Angular et cadencé
-   * par requestAnimationFrame : la détection de changements n'est déclenchée
-   * qu'au basculement affiché/masqué, jamais à chaque pixel défilé.
-   */
-  private setupScrollBehavior(): void {
-    let ticking = false;
-    const onScroll = (event: Event) => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        const target = event.target;
-        let y: number;
-        if (target === document || target === document.documentElement || target === window) {
-          y = window.scrollY || document.documentElement.scrollTop || 0;
-        } else if (target instanceof HTMLElement) {
-          y = target.scrollTop;
-        } else {
-          return;
-        }
-        if (Math.abs(y - this.lastScrollY) < this.scrollThreshold) return;
-        const hidden = y > this.lastScrollY && y > 60;
-        this.lastScrollY = y;
-        if (hidden !== this.navHidden) {
-          this.zone.run(() => (this.navHidden = hidden));
-        }
-      });
-    };
-
-    this.zone.runOutsideAngular(() => {
-      window.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    });
-    this.destroyRef.onDestroy(() => {
-      window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions);
-    });
-  }
-
-  /** Actif si l'URL correspond au lien et, le cas échéant, à l'onglet demandé. */
-  isBottomActive(item: NavItem): boolean {
-    const [path, query] = this.currentUrl.split('?');
-    if (path !== item.link) return false;
-    if (item.tab === undefined) return true;
-    const tabMatch = /(?:^|&)tab=(\d+)/.exec(query || '');
-    const currentTab = tabMatch ? +tabMatch[1] : 0;
-    return currentTab === item.tab;
-  }
-
-  toggleMore(): void {
-    this.isMoreOpen = !this.isMoreOpen;
-  }
-
   voirRetards() {
     // L'onglet « Mes factures » de l'espace pharmacie
     this.router.navigate(['/dashboard/espace-pharmacie/factures']);
@@ -415,7 +373,7 @@ export class MainLayoutComponent implements OnInit {
         if (this.currentUser) {
           this.currentUser.pointageHeure = heure;
           this.currentUser.premierPointage = false;
-          sessionStorage.setItem('csu_user', JSON.stringify(this.currentUser));
+          this.authService.majUtilisateurCourant(this.currentUser);
         }
         this.showArriveeModal = false;
         this.snackBar.open(`Arrivée enregistrée à ${heure}. Bon travail !`, 'Fermer', { duration: 5000 });
@@ -433,7 +391,7 @@ export class MainLayoutComponent implements OnInit {
         const heure = res.heureDepart ? new Date(res.heureDepart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
         if (this.currentUser) {
           this.currentUser.pointageDepartHeure = heure;
-          sessionStorage.setItem('csu_user', JSON.stringify(this.currentUser));
+          this.authService.majUtilisateurCourant(this.currentUser);
         }
         this.showDepartModal = false;
         this.snackBar.open(`Départ enregistré à ${heure}. Bonne fin de journée !`, 'Fermer', { duration: 6000 });

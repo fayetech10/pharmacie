@@ -10,6 +10,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BcsuService } from '../../../core/services/bcsu.service';
 import { LettreGarantie, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 const STATUT_LABELS: Record<string, string> = {
   BROUILLON: 'Brouillon',
   EMISE: 'Émise',
@@ -25,9 +27,8 @@ const STATUT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-lettres-garantie-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
-  templateUrl: './lettres-garantie-list.component.html',
-  styleUrls: ['./lettres-garantie-list.component.css']
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
+  templateUrl: './lettres-garantie-list.component.html'
 })
 export class LettresGarantieListComponent implements OnInit {
   readonly regimeLabels = REGIME_LABELS;
@@ -40,7 +41,6 @@ export class LettresGarantieListComponent implements OnInit {
   searchNumero = '';
   searching = false;
   exporting = false;
-  expandedIds = new Set<string>();
 
   filterMois = 0;
   filterAnnee = 0;
@@ -50,8 +50,11 @@ export class LettresGarantieListComponent implements OnInit {
   constructor(private bcsuService: BcsuService, private router: Router, private snackBar: MatSnackBar) {}
 
   get filteredLettres(): LettreGarantie[] {
-    if (!this.filterBcsuId) return this.lettres;
-    return this.lettres.filter(l => l.createdBy === this.filterBcsuId);
+    let result = this.lettres;
+    if (this.filterBcsuId) {
+      result = result.filter(l => l.createdBy === this.filterBcsuId);
+    }
+    return result;
   }
 
   ngOnInit() {
@@ -78,19 +81,6 @@ export class LettresGarantieListComponent implements OnInit {
     this.router.navigate(['/dashboard/lettres-garantie', id]);
   }
 
-  toggleExpand(id: string, event: Event) {
-    event.stopPropagation();
-    if (this.expandedIds.has(id)) {
-      this.expandedIds.delete(id);
-    } else {
-      this.expandedIds.add(id);
-    }
-  }
-
-  isExpanded(id: string): boolean {
-    return this.expandedIds.has(id);
-  }
-
   statutLabel(statut: string): string {
     return STATUT_LABELS[statut] || statut;
   }
@@ -99,7 +89,14 @@ export class LettresGarantieListComponent implements OnInit {
     return STATUT_ICONS[statut] || 'info';
   }
 
-  /** Export Excel de la liste filtrée (régime / mois / année). */
+  statutClasses(statut: string): string {
+    switch (statut) {
+      case 'EMISE':   return 'bg-primary-light text-primary';
+      case 'ANNULEE': return 'bg-warn-light text-warn';
+      default:        return 'bg-border-light text-text-secondary';
+    }
+  }
+
   exporterExcel() {
     this.exporting = true;
     const params: any = {};

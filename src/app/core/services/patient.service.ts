@@ -18,6 +18,14 @@ export class PatientService {
     return this.api.get<DossierPatientDto>(`/patients/${id}/dossier-csu`);
   }
 
+  update(id: string, req: Partial<Patient>): Observable<Patient> {
+    return this.api.put<Patient>(`/patients/${id}`, req);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.api.delete<void>(`/patients/${id}`);
+  }
+
   getDossierCsuPdf(id: string): Observable<Blob> {
     return this.api.getBlob(`/patients/${id}/dossier-csu/pdf`);
   }

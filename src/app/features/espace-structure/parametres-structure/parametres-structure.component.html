@@ -1,0 +1,287 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Paramétrage</h1>
+    </div>
+  </div>
+
+  <datalist id="services-structure">
+    <option *ngFor="let s of services" [value]="s"></option>
+  </datalist>
+
+  <!-- ═══════════════ Liste des prestations ═══════════════ -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>price_change</mat-icon></div>
+        <div>
+          <h2>Liste des prestations</h2>
+          <p>{{ mesTarifs.length }} prestation(s), dont {{ nombreActifs }} disponible(s) à la facturation.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <div class="flex flex-col sm:flex-row gap-2 mb-4" *ngIf="mesTarifs.length > 0">
+        <div class="relative flex-1">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
+          <input type="search" [(ngModel)]="recherche" placeholder="Rechercher une prestation…"
+                 class="h-10 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px]">
+        </div>
+        <select [(ngModel)]="filtreService" aria-label="Filtrer par service"
+                class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] sm:w-56">
+          <option value="">Tous les services</option>
+          <option *ngFor="let s of services" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="tarifsCharges && mesTarifs.length === 0"
+           class="flex flex-col items-center gap-2 p-6 text-text-muted bg-field-bg rounded-lg text-center">
+        <mat-icon>price_change</mat-icon>
+        <p class="m-0 text-[13px]">
+          Aucune prestation paramétrée. Ajoutez-les ci-dessous une à une, ou importez une liste
+          Excel. Une prestation saisie pendant une facturation est aussi ajoutée ici automatiquement.
+        </p>
+      </div>
+
+      <!-- Table desktop -->
+      <div class="overflow-x-auto desktop-only" *ngIf="mesTarifs.length > 0">
+        <table class="premium-table w-full">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Prestation</th>
+              <th class="text-right">Prix (FCFA)</th>
+              <th>Statut</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of tarifsFiltres | paginer: pgT.page : pgT.taille; trackBy: trackTarif" [class.opacity-60]="!t.actif">
+              <ng-container *ngIf="!estEnEdition(t); else edition">
+                <td>{{ t.categorie || '—' }}</td>
+                <td>
+                  <span class="font-medium">{{ t.designation }}</span>
+                  <span class="block font-mono text-[11.5px] text-text-muted">{{ t.code }}</span>
+                </td>
+                <td class="text-right font-semibold">{{ t.prix | number:'1.0-0':'fr' }}</td>
+              </ng-container>
+              <ng-template #edition>
+                <td>
+                  <input [(ngModel)]="t.categorie" list="services-structure" aria-label="Service"
+                         class="h-9 w-40 px-2 rounded-lg border border-border bg-field-bg text-[14px]">
+                </td>
+                <td>
+                  <input [(ngModel)]="t.designation" aria-label="Prestation"
+                         class="h-9 w-full min-w-[200px] px-2 rounded-lg border border-border bg-field-bg text-[14px]">
+                </td>
+                <td class="text-right">
+                  <input type="number" min="0" [(ngModel)]="t.prix" aria-label="Prix"
+                         class="h-9 w-28 px-2 text-right rounded-lg border border-border bg-field-bg text-[14px]">
+                </td>
+              </ng-template>
+              <td>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-bold"
+                      [ngClass]="t.actif ? 'bg-success-light text-success' : 'bg-slate-100 text-slate-600'">
+                  {{ t.actif ? 'Disponible' : 'Désactivée' }}
+                </span>
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <ng-container *ngIf="!estEnEdition(t)">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="modifier(t)" title="Modifier">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="basculerActivation(t)"
+                          [title]="t.actif ? 'Désactiver' : 'Activer'">
+                    <mat-icon>{{ t.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                  </button>
+                </ng-container>
+                <ng-container *ngIf="estEnEdition(t)">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="enregistrer(t)"
+                          [disabled]="enregistrement === t.id">
+                    <mat-icon>save</mat-icon> Enregistrer
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="annuler(t)">Annuler</button>
+                </ng-container>
+              </td>
+            </tr>
+            <tr *ngIf="tarifsFiltres.length === 0">
+              <td colspan="5" class="text-center text-text-muted py-6">Aucune prestation ne correspond à la recherche.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cartes mobiles : la table clippe sous 768px -->
+      <div class="m-cards" *ngIf="mesTarifs.length > 0">
+        <div class="m-card" *ngFor="let t of tarifsFiltres | paginer: pgT.page : pgT.taille; trackBy: trackTarif" [class.opacity-60]="!t.actif">
+          <ng-container *ngIf="!estEnEdition(t); else editionMobile">
+            <div class="m-card-top">
+              <span class="m-title">{{ t.designation }}</span>
+              <span class="m-chip" [ngClass]="t.actif ? '' : 'neutral'">{{ t.actif ? 'Disponible' : 'Désactivée' }}</span>
+            </div>
+            <div class="m-meta">
+              <mat-icon>medical_services</mat-icon>
+              <span>{{ t.categorie || 'Sans service' }}</span>
+            </div>
+            <div class="m-row">
+              <span>Prix</span>
+              <strong>{{ t.prix | number:'1.0-0':'fr' }} F</strong>
+            </div>
+            <div class="m-foot">
+              <button type="button" class="btn btn-outline btn-sm" (click)="modifier(t)">
+                <mat-icon>edit</mat-icon> Modifier
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="basculerActivation(t)">
+                <mat-icon>{{ t.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                {{ t.actif ? 'Désactiver' : 'Activer' }}
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #editionMobile>
+            <div class="flex flex-col gap-2">
+              <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-text-secondary">
+                Service
+                <input [(ngModel)]="t.categorie" list="services-structure"
+                       class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal">
+              </label>
+              <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-text-secondary">
+                Prestation
+                <input [(ngModel)]="t.designation"
+                       class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal">
+              </label>
+              <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-text-secondary">
+                Prix (FCFA)
+                <input type="number" min="0" [(ngModel)]="t.prix"
+                       class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal">
+              </label>
+              <div class="m-foot">
+                <button type="button" class="btn btn-primary btn-sm" (click)="enregistrer(t)"
+                        [disabled]="enregistrement === t.id">
+                  <mat-icon>save</mat-icon> Enregistrer
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="annuler(t)">Annuler</button>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+      <app-pagination #pgT [total]="tarifsFiltres.length"></app-pagination>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Ajout manuel ═══════════════ -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>add_circle</mat-icon></div>
+        <div>
+          <h2>Ajouter une prestation</h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <div class="grid gap-3 md:grid-cols-[1fr_2fr_1fr_1fr_auto] items-end">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Service
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [(ngModel)]="nouvelleCategorie" list="services-structure" placeholder="Ex : Consultation">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Prestation
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [(ngModel)]="nouvelleDesignation" placeholder="Ex : Consultation ICP, Pansement simple…">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Prix (FCFA)
+          <input type="number" min="0"
+                 class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [(ngModel)]="nouveauPrix" placeholder="0">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Code <span class="font-normal text-text-muted">(optionnel)</span>
+          <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [(ngModel)]="nouveauCode" placeholder="Auto">
+        </label>
+        <button type="button" class="btn btn-primary h-10" [disabled]="creationTarif" (click)="ajouterTarif()">
+          <mat-icon>add</mat-icon>
+          Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Import Excel ═══════════════ -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title-group">
+        <div class="section-icon"><mat-icon>upload_file</mat-icon></div>
+        <div>
+          <h2>Importer une liste de prestations</h2>
+        </div>
+      </div>
+      <div class="page-head-actions ml-auto">
+        <button type="button" class="btn btn-outline" (click)="telechargerModele()">
+          <mat-icon>download</mat-icon>
+          Modèle
+        </button>
+        <label class="btn btn-primary cursor-pointer !inline-flex" [class.opacity-60]="importEnCours">
+          <mat-icon>{{ importEnCours ? 'hourglass_top' : 'upload' }}</mat-icon>
+          {{ importEnCours ? 'Import en cours…' : 'Importer' }}
+          <input type="file" class="hidden" accept=".xlsx,.xls,.csv,text/csv"
+                 [disabled]="importEnCours" (change)="onFichierTarifs($event)">
+        </label>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <!-- Modèle de données fourni le 07/10/2026 : Service | Prestation | Prix (FCFA) -->
+      <div class="overflow-x-auto max-w-[520px] rounded-lg border border-border mb-3">
+        <table class="w-full text-[13px] border-collapse">
+          <thead>
+            <tr class="bg-field text-left">
+              <th class="py-1.5 px-3 font-semibold">Service</th>
+              <th class="py-1.5 px-3 font-semibold">Prestation</th>
+              <th class="py-1.5 px-3 font-semibold text-right">Prix (FCFA)</th>
+            </tr>
+          </thead>
+          <tbody class="text-text-secondary">
+            <tr class="border-t border-border-light"><td class="py-1 px-3">ICP</td><td class="py-1 px-3">Consultation : CPC</td><td class="py-1 px-3 text-right">500</td></tr>
+            <tr class="border-t border-border-light"><td class="py-1 px-3">Maternité</td><td class="py-1 px-3">Maternité : CPON</td><td class="py-1 px-3 text-right">500</td></tr>
+            <tr class="border-t border-border-light"><td class="py-1 px-3">Dépositaire</td><td class="py-1 px-3">ALBENDAZOLE CP</td><td class="py-1 px-3 text-right">300</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-[13px] text-text-secondary m-0">
+        Trois colonnes, dans cet ordre : <strong>Service</strong>, <strong>Prestation</strong>,
+        <strong>Prix (FCFA)</strong>. Une prestation est reconnue par son service et son nom : la
+        même prestation peut figurer dans plusieurs services. Déjà présente, elle est mise à jour ;
+        sinon elle est créée. Un prix laissé vide ne remplace pas le prix existant (une nouvelle
+        prestation sans prix est créée à 0 F, à compléter). Votre liste ne concerne que votre
+        structure. Un CSV enregistré depuis Excel (séparateur point-virgule) est accepté tel quel.
+      </p>
+      <p class="text-[13px] text-text-secondary m-0 mt-2">
+        Le modèle est prérempli avec votre catalogue : il ne reste qu'à saisir les prix manquants,
+        puis à le réimporter tel quel.
+      </p>
+
+      <div class="mt-4 text-[13px]" *ngIf="resultatImport">
+        <div class="flex items-center gap-2 font-semibold text-primary">
+          <mat-icon class="!text-lg !w-4 !h-4">check_circle</mat-icon>
+          {{ resultatImport.lignesLues }} ligne(s) lue(s) ·
+          {{ resultatImport.crees }} création(s) ·
+          {{ resultatImport.misAJour }} mise(s) à jour
+        </div>
+        <ul class="mt-2 pl-5 text-amber-800 list-disc" *ngIf="resultatImport.avertissements?.length">
+          <li *ngFor="let a of resultatImport.avertissements">{{ a }}</li>
+        </ul>
+        <ul class="mt-2 pl-5 text-warn list-disc" *ngIf="resultatImport.erreurs?.length">
+          <li *ngFor="let e of resultatImport.erreurs">{{ e }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

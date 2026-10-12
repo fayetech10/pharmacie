@@ -1,0 +1,42 @@
+<div class="fade-in flex flex-col gap-5">
+
+  <div class="page-head">
+    <div>
+      <h1>Administration</h1>
+      <p>Organisation sanitaire, comptes et référentiels de la plateforme SEN-CSU.</p>
+    </div>
+    <div class="page-head-actions">
+      <button type="button" class="btn btn-outline btn-sm" (click)="chargerStatistiques()">
+        <mat-icon>refresh</mat-icon> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" [class.animate-pulse]="chargement">
+    <app-indicateur icone="map" teinte="blue" [cliquable]="true" (click)="naviguerVers('/dashboard/regions')"
+                    [valeur]="chargement ? '…' : stats.nbRegions" libelle="Régions médicales"></app-indicateur>
+    <app-indicateur icone="account_tree" teinte="indigo" [cliquable]="true" (click)="naviguerVers('/dashboard/districts')"
+                    [valeur]="chargement ? '…' : stats.nbDistricts" libelle="Districts sanitaires"></app-indicateur>
+    <app-indicateur icone="local_hospital" teinte="emerald" [cliquable]="true" (click)="naviguerVers('/dashboard/structures-sanitaires')"
+                    [valeur]="chargement ? '…' : stats.nbStructures" libelle="Structures sanitaires"></app-indicateur>
+    <app-indicateur icone="local_pharmacy" teinte="purple" [cliquable]="true" (click)="naviguerVers('/dashboard/pharmacies')"
+                    [valeur]="chargement ? '…' : stats.nbPharmacies" libelle="Pharmacies partenaires"></app-indicateur>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <app-tuile-activite icone="manage_accounts" teinte="blue" titre="Utilisateurs"
+                        description="Créer et administrer les comptes et leurs rôles sur tout le territoire."
+                        (click)="naviguerVers('/dashboard/utilisateurs')"></app-tuile-activite>
+    <app-tuile-activite icone="price_change" teinte="emerald" titre="Référentiel des prestations"
+                        description="Actes médicaux, prestations et tarification CSU nationale."
+                        (click)="naviguerVers('/dashboard/referentiel')"></app-tuile-activite>
+    <app-tuile-activite icone="medication" teinte="rose" titre="Médicaments"
+                        description="Liste des médicaments agréés et classement des médicaments non répertoriés."
+                        (click)="naviguerVers('/dashboard/medicaments')"></app-tuile-activite>
+    <app-tuile-activite icone="map" teinte="amber" titre="Régions"
+                        description="Régions médicales et leurs services régionaux."
+                        (click)="naviguerVers('/dashboard/regions')"></app-tuile-activite>
+    <app-tuile-activite icone="account_tree" teinte="indigo" titre="Districts sanitaires"
+                        description="La maille de rattachement et de consolidation des structures."
+                        (click)="naviguerVers('/dashboard/districts')"></app-tuile-activite>  </div>
+</div>

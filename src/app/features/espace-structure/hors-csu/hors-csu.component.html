@@ -1,0 +1,438 @@
+<div class="fade-in">
+
+  <div class="page-head flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-text-primary">Module Hors CSU</h1>
+      <p class="text-sm text-text-secondary">Facturation des patients payants, caisse et suivi des factures par service.</p>
+    </div>
+    <div>
+      <app-onglets [onglets]="onglets" [(selection)]="ongletActif"></app-onglets>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ONGLET 1 : NOUVELLE FACTURE & CAISSE                                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div *ngIf="ongletActif === 'facturation'" class="space-y-6">
+
+    <!-- Bandeau de caisse du jour -->
+    <div class="kpi-grid" *ngIf="situationJour">
+      <div class="kpi-card">
+        <div class="kpi-icon green"><mat-icon>payments</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ situationJour.montantEncaisse | number:'1.0-0':'fr' }} <small>FCFA</small></span>
+          <span class="kpi-label">Encaissé aujourd'hui</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon blue"><mat-icon>receipt_long</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ situationJour.nombreFactures }}</span>
+          <span class="kpi-label">Factures du jour</span>
+        </div>
+      </div>
+      <div class="kpi-card" *ngIf="situationMois">
+        <div class="kpi-icon green"><mat-icon>calendar_month</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ situationMois.montantEncaisse | number:'1.0-0':'fr' }} <small>FCFA</small></span>
+          <span class="kpi-label">{{ situationMois.libellePeriode }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saisie d'une nouvelle facture -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>point_of_sale</mat-icon></div>
+          <div>
+            <h2>Nouvelle facture</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <div class="grid gap-3 md:grid-cols-3 mb-4">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Nom du patient
+            <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                   [(ngModel)]="patientNom" placeholder="Ex : NDIAYE">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Prénom
+            <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                   [(ngModel)]="patientPrenom" placeholder="Ex : Awa">
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Téléphone
+            <input class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                   [(ngModel)]="patientTelephone" placeholder="77 000 00 00">
+          </label>
+        </div>
+
+        <!-- Sélection par Service et Prestation -->
+        <div class="flex flex-wrap gap-3 items-end mb-4">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary w-full sm:w-[220px]">
+            Service
+            <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                    [(ngModel)]="serviceSelectionne" (change)="tarifSelectionne = ''">
+              <option value="">-- Tous les services --</option>
+              <option *ngFor="let s of servicesDisponibles" [value]="s">{{ s }}</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary flex-1 min-w-[240px]">
+            Prestation
+            <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                    [(ngModel)]="tarifSelectionne">
+              <option value="">-- Choisir une prestation --</option>
+              <option *ngFor="let t of tarifsFiltres" [value]="t.id">
+                {{ t.designation }} - {{ t.prix | number:'1.0-0':'fr' }} FCFA
+                <ng-container *ngIf="t.categorie && !serviceSelectionne"> ({{ t.categorie }})</ng-container>
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary w-[110px]">
+            Quantité
+            <input type="number" min="1"
+                   class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                   [(ngModel)]="quantite">
+          </label>
+          <button class="btn btn-outline" type="button" (click)="ajouterAuPanier()">
+            <mat-icon>add</mat-icon> Ajouter
+          </button>
+        </div>
+
+        <!-- Panier -->
+        <div class="empty-state" *ngIf="panier.length === 0">
+          <mat-icon>shopping_cart</mat-icon>
+          <p>Aucune prestation sélectionnée.</p>
+        </div>
+
+        <div class="overflow-x-auto" *ngIf="panier.length > 0">
+          <table class="w-full border-collapse text-[13.5px]">
+            <thead>
+              <tr class="text-left text-text-secondary border-b border-border">
+                <th class="py-2">Prestation</th>
+                <th class="py-2">Service</th>
+                <th class="py-2 w-20 text-center">Qté</th>
+                <th class="py-2 w-32 text-right">Prix unitaire</th>
+                <th class="py-2 w-32 text-right">Montant</th>
+                <th class="py-2 w-12"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ligne of panier; let i = index" class="border-b border-border-light">
+                <td class="py-2 font-medium">{{ ligne.designation }}</td>
+                <td class="py-2 text-text-secondary text-xs">{{ ligne.categorie || '—' }}</td>
+                <td class="py-2 text-center">{{ ligne.quantite }}</td>
+                <td class="py-2 text-right">{{ ligne.prixUnitaire | number:'1.0-0':'fr' }}</td>
+                <td class="py-2 text-right font-semibold">{{ ligne.montant | number:'1.0-0':'fr' }}</td>
+                <td class="py-2 text-right">
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="retirerDuPanier(i)" aria-label="Retirer">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="py-3 text-right font-bold">Total à encaisser</td>
+                <td class="py-3 text-right font-bold text-primary text-base">
+                  {{ totalPanier | number:'1.0-0':'fr' }} FCFA
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Validation de l'encaissement (sans le champ Montant Encaissé) -->
+        <div class="flex flex-wrap gap-3 items-end mt-4 pt-3 border-t border-border-light" *ngIf="panier.length > 0">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary w-[200px]">
+            Mode de paiement
+            <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                    [(ngModel)]="modePaiement">
+              <option *ngFor="let mode of modesPaiement" [value]="mode">{{ mode }}</option>
+            </select>
+          </label>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-primary" type="button" (click)="encaisser()" [disabled]="enregistrement">
+              <mat-icon>check</mat-icon>
+              {{ enregistrement ? 'Encaissement…' : 'Encaisser et imprimer' }}
+            </button>
+            <button class="btn btn-ghost" type="button" (click)="reinitialiserSaisie()">Vider</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Situation des encaissements (sans reste à recouvrer) -->
+    <div class="card" *ngIf="situationMois">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>insights</mat-icon></div>
+          <div>
+            <h2>Situation des encaissements</h2>
+            <p>{{ situationMois.libellePeriode }} — {{ situationMois.nombreFactures }} facture(s),
+               {{ situationMois.nombreFacturesAnnulees }} annulée(s).</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <select class="h-9 px-2 rounded-lg border border-border bg-field-bg text-[13px]"
+                  [(ngModel)]="filtreMois" (change)="rafraichirSituations()">
+            <option *ngFor="let m of mois" [value]="m">{{ moisNoms[m] }}</option>
+          </select>
+          <input type="number" class="h-9 w-24 px-2 rounded-lg border border-border bg-field-bg text-[13px]"
+                 [(ngModel)]="filtreAnnee" (change)="rafraichirSituations()">
+        </div>
+      </div>
+      <div class="section-body grid gap-6 md:grid-cols-3">
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-2 uppercase tracking-wide">Par service / catégorie</h3>
+          <div *ngFor="let cle of cles(situationMois.parCategorie)"
+               class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+            <span>{{ cle }}</span>
+            <strong>{{ situationMois.parCategorie[cle] | number:'1.0-0':'fr' }} FCFA</strong>
+          </div>
+          <div *ngIf="cles(situationMois.parCategorie).length === 0" class="text-xs text-text-muted py-2">
+            Aucun encaissement sur la période.
+          </div>
+        </div>
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-2 uppercase tracking-wide">Par mode de paiement</h3>
+          <div *ngFor="let cle of cles(situationMois.parModePaiement)"
+               class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+            <span>{{ cle }}</span>
+            <strong>{{ situationMois.parModePaiement[cle] | number:'1.0-0':'fr' }} FCFA</strong>
+          </div>
+          <div *ngIf="cles(situationMois.parModePaiement).length === 0" class="text-xs text-text-muted py-2">
+            Aucun encaissement sur la période.
+          </div>
+        </div>
+        <div>
+          <h3 class="text-[13px] font-bold text-text-secondary mb-2 uppercase tracking-wide">Totaux du mois</h3>
+          <div class="flex justify-between py-1.5 border-b border-border-light text-[13.5px]">
+            <span>Facturé</span><strong>{{ situationMois.montantFacture | number:'1.0-0':'fr' }} FCFA</strong>
+          </div>
+          <div class="flex justify-between py-1.5 text-[13.5px]">
+            <span>Total Encaissé</span><strong class="text-primary">{{ situationMois.montantEncaisse | number:'1.0-0':'fr' }} FCFA</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique récent des factures -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>history</mat-icon></div>
+          <div>
+            <h2>Historique récent des factures</h2>
+          </div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="empty-state" *ngIf="!chargement && factures.length === 0">
+          <mat-icon>receipt</mat-icon>
+          <p>Aucune facture Hors CSU enregistrée.</p>
+        </div>
+
+        <div class="overflow-x-auto" *ngIf="factures.length > 0">
+          <table class="w-full border-collapse text-[13.5px]">
+            <thead>
+              <tr class="text-left text-text-secondary border-b border-border">
+                <th class="py-2">N°</th>
+                <th class="py-2">Date</th>
+                <th class="py-2">Patient</th>
+                <th class="py-2 text-right">Montant Total</th>
+                <th class="py-2">Paiement</th>
+                <th class="py-2 w-32 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of factures | paginer: pgF.page : pgF.taille; trackBy: trackFacture"
+                  class="border-b border-border-light" [class.opacity-50]="f.annulee">
+                <td class="py-2 font-semibold">{{ f.numero }}</td>
+                <td class="py-2">{{ f.date | date:'dd/MM/yyyy' }}</td>
+                <td class="py-2">
+                  {{ patientLibelle(f) }}
+                  <span class="status-badge ml-2" *ngIf="f.annulee" [title]="f.motifAnnulation">Annulée</span>
+                </td>
+                <td class="py-2 text-right font-semibold">{{ f.montantTotal | number:'1.0-0':'fr' }} FCFA</td>
+                <td class="py-2">{{ f.modePaiement || '—' }}</td>
+                <td class="py-2 text-right whitespace-nowrap">
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="telechargerRecu(f)" title="Réimprimer le reçu">
+                    <mat-icon>print</mat-icon>
+                  </button>
+                  <button class="btn btn-ghost btn-sm" type="button" *ngIf="!f.annulee"
+                          (click)="annuler(f)" title="Annuler la facture">
+                    <mat-icon>block</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <app-pagination #pgF [total]="factures.length"></app-pagination>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ONGLET 2 : FACTURES DU MOIS PAR SERVICE                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div *ngIf="ongletActif === 'factures'" class="space-y-6">
+
+    <!-- Barre de filtrage par Mois / Année / Service / Recherche -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>filter_alt</mat-icon></div>
+          <div>
+            <h2>Factures par Service</h2>
+          </div>
+        </div>
+        <!-- Période -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select class="h-9 px-3 rounded-lg border border-border bg-field-bg text-[13px] font-semibold text-text-primary"
+                  [(ngModel)]="filtreMois" (change)="rafraichirSituations()">
+            <option *ngFor="let m of mois" [value]="m">{{ moisNoms[m] }}</option>
+          </select>
+          <input type="number" class="h-9 w-24 px-2 rounded-lg border border-border bg-field-bg text-[13px] font-semibold text-text-primary"
+                 [(ngModel)]="filtreAnnee" (change)="rafraichirSituations()">
+        </div>
+      </div>
+
+      <div class="section-body space-y-4">
+        <!-- Filtres Service et Recherche -->
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+            Filtrer par service
+            <select class="h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                    [(ngModel)]="filtreService">
+              <option value="">-- Tous les services --</option>
+              <option *ngFor="let s of servicesDuMois" [value]="s">{{ s }}</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-1 lg:col-span-2">
+            Recherche (N° facture, patient, tél)
+            <div class="relative">
+              <input type="text" [(ngModel)]="recherche" placeholder="Rechercher une facture..."
+                     class="h-10 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
+            </div>
+          </label>
+        </div>
+
+        <!-- Badges synthétiques des services du mois (cliquables pour filtrer) -->
+        <div *ngIf="statsParServiceDuMois.length > 0" class="pt-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-text-secondary block mb-2">Répartition du mois par service :</span>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" (click)="filtreService = ''"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer"
+                    [ngClass]="filtreService === '' ? 'bg-primary text-white border-primary shadow-sm' : 'bg-field-bg text-text-primary border-border hover:border-primary'">
+              <span>Tous</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="filtreService === '' ? 'bg-white/20' : 'bg-border'">{{ facturesDuMois.length }}</span>
+            </button>
+            <button type="button" *ngFor="let stat of statsParServiceDuMois" (click)="filtreService = (filtreService === stat.service ? '' : stat.service)"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer"
+                    [ngClass]="filtreService === stat.service ? 'bg-primary text-white border-primary shadow-sm' : 'bg-field-bg text-text-primary border-border hover:border-primary'">
+              <span>{{ stat.service }}</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px]" [ngClass]="filtreService === stat.service ? 'bg-white/20' : 'bg-border'">
+                {{ stat.montant | number:'1.0-0':'fr' }} F
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicateurs du mois -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+          <div class="p-3 rounded-lg bg-field-bg border border-border-light">
+            <div class="text-xs text-text-secondary">Total du mois</div>
+            <div class="text-lg font-bold text-primary">{{ totalMoisFacture | number:'1.0-0':'fr' }} FCFA</div>
+          </div>
+          <div class="p-3 rounded-lg bg-field-bg border border-border-light">
+            <div class="text-xs text-text-secondary">Nombre de factures</div>
+            <div class="text-lg font-bold text-text-primary">{{ facturesDuMois.length }}</div>
+          </div>
+          <div class="p-3 rounded-lg bg-field-bg border border-border-light col-span-2 md:col-span-1">
+            <div class="text-xs text-text-secondary">Factures filtrées</div>
+            <div class="text-lg font-bold text-text-primary">{{ facturesFiltrees.length }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau des factures filtrées -->
+    <div class="card">
+      <div class="section-body">
+        <div class="empty-state" *ngIf="facturesFiltrees.length === 0">
+          <mat-icon>receipt</mat-icon>
+          <p>Aucune facture trouvée pour les critères sélectionnés.</p>
+        </div>
+
+        <div class="overflow-x-auto" *ngIf="facturesFiltrees.length > 0">
+          <table class="w-full border-collapse text-[13.5px]">
+            <thead>
+              <tr class="text-left text-text-secondary border-b border-border">
+                <th class="py-2.5 px-2">N° Facture</th>
+                <th class="py-2.5 px-2">Date</th>
+                <th class="py-2.5 px-2">Patient</th>
+                <th class="py-2.5 px-2">Services & Prestations</th>
+                <th class="py-2.5 px-2 text-right">Montant</th>
+                <th class="py-2.5 px-2">Paiement</th>
+                <th class="py-2.5 px-2 text-center">Statut</th>
+                <th class="py-2.5 px-2 text-right w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of facturesFiltrees | paginer: pgService.page : pgService.taille; trackBy: trackFacture"
+                  class="border-b border-border-light hover:bg-field-bg transition-colors" [class.opacity-50]="f.annulee">
+                <td class="py-2.5 px-2 font-semibold text-text-primary">{{ f.numero }}</td>
+                <td class="py-2.5 px-2 text-text-secondary whitespace-nowrap">{{ f.date | date:'dd/MM/yyyy' }}</td>
+                <td class="py-2.5 px-2">
+                  <div class="font-medium text-text-primary">{{ patientLibelle(f) }}</div>
+                  <div class="text-xs text-text-muted" *ngIf="f.patientTelephone">{{ f.patientTelephone }}</div>
+                </td>
+                <td class="py-2.5 px-2">
+                  <div class="flex flex-wrap gap-1 mb-1" *ngIf="servicesDeFacture(f).length > 0">
+                    <span *ngFor="let s of servicesDeFacture(f)"
+                          class="px-2 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary">
+                      {{ s }}
+                    </span>
+                  </div>
+                  <div class="text-xs text-text-secondary line-clamp-1" [title]="detailPrestationsFacture(f)">
+                    {{ detailPrestationsFacture(f) }}
+                  </div>
+                </td>
+                <td class="py-2.5 px-2 text-right font-bold text-text-primary whitespace-nowrap">
+                  {{ f.montantTotal | number:'1.0-0':'fr' }} FCFA
+                </td>
+                <td class="py-2.5 px-2 text-text-secondary whitespace-nowrap">{{ f.modePaiement || '—' }}</td>
+                <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                        [ngClass]="f.annulee ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'">
+                    {{ f.annulee ? 'Annulée' : 'Encaissée' }}
+                  </span>
+                </td>
+                <td class="py-2.5 px-2 text-right whitespace-nowrap">
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="telechargerRecu(f)" title="Télécharger le reçu PDF">
+                    <mat-icon>print</mat-icon>
+                  </button>
+                  <button class="btn btn-ghost btn-sm text-red-600 hover:text-red-800" type="button" *ngIf="!f.annulee"
+                          (click)="annuler(f)" title="Annuler la facture">
+                    <mat-icon>block</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <app-pagination #pgService [total]="facturesFiltrees.length"></app-pagination>
+      </div>
+    </div>
+
+  </div>
+
+</div>

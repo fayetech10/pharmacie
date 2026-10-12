@@ -10,4 +10,6 @@ export interface DossierPatientDto {
   lignesFactureOfficine: LigneFacture[];
   facturesStructure: FactureStructure[];
   feuillesSoins: FeuilleSoins[];
+  /** Photo du porteur reprise de sa carte CSU (contrôle d'éligibilité en Espace PS), si connue. */
+  photoAssure?: string | null;
 }

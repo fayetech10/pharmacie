@@ -33,16 +33,27 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
+              "src/manifest.webmanifest",
               "src/assets"
             ],
             "styles": [
               "@angular/material/prebuilt-themes/indigo-pink.css",
+              "@fontsource/inter/400.css",
+              "@fontsource/inter/500.css",
+              "@fontsource/inter/600.css",
+              "@fontsource/inter/700.css",
+              "@fontsource/inter/800.css",
+              "@fontsource/caveat/500.css",
+              "@fontsource/caveat/700.css",
+              "material-icons/iconfont/filled.css",
               "src/styles.css"
             ],
             "scripts": [],
             "allowedCommonJsDependencies": [
               "tesseract.js",
-              "regenerator-runtime/runtime"
+              "regenerator-runtime/runtime",
+              "qrcode",
+              "jsqr"
             ]
           },
           "configurations": {
@@ -65,7 +76,8 @@
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.prod.ts"
                 }
-              ]
+              ],
+              "serviceWorker": "ngsw-config.json"
             },
             "lan": {
               "budgets": [
@@ -86,7 +98,30 @@
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.lan.ts"
                 }
-              ]
+              ],
+              "serviceWorker": "ngsw-config.json"
+            },
+            "netlify": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "32kb",
+                  "maximumError": "48kb"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.netlify.ts"
+                }
+              ],
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
