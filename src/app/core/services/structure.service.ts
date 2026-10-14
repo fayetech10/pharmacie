@@ -176,7 +176,7 @@ export class StructureService {
    * notification. Charge utile minimale et sans overlay de chargement.
    */
   getFacturesStatuts(): Observable<FactureStatutLight[]> {
-    return this.api.get<FactureStatutLight[]>('/factures-structure/statuts', { skipLoading: true });
+    return this.api.get<FactureStatutLight[]>('/factures-structure/statuts', { skipLoading: true, arrierePlan: true });
   }
 
   getFacture(id: string): Observable<FactureStructure> {
@@ -263,16 +263,20 @@ export class StructureService {
   supprimerDossier(factureId: string, dossierId: string): Observable<FactureStructure> {
     return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/dossiers/${dossierId}`);
   }
-  /** Photo justificative d'un dossier, lue à la demande. */
-  getPiece(factureId: string, dossierId: string, type: TypePiece): Observable<{ type: TypePiece; libelle: string; image: string }> {
+  /**
+   * Photo justificative d'un dossier, lue à la demande. Pièces, fiche et attestation ont leur
+   * propre indicateur de chargement : elles ne retiennent pas l'affichage de la page, sauf
+   * `retenirPage` (formulaire qui modifie ces pièces : il ne s'affiche qu'une fois tout lu).
+   */
+  getPiece(factureId: string, dossierId: string, type: TypePiece, retenirPage = false): Observable<{ type: TypePiece; libelle: string; image: string }> {
     return this.api.get<{ type: TypePiece; libelle: string; image: string }>(
-      `/factures-structure/${factureId}/dossiers/${dossierId}/pieces/${type}`, { skipLoading: true });
+      `/factures-structure/${factureId}/dossiers/${dossierId}/pieces/${type}`, { skipLoading: true, arrierePlan: !retenirPage });
   }
   attestationSoinsImage(factureId: string, dossierId: string): Observable<Blob> {
-    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation`);
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation`, { arrierePlan: true });
   }
   ficheAssureImage(factureId: string, dossierId: string): Observable<Blob> {
-    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure`);
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure`, { arrierePlan: true });
   }
 
   exportFactureExcel(id: string): Observable<Blob> {

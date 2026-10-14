@@ -3,7 +3,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Observable, of, concat, EMPTY, asapScheduler } from 'rxjs';
 import { tap, catchError, distinctUntilChanged, observeOn, shareReplay, finalize } from 'rxjs/operators';
-import { SKIP_LOADING } from '../interceptors/loading.interceptor';
+import { ARRIERE_PLAN, SKIP_LOADING } from '../interceptors/loading.interceptor';
 
 @Injectable({
   providedIn: 'root'
@@ -39,8 +39,10 @@ export class ApiService {
    * @param opts.skipLoading masque la barre de chargement globale (ex: autocomplétion).
    * @param opts.cacheFirst sert la valeur en cache SANS revalider (idéal pour les données
    *   de référence quasi-statiques comme les médicaments → vraiment « chargé une seule fois »).
+   * @param opts.arrierePlan ne retient pas l'affichage de la page (compteurs, contenus qui ont
+   *   leur propre indicateur de chargement) — voir `ARRIERE_PLAN`.
    */
-  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean; params?: any }): Observable<T> {
+  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean; arrierePlan?: boolean; params?: any }): Observable<T> {
     let url = `${this.baseUrl}${path}`;
     if (opts?.params) {
       url += (url.includes('?') ? '&' : '?') + opts.params.toString();
@@ -52,7 +54,7 @@ export class ApiService {
       return of(this.cache.get(url) as T);
     }
 
-    const fresh$ = this.fetch<T>(url, hasCache, opts?.skipLoading === true);
+    const fresh$ = this.fetch<T>(url, hasCache, opts?.skipLoading === true, opts?.arrierePlan === true);
 
     if (!hasCache) {
       return fresh$;
@@ -73,14 +75,18 @@ export class ApiService {
   }
 
   /** Requête réseau réelle, avec mutualisation des appels concurrents (in-flight). */
-  private fetch<T>(url: string, hasCache: boolean, skipLoading: boolean): Observable<T> {
+  private fetch<T>(url: string, hasCache: boolean, skipLoading: boolean, arrierePlan: boolean): Observable<T> {
     const existing = this.inFlight.get(url);
     if (existing) {
       return existing as Observable<T>;
     }
     // Revalidation silencieuse si on sert déjà du cache, ou si l'appelant le demande.
+    // Le cache étant déjà affiché, sa revalidation ne retient pas non plus l'affichage de la page.
+    const context = new HttpContext()
+      .set(SKIP_LOADING, hasCache || skipLoading)
+      .set(ARRIERE_PLAN, hasCache || arrierePlan);
     const request$ = this.http
-      .get<T>(url, { context: new HttpContext().set(SKIP_LOADING, hasCache || skipLoading) })
+      .get<T>(url, { context })
       .pipe(
         tap(data => this.cache.set(url, data)),
         finalize(() => this.inFlight.delete(url)),
@@ -92,8 +98,9 @@ export class ApiService {
 
   /** `silencieux` : envoi en arrière-plan (synchronisation hors ligne), sans le voile de chargement. */
   post<T>(path: string, body: any, options?: { silencieux?: boolean }): Observable<T> {
+    const silencieux = !!options?.silencieux;
     return this.http.post<T>(`${this.baseUrl}${path}`, body,
-      { context: new HttpContext().set(SKIP_LOADING, !!options?.silencieux) }).pipe(
+      { context: new HttpContext().set(SKIP_LOADING, silencieux).set(ARRIERE_PLAN, silencieux) }).pipe(
       tap(() => this.invalidateCache())
     );
   }
@@ -110,9 +117,12 @@ export class ApiService {
     );
   }
 
-  getBlob(path: string): Observable<Blob> {
+  getBlob(path: string, opts?: { arrierePlan?: boolean }): Observable<Blob> {
     // Exports / téléchargements : jamais mis en cache, toujours frais.
-    return this.http.get(`${this.baseUrl}${path}`, { responseType: 'blob' });
+    return this.http.get(`${this.baseUrl}${path}`, {
+      responseType: 'blob',
+      context: new HttpContext().set(ARRIERE_PLAN, !!opts?.arrierePlan)
+    });
   }
 
   /** Vide tout le cache GET (après une modification, ou au changement de session). */

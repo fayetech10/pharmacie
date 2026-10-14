@@ -1157,7 +1157,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     // La photo de la carte est posée par le serveur et ne se modifie pas ici : inutile de la charger.
     (dossier.pieces || []).filter(type => type !== 'PHOTO_ASSURE').forEach(type => {
       this.pieces[type] = null;
-      this.structureService.getPiece(factureId, dossier.id, type).pipe(last()).subscribe({
+      this.structureService.getPiece(factureId, dossier.id, type, true).pipe(last()).subscribe({
         next: piece => { if (!this.piecesModifiees.has(type)) this.pieces[type] = piece.image; },
         error: () => { /* pièce illisible : l'agent peut la reprendre */ }
       });

@@ -121,7 +121,10 @@
 </div>
 
 <main class="w-full px-3 md:px-6 pt-4 md:pt-7 pb-4 md:pb-10">
-  <router-outlet></router-outlet>
+  <!-- Page masquée et inerte tant que ses données ne sont pas arrivées (squelette à la place). -->
+  <app-attente-page>
+    <router-outlet></router-outlet>
+  </app-attente-page>
 </main>
 
 <!-- ============================================================

@@ -75,7 +75,12 @@
         <h3 class="adm-section-title">Historique des Pointages <small>(7 derniers jours)</small></h3>
       </div>
 
-      <div class="adm-table-wrap" *ngIf="pointages.length > 0; else noPointages">
+      <div class="adm-empty" *ngIf="loadingPointages" role="status">
+        <mat-icon>hourglass_empty</mat-icon>
+        <p>Chargement des pointages…</p>
+      </div>
+
+      <div class="adm-table-wrap" *ngIf="!loadingPointages && pointages.length > 0">
         <table class="adm-table">
           <thead>
             <tr>
@@ -101,12 +106,10 @@
         <app-pagination #pgA [total]="pointages.length"></app-pagination>
       </div>
 
-      <ng-template #noPointages>
-        <div class="adm-empty">
-          <mat-icon>event_busy</mat-icon>
-          <p>Aucun pointage enregistré sur les 7 derniers jours.</p>
-        </div>
-      </ng-template>
+      <div class="adm-empty" *ngIf="!loadingPointages && pointages.length === 0">
+        <mat-icon>event_busy</mat-icon>
+        <p>Aucun pointage enregistré sur les 7 derniers jours.</p>
+      </div>
     </div>
 
   </div>

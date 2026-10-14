@@ -22,6 +22,7 @@ import { ApiService } from '../../core/services/api.service';
 import { PointageUiService } from '../../core/services/pointage-ui.service';
 import { RegionService } from '../../core/services/region.service';
 import { BandeauHorsLigneComponent } from '../../shared/bandeau-hors-ligne/bandeau-hors-ligne.component';
+import { AttentePageComponent } from '../../shared/attente-page/attente-page.component';
 import { InstallationService } from '../../core/hors-ligne/installation.service';
 
 interface NavItem {
@@ -45,7 +46,8 @@ interface NavItem {
     MatButtonModule,
     MatMenuModule,
     MatSnackBarModule,
-    BandeauHorsLigneComponent
+    BandeauHorsLigneComponent,
+    AttentePageComponent
   ],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.css']

@@ -38,7 +38,7 @@ export class FactureService {
    * Charge utile minimale et sans overlay de chargement (rafraîchissement discret).
    */
   getStatuts(): Observable<FactureStatutLight[]> {
-    return this.api.get<FactureStatutLight[]>('/factures/statuts', { skipLoading: true });
+    return this.api.get<FactureStatutLight[]>('/factures/statuts', { skipLoading: true, arrierePlan: true });
   }
 
   getById(id: string): Observable<Facture> {
