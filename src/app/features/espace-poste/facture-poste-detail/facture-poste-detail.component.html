@@ -100,11 +100,9 @@
             <h2>Patients</h2>
           </div>
         </div>
-        <!-- Bande d'actions simple (texte), sur la même ligne que « Patients ». -->
+        <!-- Bande d'actions simple (texte), sur la même ligne que « Patients ». Pas de « Modifier »
+             ici : on modifie un patient depuis son écran de détail (clic sur la ligne). -->
         <div class="flex flex-wrap items-center gap-2 ml-auto print:hidden" *ngIf="!ajout">
-          <button type="button" class="btn btn-outline btn-sm" *ngIf="modifiable" (click)="basculerModification()">
-            {{ modeModification ? 'Consulter' : 'Modifier' }}
-          </button>
           <button type="button" class="btn btn-outline btn-sm" *ngIf="estEnfants" (click)="listeNominative()"
                   [disabled]="action === 'pdf' || action === 'enfantsPdf'">
             Liste nominative
@@ -112,15 +110,15 @@
           <button type="button" class="btn btn-outline btn-sm" (click)="excel()" [disabled]="action === 'excel'">
             Facture excel
           </button>
-          <button type="button" class="btn btn-primary btn-sm" *ngIf="modeModification" (click)="ajouterPatient()">
+          <button type="button" class="btn btn-primary btn-sm" *ngIf="modifiable" (click)="ajouterPatient()">
             <mat-icon>person_add</mat-icon> Ajouter un patient
           </button>
         </div>
       </div>
 
       <div class="section-body flex flex-col gap-3">
-        <!-- Recherche du patient à compléter (§6.2 : « recherche d'un patient » en modification). -->
-        <div class="relative" *ngIf="modeModification || visites.length > 5">
+        <!-- Recherche d'un patient (§6.2), utile dès que la liste s'allonge. -->
+        <div class="relative" *ngIf="visites.length > 5">
           <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
           <input type="search" [(ngModel)]="recherche" (ngModelChange)="filtrer(true)" placeholder="Rechercher un patient (nom, matricule, prestation)…"
                  class="h-10 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px]">
@@ -128,7 +126,7 @@
 
         <!-- Une ligne par visite (rendez-vous), sans en-tête : nom et prénom, date, matricule.
              Un clic ouvre l'écran du patient, où se trouvent Modifier et Compléter. -->
-        <app-liste-patients-facture [lignes]="lignes" [queryParams]="parametresPatient"
+        <app-liste-patients-facture [lignes]="lignes"
                                     [page]="etatRetour?.page ?? 0" [taille]="etatRetour?.taille ?? 10"
                                     [vide]="visites.length ? 'Aucun patient ne correspond à cette recherche.' : 'Aucun patient sur cette facture.'"
                                     (ouverture)="memoriserPosition($event)"></app-liste-patients-facture>

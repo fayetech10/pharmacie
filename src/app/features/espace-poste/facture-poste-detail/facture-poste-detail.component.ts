@@ -51,9 +51,6 @@ export class FacturePosteDetailComponent implements OnInit {
   /** Lignes de la liste des patients, après la recherche. */
   lignes: LignePatientListe[] = [];
   chargement = true;
-  modeModification = false;
-  /** Paramètres gardés en ouvrant un patient : le mode de la facture. */
-  parametresPatient: { modifier: number | null } = { modifier: null };
   recherche = '';
   action: string | null = null;
   /** Page et défilement retrouvés en revenant d'un patient. */
@@ -75,9 +72,6 @@ export class FacturePosteDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const params = this.route.snapshot.queryParamMap;
-    this.modeModification = params.get('modifier') === '1';
-    this.parametresPatient = { modifier: this.modeModification ? 1 : null };
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.etatRetour = this.etatListe.reprendre(this.cleEtat(id));
@@ -93,7 +87,6 @@ export class FacturePosteDetailComponent implements OnInit {
         this.facture = facture;
         this.construire();
         this.chargement = false;
-        if (!this.modifiable) this.modeModification = false;
         EtatListeService.defiler(this.etatRetour);
       },
       error: err => {
@@ -175,17 +168,6 @@ export class FacturePosteDetailComponent implements OnInit {
     const type = this.facture?.typeStructure || (this.auth.isPosteDeSante() ? 'PS' : null);
     return (type === 'PS' || type === 'CS') && this.facture?.regime === 'ZERO_CINQ_ANS'
       ? 'au district' : 'au service régional';
-  }
-
-  basculerModification() {
-    if (!this.modifiable) return;
-    this.modeModification = !this.modeModification;
-    this.parametresPatient = { modifier: this.modeModification ? 1 : null };
-    this.ajout = false;
-    this.router.navigate([], {
-      relativeTo: this.route, replaceUrl: true,
-      queryParams: { modifier: this.modeModification ? 1 : null }, queryParamsHandling: 'merge'
-    });
   }
 
   // ─────────────── dossiers ───────────────
@@ -272,7 +254,6 @@ export class FacturePosteDetailComponent implements OnInit {
           this.action = null;
           this.facture = facture;
           this.construire();
-          this.modeModification = false;
           this.snackBar.open(this.transmiseParLaStructure ? 'Facture transmise.' : 'Facture envoyée.', 'Fermer',
             { duration: 3500 });
         },

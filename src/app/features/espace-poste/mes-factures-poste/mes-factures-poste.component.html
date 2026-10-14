@@ -136,8 +136,6 @@
               <td class="text-right whitespace-nowrap" (click)="$event.stopPropagation()">
                 <span class="inline-flex items-center justify-end gap-1">
                   <button type="button" class="btn btn-outline btn-sm" (click)="consulter(f)" [disabled]="enCours(f)">Consulter</button>
-                  <button type="button" *ngIf="estModifiable(f.statut)" class="btn btn-ghost btn-sm" (click)="modifier(f)"
-                          [disabled]="enCours(f)">Modifier</button>
                   <button type="button" class="btn btn-ghost btn-sm" (click)="excel(f)" [disabled]="enCours(f)">Excel</button>
                   <button type="button" *ngIf="aUnPdf(f.regime)" class="btn btn-ghost btn-sm" (click)="pdf(f)"
                           [disabled]="enCours(f)">PDF</button>
@@ -190,9 +188,6 @@
 
   <mat-menu #menuFacture="matMenu" xPosition="before">
     <ng-template matMenuContent let-f="f">
-      <button mat-menu-item *ngIf="estModifiable(f.statut)" (click)="modifier(f)">
-        <mat-icon>edit</mat-icon><span>Modifier</span>
-      </button>
       <button mat-menu-item (click)="consulter(f)">
         <mat-icon>visibility</mat-icon><span>Consulter</span>
       </button>

@@ -44,7 +44,6 @@ interface LigneMois {
 export class MesFacturesPosteComponent implements OnInit {
   readonly libelleRegime = libelleRegimePoste;
   readonly aUnPdf = aUnPdf;
-  readonly estModifiable = estModifiable;
 
   regime: Regime = Regime.CONTRIBUTIF;
   annee = new Date().getFullYear();
@@ -229,10 +228,6 @@ export class MesFacturesPosteComponent implements OnInit {
 
   consulter(facture: FactureStructure) {
     this.router.navigate(['/dashboard/espace-ps/factures', facture.id]);
-  }
-
-  modifier(facture: FactureStructure) {
-    this.router.navigate(['/dashboard/espace-ps/factures', facture.id], { queryParams: { modifier: 1 } });
   }
 
   excel(facture: FactureStructure) {

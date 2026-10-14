@@ -194,10 +194,7 @@
 
   <mat-menu #menuFacture="matMenu" xPosition="before">
     <ng-template matMenuContent let-f="f">
-      <!-- Les corrections se font dans la facture elle-même, tant qu'elle est modifiable. -->
-      <button mat-menu-item *ngIf="peutModifier(f)" (click)="openDetail(f.id)">
-        <mat-icon>edit</mat-icon><span>Modifier</span>
-      </button>
+      <!-- Pas de « Modifier » : les corrections se font sur l'écran de chaque patient de la facture. -->
       <button mat-menu-item (click)="openDetail(f.id)">
         <mat-icon>visibility</mat-icon><span>Consulter</span>
       </button>

@@ -38,7 +38,7 @@ interface PatientPrestations {
 
 import { FormsModule } from '@angular/forms';
 import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
-import { apparenceStatut, factureModifiable } from '../../../core/models/statuts';
+import { apparenceStatut } from '../../../core/models/statuts';
 import { telecharger } from '../../espace-poste/poste-facturation';
 
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
@@ -148,12 +148,6 @@ export class FacturesStructureListComponent implements OnInit {
 
   openDetail(id: string) {
     this.router.navigate(['/dashboard/factures-structure', id]);
-  }
-
-  /** Mêmes droits que la page de la facture, où se font les corrections (canEditLines). */
-  peutModifier(f: FactureStructure): boolean {
-    return this.auth.isStructureSanitaire() && factureModifiable(f.statut)
-      && this.auth.getCurrentUser()?.structureSanitaireId === f.structureSanitaireId;
   }
 
   exporterFacture(f: FactureStructure, format: 'excel' | 'pdf') {

@@ -62,8 +62,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
   edition = false;
   /** Appel en cours (retrait, correction, pointage). */
   occupe = false;
-  /** Mode de la facture d'où l'on vient (« 1 » = modification), gardé d'un écran à l'autre. */
-  modeFacture: { modifier: string | null } = { modifier: null };
   /** Ouvert depuis la liste de la facture : « Retour » y revient par l'historique (page, recherche gardées). */
   private depuisFacture = false;
 
@@ -99,7 +97,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       this.cleVisite = params.get('visite') || '';
       this.edition = false;
       this.ligneEditee = null;
-      this.modeFacture = { modifier: this.route.snapshot.queryParamMap.get('modifier') };
       if (factureId !== this.factureId || !this.facture) {
         this.factureId = factureId;
         this.charger();
@@ -344,16 +341,16 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
   /** Autre patient de la facture : remplace l'écran courant dans l'historique. */
   allerA(v: VisiteFacture | null) {
     if (!v) return;
-    this.router.navigate(this.lienVisite(v), { queryParams: this.modeFacture, replaceUrl: true, state: this.etatNavigation });
+    this.router.navigate(this.lienVisite(v), { replaceUrl: true, state: this.etatNavigation });
   }
 
-  /** Retour à la facture, dans le mode d'où l'on vient et, si possible, à la page quittée. */
+  /** Retour à la facture, si possible à la page quittée. */
   retour() {
     if (this.depuisFacture) {
       this.location.back();
       return;
     }
-    this.router.navigate(cheminFacture(this.contexte, this.factureId), { queryParams: this.modeFacture });
+    this.router.navigate(cheminFacture(this.contexte, this.factureId));
   }
 
   /** Fiche du bénéficiaire (lettres, bons, factures), quand la ligne le rattache au référentiel. */
