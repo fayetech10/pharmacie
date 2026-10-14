@@ -287,7 +287,7 @@
           </select>
         </label>
         <label *ngIf="regime === Regime.ZERO_CINQ_ANS" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-          N° de l'extrait de naissance
+          N° Extrait / N° Carnet / N° PEV
           <input [(ngModel)]="patient.matricule" autocomplete="off"
                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
         </label>
@@ -485,7 +485,7 @@
               <span class="text-text-secondary">Sexe</span><strong>{{ libelleSexe(patient.sexe) }}</strong>
             </div>
             <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-              <span class="text-text-secondary">{{ regime === Regime.ZERO_CINQ_ANS ? 'N° extrait' : 'N° CNI' }}</span>
+              <span class="text-text-secondary">{{ regime === Regime.ZERO_CINQ_ANS ? 'N° Extrait / Carnet / PEV' : 'N° CNI' }}</span>
               <strong>{{ (regime === Regime.ZERO_CINQ_ANS ? patient.matricule : patient.numeroCni) || '—' }}</strong>
             </div>
           </div>

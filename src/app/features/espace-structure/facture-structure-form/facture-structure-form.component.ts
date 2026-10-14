@@ -128,7 +128,7 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   },
   [Regime.ZERO_CINQ_ANS]: {
     ...CHAMPS_COMMUNS,
-    matriculeLabel: 'N° Extrait de naissance',
+    matriculeLabel: 'N° Extrait / N° Carnet / N° PEV',
     service: true, diagnostic: true, numeroRegistre: true, forfait: true, codeActe: true,
     sexeOptions: ['M', 'F']
   },
