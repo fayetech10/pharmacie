@@ -158,6 +158,8 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isServiceRegional()) {
       return [
         { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0, group: 'Général' },
+        // Activités des districts, centres et postes de santé de la région (14/10/2026).
+        { label: 'Activités districts et postes', icon: 'hub', link: '/dashboard/espace-region', tab: 4, group: 'Général' },
         // Un badge par famille : une facture de structure ne s'affiche plus chez les pharmacies.
         { label: 'Factures pharmacies', icon: 'receipt_long', link: '/dashboard/espace-region', tab: 1, statuts: NOTIFIABLES_REGION, group: 'Facturation' },
         { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/espace-region', tab: 2, statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },

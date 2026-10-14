@@ -182,6 +182,88 @@ export interface TableauBord {
   facturesParMois: Record<string, number>;
 }
 
+/**
+ * Activités du réseau d'une région (service régional, 14/10/2026). Toutes les factures de la
+ * période, brouillons compris, ventilées « en cours » (brouillon / rejetée) et « transmises ».
+ */
+export interface IndicateursActivite {
+  nombreFactures: number;
+  facturesEnCours: number;
+  facturesTransmises: number;
+  /** Nombre de factures par statut (nom de StatutFacture). */
+  parStatut: Record<string, number>;
+  /** Patients distincts du périmètre. */
+  patients: number;
+  /** Visites = dossiers patients. */
+  visites: number;
+  dossiersACompleter: number;
+  montantTotal: number;
+  montantSencsu: number;
+  montantSencsuTransmis: number;
+  montantSencsuEnCours: number;
+  /** Dernière modification d'une facture du périmètre (ISO). */
+  derniereSaisie?: string | null;
+}
+
+export interface ResumeFactureActivite {
+  id: string;
+  numero?: string;
+  regime: string;
+  mois: number;
+  annee: number;
+  statut: string;
+  etape?: string | null;
+  patients: number;
+  visites: number;
+  dossiersACompleter: number;
+  montantTotal: number;
+  montantSencsu: number;
+  importee: boolean;
+  derniereSaisie?: string | null;
+}
+
+export interface ActiviteStructure {
+  id: string;
+  code?: string;
+  nom: string;
+  type?: 'PS' | 'CS' | 'EPS' | null;
+  actif: boolean;
+  siegeDistrict: boolean;
+  structureRattachementNom?: string | null;
+  indicateurs: IndicateursActivite;
+  factures: ResumeFactureActivite[];
+}
+
+export interface ActiviteDistrict {
+  /** null : structures de la région sans district (EPS notamment). */
+  id: string | null;
+  code?: string | null;
+  nom: string;
+  actif: boolean;
+  nombrePostes: number;
+  nombreCentres: number;
+  nombreStructures: number;
+  /** Structures ayant au moins une facture sur la période. */
+  structuresActives: number;
+  tauxActivite: number;
+  indicateurs: IndicateursActivite;
+  structures: ActiviteStructure[];
+}
+
+export interface ActivitesRegion {
+  regionId: string;
+  regionNom?: string | null;
+  /** null : toute l'année. */
+  mois: number | null;
+  annee: number;
+  periode: string;
+  nombreDistricts: number;
+  nombreStructures: number;
+  structuresActives: number;
+  indicateurs: IndicateursActivite;
+  districts: ActiviteDistrict[];
+}
+
 /** Compte rendu d'un import Excel (référentiel, districts, structures). */
 export interface ResultatImport {
   lignesLues: number;

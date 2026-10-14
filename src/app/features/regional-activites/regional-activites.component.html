@@ -1,0 +1,317 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Activités du réseau</h1>
+      <p>
+        Districts, centres et postes de santé<ng-container *ngIf="donnees?.regionNom"> de la région de {{ donnees?.regionNom }}</ng-container>
+        · {{ libellePeriode }}
+      </p>
+    </div>
+    <div class="page-head-actions flex items-center gap-2">
+      <button type="button" class="btn btn-outline btn-sm" *ngIf="filtresActifs" (click)="reinitialiser()">
+        Réinitialiser
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" (click)="charger()" [disabled]="chargement">
+        <mat-icon>refresh</mat-icon> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Indicateurs du périmètre affiché ===== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-4" [class.animate-pulse]="chargement">
+    <app-indicateur icone="local_hospital" teinte="primary"
+                    [valeur]="chargement ? '…' : structuresAyantSaisi + ' / ' + structuresAffichees"
+                    libelle="Structures ayant saisi"></app-indicateur>
+    <app-indicateur icone="groups" teinte="blue"
+                    [valeur]="chargement ? '…' : ((totaux?.patients ?? 0) | number:'1.0-0':'fr')"
+                    libelle="Patients"></app-indicateur>
+    <app-indicateur icone="event_available" teinte="indigo"
+                    [valeur]="chargement ? '…' : ((totaux?.visites ?? 0) | number:'1.0-0':'fr')"
+                    libelle="Visites"></app-indicateur>
+    <app-indicateur icone="pending_actions" teinte="amber"
+                    [valeur]="chargement ? '…' : ((totaux?.dossiersACompleter ?? 0) | number:'1.0-0':'fr')"
+                    libelle="Dossiers à compléter"></app-indicateur>
+    <app-indicateur icone="account_balance" teinte="emerald"
+                    [valeur]="chargement ? '…' : (((totaux?.montantSencsu ?? 0) | number:'1.0-0':'fr') + ' F')"
+                    libelle="Part SEN-CSU"></app-indicateur>
+  </div>
+
+  <!-- Bandeau de totaux : ventilation transmis / en cours (brouillons compris) -->
+  <div *ngIf="!chargement && totaux" class="flex flex-wrap items-center gap-x-6 gap-y-1 mb-5 p-4 rounded-lg bg-field text-[13px] text-text-secondary">
+    <span><strong class="text-text-primary">{{ totaux.nombreFactures }}</strong> facture(s) sur la période</span>
+    <span>
+      <strong class="text-text-primary">{{ totaux.facturesTransmises }}</strong> transmise(s) ·
+      {{ totaux.montantSencsuTransmis | number:'1.0-0':'fr' }} F
+    </span>
+    <span>
+      <strong class="text-text-primary">{{ totaux.facturesEnCours }}</strong> en cours (brouillon ou rejetée) ·
+      {{ totaux.montantSencsuEnCours | number:'1.0-0':'fr' }} F
+    </span>
+    <span *ngIf="totaux.derniereSaisie">Dernière saisie le {{ totaux.derniereSaisie | date:'dd/MM/yyyy à HH:mm' }}</span>
+  </div>
+
+  <!-- ===== Filtres ===== -->
+  <div class="filter-strip">
+    <div class="relative flex-1 min-w-[220px]">
+      <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted">search</mat-icon>
+      <input type="text" placeholder="Rechercher un district, un centre, un poste…"
+             [(ngModel)]="recherche" (ngModelChange)="construire()" aria-label="Rechercher"
+             class="w-full h-10 pl-10 pr-9 rounded-lg text-[14px]">
+      <button type="button" *ngIf="recherche" aria-label="Effacer" (click)="recherche = ''; construire()"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-full text-text-muted hover:bg-border-light">
+        <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
+      </button>
+    </div>
+
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreDistrict" (ngModelChange)="construire()" aria-label="District">
+      <option value="">Tous les districts</option>
+      <option *ngFor="let d of donnees?.districts ?? []" [value]="cle(d)">{{ d.nom }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreType" (ngModelChange)="construire()" aria-label="Type de structure">
+      <option value="">Toutes les structures</option>
+      <option value="PS">Postes de santé</option>
+      <option value="CENTRES">Centres de santé et EPS</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreSituation" (ngModelChange)="construire()" aria-label="Situation">
+      <option *ngFor="let s of situations" [ngValue]="s.cle">{{ s.libelle }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreMois" (ngModelChange)="changerPeriode()" aria-label="Mois">
+      <option [ngValue]="0">Toute l'année</option>
+      <option *ngFor="let m of mois" [ngValue]="m">{{ moisNoms[m] }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="filtreAnnee" (ngModelChange)="changerPeriode()" aria-label="Année">
+      <option *ngFor="let a of annees" [ngValue]="a">{{ a }}</option>
+    </select>
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            [(ngModel)]="tri" (ngModelChange)="construire()" aria-label="Trier les structures">
+      <option value="NOM">Centres puis postes, par nom</option>
+      <option value="MONTANT">Part SEN-CSU décroissante</option>
+      <option value="PATIENTS">Patients décroissants</option>
+    </select>
+  </div>
+
+  <!-- Chargement -->
+  <div class="space-y-3 animate-pulse my-4" *ngIf="chargement">
+    <div *ngFor="let i of [1,2,3,4]" class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-3">
+      <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+      <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+    </div>
+  </div>
+
+  <!-- Erreur -->
+  <div class="empty-state" *ngIf="!chargement && erreur">
+    <mat-icon>cloud_off</mat-icon>
+    <p>{{ erreur }}</p>
+    <button type="button" class="btn btn-outline" (click)="charger()"><mat-icon>refresh</mat-icon> Réessayer</button>
+  </div>
+
+  <ng-container *ngIf="!chargement && !erreur && donnees">
+    <div class="empty-state" *ngIf="lignes.length === 0">
+      <mat-icon>account_tree</mat-icon>
+      <p *ngIf="!filtresActifs">Aucun district ni structure sanitaire dans votre région.</p>
+      <p *ngIf="filtresActifs">Aucun résultat pour ces filtres.</p>
+      <button type="button" class="btn btn-outline" *ngIf="filtresActifs" (click)="reinitialiser()">
+        Réinitialiser les filtres
+      </button>
+    </div>
+
+    <!-- ═══════════ Les districts, dépliables vers leurs structures ═══════════ -->
+    <div class="card" *ngIf="lignes.length > 0">
+      <div class="section-body !p-0">
+        <div *ngFor="let l of lignes | paginer: pgD.page : pgD.taille; trackBy: trackDistrict"
+             class="border-b border-border-light last:border-b-0">
+          <button type="button" (click)="basculer(l)" [attr.aria-expanded]="estDeplie(l)"
+                  [attr.aria-label]="(estDeplie(l) ? 'Replier ' : 'Déplier ') + l.d.nom"
+                  class="w-full flex flex-wrap items-center gap-3 px-4 sm:px-5 py-3.5 text-left bg-transparent border-0 cursor-pointer transition-colors hover:bg-field">
+            <div class="section-icon shrink-0"><mat-icon>account_tree</mat-icon></div>
+            <span class="min-w-0 flex-1">
+              <strong class="block text-[15px] text-text-primary">
+                {{ l.d.nom }}
+                <span *ngIf="l.d.code" class="ml-1 font-mono text-[12px] font-semibold text-text-muted">{{ l.d.code }}</span>
+                <span *ngIf="!l.d.actif" class="ml-1 px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-slate-100 text-slate-700">Désactivé</span>
+              </strong>
+              <span class="block text-[13px] text-text-secondary">
+                {{ l.d.nombrePostes }} poste{{ l.d.nombrePostes > 1 ? 's' : '' }} ·
+                {{ l.d.nombreCentres }} centre{{ l.d.nombreCentres > 1 ? 's' : '' }} ·
+                {{ l.d.structuresActives }}/{{ l.d.nombreStructures }} ont saisi
+                <ng-container *ngIf="l.d.nombreStructures">({{ l.d.tauxActivite | number:'1.0-1':'fr' }} %)</ng-container>
+              </span>
+            </span>
+            <span class="flex flex-wrap items-center gap-1.5">
+              <span *ngIf="l.sansSaisie" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
+                {{ l.sansSaisie }} sans saisie
+              </span>
+              <span *ngIf="l.d.indicateurs.dossiersACompleter" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 whitespace-nowrap">
+                {{ l.d.indicateurs.dossiersACompleter }} à compléter
+              </span>
+              <span *ngIf="l.d.indicateurs.parStatut['SOUMISE_CS']" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-blue-50 text-blue-700 whitespace-nowrap">
+                {{ l.d.indicateurs.parStatut['SOUMISE_CS'] }} au district
+              </span>
+              <span *ngIf="l.rejetees" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-red-50 text-red-700 whitespace-nowrap">
+                {{ l.rejetees }} rejetée{{ l.rejetees > 1 ? 's' : '' }}
+              </span>
+            </span>
+            <span class="text-right whitespace-nowrap">
+              <strong class="block text-[15px] text-primary">{{ l.d.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</strong>
+              <small class="block text-[12px] text-text-secondary">
+                {{ l.d.indicateurs.patients }} patient{{ l.d.indicateurs.patients > 1 ? 's' : '' }} ·
+                {{ l.d.indicateurs.visites }} visite{{ l.d.indicateurs.visites > 1 ? 's' : '' }}
+              </small>
+            </span>
+            <mat-icon class="!text-xl !w-5 !h-5 text-text-muted shrink-0">{{ estDeplie(l) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+
+          <!-- Structures du district -->
+          <div *ngIf="estDeplie(l)" class="px-4 sm:px-5 pb-4">
+            <div *ngIf="l.puces.length" class="flex flex-wrap items-center gap-1.5 mb-3 text-[12.5px] text-text-secondary">
+              <span class="mr-1">Factures de la période :</span>
+              <app-status-badge *ngFor="let p of l.puces" [statut]="p.statut" [libelle]="p.libelle"></app-status-badge>
+            </div>
+
+            <div *ngIf="!l.structures.length" class="text-[13px] text-text-muted py-2">
+              Aucune structure {{ filtresActifs ? 'pour ces filtres' : 'rattachée à ce district' }}.
+            </div>
+
+            <!-- Ordinateur -->
+            <div class="overflow-x-auto desktop-only" *ngIf="l.structures.length">
+              <table class="premium-table w-full">
+                <thead>
+                  <tr>
+                    <th>Structure</th>
+                    <th>Factures de la période</th>
+                    <th class="text-center">Patients</th>
+                    <th class="text-center">Visites</th>
+                    <th class="text-center">À compléter</th>
+                    <th class="text-right">Part SEN-CSU</th>
+                    <th>Dernière saisie</th>
+                    <th class="w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let x of l.structures | paginer: pgS.page : pgS.taille; trackBy: trackStructure">
+                    <tr (click)="basculerStructure(x.s)" class="cursor-pointer transition-colors hover:bg-primary-light/40"
+                        [attr.aria-expanded]="structureOuverte === x.s.id">
+                      <td>
+                        <ng-container *ngTemplateOutlet="identite; context: { $implicit: x.s }"></ng-container>
+                      </td>
+                      <td>
+                        <ng-container *ngTemplateOutlet="statuts; context: { $implicit: x }"></ng-container>
+                      </td>
+                      <td class="text-center tabular-nums">{{ x.s.indicateurs.patients }}</td>
+                      <td class="text-center tabular-nums">{{ x.s.indicateurs.visites }}</td>
+                      <td class="text-center tabular-nums">
+                        <span *ngIf="x.s.indicateurs.dossiersACompleter; else zero"
+                              class="px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-amber-50 text-amber-800">
+                          {{ x.s.indicateurs.dossiersACompleter }}
+                        </span>
+                      </td>
+                      <td class="text-right font-semibold whitespace-nowrap">{{ x.s.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</td>
+                      <td class="whitespace-nowrap text-text-secondary">
+                        {{ x.s.indicateurs.derniereSaisie ? (x.s.indicateurs.derniereSaisie | date:'dd/MM/yyyy HH:mm') : '—' }}
+                      </td>
+                      <td class="text-right">
+                        <mat-icon class="!text-xl !w-5 !h-5 text-text-muted">{{ structureOuverte === x.s.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </td>
+                    </tr>
+                    <tr *ngIf="structureOuverte === x.s.id">
+                      <td colspan="8" class="bg-field/40">
+                        <ng-container *ngTemplateOutlet="factures; context: { $implicit: x.s }"></ng-container>
+                      </td>
+                    </tr>
+                  </ng-container>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile -->
+            <div class="m-cards" *ngIf="l.structures.length">
+              <div class="m-card cursor-pointer" *ngFor="let x of l.structures | paginer: pgS.page : pgS.taille; trackBy: trackStructure"
+                   (click)="basculerStructure(x.s)" role="button" tabindex="0" (keydown.enter)="basculerStructure(x.s)"
+                   [attr.aria-expanded]="structureOuverte === x.s.id">
+                <div class="m-card-top">
+                  <ng-container *ngTemplateOutlet="identite; context: { $implicit: x.s }"></ng-container>
+                  <strong class="whitespace-nowrap text-primary">{{ x.s.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</strong>
+                </div>
+                <div class="m-row">
+                  <span>{{ x.s.indicateurs.patients }} patient(s) · {{ x.s.indicateurs.visites }} visite(s)</span>
+                  <span *ngIf="x.s.indicateurs.dossiersACompleter" class="font-semibold text-amber-800">
+                    {{ x.s.indicateurs.dossiersACompleter }} à compléter
+                  </span>
+                </div>
+                <div class="mt-2">
+                  <ng-container *ngTemplateOutlet="statuts; context: { $implicit: x }"></ng-container>
+                </div>
+                <div *ngIf="x.s.indicateurs.derniereSaisie" class="mt-1 text-[12px] text-text-muted">
+                  Dernière saisie le {{ x.s.indicateurs.derniereSaisie | date:'dd/MM/yyyy à HH:mm' }}
+                </div>
+                <div *ngIf="structureOuverte === x.s.id" class="mt-3 pt-2 border-t border-border-light">
+                  <ng-container *ngTemplateOutlet="factures; context: { $implicit: x.s }"></ng-container>
+                </div>
+              </div>
+            </div>
+
+            <app-pagination #pgS [total]="l.structures.length"></app-pagination>
+          </div>
+        </div>
+      </div>
+    </div>
+    <app-pagination #pgD [total]="lignes.length"></app-pagination>
+  </ng-container>
+
+  <!-- ═══════════ Gabarits partagés ordinateur / mobile ═══════════ -->
+
+  <ng-template #zero><span class="text-text-muted">0</span></ng-template>
+
+  <!-- Nom de la structure, type, siège, rattachement -->
+  <ng-template #identite let-s>
+    <span class="min-w-0">
+      <strong class="block text-[14px] text-text-primary">{{ s.nom }}</strong>
+      <span class="flex flex-wrap items-center gap-1.5 mt-0.5 text-[12px] text-text-secondary">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">{{ typeLibelle(s.type) }}</span>
+        <span *ngIf="s.siegeDistrict" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Siège du district</span>
+        <span *ngIf="!s.actif" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700">Désactivée</span>
+        <span *ngIf="s.code" class="font-mono">{{ s.code }}</span>
+        <span *ngIf="s.type === 'PS' && s.structureRattachementNom">· rattaché à {{ s.structureRattachementNom }}</span>
+      </span>
+    </span>
+  </ng-template>
+
+  <!-- Statuts des factures de la structure (nombre par statut) -->
+  <ng-template #statuts let-x>
+    <span class="flex flex-wrap items-center gap-1">
+      <app-status-badge *ngFor="let p of x.puces" [statut]="p.statut" [libelle]="p.libelle" [sansIcone]="true"></app-status-badge>
+      <span *ngIf="!x.s.indicateurs.nombreFactures" class="text-[12.5px] italic text-text-muted">Aucune saisie</span>
+    </span>
+  </ng-template>
+
+  <!-- Factures de la structure sur la période : un clic ouvre la facture -->
+  <ng-template #factures let-s>
+    <div *ngIf="!s.factures.length" class="py-2 text-[13px] italic text-text-muted">
+      Aucune facture sur {{ filtreMois ? 'ce mois' : 'cette année' }}.
+    </div>
+    <div *ngFor="let f of s.factures; trackBy: trackFacture"
+         (click)="ouvrirFacture(f); $event.stopPropagation()" (keydown.enter)="ouvrirFacture(f)"
+         role="button" tabindex="0" [attr.aria-label]="'Ouvrir la facture ' + (f.numero || '')"
+         class="flex flex-wrap items-center gap-3 py-2.5 px-2 rounded-lg border-b border-border-light last:border-b-0 cursor-pointer transition-colors hover:bg-white">
+      <app-regime-badge [regime]="f.regime"></app-regime-badge>
+      <span class="font-semibold whitespace-nowrap">{{ f.numero || 'Sans numéro' }}</span>
+      <span *ngIf="!filtreMois" class="text-[12.5px] text-text-secondary">{{ moisNoms[f.mois] }}</span>
+      <span class="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
+        <mat-icon class="!text-lg !w-[18px] !h-[18px]">groups</mat-icon>{{ f.patients }}
+      </span>
+      <app-status-badge [statut]="f.statut"></app-status-badge>
+      <app-status-badge *ngIf="f.etape" famille="etape" [statut]="f.etape"></app-status-badge>
+      <span *ngIf="f.dossiersACompleter" class="px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-amber-50 text-amber-800">
+        {{ f.dossiersACompleter }} à compléter
+      </span>
+      <span class="ml-auto font-bold text-primary whitespace-nowrap">{{ f.montantSencsu | number:'1.0-0':'fr' }} F</span>
+      <mat-icon class="!text-xl !w-5 !h-5 text-text-muted shrink-0">chevron_right</mat-icon>
+    </div>
+  </ng-template>
+</div>

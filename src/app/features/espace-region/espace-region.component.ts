@@ -8,6 +8,7 @@ import { RegionalDashboardComponent } from './regional-dashboard/regional-dashbo
 import { FacturesListComponent } from '../factures/factures-list/factures-list.component';
 import { RegionalStructuresFacturesComponent } from '../regional-factures/regional-structures-factures.component';
 import { ImportFacturesComponent } from '../regional-factures/import-factures/import-factures.component';
+import { RegionalActivitesComponent } from '../regional-activites/regional-activites.component';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RegionService } from '../../core/services/region.service';
@@ -28,11 +29,14 @@ interface StatutGroup {
   selector: 'app-espace-region',
   standalone: true,
   imports: [CommonModule, MatTabsModule, MatIconModule, RegionalDashboardComponent, FacturesListComponent,
-    RegionalStructuresFacturesComponent, ImportFacturesComponent],
+    RegionalStructuresFacturesComponent, ImportFacturesComponent, RegionalActivitesComponent],
   templateUrl: './espace-region.component.html'
 })
 export class EspaceRegionComponent implements OnInit {
-  /** 0 = Tableau de bord · 1 = Factures Pharmacies · 2 = Factures Structures · 3 = Import des factures. */
+  /**
+   * 0 = Tableau de bord · 1 = Factures Pharmacies · 2 = Factures Structures · 3 = Import des
+   * factures · 4 = Activités des districts et postes.
+   */
   selectedTab = 0;
 
   /** Sous-filtre de statut, indépendant par type de prestataire. */
@@ -74,7 +78,7 @@ export class EspaceRegionComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         const tab = +(params.get('tab') ?? 0);
-        this.selectedTab = tab >= 0 && tab <= 3 ? tab : 0;
+        this.selectedTab = tab >= 0 && tab <= 4 ? tab : 0;
 
         // Statut transmis par le tableau de bord (clic sur un item du parcours) :
         // pré-positionne le filtre segmenté de l'onglet ouvert, pour arriver

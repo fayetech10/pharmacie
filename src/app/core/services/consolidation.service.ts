@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { SyntheseDistrict, TableauBord } from '../models/referentiel.model';
+import { ActivitesRegion, SyntheseDistrict, TableauBord } from '../models/referentiel.model';
 import { FactureStructure } from '../models/structure.model';
 
 /** Filtres communs à toutes les vues de consolidation. */
@@ -39,6 +39,15 @@ export class ConsolidationService {
 
   getTableauBord(filtres: FiltresConsolidation): Observable<TableauBord> {
     return this.api.get<TableauBord>('/consolidation/tableau-bord',
+      { params: this.parametres(filtres) });
+  }
+
+  /**
+   * Activités du réseau de la région du service régional : districts, centres et postes, sur
+   * un mois (ou l'année si `mois` est vide). La région est imposée par le serveur (jeton).
+   */
+  getActivitesRegion(filtres: { mois?: number; annee?: number }): Observable<ActivitesRegion> {
+    return this.api.get<ActivitesRegion>('/consolidation/region/activites',
       { params: this.parametres(filtres) });
   }
 
