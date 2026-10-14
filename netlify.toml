@@ -14,6 +14,11 @@
 [build]
   command = "npm run build:netlify"
   publish = "dist/pharmacie-csu-frontend/browser"
+  # Plan Free : 300 crédits par mois, 15 par déploiement de production. Un push sur main
+  # ne met donc PAS en ligne, sauf si le message du dernier commit poussé contient
+  # « [deploy] » (code de sortie 0 = build sauté, sans crédit consommé).
+  # Mettre en ligne sans changement : git commit --allow-empty -m "Mise en ligne [deploy]"
+  ignore = "! git log -1 --format=%B | grep -qF '[deploy]'"
 
 [build.environment]
   NODE_VERSION = "20"
