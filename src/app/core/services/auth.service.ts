@@ -31,7 +31,7 @@ export class AuthService {
    * au rechargement et surtout au redémarrage de l'appareil (PWA mobile : téléphone éteint puis
    * rallumé). La durée de vie reste bornée par deux garde-fous : l'expiration réelle du jeton JWT
    * (24 h côté serveur → auto-logout programmé + purge au démarrage) et la déconnexion après
-   * 30 min d'inactivité tant que l'application tourne. Un jeton expiré est purgé au démarrage, donc
+   * 30 min d'inactivité écran affiché (l'arrière-plan ne compte pas). Un jeton expiré est purgé au démarrage, donc
    * la persistance n'ouvre jamais une session au-delà de la validité du jeton.
    */
   private readonly store: Storage = localStorage;
@@ -49,7 +49,10 @@ export class AuthService {
   readonly reconnexionRequise$ = new BehaviorSubject<boolean>(false);
 
   // ----- Déconnexion automatique après inactivité -----
-  /** Durée d'inactivité (souris/clavier) au-delà de laquelle on déconnecte. */
+  /**
+   * Durée d'inactivité (écran affiché, sans geste) au-delà de laquelle on déconnecte. Le temps
+   * passé en arrière-plan ne compte pas (cf. surVisibilite).
+   */
   private readonly IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   /** Événements considérés comme une activité de l'utilisateur. */
   private readonly ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -59,6 +62,7 @@ export class AuthService {
   private lastIdleResetAt = 0;
   /** Référence stable du gestionnaire (nécessaire pour add/removeEventListener). */
   private readonly activityHandler = () => this.onUserActivity();
+  private readonly visibiliteHandler = () => this.surVisibilite();
 
   constructor(private api: ApiService, private router: Router, private zone: NgZone) {
     // Purge d'un éventuel horodatage d'expiration historique (plus utilisé : l'expiration
@@ -353,8 +357,9 @@ export class AuthService {
       this.ACTIVITY_EVENTS.forEach(evt =>
         document.addEventListener(evt, this.activityHandler, { passive: true })
       );
+      document.addEventListener('visibilitychange', this.visibiliteHandler);
     });
-    this.armIdleTimer();
+    if (!document.hidden) this.armIdleTimer();
   }
 
   /** Arrête le suivi d'inactivité et annule le minuteur. */
@@ -362,9 +367,28 @@ export class AuthService {
     this.ACTIVITY_EVENTS.forEach(evt =>
       document.removeEventListener(evt, this.activityHandler)
     );
+    document.removeEventListener('visibilitychange', this.visibiliteHandler);
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
+    }
+  }
+
+  /**
+   * Application en arrière-plan (autre application, téléphone verrouillé, autre onglet) : le
+   * minuteur d'inactivité est suspendu, puis réarmé au retour. Sans cela, l'application
+   * installée sur un téléphone déconnectait l'agent à chaque retour après une pause de plus
+   * de 30 min (le minuteur échu se déclenchait à la reprise). Seule l'expiration du jeton
+   * (24 h) ferme alors la session.
+   */
+  private surVisibilite(): void {
+    if (document.hidden) {
+      if (this.idleTimer) {
+        clearTimeout(this.idleTimer);
+        this.idleTimer = null;
+      }
+    } else {
+      this.armIdleTimer();
     }
   }
 

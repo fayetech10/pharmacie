@@ -30,6 +30,13 @@ const DELAI_PROPOSITION_MS = 4000;
 export type SituationInstallation = 'bouton' | 'ios' | 'manuel' | 'http' | 'developpement' | 'aucune';
 
 /**
+ * Navigateur utilisé sur iPhone / iPad : le bouton « Partager » n'est pas au même endroit, et
+ * certains ne savent pas installer (navigateur intégré à WhatsApp, Facebook… ; Chrome ou Firefox
+ * avant iOS 16.4) — il faut alors rouvrir la page dans Safari.
+ */
+export type NavigateurIos = 'safari' | 'autre' | 'safari-requis';
+
+/**
  * Installation de l'application sur le téléphone (application web progressive) et mises à jour.
  *
  * <p>Construit au démarrage (AppComponent) : Chrome n'émet qu'une fois, tôt, l'événement qui
@@ -77,6 +84,25 @@ export class InstallationService {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     return ios && !this.estInstallee;
+  }
+
+  /** Navigateur iOS en cours (cf. NavigateurIos). */
+  get navigateurIos(): NavigateurIos {
+    const ua = navigator.userAgent;
+    // Navigateurs intégrés aux applications : pas d'« Ajouter à l'écran d'accueil ».
+    if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|WhatsApp|GSA\//i.test(ua)) return 'safari-requis';
+    if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) {
+      // Chrome, Firefox, Edge… n'installent sur iOS qu'à partir d'iOS 16.4.
+      const version = /OS (\d+)_(\d+)/.exec(ua);
+      const recent = !version || +version[1] > 16 || (+version[1] === 16 && +version[2] >= 4);
+      return recent ? 'autre' : 'safari-requis';
+    }
+    return 'safari';
+  }
+
+  /** Appareil tactile (téléphone, tablette) : c'est là qu'installer a un sens. */
+  get estTactile(): boolean {
+    return !!window.matchMedia?.('(pointer: coarse)').matches;
   }
 
   /** Ce qu'il faut montrer à l'agent (cf. SituationInstallation). */

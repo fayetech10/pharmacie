@@ -11,6 +11,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { HorsLigneService } from '../../core/hors-ligne/hors-ligne.service';
 import { InstallationService } from '../../core/hors-ligne/installation.service';
 import { ReseauService, estErreurReseau } from '../../core/hors-ligne/reseau.service';
+import { EtapesIosComponent } from '../installation/etapes-ios.component';
 
 /**
  * Bandeau du mode hors ligne (postes et centres de santé), sous la barre du haut :
@@ -23,7 +24,7 @@ import { ReseauService, estErreurReseau } from '../../core/hors-ligne/reseau.ser
 @Component({
   selector: 'app-bandeau-hors-ligne',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, EtapesIosComponent],
   template: `
     <!-- Installation (première connexion sur l'appareil) : toujours une explication, jamais le silence -->
     <ng-container [ngSwitch]="installation.situation">
@@ -59,9 +60,10 @@ import { ReseauService, estErreurReseau } from '../../core/hors-ligne/reseau.ser
           <strong class="block text-[13.5px]">Installez l'application sur cet appareil</strong>
           <span *ngIf="installation.situation === 'bouton'">Elle fonctionnera aussi sans connexion pour les enfants de
             moins de 5 ans et le Plan Sésame ; les saisies partiront d'elles-mêmes au retour du réseau.</span>
-          <span *ngIf="installation.situation === 'ios'">Sur iPhone : touchez
-            <mat-icon class="!text-base !w-4 !h-4 align-text-bottom">ios_share</mat-icon> <strong>Partager</strong>, puis
-            <strong>« Sur l'écran d'accueil »</strong>. L'application fonctionnera aussi sans connexion.</span>
+          <div *ngIf="installation.situation === 'ios'" class="mt-1">
+            <span class="block mb-1">Elle fonctionnera aussi sans connexion. Sur iPhone :</span>
+            <app-etapes-ios></app-etapes-ios>
+          </div>
           <span *ngIf="installation.situation === 'manuel'">Ouvrez le menu du navigateur
             (<mat-icon class="!text-base !w-4 !h-4 align-text-bottom">more_vert</mat-icon>) puis
             <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.

@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ErreurConnexionHorsLigne } from '../../../core/hors-ligne/comptes-hors-ligne';
 import { ReseauService, estErreurReseau } from '../../../core/hors-ligne/reseau.service';
+import { InstallationConnexionComponent } from '../../../shared/installation/installation-connexion.component';
 
 @Component({
   selector: 'app-login',
@@ -22,7 +23,8 @@ import { ReseauService, estErreurReseau } from '../../../core/hors-ligne/reseau.
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    InstallationConnexionComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
