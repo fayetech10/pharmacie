@@ -28,8 +28,9 @@
 
   <ng-container *ngIf="!chargement && facture as f">
 
-    <!-- Aperçu simple : prix total, part SEN-CSU, nombre de patients. -->
-    <div class="flex flex-wrap gap-3 mb-4">
+    <!-- Aperçu simple : prix total, part SEN-CSU, nombre de patients. Rien pour une facture vide
+         (pas de « 0 F · 0 patient ») : la liste dit déjà qu'il n'y a aucun patient. -->
+    <div class="flex flex-wrap gap-3 mb-4" *ngIf="nbPatients > 0 || f.montantTotal">
       <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
         <div class="text-[11px] uppercase tracking-wide text-text-muted">Prix total</div>
         <div class="text-[18px] font-bold">{{ f.montantTotal | number:'1.0-0':'fr' }} F</div>

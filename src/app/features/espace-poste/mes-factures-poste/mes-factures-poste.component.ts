@@ -104,7 +104,20 @@ export class MesFacturesPosteComponent implements OnInit {
   }
 
   nombreFactures(regime: Regime): number {
-    return this.facturesAnnee.filter(f => f.regime === regime).length;
+    return this.facturesAnnee.filter(f => f.regime === regime && !this.estVide(f)).length;
+  }
+
+  /**
+   * Facture sans patient ni montant : affichée « Aucune facture », comme un mois sans facture
+   * (plutôt que « 0 patient · 0 F »). Le montant garde les factures reprises sans dossiers.
+   */
+  estVide(facture: FactureStructure): boolean {
+    return this.patients(facture) === 0 && !facture.montantTotal;
+  }
+
+  /** Aucune facture (non vide) sur la période affichée. */
+  get aucuneFacture(): boolean {
+    return !this.lignes.some(l => l.facture);
   }
 
   charger() {
@@ -141,7 +154,7 @@ export class MesFacturesPosteComponent implements OnInit {
   /** Les 12 mois de l'année pour le régime choisi, filtrés au besoin sur un mois. */
   construire() {
     const parMois = new Map<number, FactureStructure>();
-    this.facturesAnnee.filter(f => f.regime === this.regime).forEach(f => parMois.set(f.mois, f));
+    this.facturesAnnee.filter(f => f.regime === this.regime && !this.estVide(f)).forEach(f => parMois.set(f.mois, f));
     this.lignes = Array.from({ length: 12 }, (_, i) => i + 1)
       .filter(m => !this.moisFiltre || m === +this.moisFiltre)
       .map(m => ({ mois: m, libelle: MOIS[m], facture: parMois.get(m) || null }));

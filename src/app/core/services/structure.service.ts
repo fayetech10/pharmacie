@@ -272,11 +272,21 @@ export class StructureService {
     return this.api.get<{ type: TypePiece; libelle: string; image: string }>(
       `/factures-structure/${factureId}/dossiers/${dossierId}/pieces/${type}`, { skipLoading: true, arrierePlan: !retenirPage });
   }
+  /**
+   * Aperçu JPEG de l'attestation / de la fiche, rendu par le serveur : un PDF dans un `<iframe>`
+   * reste vide sur Chrome Android. Le PDF (téléchargement) : `attestationSoinsPdf` / `ficheAssurePdf`.
+   */
   attestationSoinsImage(factureId: string, dossierId: string): Observable<Blob> {
-    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation`, { arrierePlan: true });
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation?format=image`, { arrierePlan: true });
   }
   ficheAssureImage(factureId: string, dossierId: string): Observable<Blob> {
-    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure`, { arrierePlan: true });
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure?format=image`, { arrierePlan: true });
+  }
+  attestationSoinsPdf(factureId: string, dossierId: string): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/attestation`);
+  }
+  ficheAssurePdf(factureId: string, dossierId: string): Observable<Blob> {
+    return this.api.getBlob(`/factures-structure/${factureId}/dossiers/${dossierId}/fiche-assure`);
   }
 
   exportFactureExcel(id: string): Observable<Blob> {

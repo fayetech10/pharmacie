@@ -96,7 +96,8 @@
         <div class="section-icon"><mat-icon>calendar_month</mat-icon></div>
         <div>
           <h2>{{ libelleRegime(regime) }} — {{ annee }}</h2>
-          <p>{{ totalAnnee.patients }} patient(s) · {{ totalAnnee.montant | number:'1.0-0':'fr' }} F facturés ·
+          <p *ngIf="aucuneFacture">Aucune facture</p>
+          <p *ngIf="!aucuneFacture">{{ totalAnnee.patients }} patient(s) · {{ totalAnnee.montant | number:'1.0-0':'fr' }} F facturés ·
              {{ totalAnnee.sencsu | number:'1.0-0':'fr' }} F à la charge de la SEN-CSU</p>
         </div>
       </div>
@@ -156,7 +157,7 @@
       <div class="m-card" *ngFor="let l of lignes" [class.cursor-pointer]="!!l.facture"
            (click)="l.facture && consulter(l.facture)" role="button" tabindex="0">
         <div class="m-card-top">
-          <span class="m-title">{{ l.libelle }} {{ annee }}</span>
+          <span class="m-title">{{ l.libelle }}</span>
           <ng-container *ngIf="l.facture as f">
             <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
           </ng-container>

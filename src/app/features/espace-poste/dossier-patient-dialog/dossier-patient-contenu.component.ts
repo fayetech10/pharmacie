@@ -1,6 +1,5 @@
-﻿import { Component, Input, OnChanges, OnDestroy } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -10,47 +9,46 @@ import {
 } from '../../../core/models/structure.model';
 import { StructureService } from '../../../core/services/structure.service';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
-import { exigeCartePoste, ouvrirPdf } from '../poste-facturation';
+import { exigeCartePoste, ouvrirPdf, telecharger } from '../poste-facturation';
 
 interface PieceAffichee { type: TypePiece; libelle: string; image: string | null; erreur: boolean; }
 /**
- * Un PDF affichÃ© dans la visionneuse native du navigateur via un blob URL (`<iframe>`). Pas de
- * worker ni de rendu canvas : robuste, sans dÃ©pendance, et fonctionne hors ligne (le blob vient
- * de la rÃ©ponse dÃ©jÃ  tÃ©lÃ©chargÃ©e). `objectUrl` est l'URL brute, Ã  rÃ©voquer pour libÃ©rer la mÃ©moire.
+ * Aperçu d'un document du dossier : image JPEG rendue par le serveur à partir du PDF, exposée en
+ * blob URL (`objectUrl`, à révoquer pour libérer la mémoire). Une image s'affiche sur tous les
+ * appareils, alors qu'un PDF dans un `<iframe>` reste vide sur Chrome Android.
  */
-interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl: string | null; chargement: boolean; erreur: boolean; }
+interface ApercuDocument { label: 'fiche' | 'attestation'; objectUrl: string | null; chargement: boolean; erreur: boolean; }
 
 /**
- * Contenu du Â« dossier patient Â» : la fiche assurÃ© et l'attestation de soins sont affichÃ©es dans
- * la visionneuse PDF native du navigateur (`<iframe>` sur un blob URL), sans worker ni rendu
- * canvas. Le ticket de caisse reste tÃ©lÃ©chargeable.
+ * Contenu du « dossier patient » : la fiche assuré et l'attestation de soins sont affichées en
+ * aperçu image (agrandissable) ; « Télécharger » donne le PDF. Le ticket de caisse reste téléchargeable.
  */
 @Component({
   selector: 'app-dossier-patient-contenu',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
   template: `
-    <!-- AperÃ§u plein Ã©cran d'une piÃ¨ce jointe photo -->
+    <!-- Aperçu plein écran d'une pièce jointe photo -->
     <div *ngIf="apercu">
       <button type="button" class="btn btn-ghost btn-sm mb-2" (click)="apercu = null">
         <mat-icon>arrow_back</mat-icon> Retour au dossier
       </button>
-      <img [src]="apercu" alt="PiÃ¨ce justificative" class="block w-full rounded-lg border border-border bg-white">
+      <img [src]="apercu" alt="Pièce justificative" class="block w-full rounded-lg border border-border bg-white">
     </div>
 
     <div *ngIf="!apercu" class="flex flex-col gap-4">
 
-      <!-- Informations de l'assurÃ© (aperÃ§u cliquable) -->
+      <!-- Informations de l'assuré (aperçu cliquable) -->
       <ng-container *ngIf="aCarte" [ngTemplateOutlet]="sectionDocument" [ngTemplateOutletContext]="{
-        $implicit: fiche, titre: 'Informations de l\\'assurÃ©', icone: 'badge',
-        nom: 'fiche_assure.jpg', recharger: rechargerFiche }"></ng-container>
+        $implicit: fiche, titre: 'Informations de l\\'assuré', icone: 'badge',
+        nom: 'fiche_assure.pdf', recharger: rechargerFiche }"></ng-container>
 
-      <!-- Attestation de soins (aperÃ§u cliquable) -->
+      <!-- Attestation de soins (aperçu cliquable) -->
       <ng-container [ngTemplateOutlet]="sectionDocument" [ngTemplateOutletContext]="{
         $implicit: attestation, titre: 'Attestation de soins', icone: 'assignment',
-        nom: 'attestation_soins.jpg', recharger: rechargerAttestation }"></ng-container>
+        nom: 'attestation_soins.pdf', recharger: rechargerAttestation }"></ng-container>
 
-      <!-- Ticket de caisse / Feuille de soins (PDF tÃ©lÃ©chargeable) -->
+      <!-- Ticket de caisse / Feuille de soins (PDF téléchargeable) -->
       <div *ngIf="feuilleSoins as feuille" class="flex flex-col gap-1">
         <div class="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-text-muted pb-1 border-b border-border-light">
           <mat-icon class="!text-base !w-4 !h-4">description</mat-icon>
@@ -64,10 +62,10 @@ interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl
         </button>
       </div>
 
-      <!-- PiÃ¨ces jointes (photos) -->
+      <!-- Pièces jointes (photos) -->
       <div *ngIf="pieces.length || documentsAffiches.length" class="flex flex-col gap-2">
         <div class="text-[12px] font-semibold uppercase tracking-wide text-text-muted pb-1 border-b border-border-light">
-          PiÃ¨ces jointes
+          Pièces jointes
         </div>
         <div class="grid grid-cols-2 gap-3">
           <figure *ngFor="let p of pieces" class="m-0 flex flex-col gap-1">
@@ -95,7 +93,7 @@ interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl
 
     </div>
 
-    <!-- Gabarit d'une section document : aperÃ§u cliquable (image du document) + tÃ©lÃ©charger -->
+    <!-- Gabarit d'une section document : aperçu cliquable (image du document) + télécharger -->
     <ng-template #sectionDocument let-cible let-titre="titre" let-icone="icone" let-nom="nom" let-recharger="recharger">
       <div class="flex flex-col gap-2">
         <div class="flex items-center justify-between">
@@ -105,8 +103,9 @@ interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl
           </div>
           <div class="flex items-center gap-1">
             <button type="button" *ngIf="cible.objectUrl && !cible.chargement && !cible.erreur"
-                    class="btn btn-ghost btn-sm text-[12px]" (click)="telecharger(cible, nom)" title="TÃ©lÃ©charger">
-              <mat-icon class="!text-sm !w-4 !h-4">download</mat-icon>
+                    class="btn btn-ghost btn-sm text-[12px]" (click)="telecharger(cible, nom)"
+                    [disabled]="telechargement === cible.label" title="Télécharger le PDF">
+              <mat-icon class="!text-sm !w-4 !h-4">{{ telechargement === cible.label ? 'hourglass_top' : 'download' }}</mat-icon>
             </button>
             <button type="button" class="btn btn-ghost btn-sm text-[12px]" (click)="recharger()" title="Recharger">
               <mat-icon class="!text-sm !w-4 !h-4">refresh</mat-icon>
@@ -114,19 +113,19 @@ interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl
           </div>
         </div>
         <div *ngIf="cible.chargement" class="flex items-center justify-center gap-2 py-6 text-text-secondary text-[13px]">
-          <mat-spinner diameter="20"></mat-spinner> Chargementâ€¦
+          <mat-spinner diameter="20"></mat-spinner> Chargement…
         </div>
         <div *ngIf="cible.erreur && !cible.chargement" class="flex flex-col items-center gap-2 py-6 text-text-secondary text-[13px] text-center">
           <mat-icon class="!text-3xl text-text-muted">broken_image</mat-icon>
           <span>Document indisponible.</span>
           <button type="button" class="btn btn-outline btn-sm" (click)="recharger()">
-            <mat-icon>refresh</mat-icon> RÃ©essayer
+            <mat-icon>refresh</mat-icon> Réessayer
           </button>
         </div>
-        <div *ngIf="!cible.chargement && !cible.erreur && cible.url"
-             class="relative rounded-lg border border-border bg-white overflow-hidden shadow-sm">
-          <iframe [src]="cible.url" [title]="titre" tabindex="-1"
-                  class="w-full h-64 sm:h-80 bg-white border-0 pointer-events-none"></iframe>
+        <!-- Aperçu : le haut du document ; un clic l'ouvre en entier. -->
+        <div *ngIf="!cible.chargement && !cible.erreur && cible.objectUrl"
+             class="relative h-64 sm:h-80 rounded-lg border border-border bg-white overflow-hidden shadow-sm">
+          <img [src]="cible.objectUrl" [alt]="titre" class="block w-full h-auto">
           <button type="button" (click)="agrandir(cible, titre, nom)"
                   class="absolute inset-0 w-full h-full flex items-end justify-end p-2 bg-transparent hover:bg-black/5 transition-colors cursor-zoom-in"
                   [attr.aria-label]="'Agrandir : ' + titre">
@@ -138,22 +137,24 @@ interface ApercuDocument { label: string; url: SafeResourceUrl | null; objectUrl
       </div>
     </ng-template>
 
-    <!-- Vue plein Ã©cran d'un document (au-dessus de la modale du dossier) -->
+    <!-- Vue plein écran d'un document (au-dessus de la modale du dossier) -->
     <div *ngIf="pleinEcran" class="fixed inset-0 z-[1100] bg-black/80 flex flex-col p-3 sm:p-6" (click)="pleinEcran = null">
       <div class="flex items-center justify-between gap-2 mb-2 text-white" (click)="$event.stopPropagation()">
         <span class="font-semibold text-[14px] truncate">{{ pleinEcran.titre }}</span>
         <div class="flex items-center gap-2 shrink-0">
           <button type="button" class="btn btn-sm border-0 bg-white/15 text-white hover:bg-white/25"
-                  (click)="telecharger(pleinEcran.cible, pleinEcran.nom)">
-            <mat-icon>download</mat-icon> TÃ©lÃ©charger
+                  (click)="telecharger(pleinEcran.cible, pleinEcran.nom)" [disabled]="telechargement === pleinEcran.cible.label">
+            <mat-icon>{{ telechargement === pleinEcran.cible.label ? 'hourglass_top' : 'download' }}</mat-icon> Télécharger
           </button>
           <button type="button" class="btn btn-sm border-0 bg-white/15 text-white hover:bg-white/25" (click)="pleinEcran = null">
             <mat-icon>close</mat-icon> Fermer
           </button>
         </div>
       </div>
-      <iframe [src]="pleinEcran.url" [title]="pleinEcran.titre"
-              class="flex-1 w-full rounded-lg bg-white border-0" (click)="$event.stopPropagation()"></iframe>
+      <!-- Document en entier, défilable (zoom à deux doigts sur téléphone). -->
+      <div class="flex-1 min-h-0 overflow-auto rounded-lg bg-white" (click)="$event.stopPropagation()">
+        <img [src]="pleinEcran.cible.objectUrl" [alt]="pleinEcran.titre" class="block w-full max-w-[900px] h-auto mx-auto">
+      </div>
     </div>
   `
 })
@@ -165,15 +166,16 @@ export class DossierPatientContenuComponent implements OnChanges, OnDestroy {
 
   pieces: PieceAffichee[] = [];
   documentsAffiches: DocumentComplementaire[] = [];
-  telechargement: 'feuille' | null = null;
+  /** Téléchargement en cours : feuille de soins, ou PDF de la fiche / de l'attestation. */
+  telechargement: 'feuille' | 'fiche' | 'attestation' | null = null;
   apercu: string | null = null;
-  /** Document ouvert en plein Ã©cran (au-dessus de la modale du dossier). */
-  pleinEcran: { url: SafeResourceUrl; titre: string; nom: string; cible: ApercuDocument } | null = null;
+  /** Document ouvert en plein écran (au-dessus de la modale du dossier). */
+  pleinEcran: { titre: string; nom: string; cible: ApercuDocument } | null = null;
 
-  fiche: ApercuDocument = { label: 'fiche', url: null, objectUrl: null, chargement: false, erreur: false };
-  attestation: ApercuDocument = { label: 'attestation', url: null, objectUrl: null, chargement: false, erreur: false };
+  fiche: ApercuDocument = { label: 'fiche', objectUrl: null, chargement: false, erreur: false };
+  attestation: ApercuDocument = { label: 'attestation', objectUrl: null, chargement: false, erreur: false };
 
-  /** Rechargements liÃ©s, passÃ©s au gabarit `sectionDocument` via le contexte du ngTemplateOutlet. */
+  /** Rechargements liés, passés au gabarit `sectionDocument` via le contexte du ngTemplateOutlet. */
   rechargerFiche = () => this.chargerFiche();
   rechargerAttestation = () => this.chargerAttestation();
 
@@ -182,7 +184,6 @@ export class DossierPatientContenuComponent implements OnChanges, OnDestroy {
   constructor(
     private structureService: StructureService,
     private feuilleSoinsService: FeuilleSoinsService,
-    private sanitizer: DomSanitizer,
     private snackBar: MatSnackBar
   ) {}
 
@@ -236,17 +237,11 @@ export class DossierPatientContenuComponent implements OnChanges, OnDestroy {
     });
   }
 
-  /**
-   * Affiche le PDF dans la visionneuse native : on expose le blob via un object URL que le
-   * navigateur sait rendre dans un `<iframe>`. `#toolbar=0&navpanes=0` masque la barre d'outils
-   * du lecteur intÃ©grÃ© (ignorÃ© par les navigateurs qui ne la gÃ¨rent pas). Aucun worker requis.
-   */
+  /** Expose l'image de l'aperçu (blob JPEG) en object URL, affichable par `<img>`. */
   private afficherDocument(blob: Blob, cible: ApercuDocument) {
     this.resetApercu(cible);
     try {
-      const objectUrl = URL.createObjectURL(blob);
-      cible.objectUrl = objectUrl;
-      cible.url = this.sanitizer.bypassSecurityTrustResourceUrl(objectUrl);
+      cible.objectUrl = URL.createObjectURL(blob);
     } catch {
       cible.erreur = true;
     }
@@ -257,25 +252,26 @@ export class DossierPatientContenuComponent implements OnChanges, OnDestroy {
     if (this.pleinEcran?.cible === cible) this.pleinEcran = null;
     if (cible.objectUrl) URL.revokeObjectURL(cible.objectUrl);
     cible.objectUrl = null;
-    cible.url = null;
     cible.erreur = false;
   }
 
-  /** Ouvre le document en plein Ã©cran â€” on garde la barre d'outils du lecteur (zoom, impression). */
+  /** Ouvre le document en entier, en plein écran. */
   agrandir(cible: ApercuDocument, titre: string, nom: string) {
     if (!cible.objectUrl) return;
-    this.pleinEcran = { url: this.sanitizer.bypassSecurityTrustResourceUrl(cible.objectUrl), titre, nom, cible };
+    this.pleinEcran = { titre, nom, cible };
   }
 
-  /** TÃ©lÃ©charge le PDF dÃ©jÃ  en mÃ©moire (object URL), sans nouvel appel rÃ©seau. */
+  /** Télécharge le PDF du document (l'aperçu n'est qu'une image) — demande le réseau. */
   telecharger(cible: ApercuDocument, nom: string) {
-    if (!cible.objectUrl) return;
-    const a = document.createElement('a');
-    a.href = cible.objectUrl;
-    a.download = nom;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    if (this.telechargement) return;
+    this.telechargement = cible.label;
+    const pdf$ = cible.label === 'fiche'
+      ? this.structureService.ficheAssurePdf(this.facture.id, this.dossier.id)
+      : this.structureService.attestationSoinsPdf(this.facture.id, this.dossier.id);
+    pdf$.subscribe({
+      next: blob => { this.telechargement = null; telecharger(blob, nom); },
+      error: err => this.echec(err)
+    });
   }
 
   imprimerFeuille(id: string, numero: string) {
@@ -287,7 +283,7 @@ export class DossierPatientContenuComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy() {
-    // LibÃ©rer les object URLs des PDF pour Ã©viter les fuites mÃ©moire.
+    // Libérer les object URLs des aperçus pour éviter les fuites mémoire.
     this.resetApercu(this.fiche);
     this.resetApercu(this.attestation);
   }

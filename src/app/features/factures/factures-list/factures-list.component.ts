@@ -863,9 +863,13 @@ export class FacturesListComponent implements OnInit, OnChanges {
 
   readonly moisAnnee = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  /** Facture d'un mois : celle du pharmacien connecté, ou celle du prestataire ouvert. */
+  /**
+   * Facture d'un mois : celle du pharmacien connecté, ou celle du prestataire ouvert. Une facture
+   * vide (ni patient ni montant) compte comme absente : « Aucune facture » plutôt que « 0 patient · 0 F ».
+   */
   factureDuMois(month: number, groupFactures: UnifiedFacture[] | null): UnifiedFacture | null {
-    return groupFactures ? this.getFactureForMonthAndGroup(month, groupFactures) : this.getFactureForMonth(month);
+    const f = groupFactures ? this.getFactureForMonthAndGroup(month, groupFactures) : this.getFactureForMonth(month);
+    return f && (this.countPatients(f) > 0 || f.montantTotal) ? f : null;
   }
 
   /** Retourne la facture pour un mois donné et un groupe de factures spécifique (ou null). */
