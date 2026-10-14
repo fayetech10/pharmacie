@@ -21,5 +21,10 @@
 </head>
 <body>
   <app-root></app-root>
+  <!-- Badge « Powered by Netlify » (script /.netlify/scripts/hud injecté par Netlify) : il ne
+       s'affiche pas si un élément #nl-badge-frame existe déjà. Réglage officiel : Netlify →
+       Project configuration → General → Powered by Netlify badge. Ceci est le filet de sécurité. -->
+  <div id="nl-badge-frame" hidden aria-hidden="true"></div>
+  <style>iframe#nl-badge-frame { display: none !important; }</style>
 </body>
 </html>
