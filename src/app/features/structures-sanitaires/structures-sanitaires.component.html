@@ -49,6 +49,59 @@
     </ul>
   </div>
 
+  <!-- ===== Recherche et filtres : district (groupé par région, avec effectifs) et type ===== -->
+  <div class="filter-strip" *ngIf="structures.length">
+    <div class="relative flex-1 min-w-[220px]">
+      <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted">search</mat-icon>
+      <input type="text" placeholder="Rechercher une structure, un code, un district…"
+             aria-label="Rechercher une structure"
+             [(ngModel)]="recherche" (ngModelChange)="appliquerFiltres()"
+             class="w-full h-10 pl-10 pr-9 rounded-lg text-[14px]">
+      <button type="button" *ngIf="recherche" aria-label="Effacer la recherche"
+              (click)="recherche = ''; appliquerFiltres()"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center
+                     justify-center rounded-full border-0 bg-transparent cursor-pointer text-text-muted hover:bg-border-light">
+        <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
+      </button>
+    </div>
+
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            aria-label="Filtrer par district" [(ngModel)]="filtreDistrict" (ngModelChange)="appliquerFiltres()">
+      <option value="">Tous les districts</option>
+      <ng-container *ngIf="groupesDistricts.length > 1; else uneSeuleRegion">
+        <optgroup *ngFor="let g of groupesDistricts" [label]="g.region">
+          <option *ngFor="let d of g.districts" [value]="d.id">{{ d.libelle }}</option>
+        </optgroup>
+      </ng-container>
+      <ng-template #uneSeuleRegion>
+        <option *ngFor="let d of groupesDistricts[0]?.districts" [value]="d.id">{{ d.libelle }}</option>
+      </ng-template>
+      <option *ngIf="nbSansDistrict" [value]="SANS_DISTRICT">Sans district ({{ nbSansDistrict }})</option>
+    </select>
+
+    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
+            aria-label="Filtrer par type" [(ngModel)]="filtreType" (ngModelChange)="appliquerFiltres()">
+      <option value="">Tous les types</option>
+      <option value="CS">Centres de santé</option>
+      <option value="PS">Postes de santé</option>
+      <option value="EPS">Hôpitaux (EPS)</option>
+    </select>
+  </div>
+
+  <!-- Résultat du filtrage : effectif et répartition, pour vérifier un district d'un coup d'œil -->
+  <div *ngIf="structures.length && filtresActifs"
+       class="-mt-2 mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text-secondary">
+    <span>
+      <strong class="text-text-primary">{{ structuresFiltrees.length }}</strong>
+      structure{{ structuresFiltrees.length > 1 ? 's' : '' }} sur {{ structures.length }}
+      <ng-container *ngIf="resumeFiltre"> — {{ resumeFiltre }}</ng-container>
+    </span>
+    <button type="button" (click)="reinitialiserFiltres()"
+            class="inline-flex items-center gap-1 border-0 bg-transparent p-0 cursor-pointer text-[13px] font-semibold text-primary hover:underline">
+      <mat-icon class="!text-base !w-4 !h-4">filter_alt_off</mat-icon> Effacer les filtres
+    </button>
+  </div>
+
   <!-- Skeleton Loader pendant le chargement -->
   <div *ngIf="loading" class="space-y-3 animate-pulse mb-6">
     <div *ngFor="let i of [1,2,3,4]" class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
@@ -62,7 +115,7 @@
 
 <!-- Tableau (desktop / tablette large) -->
 <div class="glass-table-container desktop-only">
-  <table mat-table [dataSource]="structures | paginer: pg.page : pg.taille" class="premium-table">
+  <table mat-table [dataSource]="structuresFiltrees | paginer: pg.page : pg.taille" class="premium-table">
     <ng-container matColumnDef="nom">
       <th mat-header-cell *matHeaderCellDef> Structure </th>
       <td mat-cell *matCellDef="let s">
@@ -137,11 +190,12 @@
     <mat-icon>local_hospital</mat-icon>
     <p>Aucune structure enregistrée</p>
   </div>
+  <ng-container *ngTemplateOutlet="aucunResultat"></ng-container>
 </div>
 
 <!-- Cartes mobiles (≤ 768px) -->
-<div class="m-cards" *ngIf="structures.length">
-  <div class="m-card" *ngFor="let s of structures | paginer: pg.page : pg.taille" [class.clickable]="peutGerer"
+<div class="m-cards" *ngIf="structuresFiltrees.length">
+  <div class="m-card" *ngFor="let s of structuresFiltrees | paginer: pg.page : pg.taille" [class.clickable]="peutGerer"
        (click)="peutGerer && openEdit(s)" [attr.role]="peutGerer ? 'button' : null"
        [attr.tabindex]="peutGerer ? 0 : null"
        (keydown.enter)="peutGerer && openEdit(s)" [attr.aria-label]="peutGerer ? 'Modifier ' + s.nom : null">
@@ -184,13 +238,25 @@
   </div>
 </div>
 
-<app-pagination #pg [total]="structures.length"></app-pagination>
+<app-pagination #pg [total]="structuresFiltrees.length"></app-pagination>
 
 <!-- État vide (mobile) -->
 <div class="empty-state md:!hidden" *ngIf="structures.length === 0">
   <mat-icon>local_hospital</mat-icon>
   <p>Aucune structure enregistrée</p>
 </div>
+<div class="md:!hidden">
+  <ng-container *ngTemplateOutlet="aucunResultat"></ng-container>
+</div>
+
+<!-- Des structures existent, mais aucune ne répond aux filtres -->
+<ng-template #aucunResultat>
+  <div class="empty-state" *ngIf="structures.length && !structuresFiltrees.length">
+    <mat-icon>search_off</mat-icon>
+    <p>Aucune structure ne correspond à ces critères</p>
+    <button type="button" class="btn btn-outline mt-2" (click)="reinitialiserFiltres()">Effacer les filtres</button>
+  </div>
+</ng-template>
 
   <!-- ═══ Formulaire structure ═══ -->
   <div class="modal-overlay" *ngIf="showModal" (keydown.escape)="close()">

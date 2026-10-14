@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,14 @@ import { User } from '../../core/models/user.model';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+
+/** Texte comparable pour la recherche : sans accents ni casse (« Thiès » = « thies »). */
+function normaliser(s: string | null | undefined): string {
+  return (s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/** Valeur du filtre district désignant les structures sans district (hors de toute consolidation). */
+const SANS_DISTRICT = '__sans_district__';
 
 @Component({
   selector: 'app-structures-sanitaires',
@@ -239,8 +247,9 @@ export class StructuresSanitairesComponent implements OnInit {
       : ['nom', 'type', 'region', 'district', 'statut'];
 
     this.load();
-    this.regionService.getAll().subscribe(r => this.regions = r);
-    this.districtService.getDistricts().subscribe(d => this.districts = d);
+    // Libellés des groupes et recherche par district : recalculés dès que le référentiel arrive.
+    this.regionService.getAll().subscribe(r => { this.regions = r; this.rafraichirFiltres(); });
+    this.districtService.getDistricts().subscribe(d => { this.districts = d; this.rafraichirFiltres(); });
     // /users/bcsu et non /users : la liste complète est réservée à l'Admin. Ouverte au SR,
     // au Service Central et à l'Admin — pas au District, d'où la colonne masquée pour lui.
     if (this.peutGerer) {
@@ -254,9 +263,116 @@ export class StructuresSanitairesComponent implements OnInit {
   load() {
     this.loading = true;
     this.structureService.getStructures().subscribe({
-      next: s => { this.structures = s; this.loading = false; },
+      next: s => { this.structures = s; this.loading = false; this.rafraichirFiltres(); },
       error: () => this.loading = false
     });
+  }
+
+  // ===== Recherche et filtres (district, type) =====
+
+  readonly SANS_DISTRICT = SANS_DISTRICT;
+  recherche = '';
+  /** '' = tous les districts, {@link SANS_DISTRICT}, ou l'id d'un district. */
+  filtreDistrict = '';
+  /** '' = tous les types, sinon CS / PS / EPS. */
+  filtreType = '';
+
+  /**
+   * Structures affichées. Champ et non getter : le pipe de pagination doit recevoir la même
+   * référence d'un cycle de détection à l'autre.
+   */
+  structuresFiltrees: StructureSanitaire[] = [];
+  /** Districts du filtre, groupés par région, avec le nombre de structures de chacun. */
+  groupesDistricts: { region: string; districts: { id: string; libelle: string }[] }[] = [];
+  nbSansDistrict = 0;
+  /** Répartition par type des structures affichées (« 1 centre · 34 postes »). */
+  resumeFiltre = '';
+
+  @ViewChild('pg') pg?: PaginationComponent;
+
+  get filtresActifs(): boolean {
+    return !!(this.recherche.trim() || this.filtreDistrict || this.filtreType);
+  }
+
+  /** Données ou référentiel rechargés : options du filtre et liste recalculées, page conservée. */
+  private rafraichirFiltres(): void {
+    this.construireFiltreDistricts();
+    this.appliquerFiltres(false);
+  }
+
+  /**
+   * Options du filtre district. Un service régional ne voit que les districts de sa région ;
+   * un district sans structure reste proposé (avec « 0 ») : c'est une information en soi.
+   */
+  private construireFiltreDistricts(): void {
+    const parDistrict = new Map<string, number>();
+    this.nbSansDistrict = 0;
+    for (const s of this.structures) {
+      if (s.districtId) parDistrict.set(s.districtId, (parDistrict.get(s.districtId) || 0) + 1);
+      else this.nbSansDistrict++;
+    }
+    const regionSr = this.isServiceRegional ? this.authService.getCurrentUser()?.regionId : null;
+    const groupes = new Map<string, { id: string; libelle: string; nom: string }[]>();
+    for (const d of this.districts) {
+      if (regionSr && d.regionId !== regionSr) continue;
+      const region = d.regionNom || (d.regionId ? this.getRegionNom(d.regionId) : '-');
+      const cle = region === '-' ? 'Autres' : region;
+      if (!groupes.has(cle)) groupes.set(cle, []);
+      groupes.get(cle)!.push({ id: d.id, nom: d.nom, libelle: `${d.nom} (${parDistrict.get(d.id) || 0})` });
+    }
+    this.groupesDistricts = [...groupes.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, 'fr'))
+      .map(([region, ds]) => ({
+        region,
+        districts: ds.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(({ id, libelle }) => ({ id, libelle }))
+      }));
+    // Le district choisi a disparu (supprimé, autre région) : le filtre ne doit pas vider la liste en silence.
+    if (this.filtreDistrict && this.filtreDistrict !== SANS_DISTRICT && this.districts.length
+        && !this.groupesDistricts.some(g => g.districts.some(d => d.id === this.filtreDistrict))) {
+      this.filtreDistrict = '';
+    }
+  }
+
+  /** Texte dans lequel cherche la recherche : identité, district et centre de rattachement. */
+  private texteRecherche(s: StructureSanitaire): string {
+    const district = s.districtId ? this.districts.find(d => d.id === s.districtId) : undefined;
+    return normaliser([
+      s.nom, s.code, s.email, s.adresse, district?.nom, district?.code,
+      s.structureRattachementId ? this.getStructureNom(s.structureRattachementId) : ''
+    ].join(' '));
+  }
+
+  /** Filtre la liste ; un changement de critère ramène à la première page. */
+  appliquerFiltres(premierePage = true): void {
+    const mots = normaliser(this.recherche).split(/\s+/).filter(Boolean);
+    this.structuresFiltrees = this.structures.filter(s => {
+      if (this.filtreType && this.typeDe(s) !== this.filtreType) return false;
+      if (this.filtreDistrict === SANS_DISTRICT) {
+        if (s.districtId) return false;
+      } else if (this.filtreDistrict && s.districtId !== this.filtreDistrict) {
+        return false;
+      }
+      if (!mots.length) return true;
+      const texte = this.texteRecherche(s);
+      return mots.every(m => texte.includes(m));
+    });
+
+    const n = { CS: 0, PS: 0, EPS: 0 } as Record<string, number>;
+    for (const s of this.structuresFiltrees) n[this.typeDe(s)] = (n[this.typeDe(s)] || 0) + 1;
+    this.resumeFiltre = [
+      n['CS'] ? `${n['CS']} centre${n['CS'] > 1 ? 's' : ''}` : '',
+      n['PS'] ? `${n['PS']} poste${n['PS'] > 1 ? 's' : ''}` : '',
+      n['EPS'] ? `${n['EPS']} EPS` : ''
+    ].filter(Boolean).join(' · ');
+
+    if (premierePage) this.pg?.aller(0);
+  }
+
+  reinitialiserFiltres(): void {
+    this.recherche = '';
+    this.filtreDistrict = '';
+    this.filtreType = '';
+    this.appliquerFiltres();
   }
 
   getRegionNom(id: string): string {
