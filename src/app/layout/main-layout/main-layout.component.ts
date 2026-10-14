@@ -244,6 +244,7 @@ export class MainLayoutComponent implements OnInit {
       { label: 'Utilisateurs', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Administration' },
       { label: 'Médicaments', icon: 'medication', link: '/dashboard/medicaments', group: 'Administration' },
       { label: 'Référentiel des prestations', icon: 'price_change', link: '/dashboard/referentiel', group: 'Administration' },
+      { label: 'Prestations par défaut des postes', icon: 'medical_services', link: '/dashboard/prestations-postes', group: 'Administration' },
       { label: 'Paramétrage pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de santé' },
       { label: 'Paramétrage structures sanitaires', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de santé' },
       { label: 'Patients', icon: 'group', link: '/dashboard/patients', group: 'Dossiers patients' },

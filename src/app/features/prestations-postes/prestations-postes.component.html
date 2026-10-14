@@ -1,0 +1,145 @@
+<div class="fade-in">
+
+  <div class="page-head">
+    <div>
+      <h1>Prestations par défaut des postes</h1>
+      <p>Proposées à tous les postes de santé (et à eux seuls). Tarifées : facturables d'office ;
+        sans prix : chaque poste fixe le sien depuis ses Paramètres.</p>
+    </div>
+    <div class="page-head-actions">
+      <input type="file" #fichierImport class="hidden" accept=".xlsx,.xls" (change)="importer($event)">
+      <button class="btn btn-outline" type="button" (click)="telechargerModele()" [disabled]="!prestations.length">
+        <mat-icon>download</mat-icon> Télécharger la liste
+      </button>
+      <button class="btn btn-primary" type="button" (click)="fichierImport.click()" [disabled]="importEnCours">
+        <mat-icon>upload_file</mat-icon> {{ importEnCours ? 'Import en cours…' : 'Importer Excel' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Résultat du dernier import -->
+  <div class="card" *ngIf="resultatImport">
+    <div class="section-body text-[13px]">
+      <div class="flex items-start justify-between gap-3">
+        <strong>
+          Import : {{ resultatImport.lignesLues }} ligne(s) lue(s) · {{ resultatImport.crees }} création(s) ·
+          {{ resultatImport.misAJour }} mise(s) à jour
+        </strong>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="resultatImport = null" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <ul class="mt-2 pl-5 text-amber-800 list-disc" *ngIf="resultatImport.avertissements?.length">
+        <li *ngFor="let a of resultatImport.avertissements">{{ a }}</li>
+      </ul>
+      <ul class="mt-2 pl-5 text-warn list-disc" *ngIf="resultatImport.erreurs?.length">
+        <li *ngFor="let e of resultatImport.erreurs">{{ e }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Aucune liste encore : le format attendu -->
+  <div class="card" *ngIf="!chargement && !prestations.length">
+    <div class="empty-state">
+      <mat-icon>playlist_add</mat-icon>
+      <p>Aucune prestation par défaut pour l'instant.</p>
+      <p class="text-[13px] text-text-secondary">Importez un classeur Excel à trois colonnes :
+        <strong>Service | Prestation | Prix (FCFA)</strong>. Un prix vide = à fixer par chaque poste.</p>
+    </div>
+  </div>
+
+  <ng-container *ngIf="prestations.length">
+    <!-- Synthèse -->
+    <div class="flex flex-wrap gap-x-6 gap-y-1 p-4 mb-5 rounded-lg bg-field text-[13.5px]">
+      <span><strong>{{ actives.length }}</strong> prestation(s) proposée(s) aux postes</span>
+      <span><strong>{{ nbTarifees }}</strong> facturable(s) d'office</span>
+      <span><strong>{{ nbATarifer }}</strong> à tarifer par chaque poste</span>
+      <span *ngIf="prestations.length > actives.length" class="text-text-muted">
+        {{ prestations.length - actives.length }} retirée(s)
+      </span>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card">
+      <div class="section-body grid gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Recherche
+          <input type="search" [(ngModel)]="recherche" (ngModelChange)="filtrer()" placeholder="Nom de la prestation…"
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          Service
+          <select [(ngModel)]="filtreService" (ngModelChange)="filtrer()"
+                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <option value="">Tous les services</option>
+            <option *ngFor="let s of services" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 h-11 text-[13.5px] font-semibold text-text-secondary">
+          <input type="checkbox" [(ngModel)]="sansPrixSeulement" (ngModelChange)="filtrer()">
+          Sans prix seulement
+        </label>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="empty-state" *ngIf="!affichees.length">
+        <mat-icon>search_off</mat-icon>
+        <p>Aucune prestation ne correspond à ces critères.</p>
+      </div>
+
+      <!-- Tableau (ordinateur) -->
+      <div class="overflow-x-auto desktop-only" *ngIf="affichees.length">
+        <table class="premium-table w-full">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Prestation</th>
+              <th class="text-right">Prix</th>
+              <th class="text-right">Proposée aux postes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of affichees | paginer: pg.page : pg.taille; trackBy: trackPrestation"
+                [class.opacity-60]="!p.actif">
+              <td class="text-text-secondary">{{ p.categorie || '—' }}</td>
+              <td class="font-semibold">{{ p.designation }}</td>
+              <td class="text-right whitespace-nowrap">
+                <ng-container *ngIf="p.prix > 0; else aFixer">{{ p.prix | number:'1.0-0':'fr' }} F</ng-container>
+              </td>
+              <td class="text-right">
+                <button class="btn btn-ghost btn-sm" type="button" (click)="basculerActivation(p)"
+                        [title]="p.actif ? 'Retirer de la liste des postes' : 'Proposer de nouveau aux postes'">
+                  <mat-icon>{{ p.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon> {{ p.actif ? 'Oui' : 'Non' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cartes (téléphone) -->
+      <div class="m-cards" *ngIf="affichees.length">
+        <div class="m-card" *ngFor="let p of affichees | paginer: pg.page : pg.taille; trackBy: trackPrestation"
+             [class.opacity-60]="!p.actif">
+          <div class="m-card-top">
+            <span class="m-title">{{ p.designation }}</span>
+            <button class="btn btn-ghost btn-sm !px-2" type="button" (click)="basculerActivation(p)"
+                    [attr.aria-label]="p.actif ? 'Retirer de la liste des postes' : 'Proposer de nouveau aux postes'">
+              <mat-icon class="!m-0">{{ p.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+            </button>
+          </div>
+          <div class="m-row">
+            <span>{{ p.categorie || '—' }}</span>
+            <strong *ngIf="p.prix > 0; else aFixer">{{ p.prix | number:'1.0-0':'fr' }} F</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Hors de tout *ngIf : la référence #pg sert au tableau ET aux cartes. -->
+  <app-pagination #pg [total]="affichees.length"></app-pagination>
+
+  <ng-template #aFixer><span class="text-[12.5px] italic text-text-muted">à fixer par le poste</span></ng-template>
+</div>

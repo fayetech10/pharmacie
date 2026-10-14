@@ -34,9 +34,17 @@ export class HorsCsuService {
     return this.api.get<TarifHorsCsu[]>('/hors-csu/tarifs/miens');
   }
 
-  /** Modèle Excel prérempli du catalogue applicable : il ne reste qu'à saisir les prix. */
-  telechargerModeleTarifs(): Observable<Blob> {
-    return this.api.getBlob('/hors-csu/tarifs/modele');
+  /**
+   * Modèle Excel prérempli du catalogue applicable : il ne reste qu'à saisir les prix.
+   * `typeStructure` (administration) : la liste nationale de ce type, ex. « PS ».
+   */
+  telechargerModeleTarifs(typeStructure?: string): Observable<Blob> {
+    return this.api.getBlob('/hors-csu/tarifs/modele' + (typeStructure ? `?typeStructure=${typeStructure}` : ''));
+  }
+
+  /** Prestations par défaut des postes de santé (liste nationale « PS »), actives ou non — administration. */
+  getPrestationsParDefautPostes(): Observable<TarifHorsCsu[]> {
+    return this.api.get<TarifHorsCsu[]>('/hors-csu/tarifs/postes-par-defaut');
   }
 
   creerTarif(tarif: Partial<TarifHorsCsu>): Observable<TarifHorsCsu> {
@@ -59,10 +67,13 @@ export class HorsCsuService {
    * `getTarifsApplicables` (servi en `cacheFirst`, jamais revalidé) continuerait de
    * renvoyer l'ancienne liste et les tarifs importés resteraient invisibles à la caisse.</p>
    */
-  importerTarifs(fichier: File, structureId?: string): Observable<ResultatImport> {
+  importerTarifs(fichier: File, structureId?: string, typeStructure?: string): Observable<ResultatImport> {
     const formulaire = new FormData();
     formulaire.append('fichier', fichier);
-    const qs = structureId ? `?structureId=${encodeURIComponent(structureId)}` : '';
+    const params = new URLSearchParams();
+    if (structureId) params.set('structureId', structureId);
+    if (typeStructure) params.set('typeStructure', typeStructure);
+    const qs = params.toString() ? `?${params}` : '';
     return this.http.post<ResultatImport>(
       `${environment.apiUrl}/hors-csu/tarifs/import${qs}`, formulaire)
       .pipe(tap(() => this.api.invalidateCache()));

@@ -59,6 +59,8 @@ export interface TarifHorsCsu {
   prix: number;
   /** Null = tarif national ; sinon surcharge propre à la structure. */
   structureId?: string;
+  /** Ligne nationale réservée à un type : « PS » = prestation par défaut des postes de santé. */
+  typeStructure?: string | null;
   actif: boolean;
 }
 

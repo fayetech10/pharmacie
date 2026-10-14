@@ -193,6 +193,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/referentiel/prestations.component').then(m => m.PrestationsComponent)
       },
       {
+        // Prestations par défaut des postes de santé (catalogue national « PS », 14/10/2026).
+        path: 'prestations-postes',
+        canActivate: [roleGuard],
+        data: { roles: [Role.ADMIN] },
+        loadComponent: () => import('./features/prestations-postes/prestations-postes.component').then(m => m.PrestationsPostesComponent)
+      },
+      {
         // Districts sanitaires (§6) : la maille de consolidation.
         path: 'districts',
         canActivate: [roleGuard],
