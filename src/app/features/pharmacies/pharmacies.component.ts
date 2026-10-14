@@ -217,19 +217,26 @@ export class PharmaciesComponent implements OnInit {
   }
 
   /**
-   * Export Excel des pharmacies avec leurs identifiants (username + statut du mot de passe),
+   * PDF des identifiants de connexion des pharmacies affichées (recherche et tri appliqués),
    * à remettre aux officines après un import en masse.
    */
   exporterIdentifiants() {
-    this.pharmacieService.exportPharmacies().subscribe({
+    const affichees = this.dataSource.sort
+      ? this.dataSource.sortData([...this.dataSource.filteredData], this.dataSource.sort)
+      : this.dataSource.filteredData;
+    if (!affichees.length) {
+      this.snackBar.open('Aucune pharmacie à exporter.', 'Fermer', { duration: 3000 });
+      return;
+    }
+    this.pharmacieService.exportIdentifiantsPdf(affichees.map(p => p.id)).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'pharmacies_identifiants.xlsx';
+        a.download = 'Identifiants_pharmacies.pdf';
         a.click();
         window.URL.revokeObjectURL(url);
-        this.snackBar.open('Export des identifiants lancé', 'Fermer', { duration: 2500 });
+        this.snackBar.open(`PDF des identifiants : ${affichees.length} pharmacie(s)`, 'Fermer', { duration: 2500 });
       },
       error: () => {
         this.snackBar.open('Impossible d\'exporter les identifiants.', 'Fermer', { duration: 4000, panelClass: 'error-snackbar' });

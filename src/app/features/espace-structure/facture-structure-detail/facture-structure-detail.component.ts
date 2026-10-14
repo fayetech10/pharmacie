@@ -14,6 +14,7 @@ import { Regime } from '../../../core/models/bcsu.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { factureModifiable } from '../../../core/models/statuts';
+import { finDuMoisAtteinte } from '../../../core/utils/fin-de-mois';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
 import {
@@ -110,6 +111,11 @@ export class FactureStructureDetailComponent implements OnInit {
 
   get canEnvoyer(): boolean {
     return this.canEditLines && (this.facture?.lignes?.length || 0) > 0 && !this.facture?.nombreDossiersACompleter;
+  }
+
+  /** « Envoyer maintenant » n'apparaît qu'à la fin du mois facturé. */
+  get finDuMois(): boolean {
+    return finDuMoisAtteinte(this.facture?.mois, this.facture?.annee);
   }
 
   /** Le service régional valide ou rejette une facture reçue (ENVOYEE). */

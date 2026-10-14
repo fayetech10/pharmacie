@@ -26,9 +26,9 @@
             <span>{{ importing ? 'Import en cours…' : 'Importer des structures' }}</span>
           </button>
         </ng-container>
-        <button mat-menu-item (click)="exporterIdentifiants()">
-          <mat-icon>table_view</mat-icon>
-          <span>Exporter les identifiants</span>
+        <button mat-menu-item (click)="exporterIdentifiants()" [disabled]="exportEnCours">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>{{ exportEnCours ? 'Export en cours…' : (filtresActifs ? 'Exporter les identifiants (' + structuresFiltrees.length + ')' : 'Exporter les identifiants') }}</span>
         </button>
         <button mat-menu-item *ngIf="peutSupprimerImporter" (click)="purgerBrouillons()" [disabled]="purging">
           <mat-icon>delete_sweep</mat-icon>

@@ -78,7 +78,7 @@
             <mat-menu #groupMenu="matMenu">
               <!-- Envoi mensuel : la saisie ne part pas automatiquement, l'agent transmet le groupe. -->
               <button mat-menu-item
-                      *ngIf="g.brouillons > 0"
+                      *ngIf="g.brouillons > 0 && finDuMois(g)"
                       [disabled]="envoiEnCours === cleGroupe(g)"
                       (click)="envoyerGroupe(g, $event)">
                 <mat-icon color="primary">send</mat-icon>

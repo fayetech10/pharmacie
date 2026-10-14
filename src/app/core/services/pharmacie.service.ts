@@ -42,6 +42,11 @@ export class PharmacieService {
   }
 
   /** Export Excel des pharmacies créées avec leurs identifiants de connexion. */
+  /** PDF des identifiants de connexion des pharmacies données (ordre conservé). */
+  exportIdentifiantsPdf(ids: string[]): Observable<Blob> {
+    return this.api.postBlob('/pharmacies/export-pdf', ids);
+  }
+
   exportPharmacies(): Observable<Blob> {
     return this.api.getBlob('/pharmacies/export');
   }

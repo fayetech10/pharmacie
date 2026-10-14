@@ -77,7 +77,7 @@
               <mat-icon class="!m-0">more_vert</mat-icon>
             </button>
             <mat-menu #actionsMenu="matMenu" xPosition="before">
-              <button mat-menu-item *ngIf="canEditLines" (click)="envoyer()"
+              <button mat-menu-item *ngIf="canEditLines && finDuMois" (click)="envoyer()"
                       [disabled]="busy || !canEnvoyer"
                       [title]="f.nombreDossiersACompleter ? 'Complétez d\'abord les dossiers à compléter' : 'Envoyer'">
                 <mat-icon>send</mat-icon>

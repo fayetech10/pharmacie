@@ -15,6 +15,7 @@ import { Medicament, StatutMedicament } from '../../../core/models/medicament.mo
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { renderBonCommandeToDataUrl } from '../../../core/utils/bon-commande-image';
+import { finDuMoisAtteinte, libelleEnvoiPossible } from '../../../core/utils/fin-de-mois';
 import { QrScannerComponent } from '../../../shared/qr-scanner/qr-scanner.component';
 import { PhotoPieceComponent } from '../../../shared/photo-piece/photo-piece.component';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
@@ -293,6 +294,9 @@ export class FactureFormComponent implements OnInit {
 
   // ===== Synthèse de la facture du mois (en-tête de contexte) =====
   get factureLignesCount(): number { return this.facture?.lignes?.length ?? 0; }
+  /** « Envoyer la facture » n'apparaît qu'à la fin du mois facturé. */
+  get finDuMois(): boolean { return finDuMoisAtteinte(this.facture?.mois, this.facture?.annee); }
+  get envoiPossibleLe(): string { return libelleEnvoiPossible(this.facture?.mois, this.facture?.annee); }
   get facturePatientsCount(): number {
     const ls = this.facture?.lignes ?? [];
     const ids = new Set(

@@ -20,6 +20,7 @@ import { EtatListe, EtatListeService } from '../../../shared/pagination/etat-lis
 import {
   PatientPharmacie, lignesPatientsPharmacie, patientPharmacieCorrespond, patientsFacturePharmacie
 } from '../facture-patients';
+import { finDuMoisAtteinte, libelleEnvoiPossible } from '../../../core/utils/fin-de-mois';
 
 /**
  * Détail d'une facture de pharmacie : en-tête, circuit de validation, totaux, puis la liste
@@ -45,6 +46,16 @@ import {
 })
 export class FactureDetailComponent implements OnInit {
   facture!: Facture;
+
+  /** « Envoyer / Renvoyer » n'apparaît qu'à la fin du mois facturé. */
+  get finDuMois(): boolean {
+    return finDuMoisAtteinte(this.facture?.mois, this.facture?.annee);
+  }
+
+  get envoiPossibleLe(): string {
+    return libelleEnvoiPossible(this.facture?.mois, this.facture?.annee);
+  }
+
   /** Chargement de la facture : évite la page blanche en affichant un indicateur. */
   loading = true;
   loadError = false;

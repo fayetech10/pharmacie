@@ -22,6 +22,7 @@ import {
 } from '../../../shared/liste-patients-facture/liste-patients-facture.component';
 import { EtatListe, EtatListeService } from '../../../shared/pagination/etat-liste.service';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
+import { finDuMoisAtteinte, libelleEnvoiPossible } from '../../../core/utils/fin-de-mois';
 
 /**
  * Consultation et modification d'une facture mensuelle du poste (« Mes factures → Mois →
@@ -136,6 +137,15 @@ export class FacturePosteDetailComponent implements OnInit {
 
   get peutEnvoyer(): boolean {
     return this.modifiable && (this.facture?.lignes?.length || 0) > 0 && this.aCompleter === 0;
+  }
+
+  /** Le bouton « Envoyer / Transmettre » n'apparaît qu'à la fin du mois facturé. */
+  get finDuMois(): boolean {
+    return finDuMoisAtteinte(this.facture?.mois, this.facture?.annee);
+  }
+
+  get envoiPossibleLe(): string {
+    return libelleEnvoiPossible(this.facture?.mois, this.facture?.annee);
   }
 
   /**

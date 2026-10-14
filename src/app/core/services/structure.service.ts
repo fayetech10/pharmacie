@@ -152,6 +152,11 @@ export class StructureService {
     return this.api.getBlob('/structures-sanitaires/export');
   }
 
+  /** PDF des identifiants de connexion des structures données (ordre conservé). */
+  exportIdentifiantsPdf(ids: string[]): Observable<Blob> {
+    return this.api.postBlob('/structures-sanitaires/export-pdf', ids);
+  }
+
   /** Purge les factures de structure restées en brouillon (jamais envoyées). */
   purgerBrouillons(structureId?: string): Observable<{ supprimees: number }> {
     const qs = structureId ? `?structureId=${encodeURIComponent(structureId)}` : '';

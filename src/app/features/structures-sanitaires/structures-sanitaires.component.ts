@@ -528,19 +528,38 @@ export class StructuresSanitairesComponent implements OnInit {
     });
   }
 
-  /** Export Excel des structures avec leurs identifiants de connexion. */
+  exportEnCours = false;
+
+  /**
+   * PDF des identifiants de connexion des structures affichées : la recherche et les filtres
+   * (district, type) s'appliquent, dans l'ordre de l'écran — « District de Thiès » → le PDF
+   * de ses postes à remettre.
+   */
   exporterIdentifiants() {
-    this.structureService.exportStructures().subscribe({
+    if (!this.structuresFiltrees.length) {
+      this.snackBar.open('Aucune structure à exporter avec ces filtres.', 'Fermer', { duration: 3000 });
+      return;
+    }
+    const district = this.filtreDistrict && this.filtreDistrict !== SANS_DISTRICT
+      ? this.districts.find(d => d.id === this.filtreDistrict)?.nom : '';
+    const nomFichier = 'Identifiants_' + (district || 'structures')
+      .normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Za-z0-9]+/g, '_') + '.pdf';
+    this.exportEnCours = true;
+    this.structureService.exportIdentifiantsPdf(this.structuresFiltrees.map(s => s.id)).subscribe({
       next: (blob: Blob) => {
+        this.exportEnCours = false;
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'structures_identifiants.xlsx';
+        a.download = nomFichier;
         a.click();
         window.URL.revokeObjectURL(url);
-        this.snackBar.open('Export des identifiants lancé', 'Fermer', { duration: 2500 });
+        this.snackBar.open(`PDF des identifiants : ${this.structuresFiltrees.length} structure(s)`, 'Fermer', { duration: 2500 });
       },
-      error: (err) => this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' })
+      error: (err) => {
+        this.exportEnCours = false;
+        this.snackBar.open('Erreur : ' + (err.error?.message || err.message), 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
+      }
     });
   }
 

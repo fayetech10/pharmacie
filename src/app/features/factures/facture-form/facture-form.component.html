@@ -10,9 +10,14 @@
       <h1>{{ isEditMode ? 'Corriger la facture' : 'Facturation pharmacie' }}</h1>
     </div>
     <div class="page-head-actions" *ngIf="facture && factureLignesCount > 0">
-      <button type="button" class="btn btn-primary" (click)="envoyerFacture()">
+      <button type="button" class="btn btn-primary" *ngIf="finDuMois; else envoiPlusTard" (click)="envoyerFacture()">
         <mat-icon>send</mat-icon> Envoyer la facture
       </button>
+      <ng-template #envoiPlusTard>
+        <span class="inline-flex items-center gap-1 text-[13px] text-text-muted">
+          <mat-icon class="!w-4 !h-4 !text-base">schedule_send</mat-icon> {{ envoiPossibleLe }}
+        </span>
+      </ng-template>
     </div>
   </div>
 

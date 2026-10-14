@@ -10,7 +10,11 @@
     <div class="flex items-center gap-2 min-w-0">
       <app-status-badge *ngIf="!chargement && facture?.etape" famille="etape" [statut]="facture?.etape"></app-status-badge>
       <!-- Centres / EPS : c'est la structure qui transmet (pas de clôture automatique) — bouton mis en avant. -->
-      <button type="button" *ngIf="!chargement && facture && modifiable" (click)="envoyer()"
+      <span *ngIf="!chargement && facture && modifiable && !finDuMois"
+            class="hidden sm:inline-flex items-center gap-1 text-[12px] text-text-muted">
+        <mat-icon class="!w-4 !h-4 !text-base">schedule_send</mat-icon> {{ envoiPossibleLe }}
+      </span>
+      <button type="button" *ngIf="!chargement && facture && modifiable && finDuMois" (click)="envoyer()"
               class="btn btn-sm" [ngClass]="transmiseParLaStructure ? 'btn-primary' : 'btn-outline'"
               [disabled]="!peutEnvoyer || action === 'envoi'"
               [title]="aCompleter ? 'Complétez d\'abord les dossiers à compléter' : 'Envoyer au niveau supérieur'">

@@ -40,6 +40,7 @@ import { FormsModule } from '@angular/forms';
 import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
 import { apparenceStatut } from '../../../core/models/statuts';
 import { telecharger } from '../../espace-poste/poste-facturation';
+import { finDuMoisAtteinte } from '../../../core/utils/fin-de-mois';
 
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
@@ -242,6 +243,11 @@ export class FacturesStructureListComponent implements OnInit {
 
   cleGroupe(group: FactureGroup): string {
     return `${group.regime}|${group.mois}|${group.annee}`;
+  }
+
+  /** « Envoyer » n'apparaît qu'à la fin du mois du groupe. */
+  finDuMois(group: FactureGroup): boolean {
+    return finDuMoisAtteinte(group.mois, group.annee);
   }
 
   /** Regroupe les lignes d'une facture par patient, avec la liste de leurs prestations. */

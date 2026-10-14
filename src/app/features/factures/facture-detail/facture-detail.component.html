@@ -41,8 +41,12 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 print:hidden">
+            <span *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR') && !finDuMois"
+                  class="inline-flex items-center gap-1 text-[12px] text-text-muted">
+              <mat-icon class="!w-4 !h-4 !text-base">schedule_send</mat-icon> {{ envoiPossibleLe }}
+            </span>
             <button type="button" class="btn btn-primary btn-sm"
-                    *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR')"
+                    *ngIf="authService.isPharmacien() && (facture.statut === 'BROUILLON' || facture.statut === 'REJETEE_SR') && finDuMois"
                     (click)="envoyer()">
               <mat-icon>send</mat-icon> {{ facture.statut === 'REJETEE_SR' ? 'Renvoyer' : 'Envoyer' }}
             </button>

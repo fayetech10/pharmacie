@@ -145,6 +145,11 @@ export class ApiService {
     });
   }
 
+  /** Export généré à partir d'une sélection envoyée dans le corps (ex. ids filtrés à l'écran). Lecture seule : cache intact. */
+  postBlob(path: string, body: unknown): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}${path}`, body, { responseType: 'blob' });
+  }
+
   /** Vide tout le cache GET (après une modification, ou au changement de session). */
   invalidateCache(): void {
     this.cache.clear();
