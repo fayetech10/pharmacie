@@ -18,7 +18,7 @@ import { NativeDateAdapter, MatDateFormats } from '@angular/material/core';
 @Injectable()
 export class AdaptateurDateFr extends NativeDateAdapter {
 
-  /** `jj/mm/aaaa`, `jj-mm-aaaa` ou ISO `aaaa-mm-jj`. Toute autre forme est rejetée. */
+  /** `jj/mm/aaaa`, `jj-mm-aaaa`, `jjmmaaaa` ou ISO `aaaa-mm-jj`. Toute autre forme est rejetée. */
   override parse(valeur: any): Date | null {
     if (valeur == null || valeur === '') return null;
     if (valeur instanceof Date) return this.clampValide(valeur);
@@ -28,8 +28,12 @@ export class AdaptateurDateFr extends NativeDateAdapter {
     const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(texte);
     if (iso) return this.construire(+iso[1], +iso[2], +iso[3]);
 
-    const fr = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(texte);
+    const fr = /^(\d{1,2})[/\-.\s](\d{1,2})[/\-.\s](\d{4})$/.exec(texte);
     if (fr) return this.construire(+fr[3], +fr[2], +fr[1]);
+
+    // Saisie rapide sans séparateur : « 14102026 » = 14/10/2026.
+    const compact = /^(\d{2})(\d{2})(\d{4})$/.exec(texte);
+    if (compact) return this.construire(+compact[3], +compact[2], +compact[1]);
 
     // Volontairement null plutôt qu'un repli sur Date.parse : un repli ramènerait
     // l'interprétation américaine que cet adaptateur existe précisément pour écarter.

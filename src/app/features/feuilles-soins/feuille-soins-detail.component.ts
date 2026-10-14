@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { FeuilleSoins, StatutFeuilleSoins, STATUT_FEUILLE_LABELS } from '../../core/models/feuille-soins.model';
 import { Regime, REGIME_LABELS } from '../../core/models/bcsu.model';
+import { ChampDateComponent } from '../../shared/champ-date/champ-date.component';
 
 interface LignePriseEnCharge {
   /** « yyyy-MM-dd » (champ date natif). */
@@ -25,7 +26,7 @@ interface LignePriseEnCharge {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatIconModule, MatSnackBarModule,
-    StatusBadgeComponent, RegimeBadgeComponent
+    StatusBadgeComponent, RegimeBadgeComponent, ChampDateComponent
   ],
   templateUrl: './feuille-soins-detail.component.html',
   styleUrls: ['./feuille-soins-detail.component.css']

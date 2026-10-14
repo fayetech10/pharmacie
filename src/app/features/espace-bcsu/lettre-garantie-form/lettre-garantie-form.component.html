@@ -184,7 +184,6 @@
           <div class="grid gap-4" [ngClass]="photosIdentification.length > 1 ? 'sm:grid-cols-2' : 'sm:max-w-[360px]'">
             <app-photo-piece *ngFor="let cle of photosIdentification" [libelle]="libellesPhotos[cle]" [obligatoire]="true"
                              [galerie]="true" [tailleMaxKo]="100" aide="Le document entier, à plat, sans reflet."
-                             [cadrage]="cle === 'autreDocument' ? 'document' : 'carte'"
                              [image]="photos[cle]" (imageChange)="onPhoto(cle, $event)"
                              (fichierAccepte)="cle !== 'autreDocument' && lireCni($event)"></app-photo-piece>
           </div>
@@ -257,8 +256,8 @@
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
           Date de naissance
-          <input type="date" [(ngModel)]="beneficiaire.dateNaissance" [disabled]="!!carte?.dateNaissance"
-                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <app-champ-date [(ngModel)]="beneficiaire.dateNaissance" [disabled]="!!carte?.dateNaissance"
+                          vue="multi-year"></app-champ-date>
           <span *ngIf="ageCalcule" class="text-[12px] font-normal text-text-secondary">Âge : {{ ageCalcule }}</span>
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
@@ -426,7 +425,7 @@
             <li *ngFor="let cle of photosIdentification" class="flex items-center gap-2"
                 [ngClass]="photos[cle] ? 'text-success' : 'text-amber-700'">
               <mat-icon class="!text-lg !w-[18px] !h-[18px]">{{ photos[cle] ? 'check_circle' : 'photo_camera' }}</mat-icon>
-              {{ libellesPhotos[cle] }} : {{ photos[cle] ? 'photo conforme' : 'photo manquante' }}
+              {{ libellesPhotos[cle] }} : {{ photos[cle] ? 'photo prise' : 'photo manquante' }}
             </li>
           </ul>
         </ng-container>
@@ -436,7 +435,6 @@
              class="sm:max-w-[360px]">
           <app-photo-piece libelle="Carte d'assuré (recto)" [obligatoire]="verification === 'NON_VERIFIEE_PANNE'"
                            [galerie]="true" [tailleMaxKo]="100" aide="Elle tient lieu de preuve dans le dossier."
-                           cadrage="carte"
                            [image]="photos.carteAssureRecto" (imageChange)="onPhoto('carteAssureRecto', $event)"></app-photo-piece>
         </div>
 
@@ -474,8 +472,7 @@
         <div class="modal-body flex flex-col gap-4">
           <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:max-w-[240px]">
             Date de prise en charge
-            <input type="date" [(ngModel)]="datePriseEnCharge" [max]="aujourdhui" [disabled]="enregistrement"
-                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <app-champ-date [(ngModel)]="datePriseEnCharge" [max]="aujourdhui" [disabled]="enregistrement"></app-champ-date>
             <span *ngIf="erreurDatePriseEnCharge" class="text-[12px] font-normal text-warn">{{ erreurDatePriseEnCharge }}</span>
           </label>
           <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Motif">

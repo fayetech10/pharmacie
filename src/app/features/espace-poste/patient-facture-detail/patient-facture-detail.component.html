@@ -349,8 +349,7 @@
           </label>
           <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
             Date de prise en charge
-            <input type="date" [(ngModel)]="modeleLigne.datePriseEnCharge"
-                   class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+            <app-champ-date [(ngModel)]="modeleLigne.datePriseEnCharge"></app-champ-date>
           </label>
           <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
             Code acte <span class="font-normal text-text-muted">(facultatif)</span>

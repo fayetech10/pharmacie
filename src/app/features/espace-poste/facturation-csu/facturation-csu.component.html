@@ -17,7 +17,7 @@
 
     <!-- ═══════════ Bandeau : régime et règle de prise en charge ═══════════ -->
     <div *ngIf="regime && etape !== 'regime'"
-         class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 py-3 px-4 rounded-lg border border-border bg-white">
+         class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 py-3 px-4 rounded-xl border border-[var(--border-strong)] bg-white">
       <div class="flex items-center gap-2.5 min-w-0">
         <span class="w-9 h-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
           <mat-icon class="!text-xl !w-5 !h-5">{{ categorie?.icone || 'category' }}</mat-icon>
@@ -78,36 +78,48 @@
             <strong>Plan Sésame</strong>. Le patient est enregistré sur l'appareil et part tout seul au retour du réseau.
             Les régimes à carte exigent la vérification de la carte en ligne.</span>
         </div>
+        <!-- Une tuile par régime : filet net, choix signalé par la bordure émeraude et la pastille
+             à droite (radio), sans aplat chargé. -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Régime">
           <button type="button" *ngFor="let c of categories" role="radio" [attr.aria-checked]="categorie?.cle === c.cle"
                   (click)="choisirCategorie(c)" [attr.aria-disabled]="categorieIndisponible(c)"
-                  class="flex items-start gap-3 p-4 rounded-lg border text-left transition-colors cursor-pointer"
+                  class="group flex items-center gap-3.5 p-4 rounded-xl border bg-white text-left cursor-pointer
+                         transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-200"
                   [class.opacity-50]="categorieIndisponible(c)"
-                  [ngClass]="categorie?.cle === c.cle ? 'border-primary bg-primary-light ring-2 ring-primary-200'
-                    : 'border-border bg-white hover:border-primary-200'">
-            <span class="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
-                  [ngClass]="categorie?.cle === c.cle ? 'bg-primary text-white' : 'bg-field text-text-secondary'">
-              <mat-icon>{{ c.icone }}</mat-icon>
+                  [ngClass]="categorie?.cle === c.cle ? 'border-primary ring-1 ring-primary bg-primary-light'
+                    : 'border-[var(--border-strong)] hover:border-primary'">
+            <span class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                  [ngClass]="categorie?.cle === c.cle ? 'bg-primary text-white'
+                    : 'bg-field text-text-secondary group-hover:text-primary'">
+              <mat-icon class="!text-[22px] !w-[22px] !h-[22px]">{{ c.icone }}</mat-icon>
             </span>
-            <span class="min-w-0">
-              <span class="block text-[15px] font-bold text-text-primary">{{ c.libelle }}</span>
-              <span class="inline-block mt-2 px-2 py-0.5 rounded-full bg-white border border-border text-[11.5px] font-semibold text-text-secondary">
-                {{ c.regle }}
-              </span>
+            <span class="flex-1 min-w-0">
+              <span class="block text-[15px] font-semibold text-text-primary leading-snug">{{ c.libelle }}</span>
+              <span class="block mt-0.5 text-[12.5px] text-text-secondary">{{ c.regle }}</span>
               <span *ngIf="categorieIndisponible(c)"
-                    class="inline-flex items-center gap-1 mt-2 ml-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11.5px] font-semibold">
+                    class="inline-flex items-center gap-1 mt-1.5 text-[11.5px] font-semibold text-amber-800">
                 <mat-icon class="!text-sm !w-3.5 !h-3.5">cloud_off</mat-icon> Connexion requise
               </span>
+            </span>
+            <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+                  [ngClass]="categorie?.cle === c.cle ? 'border-primary bg-primary' : 'border-[var(--border-strong)] bg-white'"
+                  aria-hidden="true">
+              <mat-icon *ngIf="categorie?.cle === c.cle" class="!text-[14px] !w-3.5 !h-3.5 text-white">check</mat-icon>
             </span>
           </button>
         </div>
 
-        <!-- Régimes contributifs : sous-choix -->
-        <div #sousChoixRegime *ngIf="categorie && categorie.regimes.length > 1" class="mt-4 p-4 rounded-lg bg-field">
-          <div class="text-[13px] font-semibold text-text-primary mb-2">Quel régime contributif ?</div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" *ngFor="let r of categorie.regimes" class="btn" [disabled]="regimeIndisponible(r)"
-                    [ngClass]="regime === r ? 'btn-primary' : 'btn-outline'" (click)="choisirRegime(r)">
+        <!-- Régimes contributifs : sous-choix, en pastilles bordées -->
+        <div #sousChoixRegime *ngIf="categorie && categorie.regimes.length > 1" class="mt-5 pt-4 border-t border-border-light">
+          <div class="text-[12px] font-semibold uppercase tracking-wide text-text-muted mb-2.5">Quel régime contributif ?</div>
+          <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Régime contributif">
+            <button type="button" *ngFor="let r of categorie.regimes" role="radio" [attr.aria-checked]="regime === r"
+                    [disabled]="regimeIndisponible(r)" (click)="choisirRegime(r)"
+                    class="inline-flex items-center gap-1.5 h-10 px-4 rounded-full border text-[13.5px] font-semibold
+                           cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    [ngClass]="regime === r ? 'border-primary bg-primary text-white'
+                      : 'border-[var(--border-strong)] bg-white text-text-primary hover:border-primary hover:text-primary'">
+              <mat-icon *ngIf="regime === r" class="!text-base !w-4 !h-4">check</mat-icon>
               {{ libelleRegime(r) }}
             </button>
           </div>
@@ -206,12 +218,12 @@
         <div *ngIf="regime === Regime.SESAME" class="flex flex-col gap-5">
           <div class="grid gap-4 sm:grid-cols-2">
             <app-photo-piece libelle="CNI — recto" [obligatoire]="!surLettre" aide="La carte entière, sans reflet."
-                             cadrage="carte" [image]="pieces.CNI_RECTO || null"
+                             [image]="pieces.CNI_RECTO || null"
                              (imageChange)="onPiece('CNI_RECTO', $event)"
                              (fichierAccepte)="lireCni($event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
             <app-photo-piece libelle="CNI — verso" [obligatoire]="!surLettre" aide="La carte entière, sans reflet."
-                             cadrage="carte" [image]="pieces.CNI_VERSO || null"
+                             [image]="pieces.CNI_VERSO || null"
                              (imageChange)="onPiece('CNI_VERSO', $event)"
                              (fichierAccepte)="lireCni($event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
@@ -263,8 +275,7 @@
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
           Date de naissance
-          <input type="date" [(ngModel)]="patient.dateNaissance"
-                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <app-champ-date [(ngModel)]="patient.dateNaissance" vue="multi-year"></app-champ-date>
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
           Sexe
@@ -437,8 +448,7 @@
             </label>
             <label *ngIf="!carte?.dateNaissance" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
               Date de naissance
-              <input type="date" [(ngModel)]="patient.dateNaissance"
-                     class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+              <app-champ-date [(ngModel)]="patient.dateNaissance" vue="multi-year"></app-champ-date>
             </label>
             <label *ngIf="!carte?.numeroPiece" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
               N° de pièce d'identité
@@ -488,7 +498,7 @@
             <li *ngFor="let type of piecesRequises" class="flex items-center gap-2"
                 [ngClass]="pieces[type] ? 'text-success' : 'text-amber-700'">
               <mat-icon class="!text-lg !w-[18px] !h-[18px]">{{ pieces[type] ? 'check_circle' : 'photo_camera' }}</mat-icon>
-              {{ libellesPieces[type] }} : {{ pieces[type] ? 'photo conforme' : 'photo manquante — le dossier restera « à compléter »' }}
+              {{ libellesPieces[type] }} : {{ pieces[type] ? 'photo prise' : 'photo manquante — le dossier restera « à compléter »' }}
             </li>
           </ul>
         </ng-container>
@@ -496,7 +506,7 @@
         <!-- Photo de la carte d'assuré : facultative. Prise par l'appareil photo uniquement
              (le composant n'ouvre pas la galerie : galerie non activée). -->
         <div *ngIf="carteRequise" class="max-w-[360px]">
-          <app-photo-piece libelle="Carte d'assuré" [obligatoire]="false" cadrage="carte"
+          <app-photo-piece libelle="Carte d'assuré" [obligatoire]="false"
                            aide="Prenez la carte en photo, bien à plat et sans reflet."
                            [image]="pieces.CARTE_ASSURE || null"
                            (imageChange)="onPiece('CARTE_ASSURE', $event)"
@@ -538,8 +548,7 @@
         <div class="grid gap-3 sm:grid-cols-[200px_1fr]">
           <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
             Date des soins
-            <input type="date" [(ngModel)]="dateSoins"
-                   class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-normal text-text-primary">
+            <app-champ-date [(ngModel)]="dateSoins" [grand]="true"></app-champ-date>
           </label>
           <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
             Diagnostic / motif <span class="sr-only">(facultatif)</span>

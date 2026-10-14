@@ -31,8 +31,7 @@
       </label>
       <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
         Date de prise en charge
-        <input type="date" name="date" [(ngModel)]="date" [max]="aujourdhui" [disabled]="envoi"
-               class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+        <app-champ-date name="date" [(ngModel)]="date" [max]="aujourdhui" [disabled]="envoi"></app-champ-date>
       </label>
       <button type="submit" class="btn btn-primary h-11 self-end" [disabled]="!pretARechercher || rechercheEnCours || envoi">
         <mat-spinner *ngIf="rechercheEnCours" diameter="18" class="!m-0"></mat-spinner>
@@ -85,7 +84,7 @@
       <div class="grid gap-4 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         <div class="relative">
           <app-photo-piece [libelle]="'Ticket n°' + (v.tickets + 1)" [obligatoire]="v.tickets === 0" [galerie]="true"
-                           aide="Le ticket entier, à plat, lisible." cadrage="document" [desactive]="envoi"
+                           aide="Le ticket entier, à plat, lisible." [desactive]="envoi"
                            [image]="photo" (imageChange)="onPhoto($event)"></app-photo-piece>
           <div *ngIf="envoi" class="flex items-center gap-2 mt-2 text-[13px] text-text-secondary">
             <mat-spinner diameter="18"></mat-spinner> Enregistrement du ticket…

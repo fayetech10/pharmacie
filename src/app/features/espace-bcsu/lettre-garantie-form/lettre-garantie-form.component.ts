@@ -24,6 +24,7 @@ import { PhotoPieceComponent } from '../../../shared/photo-piece/photo-piece.com
 import {
   CATEGORIES_BCSU, CategoriePoste, categorieDe, controleAge, estContributif, exigeCartePoste, libelleRegimePoste
 } from '../../espace-poste/poste-facturation';
+import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
 type Etape = 'regime' | 'identification' | 'eligibilite' | 'termine';
 type PhotoKey = 'cniRecto' | 'cniVerso' | 'carteAssureRecto' | 'autreDocument';
@@ -75,7 +76,7 @@ const LIBELLES_PHOTOS: Record<PhotoKey, string> = {
 @Component({
   selector: 'app-lettre-garantie-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, MatProgressSpinnerModule,
+  imports: [ChampDateComponent, CommonModule, FormsModule, RouterModule, MatIconModule, MatProgressSpinnerModule,
     MatSnackBarModule, MatDialogModule, PhotoPieceComponent],
   templateUrl: './lettre-garantie-form.component.html'
 })

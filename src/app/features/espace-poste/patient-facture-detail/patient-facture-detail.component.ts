@@ -20,6 +20,7 @@ import {
   ContexteFacture, EchelonPointage, LigneIndexee, MOIS, VisiteFacture, cheminFacture, clePatientVisite, dateFr,
   estContributif, estForfaitaire, estModifiable, exigeCartePoste, libelleRegimePoste, visiteACompleter, visitesFacture
 } from '../poste-facturation';
+import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
 /** Une information affichée, seulement si elle est renseignée. */
 interface Info {
@@ -40,7 +41,7 @@ interface Info {
 @Component({
   selector: 'app-patient-facture-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, MatDialogModule, MatSnackBarModule,
+  imports: [ChampDateComponent, CommonModule, FormsModule, RouterModule, MatIconModule, MatDialogModule, MatSnackBarModule,
     MatProgressSpinnerModule, StatusBadgeComponent, DossierPatientContenuComponent, FacturationCsuPosteComponent],
   templateUrl: './patient-facture-detail.component.html'
 })

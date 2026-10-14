@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { analyserPhoto, MESSAGE_PHOTO_NON_CONFORME } from '../../core/utils/photo-qualite';
 import {
   canvasVersBlob, chargerImageReduite, compresserCanvas, libererCanvas
 } from '../../core/utils/image-compression';
@@ -21,15 +20,15 @@ function verifierCamera() {
 }
 
 /**
- * Prise de photo d'une pièce justificative, avec contrôle de qualité avant acceptation.
+ * Prise de photo d'une pièce justificative : la photo prise est acceptée telle quelle.
+ *
+ * Aucun contrôle de qualité ni de format (demande du 14/10/2026) : ni analyse de netteté,
+ * de luminosité ou de cadrage, ni refus. Seule une image illisible par le navigateur est
+ * signalée. La photo est compressée pour le réseau mobile.
  *
  * La photo se prend dans la page (caméra intégrée) : avec l'appareil photo du téléphone, la
  * page passait en arrière-plan et le téléphone la rechargeait souvent au retour, saisie
  * perdue. Il reste le repli quand la caméra intégrée est indisponible (page hors HTTPS).
- *
- * Une photo refusée n'est jamais transmise : l'agent voit pourquoi et la reprend. Pour une
- * pièce facultative (ticket de caisse), le refus comme l'échec technique restent sans
- * conséquence sur la facturation — le composant le dit.
  */
 @Component({
   selector: 'app-photo-piece',
@@ -44,7 +43,7 @@ function verifierCamera() {
           <span *ngIf="!obligatoire" class="font-normal text-text-secondary">(facultatif)</span>
         </span>
         <span *ngIf="image" class="inline-flex items-center gap-1 text-[11.5px] font-bold text-success">
-          <mat-icon class="!text-sm !w-3.5 !h-3.5">verified</mat-icon> Conforme
+          <mat-icon class="!text-sm !w-3.5 !h-3.5">check_circle</mat-icon> Photo prise
         </span>
       </div>
 
@@ -68,7 +67,7 @@ function verifierCamera() {
 
       <div *ngIf="analyse" class="flex items-center justify-center gap-2 min-h-[120px] rounded-lg border border-border bg-field">
         <mat-spinner diameter="22"></mat-spinner>
-        <span class="text-[13px] text-text-secondary">Contrôle de la qualité…</span>
+        <span class="text-[13px] text-text-secondary">Préparation de la photo…</span>
       </div>
 
       <div *ngIf="image && !analyse" class="relative overflow-hidden rounded-lg border border-border bg-white">
@@ -91,7 +90,6 @@ function verifierCamera() {
         <mat-icon class="shrink-0 !text-lg !w-[18px] !h-[18px]">error_outline</mat-icon>
         <div>
           <strong class="block">{{ erreur }}</strong>
-          <span *ngFor="let motif of motifs" class="block">· {{ motif }}</span>
           <span *ngIf="!obligatoire" class="block mt-1 text-text-secondary">
             Cette pièce est facultative : vous pouvez poursuivre sans elle.
           </span>
@@ -105,12 +103,10 @@ export class PhotoPieceComponent {
   @Input() obligatoire = false;
   @Input() aide = '';
   @Input() desactive = false;
-  /** Propose aussi l'import d'une photo déjà prise (galerie, fichier) — contrôlée de même. */
+  /** Propose aussi l'import d'une photo déjà prise (galerie, fichier). */
   @Input() galerie = false;
   /** Poids visé après compression (Ko) : assez pour relire une CNI. */
   @Input() tailleMaxKo = 200;
-  /** « carte » : la caméra propose un cadre au format carte (CNI) et recadre la photo dessus. */
-  @Input() cadrage: 'carte' | 'document' = 'document';
   /** Photo déjà acceptée (data URL), ou null. */
   @Input() image: string | null = null;
   /** Photo acceptée (data URL compressée) ou null quand elle est retirée. */
@@ -126,7 +122,6 @@ export class PhotoPieceComponent {
   analyse = false;
   agrandi = false;
   erreur = '';
-  motifs: string[] = [];
 
   constructor(private dialog: MatDialog) {
     verifierCamera();
@@ -143,7 +138,7 @@ export class PhotoPieceComponent {
       return;
     }
     this.dialog.open<CameraDialogComponent, CameraDialogData, Blob>(CameraDialogComponent, {
-      data: { libelle: this.libelle, cadrage: this.cadrage, avantAppareilNatif: () => this.avantSortie() },
+      data: { libelle: this.libelle, avantAppareilNatif: () => this.avantSortie() },
       panelClass: 'dialog-camera',
       width: '100vw', maxWidth: '100vw', height: '100%', maxHeight: '100%',
       autoFocus: false
@@ -165,13 +160,12 @@ export class PhotoPieceComponent {
   }
 
   /**
-   * Contrôle puis acceptation d'une photo. Elle n'est décodée qu'une fois, dans un canvas
-   * réduit d'où l'on tire le contrôle, la pièce compressée et l'image à lire : décoder trois
-   * fois une photo de 12 Mpx suffisait à saturer la mémoire d'un téléphone modeste.
+   * Acceptation d'une photo, sans contrôle. Elle n'est décodée qu'une fois, dans un canvas
+   * réduit d'où l'on tire la pièce compressée et l'image à lire : décoder plusieurs fois une
+   * photo de 12 Mpx suffisait à saturer la mémoire d'un téléphone modeste.
    */
   private async traiter(fichier: Blob) {
     this.erreur = '';
-    this.motifs = [];
     if (fichier.type && !fichier.type.startsWith('image/')) {
       this.erreur = 'Le fichier choisi n\'est pas une image.';
       return;
@@ -180,12 +174,6 @@ export class PhotoPieceComponent {
     let travail: HTMLCanvasElement | null = null;
     try {
       travail = await chargerImageReduite(fichier, 2400);
-      const resultat = analyserPhoto(travail);
-      if (!resultat.conforme) {
-        this.erreur = MESSAGE_PHOTO_NON_CONFORME;
-        this.motifs = resultat.motifs;
-        return;
-      }
       // ~200 Ko par défaut : assez pour relire une CNI, assez peu pour un réseau mobile.
       const image = compresserCanvas(travail, this.tailleMaxKo * 1024);
       const aLire = this.fichierAccepte.observed ? await canvasVersBlob(travail, 'image/jpeg', 0.95) : null;
@@ -204,7 +192,6 @@ export class PhotoPieceComponent {
   retirer() {
     this.image = null;
     this.erreur = '';
-    this.motifs = [];
     this.imageChange.emit(null);
   }
 }

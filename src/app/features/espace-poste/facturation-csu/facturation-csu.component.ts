@@ -32,6 +32,7 @@ import {
   CATEGORIES_POSTE, CategoriePoste, FORFAIT_0_5_ANS, MOIS, categorieDe, controleAge, estContributif,
   estForfaitaire, exigeCartePoste, libelleRegimePoste, nombrePatients, normaliser, piecesExigees, tauxSencsuPoste
 } from '../poste-facturation';
+import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
 type Etape = 'regime' | 'identification' | 'eligibilite' | 'medical' | 'termine';
 
@@ -132,7 +133,7 @@ function proposes(choix: string[], saisie: string | null | undefined): string[] 
 @Component({
   selector: 'app-facturation-csu-poste',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatSnackBarModule, MatAutocompleteModule,
+  imports: [ChampDateComponent, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, MatAutocompleteModule,
     MatProgressSpinnerModule, MatDialogModule, PhotoPieceComponent],
   templateUrl: './facturation-csu.component.html'
 })

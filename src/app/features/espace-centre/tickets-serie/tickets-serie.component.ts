@@ -13,6 +13,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { PhotoPieceComponent } from '../../../shared/photo-piece/photo-piece.component';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { libelleRegimePoste } from '../../espace-poste/poste-facturation';
+import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
 /** Date du jour au format des champs date natifs (« aaaa-mm-jj »), en heure locale. */
 function aujourdhuiIso(): string {
@@ -40,7 +41,7 @@ interface TicketAjoute {
 @Component({
   selector: 'app-tickets-serie',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule,
+  imports: [ChampDateComponent, CommonModule, FormsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule,
     PhotoPieceComponent, StatusBadgeComponent],
   templateUrl: './tickets-serie.component.html'
 })
