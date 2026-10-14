@@ -1132,6 +1132,13 @@ app-tuile-activite {
   from { opacity: 0; transform: translateY(10px) scale(0.985); }
 }
 
+/* Écran resservi depuis le cache (voir AttentePageComponent) : il s'affiche d'un coup. Rejouer
+   les entrées à chaque visite donnait l'impression qu'il rechargeait ses données. Les réponses
+   à une action (étapes, modales, succès) gardent leur animation. */
+.sans-entree :is(.fade-in, :is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite) {
+  animation: none;
+}
+
 /* Parcours en étapes (facturation, lettre de garantie) : chaque étape glisse en place. */
 .anim-etape { animation: entreeEtape 320ms var(--ease-out) backwards; }
 @keyframes entreeEtape {

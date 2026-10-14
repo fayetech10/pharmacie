@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { environment } from '../../../environments/environment';
 import { District, ResultatImport, StructureConsolidee } from '../models/referentiel.model';
@@ -76,6 +76,9 @@ export class DistrictService {
   importer(fichier: File): Observable<ResultatImport> {
     const formulaire = new FormData();
     formulaire.append('fichier', fichier);
-    return this.http.post<ResultatImport>(`${environment.apiUrl}/districts/import`, formulaire);
+    // Hors ApiService (multipart) : vider le cache nous-mêmes, sinon la liste rechargée
+    // juste après l'import resservirait l'ancienne version.
+    return this.http.post<ResultatImport>(`${environment.apiUrl}/districts/import`, formulaire)
+      .pipe(tap(() => this.api.invalidateCache()));
   }
 }

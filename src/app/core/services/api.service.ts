@@ -5,6 +5,19 @@ import { Observable, of, concat, EMPTY, asapScheduler } from 'rxjs';
 import { tap, catchError, distinctUntilChanged, observeOn, shareReplay, finalize } from 'rxjs/operators';
 import { ARRIERE_PLAN, SKIP_LOADING } from '../interceptors/loading.interceptor';
 
+/**
+ * Durée pendant laquelle une réponse est resservie telle quelle, SANS requête : passer d'un
+ * écran à l'autre puis revenir n'interroge pas le serveur à chaque fois. Au-delà, la donnée
+ * en cache s'affiche quand même tout de suite et se rafraîchit en silence.
+ */
+const FRAICHEUR_MS = 60_000;
+
+interface EntreeCache {
+  donnees: unknown;
+  /** Date de réception (ms) : sert à juger la fraîcheur. */
+  recueLe: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -14,12 +27,13 @@ export class ApiService {
   /**
    * Cache mémoire des réponses GET (clé = URL complète).
    *
-   * Stratégie « stale-while-revalidate » : quand une donnée est déjà en cache, on
-   * la renvoie immédiatement (navigation fluide, sans rechargement visible) puis on
-   * rafraîchit en arrière-plan, en silence. Le cache est vidé dès qu'une
-   * modification (POST/PUT/DELETE) a lieu, ainsi qu'au login/logout.
+   * - Reçue il y a moins de `FRAICHEUR_MS` : resservie sans requête.
+   * - Plus ancienne : « stale-while-revalidate » — renvoyée immédiatement (navigation
+   *   fluide, sans rechargement visible) puis rafraîchie en arrière-plan, en silence.
+   * Le cache est vidé dès qu'une modification (POST/PUT/DELETE) a lieu, ainsi qu'au
+   * login/logout : on ne revoit jamais une donnée rendue périmée par sa propre action.
    */
-  private cache = new Map<string, unknown>();
+  private cache = new Map<string, EntreeCache>();
 
   /**
    * Requêtes GET en cours, par URL. Si plusieurs composants demandent la même donnée
@@ -33,7 +47,7 @@ export class ApiService {
 
   /**
    * GET mis en cache pour tout le projet (médicaments, factures, etc.).
-   * Stratégie « stale-while-revalidate » : la donnée déjà en cache est renvoyée
+   * Donnée récente (< `FRAICHEUR_MS`) : renvoyée sans requête. Plus ancienne : renvoyée
    * immédiatement puis rafraîchie en arrière-plan. Les requêtes simultanées sur la
    * même URL sont mutualisées (une seule requête réseau).
    * @param opts.skipLoading masque la barre de chargement globale (ex: autocomplétion).
@@ -47,11 +61,17 @@ export class ApiService {
     if (opts?.params) {
       url += (url.includes('?') ? '&' : '?') + opts.params.toString();
     }
-    const hasCache = this.cache.has(url);
+    const entree = this.cache.get(url);
+    const hasCache = entree !== undefined;
 
     // Cache-first : on renvoie le cache tel quel, aucune requête de revalidation.
     if (hasCache && opts?.cacheFirst) {
-      return of(this.cache.get(url) as T);
+      return of(entree.donnees as T);
+    }
+
+    // Donnée récente : resservie sans requête. Émission asynchrone, comme plus bas.
+    if (hasCache && Date.now() - entree.recueLe < FRAICHEUR_MS) {
+      return of(entree.donnees as T).pipe(observeOn(asapScheduler));
     }
 
     const fresh$ = this.fetch<T>(url, hasCache, opts?.skipLoading === true, opts?.arrierePlan === true);
@@ -60,7 +80,7 @@ export class ApiService {
       return fresh$;
     }
 
-    const cached = this.cache.get(url) as T;
+    const cached = entree.donnees as T;
     return concat(
       of(cached),
       // Échec de la revalidation : on conserve la donnée en cache (aucune erreur visible).
@@ -88,7 +108,7 @@ export class ApiService {
     const request$ = this.http
       .get<T>(url, { context })
       .pipe(
-        tap(data => this.cache.set(url, data)),
+        tap(data => this.cache.set(url, { donnees: data, recueLe: Date.now() })),
         finalize(() => this.inFlight.delete(url)),
         shareReplay(1)
       );

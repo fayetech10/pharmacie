@@ -32,6 +32,10 @@ function cleDePage(url: string): string {
  * Ne retiennent PAS l'affichage : les données déjà en cache (affichées tout de suite), les
  * requêtes marquées `ARRIERE_PLAN` (badges, aperçus qui ont leur propre indicateur,
  * synchronisation hors ligne) et celles lancées après l'affichage (recherche, filtres, envoi).
+ *
+ * Page qui ne lance aucune requête au premier rendu (retour sur un écran déjà visité, données
+ * en cache) : affichée d'un coup, sans fondu ni animations d'entrée (`.sans-entree`) — les
+ * rejouer donnait l'impression qu'elle rechargeait ses données à chaque visite.
  */
 @Component({
   selector: 'app-attente-page',
@@ -59,7 +63,8 @@ function cleDePage(url: string): string {
     </div>
 
     <div [class.attente-page-masquee]="!prete"
-         [class.attente-page-revelee]="prete"
+         [class.attente-page-revelee]="prete && !immediate"
+         [class.sans-entree]="immediate"
          [attr.inert]="prete ? null : ''"
          [attr.aria-busy]="prete ? null : 'true'">
       <ng-content></ng-content>
@@ -81,6 +86,8 @@ export class AttentePageComponent {
   prete = false;
   /** Attente prolongée : le squelette s'affiche. */
   squelette = false;
+  /** Rien à attendre au premier rendu : page affichée d'un coup, sans animations d'entrée. */
+  immediate = false;
   readonly lignes = [92, 78, 85, 64, 88];
 
   private clePage = '';
@@ -112,19 +119,26 @@ export class AttentePageComponent {
     this.attente?.unsubscribe();
     this.prete = false;
     this.squelette = false;
+    this.immediate = false;
 
     const calme$ = this.loading.requetesPage$.pipe(
       debounceTime(SILENCE_MS),
       filter(enCours => enCours === 0)
     );
     this.attente = new Subscription();
+    // Tâche suivante : la page vient d'être rendue (ngOnInit joué) et ses requêtes, s'il y en
+    // a, sont déjà comptées. Aucune → tout est là (cache) ou rien n'est à charger.
+    this.attente.add(timer(0).subscribe(() => {
+      if (this.loading.requetesPage$.value === 0) this.reveler(true);
+    }));
     this.attente.add(timer(DELAI_SQUELETTE_MS).subscribe(() => (this.squelette = true)));
-    this.attente.add(race(calme$, timer(ATTENTE_MAX_MS)).pipe(take(1)).subscribe(() => this.reveler()));
+    this.attente.add(race(calme$, timer(ATTENTE_MAX_MS)).pipe(take(1)).subscribe(() => this.reveler(false)));
   }
 
-  private reveler() {
+  private reveler(immediate: boolean) {
     this.attente?.unsubscribe();
     this.prete = true;
     this.squelette = false;
+    this.immediate = immediate;
   }
 }

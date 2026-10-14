@@ -8,6 +8,13 @@ import { TEINTES, Teinte } from '../teintes';
 /** Durée du décompte d'un chiffre qui change. */
 const DUREE_DECOMPTE_MS = 700;
 
+/**
+ * Dernier nombre affiché par indicateur (écran + libellé), pour toute la session : revenir sur
+ * un écran ne refait pas défiler ses chiffres depuis 0 — on croirait qu'il recharge tout. Seul
+ * un chiffre qui a réellement changé depuis la dernière visite défile, depuis l'ancienne valeur.
+ */
+const derniersNombres = new Map<string, number>();
+
 /** Nombre entier lu dans une valeur affichée (« 12 345 F », 42…), avec ce qui l'entoure. */
 interface ValeurChiffree {
   nombre: number;
@@ -80,8 +87,10 @@ export class IndicateurComponent implements OnChanges, OnInit, OnDestroy {
     cancelAnimationFrame(this.image);
     const texte = this.valeur == null ? '' : String(this.valeur);
     const cible = lireValeur(this.valeur);
-    const depart = this.dernierNombre ?? 0;
+    const cle = `${location.pathname}|${this.libelle}`;
+    const depart = this.dernierNombre ?? derniersNombres.get(cle) ?? 0;
     this.dernierNombre = cible?.nombre ?? null;
+    if (cible) derniersNombres.set(cle, cible.nombre);
 
     if (!cible || cible.nombre === depart || animationsReduites()) {
       element.textContent = texte;

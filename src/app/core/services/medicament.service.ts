@@ -32,9 +32,13 @@ export class MedicamentService {
     return this.api.get<Medicament[]>(this.path, { skipLoading: true, cacheFirst: true });
   }
 
-  /** Vide le cache des médicaments (à appeler après un import ou une modification). */
+  /**
+   * À appeler après un import ou une modification. Vide TOUT le cache, comme les écritures
+   * passant par ApiService : factures et dossiers affichent aussi des médicaments, et une
+   * donnée récente est resservie sans être revérifiée.
+   */
   invalidateCache(): void {
-    this.api.invalidate(this.path);
+    this.api.invalidateCache();
   }
 
   /**

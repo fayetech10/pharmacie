@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, shareReplay } from 'rxjs';
+import { Observable, shareReplay, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { environment } from '../../../environments/environment';
 import { PagePrestations, Prestation, ResultatImport, ServiceMedical } from '../models/referentiel.model';
@@ -90,6 +90,7 @@ export class ReferentielService {
     const formulaire = new FormData();
     formulaire.append('fichier', fichier);
     return this.http.post<ResultatImport>(
-      `${environment.apiUrl}/referentiel/prestations/import`, formulaire);
+      `${environment.apiUrl}/referentiel/prestations/import`, formulaire)
+      .pipe(tap(() => this.api.invalidateCache()));
   }
 }
