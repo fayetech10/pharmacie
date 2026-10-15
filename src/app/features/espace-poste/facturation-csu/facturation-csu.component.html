@@ -550,22 +550,6 @@
             Date des soins
             <app-champ-date [(ngModel)]="dateSoins" [grand]="true"></app-champ-date>
           </label>
-          <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
-            Diagnostic / motif <span class="sr-only">(facultatif)</span>
-            <span class="relative">
-              <input #champDiagnostic [(ngModel)]="diagnostic" [matAutocomplete]="choixDiagnostic" #declDiagnostic="matAutocompleteTrigger"
-                     placeholder="Facultatif — choisir ou saisir"
-                     class="h-12 w-full pl-3 pr-11 rounded-lg border border-border bg-field-bg text-[16px] font-normal text-text-primary">
-              <button type="button" tabindex="-1" aria-label="Afficher la liste des diagnostics"
-                      (mousedown)="$event.preventDefault()" (click)="champDiagnostic.focus(); declDiagnostic.openPanel()"
-                      class="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 inline-flex items-center justify-center rounded-md border-0 bg-transparent text-text-secondary cursor-pointer">
-                <mat-icon>expand_more</mat-icon>
-              </button>
-            </span>
-            <mat-autocomplete #choixDiagnostic="matAutocomplete" class="liste-lisible">
-              <mat-option *ngFor="let d of diagnosticsProposes" [value]="d">{{ d }}</mat-option>
-            </mat-autocomplete>
-          </label>
         </div>
 
         <!-- En-têtes (desktop) -->

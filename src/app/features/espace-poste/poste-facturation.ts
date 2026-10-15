@@ -254,7 +254,6 @@ export interface VisiteFacture {
   feuilleSoins?: { id: string; numero: string };
   verificationCarte?: string;
   service?: string;
-  diagnostique?: string;
   numeroRegistre?: string;
   ircIra?: string;
   indicationCbt?: string;
@@ -308,7 +307,6 @@ export function visitesFacture(facture: FactureStructure | null | undefined): Vi
       numeroCni: dossier?.numeroCni || ligne?.patientNumeroCni,
       lettreNumero: dossier?.lettreGarantieNumero || ligne?.lettreGarantieNumero,
       verificationCarte: dossier?.verificationCarte,
-      diagnostique: dossier?.diagnostic,
       numeroRegistre: dossier?.numeroRegistre,
       documents: [], lignes: [], total: 0, sencsu: 0, patient: 0, date: '', rang: 1, nombre: 1
     };
@@ -327,7 +325,6 @@ export function visitesFacture(facture: FactureStructure | null | undefined): Vi
     v.patientId ||= ligne.patientId;
     v.verificationCarte ||= ligne.verificationCarte;
     v.service ||= ligne.service;
-    v.diagnostique ||= ligne.diagnostique;
     v.numeroRegistre ||= ligne.numeroRegistre;
     v.ircIra ||= ligne.ircIra;
     v.indicationCbt ||= ligne.indicationCbt;

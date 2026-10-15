@@ -43,23 +43,6 @@ export const TYPES_PRESTATION_POSTE = ['ICP', 'Consultation', 'Dépositaire'] as
 /** Catégorie du référentiel qui range un tarif dans le dépôt du poste. */
 export const CATEGORIE_DEPOSITAIRE = 'Dépositaire';
 
-export const LISTE_DIAGNOSTIQUES = [
-  'Paludisme',
-  'Infection respiratoire aiguë (IRA)',
-  'Hypertension artérielle (HTA)',
-  'Diabète',
-  'Gastro-entérite / Diarrhée',
-  'Anémie',
-  'Malnutrition',
-  'Grossesse (Suivi prénatal)',
-  'Appendicite',
-  'Fièvre typhoïde',
-  'Infection urinaire',
-  'Dermatose',
-  'Traumatisme / Fracture',
-  'Insuffisance rénale'
-];
-
 
 /**
  * Champs affichés/exigés selon la catégorie (classeur « GESTION DES FACTURES CS_EPS » :
@@ -72,8 +55,6 @@ interface CategorieChamps {
   cniSeparee?: boolean;
   /** Colonne « Service » présente (Classique, 0-5 ans, BSF, CEC, Sésame, Ndongo Dara). */
   service?: boolean;
-  /** Colonne « Diagnostic / Motif de consultation » (0-5 ans). */
-  diagnostic?: boolean;
   /** Colonne « N° dans le registre » (0-5 ans). */
   numeroRegistre?: boolean;
   /** Colonne « IRC/IRA » (dialyses). */
@@ -129,7 +110,7 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   [Regime.ZERO_CINQ_ANS]: {
     ...CHAMPS_COMMUNS,
     matriculeLabel: 'N° Extrait / N° Carnet / N° PEV',
-    service: true, diagnostic: true, numeroRegistre: true, forfait: true, codeActe: true,
+    service: true, numeroRegistre: true, forfait: true, codeActe: true,
     sexeOptions: ['M', 'F']
   },
   [Regime.CESARIENNE]: {
@@ -194,7 +175,6 @@ export class FactureStructureFormComponent implements OnInit {
     return (this.isPosteDeSante && REGIME_LABELS_POSTE[regime]) || REGIME_LABELS[regime];
   }
 
-  readonly listDiagnostiques = LISTE_DIAGNOSTIQUES;
   readonly listPrestations = LISTE_PRESTATIONS;
   readonly typesPrestationPoste = TYPES_PRESTATION_POSTE;
 
@@ -216,7 +196,6 @@ export class FactureStructureFormComponent implements OnInit {
   /** Feuille de soins déposée par le patient, rattachée à la facture (circuit feuille de soins). */
   feuilleSoins: FeuilleSoins | null = null;
 
-  factureForm!: FormGroup;
   patientForm!: FormGroup;
   prestationForm!: FormGroup;
   lignes: LigneFactureStructure[] = [];
@@ -241,11 +220,7 @@ export class FactureStructureFormComponent implements OnInit {
     private dialog: MatDialog
   ) {
     this.isPosteDeSante = this.authService.isPosteDeSante();
-    
-    this.factureForm = this.fb.group({
-      diagnostique: ['']
-    });
-    
+
     this.patientForm = this.fb.group({
       nom: ['', this.isPosteDeSante ? Validators.required : null],
       prenom: ['', this.isPosteDeSante ? Validators.required : null],
@@ -294,7 +269,7 @@ export class FactureStructureFormComponent implements OnInit {
 
   /**
    * Rattache la feuille de soins déposée par le patient : retrouve sa lettre de
-   * garantie puis reprend le diagnostic et les prestations de la prise en charge.
+   * garantie puis reprend les prestations de la prise en charge.
    */
   private appliquerFeuilleSoins(feuille: FeuilleSoins) {
     this.feuilleSoins = feuille;
@@ -737,7 +712,6 @@ export class FactureStructureFormComponent implements OnInit {
       regime: this.regime ?? undefined,
       lettreGarantieNumero: this.lettre?.numero,
       feuilleSoinsId: this.feuilleSoins?.id,
-      diagnostique: this.factureForm.value.diagnostique || undefined,
       lignes: this.lignes,
       ticketCaisse: this.ticketCaisse || undefined,
       documentsComplementaires: this.documents.length ? this.documents : undefined

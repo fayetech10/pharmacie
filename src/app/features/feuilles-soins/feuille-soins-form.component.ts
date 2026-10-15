@@ -17,7 +17,7 @@ import { FeuilleSoinsRequest } from '../../core/models/feuille-soins.model';
 /**
  * Délivrance d'une feuille de soins par l'agent bureau (BCSU) :
  * recherche du patient, informations du formulaire papier (régime, code assuré,
- * sexe, âge, diagnostic, accompagnant), rattachement facultatif à une lettre de
+ * sexe, âge, accompagnant), rattachement facultatif à une lettre de
  * garantie. La prise en charge sera remplie par la structure sanitaire.
  */
 @Component({

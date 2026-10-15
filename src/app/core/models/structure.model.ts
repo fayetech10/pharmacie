@@ -83,7 +83,6 @@ export interface LigneFactureStructure {
    */
   origine?: string;
   service?: string;
-  diagnostique?: string;
   designation: string;
   codeActe?: string;
   datePriseEnCharge: string;
@@ -170,7 +169,6 @@ export interface DossierPatient {
   typeAdhesion?: string;
   /** Saisie d'un centre sur lettre de garantie : la lettre identifie le patient. */
   lettreGarantieNumero?: string;
-  diagnostic?: string;
   pieces: TypePiece[];
   /** Pointé « vérifié » par le centre de rattachement pendant son contrôle (date, agent). */
   verifieCentreLe?: string | null;
@@ -354,7 +352,6 @@ export interface FactureStructureRequest {
   /** Feuille de soins déposée par le patient à rattacher à cette facture (fin du circuit). */
   feuilleSoinsId?: string;
   service?: string;
-  diagnostique?: string;
   /** Identité complémentaire du bénéficiaire (classeur CS_EPS). */
   patientDateNaissance?: string;
   patientSexe?: string;

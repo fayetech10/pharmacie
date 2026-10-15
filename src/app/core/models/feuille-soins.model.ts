@@ -44,7 +44,6 @@ export interface FeuilleSoins {
   codeAssure?: string;
   sexe?: string;
   age?: number;
-  diagnostic?: string;
   accompagnantPrenomNom?: string;
   regime: Regime;
   prestations: PrestationSoins[];
@@ -71,12 +70,10 @@ export interface FeuilleSoinsRequest {
   codeAssure?: string;
   sexe?: string;
   age?: number;
-  diagnostic?: string;
   accompagnantPrenomNom?: string;
 }
 
 /** Remplissage de la prise en charge par la structure sanitaire. */
 export interface PriseEnChargeFeuilleRequest {
-  diagnostic?: string;
   prestations: { date: string; designation: string; montant: number }[];
 }

@@ -47,7 +47,6 @@ export class FeuilleSoinsDetailComponent implements OnInit {
   /** Structure sanitaire : saisie de la prise en charge. */
   editionPriseEnCharge = false;
   lignes: LignePriseEnCharge[] = [];
-  diagnosticStructure = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -148,7 +147,6 @@ export class FeuilleSoinsDetailComponent implements OnInit {
   // ----- Prise en charge (structure sanitaire) -----
   ouvrirPriseEnCharge() {
     if (!this.feuille) return;
-    this.diagnosticStructure = this.feuille.diagnostic || '';
     this.lignes = this.feuille.prestations.length
       ? this.feuille.prestations.map(p => ({ date: (p.date || '').substring(0, 10), designation: p.designation, montant: p.montant }))
       : [this.nouvelleLigne()];
@@ -184,7 +182,6 @@ export class FeuilleSoinsDetailComponent implements OnInit {
     if (!this.feuille || !this.lignesValides || this.busy) return;
     this.busy = true;
     this.feuilleService.remplirPriseEnCharge(this.feuille.id, {
-      diagnostic: this.diagnosticStructure || undefined,
       prestations: this.lignes.map(l => ({ date: versIsoDate(l.date)!, designation: l.designation.trim(), montant: Number(l.montant) || 0 }))
     }).subscribe({
       next: (feuille) => {

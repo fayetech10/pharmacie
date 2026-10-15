@@ -194,30 +194,6 @@
 
     </ng-container>
 
-    <!-- Informations médicales -->
-    <div class="card">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>medical_information</mat-icon></div>
-          <div>
-            <h2>Informations médicales</h2>
-          </div>
-        </div>
-      </div>
-      <div class="section-body">
-        <form [formGroup]="factureForm">
-          <mat-form-field appearance="outline" class="block w-full">
-            <mat-label>Diagnostique</mat-label>
-            <mat-select formControlName="diagnostique" placeholder="Sélectionner le diagnostique…">
-              <mat-option *ngFor="let option of listDiagnostiques" [value]="option">
-                {{ option }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </form>
-      </div>
-    </div>
-
     <!-- Prestations : la structure saisit la prestation, le prix et les détails d'hospitalisation. -->
     <div class="card">
       <div class="section-header">

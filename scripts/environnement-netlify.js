@@ -1,5 +1,6 @@
 // Écrit src/environments/environment.netlify.ts à partir de la variable API_URL,
-// renseignée dans Netlify (Site configuration → Environment variables).
+// renseignée dans Netlify (Site configuration → Environment variables) ou dans
+// Vercel (Settings → Environment Variables) : les deux hébergeurs lancent ce build.
 //
 // Le tableau de bord est servi par Netlify et l'API par le VPS : deux origines
 // distinctes, l'URL de l'API doit donc être ABSOLUE. Elle n'est pas écrite en dur
@@ -19,8 +20,9 @@ function echec(message) {
 
 const brute = (process.env.API_URL || '').trim().replace(/\/+$/, '');
 if (!brute) {
-  echec('API_URL absente. Dans Netlify : Site configuration → Environment variables → '
-    + 'API_URL = https://api.votre-domaine (adresse HTTPS du VPS).');
+  echec('API_URL absente. Dans Netlify (Site configuration → Environment variables) ou '
+    + 'Vercel (Settings → Environment Variables) : API_URL = https://api.votre-domaine '
+    + '(adresse HTTPS du VPS).');
 }
 
 let adresse;

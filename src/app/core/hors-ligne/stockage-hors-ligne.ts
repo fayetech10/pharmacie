@@ -52,6 +52,11 @@ export function listerTout<T>(magasin: string): Promise<T[]> {
   return transaction<T[]>(magasin, 'readonly', store => store.getAll() as IDBRequest<T[]>);
 }
 
+/** Élément du magasin sous cette clé, ou undefined s'il n'y est plus. */
+export function lire<T>(magasin: string, cle: string): Promise<T | undefined> {
+  return transaction<T | undefined>(magasin, 'readonly', store => store.get(cle) as IDBRequest<T | undefined>);
+}
+
 export function enregistrer<T>(magasin: string, valeur: T): Promise<unknown> {
   return transaction(magasin, 'readwrite', store => store.put(valeur));
 }

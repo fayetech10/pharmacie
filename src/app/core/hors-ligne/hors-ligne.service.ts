@@ -11,7 +11,7 @@ import { StructureService } from '../services/structure.service';
 import { HorsCsuService } from '../services/hors-csu.service';
 import { prechargerOcr } from '../utils/document-ocr';
 import { ReseauService, estErreurReseau } from './reseau.service';
-import { MAGASIN_SAISIES, enregistrer, listerTout, memoriser, relire, supprimer } from './stockage-hors-ligne';
+import { MAGASIN_SAISIES, enregistrer, lire, listerTout, memoriser, relire, supprimer } from './stockage-hors-ligne';
 
 /** Régimes facturables sans réseau : aucune carte à vérifier en ligne. */
 export const REGIMES_HORS_LIGNE: Regime[] = [Regime.ZERO_CINQ_ANS, Regime.SESAME];
@@ -21,6 +21,8 @@ const MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juille
 
 /** Nouvelle tentative d'envoi tant qu'il reste des saisies et que l'application est ouverte. */
 const INTERVALLE_SYNCHRO_MS = 60_000;
+/** Verrou de l'appareil (Web Locks) : une seule synchronisation à la fois, tous onglets confondus. */
+const VERROU_SYNCHRO = 'csu-synchro-hors-ligne';
 /** Préchargement du moteur de lecture des CNI : refait au plus une fois par mois. */
 const CLE_OCR_PRET = 'csu_ocr_hors_ligne';
 const VALIDITE_OCR_MS = 30 * 24 * 60 * 60 * 1000;
@@ -39,7 +41,8 @@ export interface SaisieEnAttente {
   reporteDepuis?: string;
 }
 
-type IssueEnvoi = 'ENVOYE' | 'ERREUR' | 'ARRET';
+/** PLUS_TARD : rien n'a été écrit (facture modifiée au même instant), la saisie reste en file. */
+type IssueEnvoi = 'ENVOYE' | 'ERREUR' | 'PLUS_TARD' | 'ARRET';
 
 /**
  * Mode hors ligne des postes et centres de santé.
@@ -52,6 +55,10 @@ type IssueEnvoi = 'ENVOYE' | 'ERREUR' | 'ARRET';
  * <p>Une saisie n'est envoyée qu'avec la session de l'agent qui l'a faite. Sa clé unique
  * empêche le serveur de la compter deux fois si une réponse s'est perdue. Si le mois des
  * soins a été clôturé entre-temps, la saisie est reportée sur la facture du mois en cours.</p>
+ *
+ * <p>Les envois ne se chevauchent jamais : ces déclencheurs arrivent souvent ensemble (trois
+ * d'un coup au démarrage), et chacun envoyait alors les mêmes saisies — le même patient
+ * enregistré trois fois au retour du réseau (14/10/2026).</p>
  */
 @Injectable({ providedIn: 'root' })
 export class HorsLigneService implements OnDestroy {
@@ -62,6 +69,9 @@ export class HorsLigneService implements OnDestroy {
   readonly saisiesEnvoyees$ = new Subject<number>();
 
   private actif = false;
+  /** Envoi en cours dans cet onglet, et appel reçu pendant qu'il tournait. */
+  private envoiEnCours = false;
+  private relancer = false;
   private abonnements = new Subscription();
   private minuterie?: ReturnType<typeof setInterval>;
   private readonly surRetourPremierPlan = () => {
@@ -148,40 +158,29 @@ export class HorsLigneService implements OnDestroy {
     await this.synchroniser();
   }
 
-  /** Envoie les saisies en attente de l'agent connecté, si le serveur est joignable. */
+  /**
+   * Envoie les saisies en attente de l'agent connecté, si le serveur est joignable.
+   *
+   * <p>Un seul envoi à la fois. Le drapeau est posé avant toute attente : posé après la
+   * lecture de la file (asynchrone), il laissait passer les appels simultanés, qui
+   * envoyaient chacun les mêmes saisies. Un appel reçu pendant l'envoi en relance un autre
+   * derrière lui (une saisie a pu revenir en file entre-temps) au lieu de doubler celui-ci.</p>
+   */
   async synchroniser(): Promise<void> {
-    if (!this.actif || this.synchronisation$.value) return;
-    const utilisateur = this.auth.getCurrentUser();
-    if (!utilisateur) return;
-    const aEnvoyer = (await this.lister()).filter(s => s.etat === 'EN_ATTENTE');
-    if (!aEnvoyer.length) return;
-    if (this.auth.isSessionExpired()) {
-      // Session ouverte hors ligne, jeton périmé : rien ne part sans reconnexion.
-      if (this.reseau.enLigne) this.auth.signalerReconnexionRequise();
+    if (!this.actif) return;
+    if (this.envoiEnCours) {
+      this.relancer = true;
       return;
     }
-
-    this.synchronisation$.next(true);
-    let envoyes = 0;
-    let erreurs = 0;
-    const reports = new Set<string>();
+    this.envoiEnCours = true;
     try {
-      for (const saisie of aEnvoyer.sort((a, b) => a.creeLe.localeCompare(b.creeLe))) {
-        const issue = await this.envoyer(saisie);
-        if (issue === 'ARRET') break;
-        if (issue === 'ERREUR') {
-          erreurs++;
-          continue;
-        }
-        envoyes++;
-        if (saisie.reporteDepuis) reports.add(saisie.reporteDepuis);
-      }
+      do {
+        this.relancer = false;
+        await this.envoyerSurLAppareil();
+      } while (this.relancer && this.actif);
     } finally {
-      this.synchronisation$.next(false);
-      await this.rafraichir();
+      this.envoiEnCours = false;
     }
-    if (envoyes) this.saisiesEnvoyees$.next(envoyes);
-    this.annoncer(envoyes, erreurs, reports);
   }
 
   // ─────────────── données relues hors ligne ───────────────
@@ -231,6 +230,62 @@ export class HorsLigneService implements OnDestroy {
 
   // ─────────────── interne ───────────────
 
+  /**
+   * Un envoi pour tout l'appareil : deux onglets ouverts (ou l'application installée et le
+   * navigateur) partagent la même file, et enverraient sinon chacun les mêmes saisies. Celui
+   * qui trouve le verrou pris laisse faire l'autre ; ce qui resterait partira au passage
+   * suivant. Sans Web Locks (Safari < 15.4, page en http), seul le drapeau de l'onglet joue.
+   */
+  private async envoyerSurLAppareil(): Promise<void> {
+    const verrous = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    if (!verrous) {
+      await this.envoyerFile();
+      return;
+    }
+    await verrous.request(VERROU_SYNCHRO, { ifAvailable: true }, async verrou => {
+      if (verrou) await this.envoyerFile();
+    });
+  }
+
+  private async envoyerFile(): Promise<void> {
+    if (!this.actif || !this.auth.getCurrentUser()) return;
+    const aEnvoyer = (await this.lister()).filter(s => s.etat === 'EN_ATTENTE');
+    if (!aEnvoyer.length) return;
+    if (this.auth.isSessionExpired()) {
+      // Session ouverte hors ligne, jeton périmé : rien ne part sans reconnexion.
+      if (this.reseau.enLigne) this.auth.signalerReconnexionRequise();
+      return;
+    }
+
+    this.synchronisation$.next(true);
+    let envoyes = 0;
+    let erreurs = 0;
+    const reports = new Set<string>();
+    try {
+      for (const { id } of aEnvoyer.sort((a, b) => a.creeLe.localeCompare(b.creeLe))) {
+        // Relue juste avant l'envoi : supprimée, refusée ou déjà partie entre-temps, elle ne
+        // repart pas.
+        const saisie = await lire<SaisieEnAttente>(MAGASIN_SAISIES, id).catch(() => undefined);
+        if (saisie?.etat !== 'EN_ATTENTE') continue;
+        const issue = await this.envoyer(saisie);
+        if (issue === 'ARRET') break;
+        if (issue === 'PLUS_TARD') continue;
+        if (issue === 'ERREUR') {
+          erreurs++;
+          continue;
+        }
+        envoyes++;
+        if (saisie.reporteDepuis) reports.add(saisie.reporteDepuis);
+      }
+    } finally {
+      this.synchronisation$.next(false);
+      await this.rafraichir();
+    }
+    if (envoyes) this.saisiesEnvoyees$.next(envoyes);
+    this.annoncer(envoyes, erreurs, reports);
+  }
+
+  /** Envoie une saisie, toujours avec sa clé d'origine (le serveur reconnaît un renvoi). */
   private async envoyer(saisie: SaisieEnAttente): Promise<IssueEnvoi> {
     try {
       await firstValueFrom(this.structureService.createFacture(saisie.requete, { silencieux: true }));
@@ -240,6 +295,11 @@ export class HorsLigneService implements OnDestroy {
       const statut = (err as HttpErrorResponse)?.status;
       if (estErreurReseau(statut) || statut === 401 || (statut === 403 && this.auth.isSessionExpired())) {
         return 'ARRET'; // réseau retombé, ou reconnexion à faire : on reprendra plus tard
+      }
+      if (statut === 409 && (err as HttpErrorResponse)?.error?.code === 'CONFLIT_VERSION') {
+        // Facture modifiée au même instant par un autre (le BCSU d'un centre) : rien n'a été
+        // écrit. Ce n'est ni un refus ni un mois clôturé — nouvel essai au prochain passage.
+        return 'PLUS_TARD';
       }
       const maintenant = new Date();
       const mois = maintenant.getMonth() + 1;

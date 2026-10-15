@@ -233,7 +233,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       { libelle: 'N° de registre', valeur: v.numeroRegistre || '', mono: true },
       { libelle: 'Lettre de garantie', valeur: v.lettreNumero || '', mono: true },
       { libelle: 'Service', valeur: v.service || '' },
-      { libelle: 'Diagnostic', valeur: v.diagnostique || '' },
       { libelle: 'Dialyse (IRC / IRA)', valeur: v.ircIra || '' },
       { libelle: 'Indication', valeur: v.indicationCbt || '' }
     ]);

@@ -91,7 +91,6 @@ interface Brouillon {
   etape: Etape;
   regime: Regime;
   patient: PatientSaisi;
-  diagnostic: string;
   dateSoins: string;
   codeImmatriculation: string;
   carte: CarteCsu | null;
@@ -99,11 +98,9 @@ interface Brouillon {
   identiteVerrouillee: boolean;
   pieces: Partial<Record<TypePiece, string | null>>;
   lignes: LigneSaisie[];
+  /** Clé anti-doublon de la saisie : reprise telle quelle, pour qu'un renvoi soit reconnu. */
+  cleSaisie?: string;
 }
-
-const DIAGNOSTICS = ['Paludisme', 'Infection respiratoire aiguë (IRA)', 'Hypertension artérielle (HTA)', 'Diabète',
-  'Gastro-entérite / Diarrhée', 'Anémie', 'Malnutrition', 'Grossesse (suivi prénatal)', 'Fièvre typhoïde',
-  'Infection urinaire', 'Dermatose', 'Traumatisme / Plaie', 'Soins préventifs / Vaccination'];
 
 /**
  * Choix d'une liste déroulante : tous si la saisie est vide ou correspond déjà à un choix
@@ -160,7 +157,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   readonly libellesPieces = LIBELLES_PIECES;
   /** Patients distincts de la facture (un patient revenu dans le mois compte une fois). */
   readonly nombrePatients = nombrePatients;
-  readonly diagnostics = DIAGNOSTICS;
   readonly forfait = FORFAIT_0_5_ANS;
   readonly moisLibelles = MOIS;
   readonly etapes: { cle: Etape; libelle: string }[] = [
@@ -191,7 +187,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   chargement = false;
 
   patient: PatientSaisi = { ...PATIENT_VIDE };
-  diagnostic = '';
   dateSoins = this.aujourdhui();
 
   // ----- Contrôle d'éligibilité (régimes à carte) -----
@@ -224,6 +219,12 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   enregistrement = false;
   resultat: FactureStructure | null = null;
   private dossierExistant: DossierPatient | null = null;
+  /**
+   * Clé anti-doublon du patient en cours de saisie : la même pour tous ses envois (nouvel
+   * appui après une erreur, page rechargée pendant l'envoi puis brouillon repris), nouvelle
+   * pour le patient suivant. Le serveur ne compte qu'une fois une clé déjà reçue.
+   */
+  private cleSaisie = '';
 
   constructor(
     private structureService: StructureService,
@@ -433,7 +434,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
 
   private reinitialiserPatient() {
     this.patient = { ...PATIENT_VIDE };
-    this.diagnostic = '';
     this.codeImmatriculation = '';
     this.carte = null;
     this.refus = '';
@@ -446,7 +446,14 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.lignes = [this.ligneVide()];
     this.resultat = null;
     this.saisieHorsLigne = null;
+    this.cleSaisie = '';
     this.oublierBrouillon();
+  }
+
+  /** Clé de la saisie en cours, créée au premier besoin (brouillon ou enregistrement). */
+  private cleDeLaSaisie(): string {
+    if (!this.cleSaisie) this.cleSaisie = this.horsLigneService.nouvelleCle();
+    return this.cleSaisie;
   }
 
   // ══════════════════════════ étape 1 : identification ══════════════════════════
@@ -569,9 +576,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     if (this.modeModification || !this.regime) return;
     const brouillon: Brouillon = {
       enregistreLe: Date.now(), mois: this.mois, annee: this.annee, etape: this.etape, regime: this.regime,
-      patient: this.patient, diagnostic: this.diagnostic, dateSoins: this.dateSoins,
+      patient: this.patient, dateSoins: this.dateSoins,
       codeImmatriculation: this.codeImmatriculation, carte: this.carte, verification: this.verification,
-      identiteVerrouillee: this.identiteVerrouillee, pieces: this.pieces, lignes: this.lignes
+      identiteVerrouillee: this.identiteVerrouillee, pieces: this.pieces, lignes: this.lignes,
+      cleSaisie: this.cleDeLaSaisie()
     };
     try {
       sessionStorage.setItem(CLE_BROUILLON, JSON.stringify(brouillon));
@@ -601,7 +609,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.regime = brouillon.regime;
     this.categorie = categorieDe(brouillon.regime) || null;
     this.patient = { ...PATIENT_VIDE, ...brouillon.patient };
-    this.diagnostic = brouillon.diagnostic;
     this.dateSoins = brouillon.dateSoins;
     this.codeImmatriculation = brouillon.codeImmatriculation;
     this.carte = brouillon.carte;
@@ -609,6 +616,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.identiteVerrouillee = brouillon.identiteVerrouillee;
     this.pieces = brouillon.pieces || {};
     this.lignes = brouillon.lignes?.length ? brouillon.lignes : [];
+    this.cleSaisie = brouillon.cleSaisie || '';
     this.assurerLigneVide();
     // Un brouillon d'avant la suppression du « Récapitulatif » peut encore porter cette étape :
     // il reprend aux informations médicales, d'où l'on enregistre désormais.
@@ -685,11 +693,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
    */
   servicesProposes(ligne: LigneSaisie): string[] {
     return proposes(this.services, ligne.service);
-  }
-
-  /** Diagnostics de la liste déroulante, même règle que les services. */
-  get diagnosticsProposes(): string[] {
-    return proposes(this.diagnostics, this.diagnostic);
   }
 
   /** Service saisi qui ne figure pas encore dans la liste : il y entrera avec sa prestation. */
@@ -846,6 +849,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
    * compléter » (§9) — accessible dès que l'identité est contrôlée.
    */
   enregistrer(partiel: boolean) {
+    // Double appui (ou confirmation arrivée pendant un envoi) : un seul enregistrement à la fois.
+    if (this.enregistrement) return;
     const erreur = this.erreurIdentite() || this.erreurPrestations();
     if (erreur) {
       this.snackBar.open(erreur, 'Fermer', { duration: 4500 });
@@ -855,9 +860,9 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       this.snackBar.open('Pas de connexion : un dossier déjà enregistré se modifie en ligne.', 'Fermer', { duration: 5000 });
       return;
     }
-    // Clé unique de cette saisie : si elle doit être renvoyée (réseau coupé), le serveur ne la
-    // comptera qu'une fois.
-    const cle = this.horsLigneService.nouvelleCle();
+    // Clé de ce patient, la même à chaque envoi : renvoyé (réseau coupé, nouvel appui, page
+    // rechargée), il n'est compté qu'une fois par le serveur.
+    const cle = this.cleDeLaSaisie();
     if (!this.modeModification && (this.horsLigne || this.auth.isSessionExpired())) {
       // Pas de réseau (ou session hors ligne à renouveler) : enregistrée sur l'appareil.
       void this.enregistrerHorsLigne({ ...this.requete(partiel), cleSynchronisation: cle }, partiel);
@@ -1029,7 +1034,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       patientNumeroCni: p.numeroCni.trim() || undefined,
       numeroRegistre: p.numeroRegistre.trim() || undefined,
       verificationCarte: this.carteRequise ? (this.verification ?? undefined) : undefined,
-      diagnostique: this.diagnostic.trim() || undefined,
       lignes,
       pieces: this.piecesAEnvoyer(),
       partiel
@@ -1105,7 +1109,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
           numeroRegistre: dossier.numeroRegistre || ''
         };
         this.codeImmatriculation = dossier.matricule || '';
-        this.diagnostic = dossier.diagnostic || '';
         this.identiteVerrouillee = dossier.identiteVerrouillee;
         this.verification = dossier.verificationCarte === 'VERIFIEE' || dossier.verificationCarte === 'NON_VERIFIEE_PANNE'
           ? dossier.verificationCarte : null;
