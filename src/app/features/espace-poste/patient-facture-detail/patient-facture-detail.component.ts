@@ -132,7 +132,8 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
     const v = this.visites.find(x => x.cle === this.cleVisite) || null;
     this.visite = v;
     const cle = v ? clePatientVisite(v) : null;
-    this.visitesDuPatient = cle ? this.visites.filter(x => clePatientVisite(x) === cle) : [];
+    // « Visites du mois » dans l'ordre chronologique (la facture, elle, met les dernières en tête).
+    this.visitesDuPatient = cle ? this.visites.filter(x => clePatientVisite(x) === cle).sort((a, b) => a.rang - b.rang) : [];
     this.dossierAffiche = !v ? null : v.dossier || {
       id: v.lignes[0]?.dossierId || v.cle, statut: 'COMPLET', identiteVerrouillee: false, pieces: [],
       prenom: v.prenom, nom: v.nom, matricule: v.matricule, lettreGarantieNumero: v.lettreNumero

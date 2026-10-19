@@ -28,7 +28,7 @@ export const PIECES_PHARMACIE: { cle: 'ticketCaisse' | 'bonCommande' | 'ordonnan
   { cle: 'ordonnance', libelle: 'Ordonnance', icone: 'clinical_notes' }
 ];
 
-/** Les patients d'une facture, dans l'ordre de saisie (un patient = matricule + nom). */
+/** Les patients d'une facture, les derniers saisis en tête (un patient = matricule + nom). */
 export function patientsFacturePharmacie(facture: Facture | null | undefined): PatientPharmacie[] {
   const parCle = new Map<string, PatientPharmacie>();
   (facture?.lignes || []).forEach((ligne, index) => {
@@ -48,7 +48,7 @@ export function patientsFacturePharmacie(facture: Facture | null | undefined): P
     p.lignes.push({ ligne, index });
     p.total += ligne.montant || 0;
   });
-  return Array.from(parCle.values());
+  return Array.from(parCle.values()).reverse();
 }
 
 export function nombrePieces(p: PatientPharmacie): number {

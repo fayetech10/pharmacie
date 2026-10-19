@@ -284,8 +284,8 @@ export function visiteACompleter(v: VisiteFacture): boolean {
 
 /**
  * Les visites d'une facture, une par dossier (ou, sans dossier, par lettre de garantie puis
- * par nom), dans l'ordre des dates puis de saisie. Un patient revenu dans le mois a plusieurs
- * visites ; chacune note son rang parmi les siennes.
+ * par nom), les derniers patients enregistrés en tête. Un patient revenu dans le mois a
+ * plusieurs visites ; chacune note son rang chronologique parmi les siennes.
  */
 export function visitesFacture(facture: FactureStructure | null | undefined): VisiteFacture[] {
   if (!facture) return [];
@@ -367,7 +367,12 @@ export function visitesFacture(facture: FactureStructure | null | undefined): Vi
     parPatient.set(cle, [...(parPatient.get(cle) || []), v]);
   });
   parPatient.forEach(siennes => siennes.forEach((v, i) => { v.rang = i + 1; v.nombre = siennes.length; }));
-  return visites;
+
+  // Affichage : les derniers enregistrés en tête (demande du 19/10/2026), le rang ci-dessus
+  // restant chronologique. Sans dossier, la date de la visite tient lieu d'enregistrement ;
+  // à égalité (import en une fois), la visite la plus récente d'abord.
+  const enregistrement = (v: VisiteFacture) => v.dossier?.createdAt || v.date;
+  return visites.reverse().sort((a, b) => enregistrement(b).localeCompare(enregistrement(a)));
 }
 
 /**
