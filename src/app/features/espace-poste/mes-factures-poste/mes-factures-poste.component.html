@@ -90,18 +90,9 @@
     </div>
   </div>
 
+  <!-- Plus d'en-tête « Régime — année · patients · montants » au-dessus des mois
+       (demande du 19/10/2026) : chaque mois porte déjà ses chiffres. -->
   <div *ngIf="!chargement" class="card table-card">
-    <div class="section-header">
-      <div class="section-title-group">
-        <div class="section-icon"><mat-icon>calendar_month</mat-icon></div>
-        <div>
-          <h2>{{ libelleRegime(regime) }} — {{ annee }}</h2>
-          <p *ngIf="aucuneFacture">Aucune facture</p>
-          <p *ngIf="!aucuneFacture">{{ totalAnnee.patients }} patient(s) · {{ totalAnnee.montant | number:'1.0-0':'fr' }} F facturés ·
-             {{ totalAnnee.sencsu | number:'1.0-0':'fr' }} F à la charge de la SEN-CSU</p>
-        </div>
-      </div>
-    </div>
 
     <!-- Table desktop -->
     <div class="overflow-x-auto desktop-only">

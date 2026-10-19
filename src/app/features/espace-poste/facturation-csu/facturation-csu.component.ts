@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { forkJoin, Observable, of } from 'rxjs';
@@ -122,7 +121,7 @@ function prestationsDuPoste(tarifs: TarifHorsCsu[] | null | undefined): TarifHor
 @Component({
   selector: 'app-facturation-csu-poste',
   standalone: true,
-  imports: [ChampDateComponent, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, MatAutocompleteModule,
+  imports: [ChampDateComponent, CommonModule, FormsModule, MatIconModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDialogModule, PhotoPieceComponent],
   templateUrl: './facturation-csu.component.html'
 })
@@ -648,14 +647,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     return !this.forfaitaire && !!tarif && ligne.prixUnitaire != null && prix >= 0 && prix !== tarif.prix;
   }
 
-  /** Prestations proposées pour une ligne, tous services confondus, filtrées par la saisie. */
-  suggestions(ligne: LigneSaisie): TarifHorsCsu[] {
-    const terme = normaliser(ligne.designation);
-    return this.catalogue
-      .filter(t => !terme || normaliser(t.designation).includes(terme))
-      .slice(0, 30);
-  }
-
   ligneVide(): LigneSaisie {
     return { service: '', designation: '', quantite: 1, prixUnitaire: null, nouvelle: false };
   }
@@ -679,17 +670,21 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.assurerUneLigne();
   }
 
-  choisirPrestation(ligne: LigneSaisie, tarif: TarifHorsCsu) {
-    ligne.designation = tarif.designation;
+  /**
+   * Prestation tapée sous le nom d'une prestation déjà enregistrée par le poste : la ligne s'y
+   * rattache (pas de doublon dans ses prestations) et en reprend le prix si l'agent n'en a
+   * pas encore saisi. Le texte tapé reste tel quel — plus de liste déroulante (19/10/2026).
+   */
+  private rattacherAuTarif(ligne: LigneSaisie, tarif: TarifHorsCsu) {
     ligne.tarifId = tarif.id;
     ligne.prestationId = undefined;
     ligne.nouvelle = false;
-    ligne.prixUnitaire = tarif.prix;
+    if (ligne.prixUnitaire == null || String(ligne.prixUnitaire) === '') ligne.prixUnitaire = tarif.prix;
     // La prestation apporte son service (il n'est plus saisi dans le formulaire).
     ligne.service = tarif.categorie || '';
   }
 
-  /** Saisie libre : une désignation inconnue du paramétrage devient une nouvelle prestation. */
+  /** Saisie libre : une désignation inconnue du poste devient une nouvelle prestation, enregistrée d'office. */
   onDesignation(ligne: LigneSaisie) {
     const terme = normaliser(ligne.designation);
     if (!terme) {
@@ -701,7 +696,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       && (!ligne.service || normaliser(t.categorie) === normaliser(ligne.service)))
       || this.catalogue.find(t => normaliser(t.designation) === terme);
     if (connu) {
-      if (ligne.tarifId !== connu.id) this.choisirPrestation(ligne, connu);
+      if (ligne.tarifId !== connu.id) this.rattacherAuTarif(ligne, connu);
       return;
     }
     if (ligne.origine && normaliser(ligne.origine.designation) === terme) {

@@ -299,25 +299,13 @@
 
           <div *ngFor="let ligne of lignes; let i = index; trackBy: trackIndex"
                class="grid grid-cols-6 sm:grid-cols-12 gap-2 items-start p-3 sm:p-1 rounded-lg border sm:border-0 border-border bg-white">
-            <!-- Plus de colonne « Service » ni de liste prédéfinie (19/10/2026) : l'agent tape la
-                 prestation ; celles qu'il a déjà saisies lui sont proposées, avec leur prix. -->
+            <!-- Ni colonne « Service » ni liste déroulante (19/10/2026) : l'agent tape la
+                 prestation à la main, et son prix ; elle est enregistrée d'office pour le poste. -->
             <label class="col-span-6 flex flex-col gap-1" [ngClass]="forfaitaire ? 'sm:col-span-10' : 'sm:col-span-7'">
               <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Prestation</span>
-              <input [(ngModel)]="ligne.designation" [matAutocomplete]="choix" placeholder="Saisir la prestation"
+              <input [(ngModel)]="ligne.designation" placeholder="Saisir la prestation" autocomplete="off"
                      (ngModelChange)="onDesignation(ligne)"
                      class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] text-text-primary">
-              <mat-autocomplete #choix="matAutocomplete" class="liste-lisible">
-                <mat-option *ngFor="let t of suggestions(ligne)" [value]="t.designation"
-                            (onSelectionChange)="$event.isUserInput && choisirPrestation(ligne, t)">
-                  <span class="flex justify-between gap-3 w-full">
-                    <span class="truncate">{{ t.designation }}</span>
-                    <span class="shrink-0 text-text-secondary text-[14px]">
-                      <ng-container *ngIf="!forfaitaire">{{ t.prix | number:'1.0-0':'fr' }} F</ng-container>
-                      <ng-container *ngIf="forfaitaire">{{ t.categorie }}</ng-container>
-                    </span>
-                  </span>
-                </mat-option>
-              </mat-autocomplete>
             </label>
             <label class="col-span-2 sm:col-span-1 flex flex-col gap-1">
               <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Quantité</span>

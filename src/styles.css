@@ -65,20 +65,26 @@
   --gold-hover: var(--primary-hover);
   --gold-light: var(--primary-light);
 
-  /* Surfaces & texte — neutres purs (le fond ne tire plus vers le bleu) */
-  --bg: #FAFAFA;
+  /* Surfaces & texte. Fond de page vert d'eau (19/10/2026, application plus colorée) :
+     les cartes blanches cernées de vert foncé s'en détachent nettement. */
+  --bg: #EEF6F1;
   --card-bg: #FFFFFF;
   --text-primary: #101828;
   --text-secondary: #475467;
   --text-muted: #98A2B3;
-  --border: #E4E7EC;
+  /* Filet des encadrés (cartes, boîtes, tableaux, fenêtres) et des onglets : vert foncé
+     (demande du 19/10/2026, pour mieux distinguer les blocs ; avant : gris #E4E7EC). Les
+     séparateurs internes (--border-light) restent clairs pour ne pas alourdir les listes. */
+  --border-cadre: #065F46;  /* emerald-800 */
+  --border: var(--border-cadre);
   --border-light: #F2F4F7;
   /* Filet appuyé : sépare l'en-tête d'un tableau de son corps sans aplat de fond. */
-  --border-strong: #D0D5DD;
-  --field-bg: #F9FAFB;
-  /* Fond « rempli » des champs de formulaire (design sans bordure, tout le projet). */
-  --field-fill: #EFF1F4;
-  --field-fill-hover: #E7EBEF;
+  --border-strong: var(--border-cadre);
+  --field-bg: #F2F8F4;
+  /* Fond « rempli » des champs de formulaire (design sans bordure, tout le projet),
+     légèrement teinté de vert depuis le 19/10/2026. */
+  --field-fill: #E8F1EB;
+  --field-fill-hover: #DEEBE2;
 
   /* Élévation — volontairement quasi nulle.
      Une carte posée dans la page se délimite au filet ; seuls les éléments qui
@@ -157,7 +163,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
-  font-size: 14px;
+  /* 15px depuis le 19/10/2026 (14px avant) : textes agrandis d'un cran, voir « LISIBILITÉ ». */
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -295,12 +302,12 @@ input[readonly], textarea[readonly] {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 2px;
-  color: var(--text-primary);
+  color: var(--primary-dark);
 }
 .page-head p {
   color: var(--text-secondary);
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 .page-head-actions {
   display: flex;
@@ -311,8 +318,8 @@ input[readonly], textarea[readonly] {
 
 /* Compat : anciens en-têtes encore utilisés */
 .page-header { margin-bottom: var(--sp-6); }
-.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--text-primary); }
-.page-header p { color: var(--text-secondary); margin: 0; font-size: 14px; }
+.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--primary-dark); }
+.page-header p { color: var(--text-secondary); margin: 0; font-size: 15px; }
 
 /* ============================================================
    CARTES / SECTIONS
@@ -327,29 +334,42 @@ input[readonly], textarea[readonly] {
   margin-bottom: var(--sp-5);
 }
 
-/* En-tête de section : pas d'aplat de fond, un simple filet de séparation. */
+/* Onglets segmentés (`.onglets` : app-onglets, espaces poste et centre) : la barre et
+   l'onglet actif cernés de vert foncé (19/10/2026). Les onglets inactifs gardent un filet
+   transparent de même épaisseur : passer de l'un à l'autre ne décale rien. */
+.onglets { border: 1px solid var(--border-cadre); }
+.onglets > [role="tab"] { border: 1px solid transparent !important; }
+/* Onglet actif en aplat vert, texte blanc (19/10/2026) : on voit d'un coup d'œil où l'on est. */
+.onglets > [role="tab"][aria-selected="true"] {
+  border-color: var(--border-cadre) !important;
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+/* En-tête de section teinté (19/10/2026, application plus colorée) : un fond vert très
+   clair et un titre vert foncé annoncent chaque carte ; le filet vert pâle le sépare du corps. */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
   padding: var(--sp-4) var(--sp-5);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--primary-100);
   flex-wrap: wrap;
-  background: transparent;
+  background: linear-gradient(90deg, var(--primary-light) 0%, #F7FCF9 100%);
 }
 .section-title-group { display: flex; align-items: center; gap: var(--sp-3); }
-.section-title-group h2 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0; }
-.section-title-group p { margin: 2px 0 0; font-size: 13px; color: var(--text-secondary); }
-/* Icône de section : discrète et neutre. La pastille émeraude était un accent
-   décoratif répété sur chaque carte — l'émeraude est réservée aux actions. */
+.section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--primary-dark); margin: 0; }
+.section-title-group p { margin: 2px 0 0; font-size: 14px; color: var(--text-secondary); }
+/* Icône de section : pastille verte (19/10/2026 ; elle était neutre et transparente). */
 .section-icon {
-  color: var(--text-secondary);
-  background: transparent;
+  color: var(--primary);
+  background: var(--primary-100);
   border-radius: var(--radius-sm);
   font-size: 20px;
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -364,7 +384,7 @@ input[readonly], textarea[readonly] {
    ============================================================ */
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 border border-transparent text-sm font-semibold cursor-pointer whitespace-nowrap no-underline;
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 border border-transparent text-[15px] font-semibold cursor-pointer whitespace-nowrap no-underline;
     border-radius: var(--radius-sm);
     font-family: inherit;
     transition: background-color var(--transition), border-color var(--transition), color var(--transition),
@@ -374,7 +394,7 @@ input[readonly], textarea[readonly] {
   /* Retour au clic sans déplacement de la mise en page (pas de scale sur la boîte). */
   .btn:active:not(:disabled) { transform: translateY(1px); }
   .btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  .btn-sm { @apply h-9 px-3 text-[13px]; border-radius: var(--radius-sm); }
+  .btn-sm { @apply h-9 px-3 text-[14px]; border-radius: var(--radius-sm); }
   .btn-sm mat-icon { font-size: 16px; width: 16px; height: 16px; }
   .btn-block { @apply w-full; }
 
@@ -386,7 +406,7 @@ input[readonly], textarea[readonly] {
     box-shadow: 0 6px 16px -6px rgba(4, 120, 87, 0.55);
   }
 
-  .btn-outline { @apply bg-white text-text-primary border-border; }
+  .btn-outline { @apply bg-white text-primary-dark border-border; }
   .btn-outline:hover:not(:disabled) { @apply border-primary text-primary bg-primary-light; }
 
   .btn-ghost { @apply bg-transparent text-text-secondary; }
@@ -461,7 +481,7 @@ input[readonly], textarea[readonly] {
   padding: 3px 10px;
   border-radius: var(--radius-full);
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -518,17 +538,16 @@ input[readonly], textarea[readonly] {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-secondary);
-  background: var(--field-bg);
-  border: 1px solid var(--border-light);
+  /* Pastille colorée (19/10/2026 ; elle était grise) : vert par défaut, teinte de la variante sinon. */
+  color: var(--primary);
+  background: var(--primary-100);
+  border: 0;
 }
 .kpi-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
-/* Variantes conservées pour la compatibilité, mais désaturées : la teinte
-   reste un repère, elle ne crie plus. Le sens passe par le libellé. */
-.kpi-icon.blue  { color: #1D4ED8; }
-.kpi-icon.green { color: var(--primary); }
-.kpi-icon.amber { color: #B45309; }
-.kpi-icon.red   { color: #DC2626; }
+.kpi-icon.blue  { color: #1D4ED8; background: #DBEAFE; }
+.kpi-icon.green { color: var(--primary); background: var(--primary-100); }
+.kpi-icon.amber { color: #B45309; background: #FEF3C7; }
+.kpi-icon.red   { color: #DC2626; background: #FEE2E2; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
 .kpi-value {
   font-size: 24px;
@@ -537,9 +556,9 @@ input[readonly], textarea[readonly] {
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
-.kpi-value small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.kpi-value small { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .kpi-label {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   font-weight: 500;
   margin-top: 3px;
@@ -552,7 +571,7 @@ input[readonly], textarea[readonly] {
   .kpi-card { padding: var(--sp-4); gap: var(--sp-3); flex-direction: column; align-items: flex-start; }
   .kpi-icon { width: 38px; height: 38px; }
   .kpi-value { font-size: 18px; }
-  .kpi-label { font-size: 12px; }
+  .kpi-label { font-size: 13px; }
 }
 
 /* ============================================================
@@ -620,7 +639,7 @@ input[readonly], textarea[readonly] {
   color: var(--text-muted);
   opacity: 0.6;
 }
-.empty-state p { margin: 0; font-size: 14px; color: var(--text-secondary); }
+.empty-state p { margin: 0; font-size: 15px; color: var(--text-secondary); }
 
 /* ============================================================
    CELLULES « ENTITÉ » (icône + nom + sous-titre)
@@ -637,11 +656,11 @@ input[readonly], textarea[readonly] {
 .entity-icon.pharma { background: var(--accent-light); color: var(--accent); }
 .entity-icon.month  { background: #FEF3C7; color: #D97706; }
 .entity-name { display: block; font-weight: 600; color: var(--text-primary); }
-.entity-sub { display: block; font-size: 12px; color: var(--text-muted); }
+.entity-sub { display: block; font-size: 13px; color: var(--text-muted); }
 
 .id-chip {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 12.5px;
+  font-size: 13.5px;
   background: var(--border-light);
   padding: 3px 8px;
   border-radius: 6px;
@@ -666,7 +685,7 @@ input[readonly], textarea[readonly] {
   background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
@@ -712,7 +731,8 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
    coupé). C'est le corps qui défile, pas la carte. */
 .modal-card form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .modal-header {
-  background: #F8FAFC;
+  /* Même en-tête teinté que les cartes (19/10/2026). */
+  background: linear-gradient(90deg, var(--primary-light) 0%, #F7FCF9 100%);
   padding: 18px var(--sp-6);
   display: flex;
   justify-content: space-between;
@@ -720,7 +740,7 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--primary-dark); }
 .close-btn {
   background: transparent;
   border: none;
@@ -745,7 +765,7 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   display: flex;
   justify-content: flex-end;
   gap: var(--sp-3);
-  background: #F8FAFC;
+  background: var(--field-bg);
   flex-shrink: 0;
 }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
@@ -807,7 +827,7 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-top: 4px;
 }
@@ -840,7 +860,7 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
   gap: 5px;
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   background: var(--primary-light);
   color: var(--primary);
@@ -902,7 +922,7 @@ mat-icon.inline-ic {
   .list-page mat-paginator { display: none !important; }
   .page-head { margin-bottom: var(--sp-4); }
   .page-head h1 { font-size: 21px; }
-  .page-head p { font-size: 13.5px; }
+  .page-head p { font-size: 14.5px; }
   .page-head-actions { width: 100%; }
   /* Boutons d'en-tête sur mobile : flex-basis = largeur du contenu (auto) pour
      qu'ils PASSENT À LA LIGNE au lieu de s'écraser (labels longs + nowrap → les
@@ -938,7 +958,7 @@ mat-icon.inline-ic {
   background-color: var(--card-bg) !important;
 }
 
-.mat-mdc-form-field { font-size: 14px !important; }
+.mat-mdc-form-field { font-size: 15px !important; }
 .mat-mdc-text-field-wrapper { border-radius: var(--radius) !important; }
 .mdc-notched-outline__leading { border-radius: var(--radius) 0 0 var(--radius) !important; min-width: var(--radius) !important; }
 .mdc-notched-outline__trailing { border-radius: 0 var(--radius) var(--radius) 0 !important; }
@@ -946,14 +966,14 @@ mat-icon.inline-ic {
 .mat-mdc-table { border-radius: var(--radius) !important; overflow: hidden; }
 .mat-mdc-header-cell {
   font-weight: 600 !important;
-  color: var(--text-secondary) !important;
-  font-size: 12.5px !important;
+  color: var(--primary-dark) !important;
+  font-size: 13px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.03em !important;
-  background: #F8FAFC !important;
+  background: var(--primary-light) !important;
 }
 .mat-mdc-row { transition: background-color var(--transition); }
-.mat-mdc-row:hover { background-color: #F8FAFC !important; }
+.mat-mdc-row:hover { background-color: #F3F9F5 !important; }
 
 /* --- Pagination compacte style photo (boutons or arrondis) --- */
 .mat-mdc-paginator {
@@ -1253,16 +1273,17 @@ button, a { transition: all var(--transition); }
   background: transparent !important;
 }
 
-/* En-tête sans aplat : un filet appuyé suffit à le détacher du corps. */
+/* En-tête teinté vert clair, texte vert foncé (19/10/2026, application plus colorée),
+   détaché du corps par le filet vert foncé. */
 .premium-table thead tr {
-  background: transparent !important;
+  background: var(--primary-light) !important;
   border-bottom: 1px solid var(--border-strong) !important;
 }
 
 .premium-table th.mat-header-cell {
-  color: var(--text-secondary);
+  color: var(--primary-dark);
   font-weight: 600;
-  font-size: 11.5px;
+  font-size: 12.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 12px 20px;
@@ -1282,9 +1303,9 @@ button, a { transition: all var(--transition); }
    patients, bons de commande…). :where() ramène la spécificité à zéro : les utilitaires
    Tailwind posés sur une cellule (text-right, px-…) gardent la main. */
 :where(.premium-table > thead > tr > th:not(.mat-header-cell)) {
-  color: var(--text-secondary);
+  color: var(--primary-dark);
   font-weight: 600;
-  font-size: 11.5px;
+  font-size: 12.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 12px 20px;
@@ -1351,3 +1372,28 @@ button, a { transition: all var(--transition); }
   .search-box input { font-size: 16px; }
   .mat-mdc-form-field { font-size: 16px !important; }
 }
+
+/* ============================================================
+   LISIBILITÉ (19/10/2026) — textes agrandis d'un cran
+   Les écrans écrivent leurs tailles en dur (text-[13px]… plusieurs centaines de fois).
+   Plutôt que de retoucher chaque gabarit, les PETITES tailles sont relevées ici d'environ
+   1px : les titres (16px et plus) ne bougent pas, la mise en page du téléphone en mode
+   vertical non plus (les lignes passent à la ligne, les tableaux défilent déjà). Les
+   variantes « !text-[…] » des icônes (taille fixée avec leur boîte) et « md:text-[…] »
+   (grands écrans) ne sont pas concernées. Placé en fin de fichier, hors @layer : passe
+   après les utilitaires Tailwind à spécificité égale.
+   ============================================================ */
+.text-\[9px\]    { font-size: 10px; }
+.text-\[10px\]   { font-size: 11px; }
+.text-\[10\.5px\] { font-size: 11.5px; }
+.text-\[11px\]   { font-size: 12px; }
+.text-\[11\.5px\] { font-size: 12.5px; }
+.text-\[12px\]   { font-size: 13px; }
+.text-\[12\.5px\] { font-size: 13.5px; }
+.text-\[13px\]   { font-size: 14px; }
+.text-\[13\.5px\] { font-size: 14.5px; }
+.text-\[14px\]   { font-size: 15px; }
+.text-\[14\.5px\] { font-size: 15.5px; }
+.text-\[15px\]   { font-size: 16px; }
+.text-xs { font-size: 13px; }
+.text-sm { font-size: 15px; }

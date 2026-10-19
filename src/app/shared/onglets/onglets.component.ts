@@ -17,7 +17,7 @@ export interface Onglet<T = string | number> {
   standalone: true,
   imports: [CommonModule, MatIconModule],
   template: `
-    <div class="flex flex-wrap p-1 rounded-lg bg-field w-fit max-w-full" role="tablist" [attr.aria-label]="libelle">
+    <div class="onglets flex flex-wrap p-1 rounded-lg bg-field w-fit max-w-full" role="tablist" [attr.aria-label]="libelle">
       <button type="button" *ngFor="let o of onglets" role="tab" [attr.aria-selected]="o.cle === selection" (click)="choisir(o.cle)"
               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
               [ngClass]="o.cle === selection ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">

@@ -114,11 +114,6 @@ export class MesFacturesPosteComponent implements OnInit {
     return this.patients(facture) === 0 && !facture.montantTotal;
   }
 
-  /** Aucune facture (non vide) sur la période affichée. */
-  get aucuneFacture(): boolean {
-    return !this.lignes.some(l => l.facture);
-  }
-
   charger() {
     this.chargement = true;
     this.structureService.getFactures({ annee: this.annee }).subscribe({
@@ -157,14 +152,6 @@ export class MesFacturesPosteComponent implements OnInit {
     this.lignes = Array.from({ length: 12 }, (_, i) => i + 1)
       .filter(m => !this.moisFiltre || m === +this.moisFiltre)
       .map(m => ({ mois: m, libelle: MOIS[m], facture: parMois.get(m) || null }));
-  }
-
-  get totalAnnee(): { montant: number; sencsu: number; patients: number } {
-    return this.lignes.reduce((t, l) => ({
-      montant: t.montant + (l.facture?.montantTotal || 0),
-      sencsu: t.sencsu + (l.facture?.montantTotalSencsu || 0),
-      patients: t.patients + this.patients(l.facture)
-    }), { montant: 0, sencsu: 0, patients: 0 });
   }
 
   /** Patients distincts : un patient revenu plusieurs fois dans le mois compte une fois. */

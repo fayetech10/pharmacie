@@ -51,7 +51,7 @@
 
   <!-- Onglet 2: Facturation CSU — Espace PS (identification directe) ou lettre de garantie BCSU -->
   <div *ngIf="selectedTab === 2" class="pt-2">
-    <div class="flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Mode de saisie">
+    <div class="onglets flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Mode de saisie">
       <button type="button" role="tab" [attr.aria-selected]="modeSaisie === 'espace-ps'" (click)="choisirModeSaisie('espace-ps')"
               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
               [ngClass]="modeSaisie === 'espace-ps' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
@@ -75,7 +75,7 @@
 
   <!-- Onglet 3: Mes factures — vue mensuelle de l'Espace PS, ou liste détaillée historique -->
   <div *ngIf="selectedTab === 3" class="pt-2">
-    <div class="flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Affichage des factures">
+    <div class="onglets flex flex-wrap p-1 mb-4 rounded-lg bg-field w-fit max-w-full" role="tablist" aria-label="Affichage des factures">
       <button type="button" role="tab" [attr.aria-selected]="vueFactures === 'mois'" (click)="choisirVueFactures('mois')"
               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold border-0 cursor-pointer"
               [ngClass]="vueFactures === 'mois' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-secondary'">
