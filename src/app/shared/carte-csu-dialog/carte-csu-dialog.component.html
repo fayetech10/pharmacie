@@ -38,15 +38,11 @@
         <mat-icon class="shrink-0">{{ statut.icone }}</mat-icon>
         <div>
           <div class="font-semibold">{{ statut.texte }}</div>
-          <div *ngIf="!carte.carteValide" class="mt-1 text-xs">
-            Le patient ne peut pas être facturé au titre de la CSU avec cette carte.
+          <div *ngIf="!utilisable" class="mt-1 text-xs">
+            Le patient ne peut pas être facturé au titre de la CSU avec cette carte<ng-container
+              *ngIf="carte.carteValide"> dans ce régime : changez de régime ou saisissez un autre code</ng-container>.
           </div>
         </div>
-      </div>
-
-      <div *ngIf="carte.carteValide && incoherence" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-        <mat-icon class="shrink-0 !text-lg !w-[18px] !h-[18px]">warning_amber</mat-icon>
-        <span>{{ incoherence }}</span>
       </div>
 
       <div class="flex items-start gap-4">
@@ -90,7 +86,7 @@
     <button type="button" class="btn btn-outline" *ngIf="!chargement && siteEnPanne" (click)="continuerSansVerification()">
       Continuer sans vérification
     </button>
-    <button type="button" class="btn btn-primary" *ngIf="!chargement && carte?.carteValide" (click)="remplir()">
+    <button type="button" class="btn btn-primary" *ngIf="!chargement && utilisable" (click)="remplir()">
       Remplir le formulaire
     </button>
   </div>

@@ -62,3 +62,15 @@ export function categorieCompatible(categorie: string | undefined, regime: Regim
   if (!attendus || !regime) return null;
   return attendus.includes(regime);
 }
+
+/**
+ * Carte d'une autre catégorie que le régime choisi — une carte classique sur BSF / CEC, ou
+ * l'inverse : la prise en charge est REFUSÉE (demande du 19/10/2026 ; ce n'était qu'un
+ * avertissement). Rend le motif, ou null si la carte convient (ou si sa catégorie n'est pas
+ * reconnue). Miroir de Regime.compatibleAvecCarte côté serveur.
+ */
+export function refusCategorie(categorie: string | undefined, regime: Regime | null | undefined,
+                               libelleRegime: string): string | null {
+  if (categorieCompatible(categorie, regime) !== false) return null;
+  return `Carte de catégorie « ${categorie} » : elle ne relève pas du régime « ${libelleRegime} »`;
+}

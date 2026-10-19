@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { CarteCsuService } from '../../core/services/carte-csu.service';
-import { CarteCsu, ResultatCarteCsu, categorieCompatible } from '../../core/models/carte-csu.model';
+import { CarteCsu, ResultatCarteCsu, refusCategorie } from '../../core/models/carte-csu.model';
 import { Regime } from '../../core/models/bcsu.model';
 
 export interface CarteCsuDialogData {
@@ -71,9 +71,20 @@ export class CarteCsuDialogComponent implements OnInit {
     return `https://carte.sencsu.sn/?code=${encodeURIComponent(code)}`;
   }
 
+  /**
+   * Carte utilisable pour ce régime : valide ET de la bonne catégorie. Une carte classique sur
+   * BSF / CEC (ou l'inverse) est refusée depuis le 19/10/2026 — ce n'était qu'un avertissement.
+   */
+  get utilisable(): boolean {
+    return !!this.carte?.carteValide && !this.incoherence;
+  }
+
   /** Bandeau d'état : la carte est-elle utilisable aujourd'hui, et sinon pourquoi. */
   get statut(): { classe: string; icone: string; texte: string } {
     const c = this.carte!;
+    if (c.carteValide && this.incoherence) {
+      return { classe: 'bg-red-50 text-red-800 border-red-200', icone: 'block', texte: this.incoherence };
+    }
     if (c.carteValide) {
       return {
         classe: 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -106,23 +117,23 @@ export class CarteCsuDialogComponent implements OnInit {
     };
   }
 
-  /** La catégorie de la carte ne correspond pas au régime choisi (avertissement, pas blocage). */
+  /** La catégorie de la carte ne correspond pas au régime choisi : motif du refus, sinon null. */
   get incoherence(): string | null {
     if (!this.carte) return null;
-    if (categorieCompatible(this.carte.categorie, this.data.regime) !== false) return null;
-    return `La carte est de catégorie « ${this.carte.categorie} », alors que le régime choisi est « ${this.data.regimeLibelle || this.data.regime} ». Vérifiez le régime avant de continuer.`;
+    const motif = refusCategorie(this.carte.categorie, this.data.regime, this.data.regimeLibelle || String(this.data.regime));
+    return motif ? `${motif}.` : null;
   }
 
-  /** Une carte non valide ne remplit jamais le formulaire. */
+  /** Une carte non valide, ou d'une autre catégorie, ne remplit jamais le formulaire. */
   remplir() {
-    if (this.carte?.carteValide) {
+    if (this.carte && this.utilisable) {
       this.dialogRef.close({ carte: this.carte });
     }
   }
 
-  /** Fermer après avoir vu une carte invalide le signale à l'appelant. */
+  /** Fermer après avoir vu une carte refusée le signale à l'appelant. */
   fermer() {
-    this.dialogRef.close(this.carte && !this.carte.carteValide ? { invalide: true } : undefined);
+    this.dialogRef.close(this.carte && !this.utilisable ? { invalide: true } : undefined);
   }
 
   continuerSansVerification() {

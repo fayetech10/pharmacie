@@ -16,7 +16,7 @@ import { CarteCsuService } from '../../../core/services/carte-csu.service';
 import {
   LettreGarantie, LettreGarantieRequest, Patient, PrestationGarantie, Regime
 } from '../../../core/models/bcsu.model';
-import { CarteCsu, VerificationCarte, categorieCompatible } from '../../../core/models/carte-csu.model';
+import { CarteCsu, VerificationCarte, categorieCompatible, refusCategorie } from '../../../core/models/carte-csu.model';
 import { LISTE_PRESTATIONS } from '../../../core/models/prestations';
 import { ocrCni, RepriseCni } from '../../../core/utils/document-ocr';
 import { renderCarteAssureToDataUrl } from '../../../core/utils/carte-assure-image';
@@ -264,9 +264,18 @@ export class LettreGarantieFormComponent implements OnInit {
     return null;
   }
 
+  /**
+   * Carte d'une autre catégorie déjà acceptée : ne concerne plus que les lettres établies
+   * avant le blocage du 19/10/2026 (une nouvelle vérification est refusée).
+   */
   get incoherenceCategorie(): string | null {
-    if (!this.carte || categorieCompatible(this.carte.categorie, this.regime) !== false) return null;
+    if (!this.carte || !this.verification || categorieCompatible(this.carte.categorie, this.regime) !== false) return null;
     return `La carte est de catégorie « ${this.carte.categorie} » alors que le régime choisi est « ${this.libelleRegime(this.regime)} ». Vérifiez le régime.`;
+  }
+
+  /** Refus en cours pour une carte valide d'une autre catégorie que le régime (et non expirée). */
+  get refusDeCategorie(): boolean {
+    return !!this.refus && !!this.carte?.carteValide && categorieCompatible(this.carte.categorie, this.regime) === false;
   }
 
   get ageCalcule(): string {
@@ -370,6 +379,14 @@ export class LettreGarantieFormComponent implements OnInit {
           if (carte.enPeriodeObservation) {
             this.avertirPeriodeObservation(carte);
           }
+          return;
+        }
+        // Carte valide mais d'une autre catégorie (classique sur BSF / CEC, ou l'inverse) :
+        // refusée comme une carte expirée (19/10/2026 ; ce n'était qu'un avertissement).
+        const horsRegime = refusCategorie(carte.categorie, this.regime, this.libelleRegime(this.regime));
+        if (horsRegime) {
+          this.verification = null;
+          this.refus = `${horsRegime} — La prise en charge ne peut pas être accordée.`;
           return;
         }
         this.rattacherEtAppliquerCarte(carte);

@@ -144,7 +144,10 @@
                     {{ carte.prenom }} {{ carte.nom }} · {{ carte.codeImmatriculation }}
                     <ng-container *ngIf="carte.dateFin"> · validité jusqu'au {{ dateFr(carte.dateFin) }}</ng-container>
                   </span>
-                  <span class="block mt-1 text-[12.5px]">Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.</span>
+                  <span *ngIf="!refusDeCategorie" class="block mt-1 text-[12.5px]">Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.</span>
+                  <!-- Carte valide d'une autre catégorie (classique ↔ BSF / CEC) : refus, pas d'avertissement (19/10/2026). -->
+                  <span *ngIf="refusDeCategorie" class="block mt-1 text-[12.5px]">Revenez au choix du régime (bouton « Régime » en bas) et
+                    prenez celui de la carte, ou saisissez un autre code.</span>
                 </div>
               </div>
             </div>

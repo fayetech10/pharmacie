@@ -13,7 +13,7 @@ import {
 import { catchError, last, map, switchMap } from 'rxjs/operators';
 
 import { Regime } from '../../../core/models/bcsu.model';
-import { CarteCsu, categorieCompatible } from '../../../core/models/carte-csu.model';
+import { CarteCsu, categorieCompatible, refusCategorie } from '../../../core/models/carte-csu.model';
 import {
   DossierPatient, FactureStructure, FactureStructureRequest, LIBELLES_PIECES, LigneFactureStructure, TypePiece
 } from '../../../core/models/structure.model';
@@ -326,10 +326,18 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       || (this.mois === maintenant.getMonth() + 1 && this.annee === maintenant.getFullYear());
   }
 
-  /** Alerte (non bloquante) : la catégorie imprimée sur la carte ne correspond pas au régime. */
+  /**
+   * Carte d'une autre catégorie déjà acceptée : ne concerne plus que les dossiers enregistrés
+   * avant le blocage du 19/10/2026 (une nouvelle saisie est refusée, cf. `refusDeCategorie`).
+   */
   get incoherenceCategorie(): string | null {
-    if (!this.carte || categorieCompatible(this.carte.categorie, this.regime) !== false) return null;
+    if (!this.carte || !this.verification || categorieCompatible(this.carte.categorie, this.regime) !== false) return null;
     return `La carte est de catégorie « ${this.carte.categorie} » alors que le régime choisi est « ${this.libelleRegime(this.regime)} ». Vérifiez le régime.`;
+  }
+
+  /** Refus en cours pour une carte valide d'une autre catégorie que le régime (et non expirée). */
+  get refusDeCategorie(): boolean {
+    return !!this.refus && !!this.carte?.carteValide && categorieCompatible(this.carte.categorie, this.regime) === false;
   }
 
   get alerteAge(): string | null {
@@ -459,6 +467,14 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
           if (carte.enPeriodeObservation) {
             this.avertirPeriodeObservation(carte);
           }
+          return;
+        }
+        // Carte valide mais d'une autre catégorie (classique sur BSF / CEC, ou l'inverse) :
+        // refusée comme une carte expirée — le serveur la refuserait aussi (19/10/2026).
+        const horsRegime = refusCategorie(carte.categorie, this.regime, this.libelleRegime(this.regime));
+        if (horsRegime) {
+          this.verification = null;
+          this.refus = `${horsRegime} — La facturation ne peut pas être effectuée.`;
           return;
         }
         this.appliquerCarte(carte);
