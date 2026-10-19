@@ -224,10 +224,6 @@ export class LettreGarantieFormComponent implements OnInit {
     return null;
   }
 
-  get regleRegime(): string {
-    return categorieDe(this.regime, CATEGORIES_BCSU)?.regle || '';
-  }
-
   get numeroEtape(): number {
     return this.etapes.findIndex(e => e.cle === this.etape);
   }

@@ -47,8 +47,8 @@ export class MesFacturesPosteComponent implements OnInit {
 
   regime: Regime = Regime.CONTRIBUTIF;
   annee = new Date().getFullYear();
-  /** 0 = toute l'année. */
-  moisFiltre = 0;
+  /** 0 = toute l'année. Le mois en cours par défaut (demande du 19/10/2026). */
+  moisFiltre = new Date().getMonth() + 1;
   annees: number[] = [];
 
   /** Toutes les factures de l'année, tous régimes : sert aussi les compteurs du sélecteur. */

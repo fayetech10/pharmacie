@@ -140,10 +140,13 @@ export function tauxSencsuPoste(regime: Regime | null | undefined): number {
   return estContributif(regime) ? 0.8 : 1;
 }
 
-/** Pièces sans lesquelles le dossier reste « à compléter » (miroir de ServiceFacturePoste). */
+/**
+ * Pièces sans lesquelles le dossier reste « à compléter » (miroir de
+ * ServiceFacturation.piecesExigees). L'extrait de naissance des 0-5 ans est facultatif
+ * depuis le 19/10/2026.
+ */
 export function piecesExigees(regime: Regime | null | undefined): TypePiece[] {
   if (regime === Regime.SESAME) return ['CNI_RECTO', 'CNI_VERSO'];
-  if (regime === Regime.ZERO_CINQ_ANS) return ['EXTRAIT_NAISSANCE'];
   return [];
 }
 
@@ -395,9 +398,12 @@ export function visiteVerifiee(v: VisiteFacture, echelon: EchelonPointage): bool
  * Lignes de la liste des patients d'une facture (une par visite) : nom, date, matricule,
  * pastilles (à compléter, carte non vérifiée, visite n/N, pointages), lien vers l'écran patient.
  * `echelon` : échelon qui pointe en ce moment (sa coche teinte la ligne en vert).
+ * `completer` : facture encore modifiable par celui qui la saisit — les visites « à compléter »
+ * portent un bouton « Compléter » (le patient s'ouvre alors sur son formulaire).
  */
 export function lignesPatients(visites: VisiteFacture[], cheminFacture: any[],
-                               options: { aCarte: boolean; echelon?: EchelonPointage | null }): LignePatientListe[] {
+                               options: { aCarte: boolean; echelon?: EchelonPointage | null; completer?: boolean }
+): LignePatientListe[] {
   return visites.map(v => {
     const pastilles: PastillePatient[] = [];
     if (visiteACompleter(v)) pastilles.push({ libelle: 'À compléter', ton: 'ambre' });
@@ -420,7 +426,8 @@ export function lignesPatients(visites: VisiteFacture[], cheminFacture: any[],
       lien: [...cheminFacture, 'patients', v.cle],
       pastilles,
       identiteVerifiee: !!v.dossier?.identiteVerrouillee,
-      teinte: verifieIci ? 'vert' : (visiteACompleter(v) ? 'ambre' : undefined)
+      teinte: verifieIci ? 'vert' : (visiteACompleter(v) ? 'ambre' : undefined),
+      action: options.completer && v.dossier && visiteACompleter(v) ? 'Compléter' : undefined
     };
   });
 }

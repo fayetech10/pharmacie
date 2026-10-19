@@ -35,7 +35,27 @@ function verifierCamera() {
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatIconModule, MatProgressSpinnerModule],
   template: `
-    <div class="flex flex-col gap-2">
+    <input type="file" accept="image/*" capture="environment" hidden #entree (change)="choisir($event)">
+    <input type="file" accept="image/*" hidden #galerieEntree (change)="choisir($event)">
+
+    <!-- Version icône : un rond appareil photo, la vignette une fois la photo prise. -->
+    <button *ngIf="compact" type="button" [disabled]="desactive || analyse" (click)="prendrePhoto(entree)"
+            [attr.aria-label]="(image ? 'Reprendre la photo : ' : 'Prendre en photo : ') + libelle"
+            [title]="erreur || libelle"
+            class="relative w-14 h-14 shrink-0 inline-flex items-center justify-center rounded-full border-2 p-0 cursor-pointer"
+            [ngClass]="erreur ? 'border-warn bg-warn-light text-warn'
+              : image ? 'border-success bg-white' : 'border-primary bg-primary-light text-primary'">
+      <mat-spinner *ngIf="analyse" diameter="22"></mat-spinner>
+      <img *ngIf="image && !analyse" [src]="image" alt="" class="w-full h-full rounded-full object-cover">
+      <mat-icon *ngIf="!image && !analyse">photo_camera</mat-icon>
+      <span *ngIf="image && !analyse" aria-hidden="true"
+            class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-success text-white flex items-center justify-center ring-2 ring-white">
+        <mat-icon class="!text-[13px] !w-3.5 !h-3.5">check</mat-icon>
+      </span>
+      <span *ngIf="erreur" role="alert" class="sr-only">{{ erreur }}</span>
+    </button>
+
+    <div *ngIf="!compact" class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
         <span class="text-[13px] font-semibold text-text-primary">
           {{ libelle }}
@@ -46,9 +66,6 @@ function verifierCamera() {
           <mat-icon class="!text-sm !w-3.5 !h-3.5">check_circle</mat-icon> Photo prise
         </span>
       </div>
-
-      <input type="file" accept="image/*" capture="environment" hidden #entree (change)="choisir($event)">
-      <input type="file" accept="image/*" hidden #galerieEntree (change)="choisir($event)">
 
       <div *ngIf="!image && !analyse"
            class="flex flex-col items-center justify-center gap-2 min-h-[120px] p-4 rounded-lg border border-dashed
@@ -105,6 +122,8 @@ export class PhotoPieceComponent {
   @Input() desactive = false;
   /** Propose aussi l'import d'une photo déjà prise (galerie, fichier). */
   @Input() galerie = false;
+  /** Simple icône appareil photo (puis vignette), sans libellé ni cadre. */
+  @Input() compact = false;
   /** Poids visé après compression (Ko) : assez pour relire une CNI. */
   @Input() tailleMaxKo = 200;
   /** Photo déjà acceptée (data URL), ou null. */

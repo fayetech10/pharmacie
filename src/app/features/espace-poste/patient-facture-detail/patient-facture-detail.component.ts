@@ -17,10 +17,9 @@ import { PatientDetailComponent } from '../../patients/patient-detail/patient-de
 import { FacturationCsuPosteComponent } from '../facturation-csu/facturation-csu.component';
 import { DossierPatientContenuComponent } from '../dossier-patient-dialog/dossier-patient-contenu.component';
 import {
-  ContexteFacture, EchelonPointage, LigneIndexee, MOIS, VisiteFacture, cheminFacture, clePatientVisite, dateFr,
-  estContributif, estForfaitaire, estModifiable, exigeCartePoste, libelleRegimePoste, visiteACompleter, visitesFacture
+  ContexteFacture, EchelonPointage, LigneIndexee, VisiteFacture, cheminFacture, clePatientVisite, dateFr,
+  estContributif, estForfaitaire, estModifiable, exigeCartePoste, visiteACompleter, visitesFacture
 } from '../poste-facturation';
-import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
 /** Une information affichée, seulement si elle est renseignée. */
 interface Info {
@@ -33,6 +32,8 @@ interface Info {
  * Détail d'un patient d'une facture (« facture → patient ») : une visite — identité,
  * prestations et montants, pièces du dossier — avec ce que l'utilisateur peut y faire :
  *  - Espace PS, facture modifiable : Modifier / Compléter (assistant de facturation), Retirer ;
+ *    un dossier « à compléter » s'ouvre directement sur son formulaire et, une fois enregistré,
+ *    on passe au suivant à compléter (retour à la facture quand il n'en reste plus) ;
  *  - structure émettrice avant l'envoi : corriger ou supprimer une prestation, Retirer ;
  *  - contrôle (centre pour un poste, service régional) : pointer le patient « vérifié ».
  * Les autres visites du même patient dans le mois sont listées ; « Précédent / Suivant »
@@ -41,12 +42,11 @@ interface Info {
 @Component({
   selector: 'app-patient-facture-detail',
   standalone: true,
-  imports: [ChampDateComponent, CommonModule, FormsModule, RouterModule, MatIconModule, MatDialogModule, MatSnackBarModule,
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, MatDialogModule, MatSnackBarModule,
     MatProgressSpinnerModule, StatusBadgeComponent, DossierPatientContenuComponent, FacturationCsuPosteComponent],
   templateUrl: './patient-facture-detail.component.html'
 })
 export class PatientFactureDetailComponent implements OnInit, OnDestroy {
-  readonly libelleRegime = libelleRegimePoste;
   readonly dateFr = dateFr;
 
   contexte: ContexteFacture = 'espace-ps';
@@ -61,6 +61,13 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
   chargement = true;
   /** Assistant de facturation ouvert sur cette visite. */
   edition = false;
+  /** Assistant ouvert pour compléter un dossier : une fois enregistré, on passe au suivant. */
+  private enCompletion = false;
+  /**
+   * Un dossier « à compléter » s'ouvre d'office sur son formulaire, une fois par visite :
+   * fermé par l'agent, il ne se rouvre pas tout seul.
+   */
+  private ouvertureAutoFaite = false;
   /** Appel en cours (retrait, correction, pointage). */
   occupe = false;
   /** Ouvert depuis la liste de la facture : « Retour » y revient par l'historique (page, recherche gardées). */
@@ -68,7 +75,7 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
 
   /** Prestation en cours de correction (modale). */
   ligneEditee: LigneIndexee | null = null;
-  modeleLigne = { designation: '', quantite: 1, prixUnitaire: 0, datePriseEnCharge: '', codeActe: '' };
+  modeleLigne = { designation: '', quantite: 1, prixUnitaire: 0, codeActe: '' };
 
   afficherIdentite = false;
   afficherDossier = false;
@@ -97,6 +104,8 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       const factureId = params.get('id') || '';
       this.cleVisite = params.get('visite') || '';
       this.edition = false;
+      this.enCompletion = false;
+      this.ouvertureAutoFaite = false;
       this.ligneEditee = null;
       if (factureId !== this.factureId || !this.facture) {
         this.factureId = factureId;
@@ -139,6 +148,12 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       prenom: v.prenom, nom: v.nom, matricule: v.matricule, lettreGarantieNumero: v.lettreNumero
     };
     if (!this.peutModifierDossier) this.edition = false;
+    // Dossier « à compléter » : directement son formulaire, sans passer par la fiche en lecture
+    // ni par le bouton « Compléter » (demande du 19/10/2026).
+    if (v && !this.ouvertureAutoFaite) {
+      this.ouvertureAutoFaite = true;
+      if (this.peutModifierDossier && this.aCompleter) this.editer();
+    }
   }
 
   // ─────────────── droits ───────────────
@@ -192,10 +207,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
 
   get aCompleter(): boolean {
     return !!this.visite && visiteACompleter(this.visite);
-  }
-
-  get periode(): string {
-    return this.facture ? `${MOIS[this.facture.mois]} ${this.facture.annee}` : '';
   }
 
   /** Position du patient dans la facture (1 à N). */
@@ -371,14 +382,40 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
   editer() {
     if (!this.peutModifierDossier) return;
     this.edition = true;
+    this.enCompletion = this.aCompleter;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  /** Fin de l'assistant : la facture renvoyée par le serveur fait foi. */
+  /**
+   * Fin de l'assistant : la facture renvoyée par le serveur fait foi. Après avoir complété un
+   * dossier, on enchaîne sur le suivant à compléter (demande du 19/10/2026) ; après une
+   * simple modification, on reste sur le patient.
+   */
   editionTerminee(facture: FactureStructure) {
     this.facture = facture;
     this.edition = false;
+    const enchainer = this.enCompletion;
+    this.enCompletion = false;
     this.construire();
+    if (enchainer) this.allerAuSuivantACompleter();
+  }
+
+  /**
+   * Patient suivant « à compléter » dans l'ordre de la liste (à défaut, le premier qui reste),
+   * ouvert directement sur son formulaire ; s'il n'en reste aucun, retour à la facture. Le
+   * patient qu'on vient d'enregistrer est sauté, même laissé « à compléter » exprès.
+   */
+  private allerAuSuivantACompleter() {
+    const position = this.visites.findIndex(v => v.cle === this.cleVisite);
+    const restants = this.visites.filter(v => v.cle !== this.cleVisite && !!v.dossier && visiteACompleter(v));
+    const suivant = restants.find(v => this.visites.indexOf(v) > position) || restants[0];
+    if (suivant) {
+      this.snackBar.open(`Dossier enregistré. Patient suivant à compléter : ${suivant.nomComplet}.`, 'Fermer', { duration: 4000 });
+      this.allerA(suivant);
+      return;
+    }
+    this.snackBar.open('Dossier enregistré. Plus aucun patient à compléter sur cette facture.', 'Fermer', { duration: 4000 });
+    this.retour();
   }
 
   fermerEdition() {
@@ -394,7 +431,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       designation: ligne.designation || '',
       quantite: ligne.quantite || 1,
       prixUnitaire: ligne.prixUnitaire || 0,
-      datePriseEnCharge: (ligne.datePriseEnCharge || '').substring(0, 10),
       codeActe: ligne.codeActe || ''
     };
   }
@@ -411,7 +447,6 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       designation: m.designation.trim(),
       quantite: m.quantite,
       prixUnitaire: m.prixUnitaire,
-      datePriseEnCharge: m.datePriseEnCharge || undefined,
       codeActe: m.codeActe || undefined
     }), 'Prestation modifiée.', () => this.ligneEditee = null);
   }

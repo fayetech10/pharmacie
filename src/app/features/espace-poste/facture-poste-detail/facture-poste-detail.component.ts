@@ -106,7 +106,8 @@ export class FacturePosteDetailComponent implements OnInit {
   filtrer(premierePage = false) {
     if (!this.facture) return;
     const retenues = this.visites.filter(v => visiteCorrespond(v, this.recherche));
-    this.lignes = lignesPatients(retenues, cheminFacture('espace-ps', this.facture.id), { aCarte: this.aCarte });
+    this.lignes = lignesPatients(retenues, cheminFacture('espace-ps', this.facture.id),
+      { aCarte: this.aCarte, completer: this.modifiable });
     if (premierePage) this.liste?.premierePage();
   }
 

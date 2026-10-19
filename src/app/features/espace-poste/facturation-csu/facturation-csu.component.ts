@@ -18,7 +18,7 @@ import { CarteCsu, categorieCompatible } from '../../../core/models/carte-csu.mo
 import {
   DossierPatient, FactureStructure, FactureStructureRequest, LIBELLES_PIECES, LigneFactureStructure, TypePiece
 } from '../../../core/models/structure.model';
-import { SERVICES_PAR_DEFAUT, TarifHorsCsu } from '../../../core/models/referentiel.model';
+import { TarifHorsCsu } from '../../../core/models/referentiel.model';
 import { CarteCsuService } from '../../../core/services/carte-csu.service';
 import { HorsCsuService } from '../../../core/services/hors-csu.service';
 import { StructureService } from '../../../core/services/structure.service';
@@ -34,7 +34,8 @@ import {
 } from '../poste-facturation';
 import { ChampDateComponent } from '../../../shared/champ-date/champ-date.component';
 
-type Etape = 'regime' | 'identification' | 'eligibilite' | 'medical' | 'termine';
+/** Choix du régime, puis éligibilité et prestations sur un seul écran, puis le résultat. */
+type Etape = 'regime' | 'saisie' | 'termine';
 
 /** Identité du patient telle qu'affichée et saisie. */
 interface PatientSaisi {
@@ -61,12 +62,6 @@ interface LigneSaisie {
   prestationId?: string;
   /** Prestation absente du paramétrage : elle y sera ajoutée à l'enregistrement. */
   nouvelle: boolean;
-  /**
-   * Service tapé par l'agent sur cette ligne — et non recopié de la ligne précédente. Seul
-   * un service saisi exprès est reporté au paramétrage : un service hérité par simple copie
-   * déplacerait la prestation sans que personne l'ait voulu.
-   */
-  serviceSaisi?: boolean;
   /** Ligne déjà enregistrée (modification) : ses autres champs sont renvoyés tels quels. */
   origine?: LigneFactureStructure;
 }
@@ -103,21 +98,18 @@ interface Brouillon {
 }
 
 /**
- * Choix d'une liste déroulante : tous si la saisie est vide ou correspond déjà à un choix
- * (pour pouvoir en changer), sinon ceux qui contiennent la saisie (accents ignorés).
+ * Prestations proposées à la saisie : seulement celles que le poste a lui-même saisies
+ * (enregistrées d'office, avec leur prix, à la première facturation) — pas de liste
+ * prédéfinie (demande du 19/10/2026), donc rien du référentiel national.
  */
-function proposes(choix: string[], saisie: string | null | undefined): string[] {
-  const terme = normaliser(saisie);
-  if (!terme || choix.some(c => normaliser(c) === terme)) return choix;
-  return choix.filter(c => normaliser(c).includes(terme));
+function prestationsDuPoste(tarifs: TarifHorsCsu[] | null | undefined): TarifHorsCsu[] {
+  return (tarifs || []).filter(t => t.actif && !!t.structureId);
 }
 
 /**
- * Facturation CSU d'un patient au poste de santé, en étapes séparées :
- * Identification → Contrôle de l'éligibilité → Informations médicales → Validation. Plus
- * d'étape « Récapitulatif » (supprimée le 07/10/2026) : on enregistre depuis les informations
- * médicales ; « Enregistrer — à compléter » suit le bouton principal de l'éligibilité et des
- * informations médicales.
+ * Facturation CSU d'un patient au poste de santé : le choix du régime, puis un seul écran
+ * (19/10/2026) où se suivent le contrôle d'éligibilité, le patient (sa photo et son nom) et
+ * ses prestations, d'où l'on enregistre ; enfin le résultat de l'enregistrement.
  *
  * <p>Sert aussi à <b>compléter ou modifier</b> un dossier depuis « Mes factures » : avec
  * `factureId` et `dossierId`, il s'ouvre sur le dossier existant. L'identité validée par
@@ -159,19 +151,11 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   readonly nombrePatients = nombrePatients;
   readonly forfait = FORFAIT_0_5_ANS;
   readonly moisLibelles = MOIS;
-  readonly etapes: { cle: Etape; libelle: string }[] = [
-    { cle: 'identification', libelle: 'Identification' },
-    { cle: 'eligibilite', libelle: 'Éligibilité' },
-    { cle: 'medical', libelle: 'Informations médicales' },
-    { cle: 'termine', libelle: 'Validation' }
-  ];
-
   private _etape: Etape = 'regime';
   /**
-   * Étape courante de l'assistant. Passer par un setter permet de remonter en haut du
-   * formulaire à chaque changement d'étape : sinon, après avoir cliqué sur un bouton situé en
-   * bas d'une étape longue (ex. « Informations médicales »), on restait défilé tout en bas de
-   * l'étape suivante. Le template conserve ses `etape = '…'` et `etape === '…'` tels quels.
+   * Étape courante. Passer par un setter permet de remonter en haut du formulaire à chaque
+   * changement : sinon, après l'enregistrement (bouton tout en bas), on restait défilé en bas
+   * du résultat.
    */
   get etape(): Etape {
     return this._etape;
@@ -332,12 +316,9 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     return this.piecesRequises.filter(type => !this.pieces[type]);
   }
 
-  get regleRegime(): string {
-    return categorieDe(this.regime)?.regle || '';
-  }
-
-  get numeroEtape(): number {
-    return this.etapes.findIndex(e => e.cle === this.etape);
+  /** Patient identifié : la partie des prestations peut s'afficher (carte contrôlée, ou dérogation). */
+  get patientPret(): boolean {
+    return !this.carteRequise || this.verification !== null;
   }
 
   get estMoisCourant(): boolean {
@@ -424,7 +405,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     }
     this.regime = regime;
     this.categorie = categorieDe(regime) || null;
-    this.etape = 'identification';
+    this.etape = 'saisie';
   }
 
   changerDeRegime() {
@@ -482,7 +463,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
           return;
         }
         this.appliquerCarte(carte);
-        this.etape = 'eligibilite';
+        this.assurerUneLigne();
       },
       error: err => {
         this.controleEnCours = false;
@@ -528,7 +509,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.identiteVerrouillee = false;
     this.patient.matricule = this.codeImmatriculation.replace(/\s+/g, '').toUpperCase();
     this.siteEnPanne = false;
-    this.etape = 'eligibilite';
+    this.assurerUneLigne();
   }
 
   changerDeCarte() {
@@ -538,7 +519,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.verification = null;
     this.identiteVerrouillee = false;
     this.patient = { ...PATIENT_VIDE, telephone: this.patient.telephone };
-    this.etape = 'identification';
   }
 
   onPiece(type: TypePiece, image: string | null) {
@@ -617,12 +597,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.pieces = brouillon.pieces || {};
     this.lignes = brouillon.lignes?.length ? brouillon.lignes : [];
     this.cleSaisie = brouillon.cleSaisie || '';
-    this.assurerLigneVide();
-    // Un brouillon d'avant la suppression du « Récapitulatif » peut encore porter cette étape :
-    // il reprend aux informations médicales, d'où l'on enregistre désormais.
-    const etapeBrouillon = brouillon.etape as string;
-    this.etape = etapeBrouillon === 'termine' || etapeBrouillon === 'regime' ? 'identification'
-      : etapeBrouillon === 'recapitulatif' ? 'medical' : brouillon.etape;
+    this.assurerUneLigne();
+    // Le brouillon porte toujours un régime : il reprend à l'écran unique de la saisie, même
+    // s'il date d'avant (étapes séparées).
+    this.etape = 'saisie';
     this.snackBar.open('La page s\'est rechargée pendant la photo : votre saisie a été reprise.', 'Fermer',
       { duration: 5000 });
     return true;
@@ -634,16 +612,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     } catch { /* stockage indisponible */ }
   }
 
-  /** Identification par pièce (enfants, Sésame) ou saisie manuelle après dérogation. */
-  validerIdentification() {
-    const erreur = this.erreurIdentite();
-    if (erreur) {
-      this.snackBar.open(erreur, 'Fermer', { duration: 4000 });
-      return;
-    }
-    this.etape = 'eligibilite';
-  }
-
+  /** Identité contrôlée à l'enregistrement (tout est saisi sur le même écran). */
   private erreurIdentite(): string | null {
     if (!this.patient.prenom.trim() || !this.patient.nom.trim()) return 'Le prénom et le nom du patient sont obligatoires.';
     if (!this.patient.dateNaissance && (this.regime === Regime.ZERO_CINQ_ANS || this.regime === Regime.SESAME)) {
@@ -654,51 +623,17 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  // ══════════════════════════ étape 2 : éligibilité ══════════════════════════
-
-  continuerVersMedical() {
-    const erreur = this.erreurIdentite();
-    if (erreur) {
-      this.snackBar.open(erreur, 'Fermer', { duration: 4000 });
-      return;
-    }
-    this.assurerLigneVide();
-    this.etape = 'medical';
-  }
-
-  // ══════════════════════════ étape 3 : prestations ══════════════════════════
+  // ══════════════════════════ prestations ══════════════════════════
 
   private chargerCatalogue() {
     this.horsCsu.getTarifsApplicables().subscribe({
       next: tarifs => {
-        this.catalogue = (tarifs || []).filter(t => t.actif);
+        this.catalogue = prestationsDuPoste(tarifs);
         this.horsLigneService.memoriserCatalogue(this.catalogue);
       },
       // Hors ligne : le catalogue mémorisé lors de la dernière lecture en ligne.
-      error: () => void this.horsLigneService.catalogueMemorise().then(tarifs => this.catalogue = tarifs || [])
+      error: () => void this.horsLigneService.catalogueMemorise().then(tarifs => this.catalogue = prestationsDuPoste(tarifs))
     });
-  }
-
-  /** Services proposés : ceux par défaut et ceux qu'emploient les prestations paramétrées. */
-  get services(): string[] {
-    const connus = this.catalogue.map(t => (t.categorie || '').trim()).filter(Boolean);
-    return Array.from(new Set([...SERVICES_PAR_DEFAUT, ...connus])).sort((a, b) => a.localeCompare(b, 'fr'));
-  }
-
-  /**
-   * Services de la liste déroulante d'une ligne : tous tant que le champ est vide ou porte
-   * déjà un service connu (on peut alors en choisir un autre), sinon ceux qui contiennent
-   * la saisie. Liste Angular Material et non `<datalist>` : celle-ci ne s'affichait pas sur
-   * certains téléphones, et filtrée sur un service déjà rempli, elle ne proposait plus rien.
-   */
-  servicesProposes(ligne: LigneSaisie): string[] {
-    return proposes(this.services, ligne.service);
-  }
-
-  /** Service saisi qui ne figure pas encore dans la liste : il y entrera avec sa prestation. */
-  nouveauService(ligne: LigneSaisie): boolean {
-    const service = normaliser(ligne.service);
-    return !!service && !this.services.some(s => normaliser(s) === service);
   }
 
   /** Prestation du paramétrage dont vient la ligne, si elle y figure encore. */
@@ -713,21 +648,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     return !this.forfaitaire && !!tarif && ligne.prixUnitaire != null && prix >= 0 && prix !== tarif.prix;
   }
 
-  /**
-   * Service saisi exprès sur une prestation paramétrée, différent du sien — nouveau ou
-   * déjà existant : la prestation sera rangée dans ce service.
-   */
-  serviceAReporter(ligne: LigneSaisie): boolean {
-    const tarif = this.tarifDe(ligne);
-    const service = normaliser(ligne.service);
-    return !!ligne.serviceSaisi && !!tarif && !!service && service !== normaliser(tarif.categorie);
-  }
-
-  /** Prestations proposées pour une ligne : celles de son service, filtrées par la saisie. */
+  /** Prestations proposées pour une ligne, tous services confondus, filtrées par la saisie. */
   suggestions(ligne: LigneSaisie): TarifHorsCsu[] {
     const terme = normaliser(ligne.designation);
     return this.catalogue
-      .filter(t => !ligne.service || normaliser(t.categorie) === normaliser(ligne.service))
       .filter(t => !terme || normaliser(t.designation).includes(terme))
       .slice(0, 30);
   }
@@ -736,37 +660,23 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     return { service: '', designation: '', quantite: 1, prixUnitaire: null, nouvelle: false };
   }
 
+  /** Toujours au moins une ligne à remplir. */
+  private assurerUneLigne() {
+    if (this.lignes.length === 0) this.lignes.push(this.ligneVide());
+  }
+
   /**
-   * Il y a toujours une ligne vide en bas : dès que la dernière est entièrement remplie
-   * (service, prestation, quantité et, hors forfait, prix), la suivante apparaît d'elle-même
-   * — plus de bouton « Ajouter une prestation ». Elle part d'un service vide (demande du
-   * 07/10/2026 : recopier celui de la ligne précédente masquait la liste des services) ;
-   * le choix d'une prestation y met son service.
+   * Bouton « Ajouter une prestation » (demande du 19/10/2026) : une ligne de plus sur
+   * demande, au lieu d'une ligne vide qui apparaissait d'elle-même. Une ligne laissée vide
+   * est ignorée à l'enregistrement.
    */
-  assurerLigneVide() {
-    const derniere = this.lignes[this.lignes.length - 1];
-    if (!derniere || this.ligneComplete(derniere)) {
-      this.lignes.push(this.ligneVide());
-    }
-  }
-
-  private ligneComplete(ligne: LigneSaisie): boolean {
-    if (!ligne.service.trim() || !ligne.designation.trim() || !(Number(ligne.quantite) >= 1)) return false;
-    if (this.forfaitaire) return true;
-    if (ligne.prixUnitaire == null || String(ligne.prixUnitaire) === '') return false;
-    // Une prestation nouvelle doit avoir un prix (elle entre au paramétrage) ; une prestation
-    // paramétrée peut être gratuite.
-    return ligne.nouvelle ? Number(ligne.prixUnitaire) > 0 : Number(ligne.prixUnitaire) >= 0;
-  }
-
-  /** La ligne vide du bas : rien à retirer. */
-  estLigneVideFinale(index: number): boolean {
-    return index === this.lignes.length - 1 && !this.lignes[index].designation.trim();
+  ajouterLigne() {
+    this.lignes.push(this.ligneVide());
   }
 
   retirerLigne(index: number) {
     this.lignes.splice(index, 1);
-    this.assurerLigneVide();
+    this.assurerUneLigne();
   }
 
   choisirPrestation(ligne: LigneSaisie, tarif: TarifHorsCsu) {
@@ -775,9 +685,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     ligne.prestationId = undefined;
     ligne.nouvelle = false;
     ligne.prixUnitaire = tarif.prix;
-    // La prestation apporte son service, sauf si l'agent en a tapé un lui-même sur cette ligne
-    // (un service recopié de la ligne précédente n'est qu'une valeur par défaut).
-    if (tarif.categorie && (!ligne.service || !ligne.serviceSaisi)) ligne.service = tarif.categorie;
+    // La prestation apporte son service (il n'est plus saisi dans le formulaire).
+    ligne.service = tarif.categorie || '';
   }
 
   /** Saisie libre : une désignation inconnue du paramétrage devient une nouvelle prestation. */
@@ -803,6 +712,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     ligne.tarifId = undefined;
     ligne.prestationId = undefined;
     ligne.nouvelle = true;
+    // Le service d'une prestation choisie auparavant sur cette ligne ne la suit pas.
+    ligne.service = '';
   }
 
   private erreurPrestations(): string | null {
@@ -812,22 +723,16 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
         return `« ${ligne.designation} » : indiquez le prix unitaire.`;
       }
       if (ligne.nouvelle && !this.forfaitaire && !(Number(ligne.prixUnitaire) > 0)) {
-        return `« ${ligne.designation} » est une nouvelle prestation : saisissez son prix, elle sera ajoutée au paramétrage.`;
+        return `« ${ligne.designation} » : indiquez son prix.`;
       }
     }
     return null;
   }
 
-  allerA(etape: Etape) {
-    if (etape === 'termine' || this.etape === 'termine') return;
-    const cible = this.etapes.findIndex(e => e.cle === etape);
-    if (cible >= 0 && cible < this.numeroEtape) this.etape = etape;
-  }
-
   // ══════════════════════════ enregistrement ══════════════════════════
 
   /**
-   * « Enregistrer — à compléter » depuis une étape intermédiaire : confirmé d'abord, pour qu'un
+   * « Enregistrer — à compléter » (bouton secondaire) : confirmé d'abord, pour qu'un
    * appui involontaire ne crée pas un dossier incomplet dans la facture du mois.
    */
   enregistrerPlusTard() {
@@ -940,11 +845,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   /**
    * Reporte la saisie dans le paramétrage du poste avant d'enregistrer (§3.2) :
    * <ul>
-   *   <li>prestation inconnue → ajoutée, avec son service et son prix ;</li>
+   *   <li>prestation inconnue → ajoutée avec son prix, sans service (à ranger depuis les
+   *       paramètres) ;</li>
    *   <li>prix modifié sur une prestation paramétrée → le nouveau prix devient le prix
-   *       paramétré (les patients suivants l'auront d'office) ;</li>
-   *   <li>autre service tapé sur une prestation paramétrée → la prestation y est rangée ;
-   *       un service qui n'existait pas entre ainsi dans la liste.</li>
+   *       paramétré (les patients suivants l'auront d'office).</li>
    * </ul>
    * <p>Une prestation du référentiel <b>national</b> ne se modifie pas d'ici : le poste s'en
    * fait sa propre version, même code, que le serveur fait primer chez lui seul.</p>
@@ -974,15 +878,13 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     for (const ligne of this.lignesSaisies) {
       const tarif = this.tarifDe(ligne);
       if (!tarif || traites.has(tarif.id)) continue;
-      const prixChange = this.prixModifie(ligne);
-      const serviceChange = this.serviceAReporter(ligne);
-      if (!prixChange && !serviceChange) continue;
+      if (!this.prixModifie(ligne)) continue;
       traites.add(tarif.id);
 
       const maj: Partial<TarifHorsCsu> = {
         designation: tarif.designation,
-        categorie: serviceChange ? ligne.service.trim() : (tarif.categorie || ''),
-        prix: prixChange ? Number(ligne.prixUnitaire) : tarif.prix
+        categorie: tarif.categorie || '',
+        prix: Number(ligne.prixUnitaire)
       };
       const appel = tarif.structureId
         ? this.horsCsu.modifierTarif(tarif.id, maj)
@@ -991,10 +893,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
         map(enregistre => {
           // Version propre créée à partir d'un tarif national : les lignes la référencent.
           this.lignes.filter(l => l.tarifId === tarif.id).forEach(l => l.tarifId = enregistre.id);
-          const changements: string[] = [];
-          if (prixChange) changements.push(`${Number(ligne.prixUnitaire).toLocaleString('fr-FR')} F`);
-          if (serviceChange) changements.push(`service « ${maj.categorie} »`);
-          return `« ${tarif.designation} » : ${changements.join(', ')}`;
+          return `« ${tarif.designation} » : ${Number(ligne.prixUnitaire).toLocaleString('fr-FR')} F`;
         }),
         catchError(() => of(null))
       ));
@@ -1036,7 +935,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       verificationCarte: this.carteRequise ? (this.verification ?? undefined) : undefined,
       lignes,
       pieces: this.piecesAEnvoyer(),
-      partiel
+      partiel,
+      datePriseEnCharge: this.dateSoins
     };
     if (!this.modeModification && this.mois && this.annee) {
       requete.mois = this.mois;
@@ -1131,10 +1031,13 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
           nouvelle: false,
           origine: l
         }));
-        this.assurerLigneVide();
+        this.assurerUneLigne();
+        // La date de prise en charge reste celle de la saisie, même complétée le lendemain :
+        // celle du dossier, à défaut celle de ses prestations ou le jour de son enregistrement.
+        const premiereDate = (facture.lignes || []).find(l => l.dossierId === dossierId && l.datePriseEnCharge)?.datePriseEnCharge;
+        this.dateSoins = (dossier.datePriseEnCharge || premiereDate || dossier.createdAt || this.dateSoins).substring(0, 10);
         this.chargerPieces(factureId, dossier);
-        // Le dossier s'ouvre sur ce qui reste à faire : prestations, ou identité/pièces.
-        this.etape = this.piecesManquantesDossier(dossier) ? 'identification' : 'medical';
+        this.etape = 'saisie';
       },
       error: err => {
         this.chargement = false;
@@ -1142,10 +1045,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
         this.annule.emit();
       }
     });
-  }
-
-  private piecesManquantesDossier(dossier: DossierPatient): boolean {
-    return this.piecesRequises.some(type => !(dossier.pieces || []).includes(type));
   }
 
   /**
@@ -1179,10 +1078,6 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     if (!iso) return '';
     const [a, m, j] = iso.substring(0, 10).split('-');
     return `${j}/${m}/${a}`;
-  }
-
-  libelleSexe(sexe: string): string {
-    return sexe === 'M' ? 'Masculin' : sexe === 'F' ? 'Féminin' : '—';
   }
 
   private aujourdhui(): string {

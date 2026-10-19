@@ -85,12 +85,32 @@
           <mat-icon>close</mat-icon> Fermer
         </button>
       </div>
-      <app-facturation-csu-poste [integre]="true" [factureId]="facture.id" [dossierId]="v.dossier.id"
-                                 (termine)="editionTerminee($event)" (annule)="fermerEdition()"></app-facturation-csu-poste>
+      <!-- Un formulaire neuf par dossier : il ne lit son dossier qu'à sa création, et l'on
+           enchaîne d'un patient « à compléter » au suivant sans quitter l'écran. -->
+      <ng-container *ngFor="let dossierId of [v.dossier.id]">
+        <app-facturation-csu-poste [integre]="true" [factureId]="facture.id" [dossierId]="dossierId"
+                                   (termine)="editionTerminee($event)" (annule)="fermerEdition()"></app-facturation-csu-poste>
+      </ng-container>
     </div>
 
-    <!-- =========== Identité (en-tête compact, toujours visible) =========== -->
-    <div class="card mb-4" [ngClass]="{ '!border-success': estVerifie(echelonPointage) }">
+    <!-- Formulaire « Compléter / Modifier » ouvert : il est seul à l'écran (demande du
+         19/10/2026) — ni la carte Dossier, ni le tableau des prestations déjà faites, ni les
+         visites du mois, que le formulaire reprend déjà. -->
+    <ng-container *ngIf="!edition">
+
+    <!-- =========== Espace PS : de la carte du patient ne reste que « Dossier » ===========
+         (demande du 19/10/2026) — ni nom, ni badges, ni Informations, ni Fiche. -->
+    <div *ngIf="contexte === 'espace-ps' && dossierAffiche" class="card mb-4 print:hidden">
+      <div class="section-body">
+        <button type="button" class="btn btn-outline btn-sm" (click)="afficherDossier = true"
+                title="Ouvrir le dossier patient (documents justificatifs)">
+          <mat-icon>folder_shared</mat-icon> Dossier
+        </button>
+      </div>
+    </div>
+
+    <!-- =========== Identité (district / SR / structure : en-tête compact, toujours visible) =========== -->
+    <div *ngIf="contexte === 'structure'" class="card mb-4" [ngClass]="{ '!border-success': estVerifie(echelonPointage) }">
       <div class="section-header">
         <div class="section-title-group">
           <div class="section-icon"><mat-icon>person</mat-icon></div>
@@ -121,10 +141,9 @@
                 <mat-icon class="!text-[13px] !w-[13px] !h-[13px]">block</mat-icon>Rejeté par le SR
               </span>
             </h2>
-            <p>
-              {{ libelleRegime(facture.regime) }} – facture {{ facture.numero }} – {{ periode }}
-              <ng-container *ngIf="contexte === 'structure' && facture.structureNom"> – {{ facture.structureNom }}</ng-container>
-            </p>
+            <!-- Plus de « régime – facture – mois » sous le nom (demande du 19/10/2026) ; le
+                 district / SR, qui voit plusieurs structures, garde le nom de la structure. -->
+            <p *ngIf="contexte === 'structure' && facture.structureNom">{{ facture.structureNom }}</p>
           </div>
         </div>
         <!-- Boutons : Informations + Dossier + Fiche bénéficiaire -->
@@ -192,23 +211,21 @@
           <div class="overflow-x-auto">
             <table class="w-full text-[13px] border-collapse">
               <thead>
+                <!-- Ni date (déjà sur la ligne de la facture, et dans le titre) ni parts SEN-CSU /
+                     patient (demande du 19/10/2026) : prestation, quantité, prix, montant. -->
                 <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
-                  <th class="py-1.5 pr-2 whitespace-nowrap">Date</th>
-                  <th class="py-1.5 px-2">Prestation</th>
+                  <th class="py-1.5 pr-2">Prestation</th>
                   <th class="py-1.5 px-2 text-center">Qté</th>
                   <ng-container *ngIf="!forfaitaire">
                     <th class="py-1.5 px-2 text-right">Prix</th>
                     <th class="py-1.5 px-2 text-right">Montant</th>
-                    <th class="py-1.5 px-2 text-right">SEN-CSU ({{ tauxSencsu }} %)</th>
-                    <th class="py-1.5 pl-2 text-right">Patient ({{ 100 - tauxSencsu }} %)</th>
                   </ng-container>
                   <th *ngIf="peutCorrigerLignes" class="py-1.5 pl-2"></th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let ligne of v.lignes" class="border-b border-border-light">
-                  <td class="py-2 pr-2 whitespace-nowrap text-text-secondary">{{ dateFr(ligne.datePriseEnCharge) }}</td>
-                  <td class="py-2 px-2">
+                  <td class="py-2 pr-2">
                     {{ ligne.designation }}
                     <span *ngIf="ligne.service" class="text-[11.5px] text-text-secondary"> – {{ ligne.service }}</span>
                     <span *ngIf="ligne.codeActe" class="block text-[11.5px] text-text-secondary">{{ ligne.codeActe }}</span>
@@ -217,8 +234,6 @@
                   <ng-container *ngIf="!forfaitaire">
                     <td class="py-2 px-2 text-right">{{ ligne.prixUnitaire | number:'1.0-0':'fr' }}</td>
                     <td class="py-2 px-2 text-right font-semibold">{{ ligne.montant | number:'1.0-0':'fr' }}</td>
-                    <td class="py-2 px-2 text-right">{{ ligne.montantSencsu | number:'1.0-0':'fr' }}</td>
-                    <td class="py-2 pl-2 text-right">{{ ligne.montantBeneficiaire | number:'1.0-0':'fr' }}</td>
                   </ng-container>
                   <td *ngIf="peutCorrigerLignes" class="py-1 pl-2 text-right whitespace-nowrap">
                     <button type="button" class="btn btn-ghost btn-sm" (click)="corrigerLigne(ligne)" title="Modifier la prestation"
@@ -232,8 +247,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="v.lignes.length === 0">
-                  <td class="py-3 pr-2 whitespace-nowrap text-text-secondary">{{ dateFr(v.date) }}</td>
-                  <td [attr.colspan]="forfaitaire ? 2 : 6" class="py-3 px-2 text-text-muted italic">Aucune prestation : dossier à compléter.</td>
+                  <td [attr.colspan]="forfaitaire ? 2 : 4" class="py-3 pr-2 text-text-muted italic">Aucune prestation : dossier à compléter.</td>
                 </tr>
               </tbody>
             </table>
@@ -304,6 +318,8 @@
       </div>
     </div>
 
+    </ng-container>
+
     <!-- =========== Modale Dossier patient =========== -->
     <div class="modal-overlay" *ngIf="afficherDossier && dossierAffiche" (click)="afficherDossier = false">
       <div class="modal-card sm:w-[80vw] sm:max-w-[80vw] sm:h-[80vh]" role="dialog" aria-labelledby="titre-dossier" (click)="$event.stopPropagation()">
@@ -347,11 +363,8 @@
             <input type="number" min="0" [(ngModel)]="modeleLigne.prixUnitaire"
                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
           </label>
-          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-            Date de prise en charge
-            <app-champ-date [(ngModel)]="modeleLigne.datePriseEnCharge"></app-champ-date>
-          </label>
-          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+          <!-- Pas de date : celle de la visite ne change plus après la saisie (19/10/2026). -->
+          <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary sm:col-span-2">
             Code acte <span class="font-normal text-text-muted">(facultatif)</span>
             <input [(ngModel)]="modeleLigne.codeActe"
                    class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">

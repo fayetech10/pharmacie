@@ -15,49 +15,8 @@
 
   <ng-container *ngIf="!chargement">
 
-    <!-- ═══════════ Bandeau : régime et règle de prise en charge ═══════════ -->
-    <div *ngIf="regime && etape !== 'regime'"
-         class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 py-3 px-4 rounded-xl border border-[var(--border-strong)] bg-white">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <span class="w-9 h-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-          <mat-icon class="!text-xl !w-5 !h-5">{{ categorie?.icone || 'category' }}</mat-icon>
-        </span>
-        <div class="min-w-0">
-          <div class="text-[12px] text-text-secondary leading-tight">Régime</div>
-          <div class="text-[14.5px] font-bold text-text-primary leading-tight">{{ libelleRegime(regime) }}</div>
-        </div>
-      </div>
-      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-light text-primary text-[12px] font-semibold">
-        <mat-icon class="!text-sm !w-3.5 !h-3.5">shield</mat-icon>{{ regleRegime }}
-      </span>
-      <span *ngIf="mois && annee && !estMoisCourant" class="text-[12.5px] text-text-secondary">
-        Facture de {{ moisLibelles[mois] }} {{ annee }}
-      </span>
-      <button type="button" *ngIf="!modeModification && !regimeImpose && etape !== 'termine'"
-              class="btn btn-ghost btn-sm ml-auto" (click)="changerDeRegime()">
-        <mat-icon>swap_horiz</mat-icon> Changer de régime
-      </button>
-    </div>
-
-    <!-- ═══════════ Étapes ═══════════ -->
-    <ol *ngIf="etape !== 'regime'" class="flex items-center gap-1 sm:gap-2 mb-4 overflow-x-auto pb-1 list-none p-0"
-        aria-label="Étapes de la facturation">
-      <li *ngFor="let e of etapes; let i = index; let dernier = last" class="flex items-center gap-1 sm:gap-2 shrink-0">
-        <button type="button" (click)="allerA(e.cle)" [disabled]="i >= numeroEtape || etape === 'termine'"
-                class="flex items-center gap-1.5 px-1 py-1 rounded-lg disabled:cursor-default"
-                [attr.aria-current]="i === numeroEtape ? 'step' : null">
-          <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11.5px] font-bold shrink-0"
-                [ngClass]="i < numeroEtape || etape === 'termine' ? 'bg-primary text-white'
-                  : i === numeroEtape ? 'bg-primary-light text-primary ring-2 ring-primary-200' : 'bg-field text-text-muted'">
-            <mat-icon *ngIf="i < numeroEtape || etape === 'termine'" class="!text-sm !w-3.5 !h-3.5">check</mat-icon>
-            <ng-container *ngIf="!(i < numeroEtape || etape === 'termine')">{{ i + 1 }}</ng-container>
-          </span>
-          <span class="text-[12.5px] font-semibold whitespace-nowrap"
-                [ngClass]="i === numeroEtape ? 'inline text-text-primary' : 'hidden sm:inline text-text-secondary'">{{ e.libelle }}</span>
-        </button>
-        <span *ngIf="!dernier" class="w-4 sm:w-8 h-px bg-border"></span>
-      </li>
-    </ol>
+    <!-- Plus de bandeau du régime au-dessus de la saisie (demande du 19/10/2026) : on revient
+         au choix du régime par le bouton « Régime » en bas de l'écran. -->
 
     <!-- ═══════════ 0. Régime ═══════════ -->
     <div *ngIf="etape === 'regime'" class="card anim-etape">
@@ -127,135 +86,315 @@
       </div>
     </div>
 
-    <!-- ═══════════ 1. Identification ═══════════ -->
-    <div *ngIf="etape === 'identification'" class="card anim-etape">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>badge</mat-icon></div>
-          <div>
-            <h2>Identification du patient</h2>
+    <!-- ═══════════ 1. Éligibilité et prestations : un seul écran (demande du 19/10/2026) ═══════════
+         Après le choix du régime : le contrôle d'éligibilité (ou les pièces), le patient (photo,
+         nom, icône photo) et ses prestations se suivent sur la même page. Chaque partie apparaît
+         dès que la précédente est remplie. Textes agrandis (07/10/2026 : lisibles par les agents
+         de tous âges) : champs 16px, libellés 15px, listes à grandes options (.liste-lisible). -->
+    <div *ngIf="etape === 'saisie'" class="card anim-etape">
+      <div class="section-body flex flex-col gap-5 text-[15px]">
+
+        <!-- ─── Date de prise en charge, en tête (demande du 19/10/2026) ───
+             Le jour même par défaut, modifiable à la saisie. Quand on complète un dossier, elle
+             reste celle de la saisie : plus modifiable, même le lendemain. -->
+        <div class="flex flex-col gap-1.5">
+          <label *ngIf="!modeModification" class="flex flex-col gap-1.5 max-w-[260px] text-[15px] font-semibold text-text-secondary">
+            Date de prise en charge
+            <app-champ-date [(ngModel)]="dateSoins" [grand]="true"></app-champ-date>
+          </label>
+          <div *ngIf="modeModification" class="flex flex-col gap-1.5">
+            <span class="text-[15px] font-semibold text-text-secondary">Date de prise en charge</span>
+            <span class="inline-flex items-center gap-1.5 text-[16px] font-bold text-text-primary">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-secondary">lock</mat-icon>{{ dateFr(dateSoins) }}
+            </span>
           </div>
+          <span *ngIf="mois && annee && !estMoisCourant" class="text-[13px] text-text-secondary">
+            Facture de {{ moisLibelles[mois] }} {{ annee }}
+          </span>
         </div>
-      </div>
 
-      <div class="section-body">
+        <!-- ─── Patient ─── -->
+        <section *ngIf="regime" class="flex flex-col gap-3" aria-label="Patient">
+          <h2 class="m-0 text-[13px] font-bold uppercase tracking-wide text-text-secondary">Patient</h2>
 
-        <!-- Régimes à carte : code d'immatriculation -->
-        <ng-container *ngIf="carteRequise">
-          <div *ngIf="identiteVerrouillee"
-               class="flex flex-wrap items-center gap-2 py-3 px-3 rounded-lg bg-success-light text-success text-[13px]">
-            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">lock</mat-icon>
-            <span class="flex-1 min-w-[200px]">Identité validée par le contrôle d'éligibilité ({{ patient.matricule }}) :
-              elle ne peut plus être modifiée.</span>
-            <button type="button" *ngIf="!modeModification" class="btn btn-sm btn-outline" (click)="changerDeCarte()">
-              Saisir un autre code
-            </button>
-          </div>
+          <!-- Régimes à carte : le code d'immatriculation, contrôlé avant tout le reste -->
+          <ng-container *ngIf="carteRequise && !verification">
+            <form (ngSubmit)="verifierEligibilite()" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+              <label class="flex flex-col gap-1.5 flex-1 text-[15px] font-semibold text-text-secondary">
+                Code d'immatriculation
+                <input name="code" [(ngModel)]="codeImmatriculation" autocomplete="off" autocapitalize="characters"
+                       placeholder="Ex. V8658Y2605" [disabled]="controleEnCours"
+                       class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-mono tracking-wide uppercase text-text-primary">
+              </label>
+              <button type="submit" class="btn btn-primary h-12" [disabled]="controleEnCours || !codeImmatriculation.trim()">
+                <mat-spinner *ngIf="controleEnCours" diameter="18" class="!m-0"></mat-spinner>
+                <mat-icon *ngIf="!controleEnCours">verified_user</mat-icon>
+                {{ controleEnCours ? 'Contrôle en cours…' : 'Contrôler l\'éligibilité' }}
+              </button>
+            </form>
 
-          <form *ngIf="!identiteVerrouillee" (ngSubmit)="verifierEligibilite()" class="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <label class="flex flex-col gap-1 flex-1 text-[13px] font-semibold text-text-secondary">
-              Code d'immatriculation
-              <input name="code" [(ngModel)]="codeImmatriculation" autocomplete="off" autocapitalize="characters"
-                     placeholder="Ex. V8658Y2605" [disabled]="controleEnCours"
-                     class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-mono tracking-wide uppercase text-text-primary">
-            </label>
-            <button type="submit" class="btn btn-primary h-12" [disabled]="controleEnCours || !codeImmatriculation.trim()">
-              <mat-spinner *ngIf="controleEnCours" diameter="18" class="!m-0"></mat-spinner>
-              <mat-icon *ngIf="!controleEnCours">verified_user</mat-icon>
-              {{ controleEnCours ? 'Contrôle en cours…' : 'Contrôler l\'éligibilité' }}
-            </button>
-          </form>
-
-          <!-- Carte expirée / non valide : blocage -->
-          <div *ngIf="refus" role="alert"
-               class="mt-4 p-4 rounded-lg border-2 border-red-300 bg-red-50 text-red-800">
-            <div class="flex items-start gap-3">
-              <mat-icon class="shrink-0 !text-[28px] !w-7 !h-7">block</mat-icon>
-              <div class="min-w-0">
-                <strong class="block text-[15px]">{{ refus }}</strong>
-                <span *ngIf="carte" class="block mt-1 text-[13px]">
-                  {{ carte.prenom }} {{ carte.nom }} · {{ carte.codeImmatriculation }}
-                  <ng-container *ngIf="carte.dateFin"> · validité jusqu'au {{ dateFr(carte.dateFin) }}</ng-container>
-                </span>
-                <span class="block mt-1 text-[12.5px]">Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Système injoignable : seule dérogation -->
-          <div *ngIf="siteEnPanne" role="alert"
-               class="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
-            <div class="flex items-start gap-3">
-              <mat-icon class="shrink-0">cloud_off</mat-icon>
-              <div class="min-w-0">
-                <strong class="block text-[14px]">Le système de gestion des assurés est injoignable.</strong>
-                <span class="block mt-1 text-[13px]">Réessayez dans un instant. En cas de panne persistante, vous pouvez
-                  saisir le patient à la main : la facture portera la mention « carte non vérifiée ».</span>
-                <div class="flex flex-wrap gap-2 mt-3">
-                  <button type="button" class="btn btn-sm btn-outline" (click)="verifierEligibilite()">
-                    <mat-icon>refresh</mat-icon> Réessayer
-                  </button>
-                  <button type="button" class="btn btn-sm btn-warning" (click)="continuerSansVerification()">
-                    Continuer sans vérification
-                  </button>
+            <!-- Carte expirée / non valide : blocage -->
+            <div *ngIf="refus" role="alert"
+                 class="p-4 rounded-lg border-2 border-red-300 bg-red-50 text-red-800">
+              <div class="flex items-start gap-3">
+                <mat-icon class="shrink-0 !text-[28px] !w-7 !h-7">block</mat-icon>
+                <div class="min-w-0">
+                  <strong class="block text-[15px]">{{ refus }}</strong>
+                  <span *ngIf="carte" class="block mt-1 text-[13px]">
+                    {{ carte.prenom }} {{ carte.nom }} · {{ carte.codeImmatriculation }}
+                    <ng-container *ngIf="carte.dateFin"> · validité jusqu'au {{ dateFr(carte.dateFin) }}</ng-container>
+                  </span>
+                  <span class="block mt-1 text-[12.5px]">Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.</span>
                 </div>
               </div>
             </div>
+
+            <!-- Système injoignable : seule dérogation -->
+            <div *ngIf="siteEnPanne" role="alert"
+                 class="p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
+              <div class="flex items-start gap-3">
+                <mat-icon class="shrink-0">cloud_off</mat-icon>
+                <div class="min-w-0">
+                  <strong class="block text-[14px]">Le système de gestion des assurés est injoignable.</strong>
+                  <span class="block mt-1 text-[13px]">Réessayez dans un instant. En cas de panne persistante, vous pouvez
+                    saisir le patient à la main : la facture portera la mention « carte non vérifiée ».</span>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-sm btn-outline" (click)="verifierEligibilite()">
+                      <mat-icon>refresh</mat-icon> Réessayer
+                    </button>
+                    <button type="button" class="btn btn-sm btn-warning" (click)="continuerSansVerification()">
+                      Continuer sans vérification
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Carte contrôlée : la photo, le prénom et le nom (la photo de la carte se prend en dessous) -->
+          <div *ngIf="carteRequise && verification" class="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-border bg-white">
+            <img *ngIf="carte?.photo" [src]="carte?.photo" alt="Photo du patient"
+                 class="w-20 h-24 shrink-0 object-cover rounded-lg border border-border">
+            <span *ngIf="!carte?.photo" aria-hidden="true"
+                  class="w-20 h-24 shrink-0 rounded-lg bg-field text-text-muted flex items-center justify-center">
+              <mat-icon class="!text-[40px] !w-10 !h-10">person</mat-icon>
+            </span>
+            <div class="flex-1 min-w-0 flex flex-col items-start gap-1">
+              <div class="text-[19px] font-bold text-text-primary leading-snug break-words">
+                {{ (patient.prenom + ' ' + patient.nom).trim() || patient.matricule }}
+              </div>
+              <span *ngIf="verification === 'VERIFIEE'" class="inline-flex items-center gap-1 text-[13px] font-semibold text-success">
+                <mat-icon class="!text-base !w-4 !h-4">verified</mat-icon> Éligible
+              </span>
+              <button type="button" *ngIf="!modeModification" (click)="changerDeCarte()"
+                      class="inline-flex items-center gap-1 p-0 bg-transparent border-0 text-[13px] text-primary font-semibold underline cursor-pointer">
+                Autre code d'immatriculation
+              </button>
+            </div>
           </div>
-        </ng-container>
 
-        <!-- Enfants de moins de 5 ans -->
-        <div *ngIf="regime === Regime.ZERO_CINQ_ANS" class="grid gap-5 md:grid-cols-[300px_1fr]">
-          <app-photo-piece libelle="Extrait de naissance" [obligatoire]="!surLettre"
-                           aide="À plat, en entier, bien éclairé."
-                           [image]="pieces.EXTRAIT_NAISSANCE || null"
-                           (imageChange)="onPiece('EXTRAIT_NAISSANCE', $event)"
-                           (sortiePage)="garderBrouillon()"></app-photo-piece>
-          <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
-        </div>
+          <!-- Dérogation (système des assurés en panne) : l'identité se saisit à la main -->
+          <ng-container *ngIf="carteRequise && verification && !identiteVerrouillee">
+            <div *ngIf="verification === 'NON_VERIFIEE_PANNE'"
+                 class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13.5px]">
+              <mat-icon class="shrink-0">warning_amber</mat-icon>
+              <div>
+                <strong class="block">Carte non vérifiée (système indisponible)</strong>
+                Saisissez l'identité figurant sur la carte. La facture portera cette mention.
+                <div *ngIf="peutVerifierApresCoup" class="flex flex-wrap items-end gap-2 mt-3">
+                  <input [(ngModel)]="codeImmatriculation" aria-label="Code d'immatriculation"
+                         class="h-9 px-3 rounded-lg border border-border bg-white text-[14px] font-mono uppercase text-text-primary">
+                  <button type="button" class="btn btn-sm btn-outline" [disabled]="controleEnCours" (click)="verifierEligibilite()">
+                    <mat-icon>verified_user</mat-icon> Vérifier la carte maintenant
+                  </button>
+                </div>
+                <span *ngIf="refus" class="block mt-2 font-semibold text-red-700">{{ refus }}</span>
+              </div>
+            </div>
+            <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
+          </ng-container>
 
-        <!-- Plan Sésame -->
-        <div *ngIf="regime === Regime.SESAME" class="flex flex-col gap-5">
-          <div class="grid gap-4 sm:grid-cols-2">
-            <app-photo-piece libelle="CNI — recto" [obligatoire]="!surLettre" aide="La carte entière, sans reflet."
-                             [image]="pieces.CNI_RECTO || null"
-                             (imageChange)="onPiece('CNI_RECTO', $event)"
-                             (fichierAccepte)="lireCni($event)"
+          <!-- Photo de la carte d'assuré : sous le patient, sur sa propre ligne, avec un libellé
+               clair (demande du 19/10/2026) ; facultative. -->
+          <div *ngIf="carteRequise && verification"
+               class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
+            <span class="text-[15px] font-semibold text-text-primary">
+              Prendre en photo la carte d'assuré <span class="font-normal text-text-secondary">(facultatif)</span>
+            </span>
+            <app-photo-piece [compact]="true" libelle="Carte d'assuré" [obligatoire]="false"
+                             [image]="pieces.CARTE_ASSURE || null"
+                             (imageChange)="onPiece('CARTE_ASSURE', $event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
-            <app-photo-piece libelle="CNI — verso" [obligatoire]="!surLettre" aide="La carte entière, sans reflet."
-                             [image]="pieces.CNI_VERSO || null"
-                             (imageChange)="onPiece('CNI_VERSO', $event)"
-                             (fichierAccepte)="lireCni($event)"
+          </div>
+
+          <!-- Régimes sans carte (enfants, Sésame, lettre de garantie) : pièces et identité -->
+          <ng-container *ngIf="!carteRequise">
+            <div *ngIf="regime === Regime.ZERO_CINQ_ANS"
+                 class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
+              <!-- Photo facultative (demande du 19/10/2026) : son absence ne laisse plus le dossier « à compléter ». -->
+              <span class="text-[15px] font-semibold text-text-primary">
+                Extrait de naissance <span class="font-normal text-text-secondary">(facultatif)</span>
+              </span>
+              <app-photo-piece [compact]="true" libelle="Extrait de naissance" [obligatoire]="false"
+                               [image]="pieces.EXTRAIT_NAISSANCE || null"
+                               (imageChange)="onPiece('EXTRAIT_NAISSANCE', $event)"
+                               (sortiePage)="garderBrouillon()"></app-photo-piece>
+            </div>
+            <ng-container *ngIf="regime === Regime.SESAME">
+              <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
+                <span class="text-[15px] font-semibold text-text-primary">
+                  CNI — recto <span *ngIf="!surLettre" class="text-warn">*</span>
+                </span>
+                <app-photo-piece [compact]="true" libelle="CNI — recto" [obligatoire]="!surLettre"
+                                 [image]="pieces.CNI_RECTO || null"
+                                 (imageChange)="onPiece('CNI_RECTO', $event)"
+                                 (fichierAccepte)="lireCni($event)"
+                                 (sortiePage)="garderBrouillon()"></app-photo-piece>
+              </div>
+              <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
+                <span class="text-[15px] font-semibold text-text-primary">
+                  CNI — verso <span *ngIf="!surLettre" class="text-warn">*</span>
+                </span>
+                <app-photo-piece [compact]="true" libelle="CNI — verso" [obligatoire]="!surLettre"
+                                 [image]="pieces.CNI_VERSO || null"
+                                 (imageChange)="onPiece('CNI_VERSO', $event)"
+                                 (fichierAccepte)="lireCni($event)"
+                                 (sortiePage)="garderBrouillon()"></app-photo-piece>
+              </div>
+              <div *ngIf="ocrEnCours" class="flex items-center gap-2 text-[13px] text-text-secondary">
+                <mat-spinner diameter="18"></mat-spinner> Lecture automatique de la CNI…
+              </div>
+            </ng-container>
+            <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
+            <div *ngIf="alerteAge" role="alert"
+                 class="flex items-start gap-2 py-2.5 px-3 rounded-lg bg-warn-light text-warn text-[13px]">
+              <mat-icon class="shrink-0 !text-xl !w-5 !h-5">error_outline</mat-icon>{{ alerteAge }}
+            </div>
+          </ng-container>
+
+          <div *ngIf="incoherenceCategorie"
+               class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
+            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">info</mat-icon>{{ incoherenceCategorie }}
+          </div>
+          <div *ngIf="surLettre"
+               class="flex items-start gap-3 py-3 px-4 rounded-lg bg-primary-light text-primary text-[13.5px]">
+            <mat-icon class="shrink-0">description</mat-icon>
+            <span>Patient identifié par la lettre de garantie <strong>{{ surLettre }}</strong> : son nom fait foi et
+              n'est pas modifiable.</span>
+          </div>
+        </section>
+
+        <!-- ─── Informations prestation ─── -->
+        <section *ngIf="regime && patientPret" class="flex flex-col gap-4 pt-4 border-t border-border-light"
+                 aria-label="Informations prestation">
+          <h2 class="m-0 text-[13px] font-bold uppercase tracking-wide text-text-secondary">Informations prestation</h2>
+
+          <!-- En-têtes (desktop) -->
+          <div class="hidden sm:grid grid-cols-12 gap-2 px-1 text-[13px] font-bold uppercase tracking-wide text-text-secondary">
+            <span [ngClass]="forfaitaire ? 'col-span-10' : 'col-span-7'">Prestation</span>
+            <span class="col-span-1 text-center">Qté</span>
+            <span *ngIf="!forfaitaire" class="col-span-3 text-right">Prix unitaire (F)</span>
+            <span class="col-span-1"></span>
+          </div>
+
+          <div *ngFor="let ligne of lignes; let i = index; trackBy: trackIndex"
+               class="grid grid-cols-6 sm:grid-cols-12 gap-2 items-start p-3 sm:p-1 rounded-lg border sm:border-0 border-border bg-white">
+            <!-- Plus de colonne « Service » ni de liste prédéfinie (19/10/2026) : l'agent tape la
+                 prestation ; celles qu'il a déjà saisies lui sont proposées, avec leur prix. -->
+            <label class="col-span-6 flex flex-col gap-1" [ngClass]="forfaitaire ? 'sm:col-span-10' : 'sm:col-span-7'">
+              <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Prestation</span>
+              <input [(ngModel)]="ligne.designation" [matAutocomplete]="choix" placeholder="Saisir la prestation"
+                     (ngModelChange)="onDesignation(ligne)"
+                     class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] text-text-primary">
+              <mat-autocomplete #choix="matAutocomplete" class="liste-lisible">
+                <mat-option *ngFor="let t of suggestions(ligne)" [value]="t.designation"
+                            (onSelectionChange)="$event.isUserInput && choisirPrestation(ligne, t)">
+                  <span class="flex justify-between gap-3 w-full">
+                    <span class="truncate">{{ t.designation }}</span>
+                    <span class="shrink-0 text-text-secondary text-[14px]">
+                      <ng-container *ngIf="!forfaitaire">{{ t.prix | number:'1.0-0':'fr' }} F</ng-container>
+                      <ng-container *ngIf="forfaitaire">{{ t.categorie }}</ng-container>
+                    </span>
+                  </span>
+                </mat-option>
+              </mat-autocomplete>
+            </label>
+            <label class="col-span-2 sm:col-span-1 flex flex-col gap-1">
+              <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Quantité</span>
+              <input type="number" min="1" [(ngModel)]="ligne.quantite" aria-label="Quantité"
+                     class="h-12 px-2 rounded-lg border border-border bg-field-bg text-[16px] text-center text-text-primary">
+            </label>
+            <label *ngIf="!forfaitaire" class="col-span-3 flex flex-col gap-1">
+              <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Prix unitaire (F)</span>
+              <input type="number" min="0" [(ngModel)]="ligne.prixUnitaire" aria-label="Prix unitaire"
+                     class="h-12 px-2 rounded-lg border bg-field-bg text-[16px] text-right text-text-primary"
+                     [ngClass]="ligne.nouvelle && !(ligne.prixUnitaire! > 0) ? 'border-warn' : 'border-border'">
+            </label>
+            <div class="flex justify-end" [ngClass]="forfaitaire ? 'col-span-4 sm:col-span-1' : 'col-span-1'">
+              <button type="button" *ngIf="lignes.length > 1" (click)="retirerLigne(i)" [attr.aria-label]="'Retirer la ligne ' + (i + 1)"
+                      class="w-12 h-12 inline-flex items-center justify-center rounded-lg text-text-muted hover:bg-warn-light hover:text-warn">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+            <!-- Plus de message sous la ligne (19/10/2026) : une prestation tapée est enregistrée
+                 d'office avec son prix, et un prix changé remplace l'ancien, sans rien demander. -->
+          </div>
+
+          <!-- Une ligne de plus sur demande (plus de ligne vide ajoutée d'elle-même) -->
+          <button type="button" class="btn btn-outline self-start max-sm:w-full max-sm:h-12" (click)="ajouterLigne()">
+            <mat-icon>add</mat-icon> Ajouter une prestation
+          </button>
+
+          <!-- Parts SEN-CSU / patient ; plus de montant total (demande du 19/10/2026). -->
+          <div class="grid gap-3 sm:grid-cols-2 p-4 rounded-lg bg-field">
+            <div>
+              <div class="text-[14px] text-text-secondary">Part SEN-CSU ({{ contributif ? '80' : '100' }} %)</div>
+              <div class="text-[21px] font-bold text-primary">{{ totalSencsu | number:'1.0-0':'fr' }} F</div>
+            </div>
+            <div>
+              <div class="text-[14px] text-text-secondary">Part patient ({{ contributif ? '20' : '0' }} %)</div>
+              <div class="text-[21px] font-bold">{{ totalPatient | number:'1.0-0':'fr' }} F</div>
+            </div>
+          </div>
+
+          <!-- Ticket de caisse : contributif, facultatif ; une simple icône appareil photo -->
+          <div *ngIf="contributif" class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
+            <span class="text-[15px] font-semibold text-text-primary">
+              Ticket de caisse <span class="font-normal text-text-secondary">(facultatif)</span>
+            </span>
+            <app-photo-piece [compact]="true" libelle="Ticket de caisse" [obligatoire]="false"
+                             [image]="pieces.TICKET_CAISSE || null"
+                             (imageChange)="onPiece('TICKET_CAISSE', $event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
           </div>
-          <div *ngIf="ocrEnCours" class="flex items-center gap-2 text-[13px] text-text-secondary">
-            <mat-spinner diameter="18"></mat-spinner> Lecture automatique de la CNI…
+
+          <div *ngIf="manques.length" class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[14px]">
+            <mat-icon class="shrink-0 !text-xl !w-5 !h-5">pending_actions</mat-icon>
+            <span>Le dossier sera enregistré <strong>« à compléter »</strong> ({{ manques.join(', ') }}). Il faudra le
+              compléter depuis « Mes factures » avant d'envoyer la facture.</span>
           </div>
-          <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
-        </div>
+        </section>
 
-        <!-- Dossier sur lettre de garantie (centre), régime à carte : coordonnées seules -->
-        <ng-container *ngIf="surLettre && regime !== Regime.ZERO_CINQ_ANS && regime !== Regime.SESAME">
-          <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
-        </ng-container>
-
-        <div *ngIf="!carteRequise && alerteAge" role="alert"
-             class="flex items-start gap-2 mt-4 py-2.5 px-3 rounded-lg bg-warn-light text-warn text-[13px]">
-          <mat-icon class="shrink-0 !text-xl !w-5 !h-5">error_outline</mat-icon>{{ alerteAge }}
-        </div>
-
-        <div class="flex flex-wrap justify-between gap-3 mt-6">
+        <!-- Bouton principal : « à compléter » s'il manque quelque chose (l'encadré ci-dessus
+             l'explique), sinon la validation ; « Enregistrer — à compléter » juste après, pour
+             garder le dossier ouvert à d'autres prestations (confirmé). -->
+        <div class="flex flex-col-reverse gap-3 pt-4 border-t border-border-light sm:flex-row sm:items-center">
           <button type="button" class="btn btn-outline" *ngIf="!modeModification && !regimeImpose" (click)="changerDeRegime()">
             <mat-icon>arrow_back</mat-icon> Régime
           </button>
           <button type="button" class="btn btn-outline" *ngIf="modeModification" (click)="annule.emit()">Annuler</button>
-          <span class="flex-1"></span>
-          <button type="button" class="btn btn-primary" *ngIf="!carteRequise" (click)="validerIdentification()">
-            Continuer <mat-icon>arrow_forward</mat-icon>
-          </button>
-          <button type="button" class="btn btn-primary" *ngIf="carteRequise && verification" (click)="etape = 'eligibilite'">
-            Informations du patient <mat-icon>arrow_forward</mat-icon>
-          </button>
+          <ng-container *ngIf="regime && patientPret">
+            <button type="button" *ngIf="!manques.length" class="btn btn-outline max-sm:h-12 sm:order-2" [disabled]="enregistrement"
+                    (click)="enregistrerPlusTard()" title="D'autres prestations à ajouter plus tard : le dossier reste « à compléter »">
+              <mat-icon>bookmark_add</mat-icon> Enregistrer — à compléter
+            </button>
+            <button type="button" class="btn btn-primary max-sm:h-12 sm:order-1 sm:ml-auto" [disabled]="enregistrement"
+                    (click)="enregistrer(manques.length > 0)">
+              <mat-spinner *ngIf="enregistrement" diameter="18" class="!m-0"></mat-spinner>
+              <mat-icon *ngIf="!enregistrement">{{ manques.length ? 'bookmark_add' : 'task_alt' }}</mat-icon>
+              {{ manques.length ? 'Enregistrer — à compléter' : (modeModification ? 'Valider le dossier' : 'Valider la facturation') }}
+            </button>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -308,410 +447,6 @@
         </label>
       </div>
     </ng-template>
-
-    <!-- ═══════════ 2. Éligibilité — Écran 1 : informations du patient ═══════════ -->
-    <div *ngIf="etape === 'eligibilite'" class="card anim-etape">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>how_to_reg</mat-icon></div>
-          <div>
-            <h2>Informations du patient</h2>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-body flex flex-col gap-4">
-        <!-- Verdict -->
-        <div *ngIf="carteRequise && verification === 'VERIFIEE'"
-             class="flex items-start gap-3 py-3 px-4 rounded-lg bg-success-light text-success">
-          <mat-icon class="shrink-0">verified</mat-icon>
-          <div class="text-[13.5px]">
-            <strong class="block">Carte valide — bénéficiaire éligible</strong>
-            <span *ngIf="carte?.dateDebut || carte?.dateFin">
-              Couverture
-              <ng-container *ngIf="carte?.dateDebut">du {{ dateFr(carte?.dateDebut) }} </ng-container>
-              <ng-container *ngIf="carte?.dateFin">au {{ dateFr(carte?.dateFin) }}</ng-container>
-            </span>
-          </div>
-        </div>
-        <div *ngIf="carteRequise && verification === 'NON_VERIFIEE_PANNE'"
-             class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13.5px]">
-          <mat-icon class="shrink-0">warning_amber</mat-icon>
-          <div>
-            <strong class="block">Carte non vérifiée (système indisponible)</strong>
-            Saisissez l'identité figurant sur la carte. La facture portera cette mention.
-            <div *ngIf="peutVerifierApresCoup" class="flex flex-wrap items-end gap-2 mt-3">
-              <input [(ngModel)]="codeImmatriculation" aria-label="Code d'immatriculation"
-                     class="h-9 px-3 rounded-lg border border-border bg-white text-[14px] font-mono uppercase text-text-primary">
-              <button type="button" class="btn btn-sm btn-outline" [disabled]="controleEnCours" (click)="verifierEligibilite()">
-                <mat-icon>verified_user</mat-icon> Vérifier la carte maintenant
-              </button>
-            </div>
-            <span *ngIf="refus" class="block mt-2 font-semibold text-red-700">{{ refus }}</span>
-          </div>
-        </div>
-        <div *ngIf="surLettre"
-             class="flex items-start gap-3 py-3 px-4 rounded-lg bg-primary-light text-primary text-[13.5px]">
-          <mat-icon class="shrink-0">description</mat-icon>
-          <span>Patient identifié par la lettre de garantie <strong>{{ surLettre }}</strong> : son nom fait foi et
-            n'est pas modifiable.</span>
-        </div>
-        <div *ngIf="incoherenceCategorie"
-             class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
-          <mat-icon class="shrink-0 !text-xl !w-5 !h-5">info</mat-icon>{{ incoherenceCategorie }}
-        </div>
-
-        <!-- Identité de référence : TOUTES les informations renvoyées par le contrôle
-             d'éligibilité sont figées (demande du 09/10/2026 : « on ne doit pas pouvoir
-             modifier les informations reçues quand on met le numéro matricule »). Seuls les
-             champs que la carte n'a pas fournis restent saisissables, pour compléter le dossier. -->
-        <ng-container *ngIf="identiteVerrouillee && carteRequise">
-          <div class="flex flex-col sm:flex-row gap-4">
-            <img *ngIf="carte?.photo" [src]="carte?.photo" alt="Photo du porteur de la carte"
-                 class="w-28 h-32 object-cover rounded-lg border border-border self-start">
-            <dl class="grid flex-1 gap-x-6 sm:grid-cols-2 m-0">
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Prénom(s)</dt>
-                <dd class="m-0 font-semibold text-right">{{ patient.prenom }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Nom</dt>
-                <dd class="m-0 font-semibold text-right">{{ patient.nom }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Code d'immatriculation</dt>
-                <dd class="m-0 font-semibold font-mono text-right">{{ patient.matricule }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.sexe">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Sexe</dt>
-                <dd class="m-0 font-semibold text-right">{{ libelleSexe(patient.sexe) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.dateNaissance">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Date de naissance</dt>
-                <dd class="m-0 font-semibold text-right">{{ dateFr(patient.dateNaissance) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.numeroPiece">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>N° de pièce d'identité</dt>
-                <dd class="m-0 font-semibold text-right">{{ patient.numeroCni }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.telephone">
-                <dt class="text-text-secondary inline-flex items-center gap-1">
-                  <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>Téléphone</dt>
-                <dd class="m-0 font-semibold text-right">{{ patient.telephone }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.categorie">
-                <dt class="text-text-secondary">Catégorie</dt><dd class="m-0 font-semibold text-right">{{ carte?.categorie }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.mutuelle">
-                <dt class="text-text-secondary">Mutuelle</dt><dd class="m-0 font-semibold text-right">{{ carte?.mutuelle }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.typeAdhesion">
-                <dt class="text-text-secondary">Adhésion</dt><dd class="m-0 font-semibold text-right">{{ carte?.typeAdhesion }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.dateFin">
-                <dt class="text-text-secondary">Date d'expiration</dt><dd class="m-0 font-semibold text-right">{{ dateFr(carte?.dateFin) }}</dd>
-              </div>
-              <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]" *ngIf="carte?.etat">
-                <dt class="text-text-secondary">État de la carte</dt><dd class="m-0 font-semibold text-right">{{ carte?.etat }}</dd>
-              </div>
-            </dl>
-          </div>
-          <p class="flex items-center gap-1.5 m-0 text-[12px] text-text-secondary">
-            <mat-icon class="!text-sm !w-3.5 !h-3.5">lock</mat-icon>
-            Les informations validées par le contrôle d'éligibilité ne sont plus modifiables.
-          </p>
-          <!-- Changer de carte : à côté de l'identité qu'il remet en cause, loin des boutons du bas -->
-          <p *ngIf="!modeModification" class="flex flex-wrap items-center gap-x-1.5 gap-y-1 m-0 text-[13px] text-text-secondary">
-            Ce n'est pas la personne présente ?
-            <button type="button" (click)="changerDeCarte()"
-                    class="inline-flex items-center gap-1 p-0 bg-transparent border-0 text-primary font-semibold underline cursor-pointer">
-              <mat-icon class="!text-base !w-4 !h-4">badge</mat-icon> Saisir un autre code d'immatriculation
-            </button>
-          </p>
-          <!-- Champs absents de la carte : laissés saisissables pour compléter le dossier. -->
-          <div *ngIf="!carte?.sexe || !carte?.dateNaissance || !carte?.numeroPiece || !carte?.telephone"
-               class="grid gap-3 sm:grid-cols-2">
-            <label *ngIf="!carte?.sexe" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-              Sexe
-              <select [(ngModel)]="patient.sexe"
-                      class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
-                <option value="">—</option>
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-              </select>
-            </label>
-            <label *ngIf="!carte?.dateNaissance" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-              Date de naissance
-              <app-champ-date [(ngModel)]="patient.dateNaissance" vue="multi-year"></app-champ-date>
-            </label>
-            <label *ngIf="!carte?.numeroPiece" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-              N° de pièce d'identité
-              <input [(ngModel)]="patient.numeroCni" autocomplete="off"
-                     class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
-            </label>
-            <label *ngIf="!carte?.telephone" class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-              Téléphone
-              <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off"
-                     class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
-            </label>
-          </div>
-        </ng-container>
-
-        <!-- Dérogation : identité saisie -->
-        <ng-container *ngIf="carteRequise && !identiteVerrouillee">
-          <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-            <span class="text-text-secondary">Code d'immatriculation</span>
-            <strong class="font-mono">{{ patient.matricule }}</strong>
-          </div>
-          <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
-        </ng-container>
-
-        <!-- Régimes sans carte : contrôle de l'identification (âge, pièces) -->
-        <ng-container *ngIf="!carteRequise">
-          <div class="grid gap-x-6 sm:grid-cols-2">
-            <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-              <span class="text-text-secondary">Patient</span><strong class="text-right">{{ patient.prenom }} {{ patient.nom }}</strong>
-            </div>
-            <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-              <span class="text-text-secondary">Date de naissance</span><strong>{{ dateFr(patient.dateNaissance) || '—' }}</strong>
-            </div>
-            <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-              <span class="text-text-secondary">Sexe</span><strong>{{ libelleSexe(patient.sexe) }}</strong>
-            </div>
-            <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
-              <span class="text-text-secondary">{{ regime === Regime.ZERO_CINQ_ANS ? 'N° Extrait / Carnet / PEV' : 'N° CNI' }}</span>
-              <strong>{{ (regime === Regime.ZERO_CINQ_ANS ? patient.matricule : patient.numeroCni) || '—' }}</strong>
-            </div>
-          </div>
-          <ul class="list-none m-0 p-0 flex flex-col gap-1.5 text-[13px]">
-            <li *ngIf="regime === Regime.ZERO_CINQ_ANS || regime === Regime.SESAME"
-                class="flex items-center gap-2" [ngClass]="alerteAge ? 'text-warn' : 'text-success'">
-              <mat-icon class="!text-lg !w-[18px] !h-[18px]">{{ alerteAge ? 'error_outline' : 'check_circle' }}</mat-icon>
-              {{ alerteAge || (regime === Regime.ZERO_CINQ_ANS ? 'Âge conforme : moins de 5 ans' : 'Âge conforme : 60 ans et plus') }}
-            </li>
-            <li *ngFor="let type of piecesRequises" class="flex items-center gap-2"
-                [ngClass]="pieces[type] ? 'text-success' : 'text-amber-700'">
-              <mat-icon class="!text-lg !w-[18px] !h-[18px]">{{ pieces[type] ? 'check_circle' : 'photo_camera' }}</mat-icon>
-              {{ libellesPieces[type] }} : {{ pieces[type] ? 'photo prise' : 'photo manquante — le dossier restera « à compléter »' }}
-            </li>
-          </ul>
-        </ng-container>
-
-        <!-- Photo de la carte d'assuré : facultative. Prise par l'appareil photo uniquement
-             (le composant n'ouvre pas la galerie : galerie non activée). -->
-        <div *ngIf="carteRequise" class="max-w-[360px]">
-          <app-photo-piece libelle="Carte d'assuré" [obligatoire]="false"
-                           aide="Prenez la carte en photo, bien à plat et sans reflet."
-                           [image]="pieces.CARTE_ASSURE || null"
-                           (imageChange)="onPiece('CARTE_ASSURE', $event)"
-                           (sortiePage)="garderBrouillon()"></app-photo-piece>
-        </div>
-
-        <!-- « Enregistrer — à compléter » juste après « Informations médicales » (demande du
-             07/10/2026) : à droite sur ordinateur, en dessous sur téléphone ; toujours confirmé. -->
-        <div class="flex flex-col-reverse gap-3 mt-2 pt-4 border-t border-border-light sm:flex-row sm:items-center">
-          <button type="button" class="btn btn-outline" *ngIf="!carteRequise || !identiteVerrouillee"
-                  (click)="etape = 'identification'">
-            <mat-icon>arrow_back</mat-icon> Modifier l'identification
-          </button>
-          <button type="button" class="btn btn-outline max-sm:h-12 sm:order-2" [disabled]="enregistrement"
-                  (click)="enregistrerPlusTard()" title="Enregistrer le patient maintenant ; ses prestations se saisiront plus tard, depuis « Mes factures »">
-            <mat-icon>bookmark_add</mat-icon> Enregistrer — à compléter
-          </button>
-          <button type="button" class="btn btn-primary max-sm:h-12 sm:order-1 sm:ml-auto" (click)="continuerVersMedical()">
-            Informations médicales <mat-icon>arrow_forward</mat-icon>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════════ 3. Informations médicales — Écran 2 ═══════════ -->
-    <div *ngIf="etape === 'medical'" class="card anim-etape">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>medical_information</mat-icon></div>
-          <div>
-            <h2>Informations médicales</h2>
-          </div>
-        </div>
-      </div>
-
-      <!-- Textes agrandis (demande du 07/10/2026 : lisibles par les agents de tous âges) :
-           champs 16px, libellés 15px, listes déroulantes à grandes options (.liste-lisible). -->
-      <div class="section-body flex flex-col gap-4 text-[15px]">
-        <div class="grid gap-3 sm:grid-cols-[200px_1fr]">
-          <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
-            Date des soins
-            <app-champ-date [(ngModel)]="dateSoins" [grand]="true"></app-champ-date>
-          </label>
-        </div>
-
-        <!-- En-têtes (desktop) -->
-        <div class="hidden sm:grid grid-cols-12 gap-2 px-1 text-[13px] font-bold uppercase tracking-wide text-text-secondary">
-          <span class="col-span-3">Service</span>
-          <span [ngClass]="forfaitaire ? 'col-span-7' : 'col-span-4'">Prestation</span>
-          <span class="col-span-1 text-center">Qté</span>
-          <ng-container *ngIf="!forfaitaire">
-            <span class="col-span-2 text-right">Prix unit. (F)</span>
-            <span class="col-span-1 text-right">Montant</span>
-          </ng-container>
-          <span class="col-span-1"></span>
-        </div>
-
-        <div *ngFor="let ligne of lignes; let i = index; trackBy: trackIndex"
-             class="grid grid-cols-6 sm:grid-cols-12 gap-2 items-start p-3 sm:p-1 rounded-lg border sm:border-0 border-border bg-white">
-          <label class="col-span-6 sm:col-span-3 flex flex-col gap-1">
-            <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Service</span>
-            <!-- Liste Material (et non <datalist>, absente sur certains téléphones) ; tous les
-                 services restent proposés quand un service est déjà choisi. -->
-            <span class="relative">
-              <input #champService [(ngModel)]="ligne.service" [matAutocomplete]="choixService" #declService="matAutocompleteTrigger"
-                     placeholder="Choisir un service" (change)="onDesignation(ligne)"
-                     (ngModelChange)="ligne.serviceSaisi = true; assurerLigneVide()"
-                     class="h-12 w-full pl-3 pr-11 rounded-lg border border-border bg-field-bg text-[16px] text-text-primary">
-              <button type="button" tabindex="-1" aria-label="Afficher la liste des services"
-                      (mousedown)="$event.preventDefault()" (click)="champService.focus(); declService.openPanel()"
-                      class="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 inline-flex items-center justify-center rounded-md border-0 bg-transparent text-text-secondary cursor-pointer">
-                <mat-icon>expand_more</mat-icon>
-              </button>
-            </span>
-            <mat-autocomplete #choixService="matAutocomplete" class="liste-lisible" (optionSelected)="onDesignation(ligne)">
-              <mat-option *ngFor="let s of servicesProposes(ligne)" [value]="s">{{ s }}</mat-option>
-            </mat-autocomplete>
-          </label>
-          <label class="col-span-6 flex flex-col gap-1" [ngClass]="forfaitaire ? 'sm:col-span-7' : 'sm:col-span-4'">
-            <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Prestation</span>
-            <input [(ngModel)]="ligne.designation" [matAutocomplete]="choix" placeholder="Rechercher ou saisir une prestation"
-                   (ngModelChange)="onDesignation(ligne); assurerLigneVide()"
-                   class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] text-text-primary">
-            <mat-autocomplete #choix="matAutocomplete" class="liste-lisible">
-              <mat-option *ngFor="let t of suggestions(ligne)" [value]="t.designation"
-                          (onSelectionChange)="$event.isUserInput && choisirPrestation(ligne, t); assurerLigneVide()">
-                <span class="flex justify-between gap-3 w-full">
-                  <span class="truncate">{{ t.designation }}</span>
-                  <span class="shrink-0 text-text-secondary text-[14px]">
-                    <ng-container *ngIf="!forfaitaire">{{ t.prix | number:'1.0-0':'fr' }} F</ng-container>
-                    <ng-container *ngIf="forfaitaire">{{ t.categorie }}</ng-container>
-                  </span>
-                </span>
-              </mat-option>
-            </mat-autocomplete>
-          </label>
-          <label class="col-span-2 sm:col-span-1 flex flex-col gap-1">
-            <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Quantité</span>
-            <input type="number" min="1" [(ngModel)]="ligne.quantite" aria-label="Quantité" (ngModelChange)="assurerLigneVide()"
-                   class="h-12 px-2 rounded-lg border border-border bg-field-bg text-[16px] text-center text-text-primary">
-          </label>
-          <ng-container *ngIf="!forfaitaire">
-            <label class="col-span-2 sm:col-span-2 flex flex-col gap-1">
-              <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Prix unitaire</span>
-              <input type="number" min="0" [(ngModel)]="ligne.prixUnitaire" aria-label="Prix unitaire" (ngModelChange)="assurerLigneVide()"
-                     class="h-12 px-2 rounded-lg border bg-field-bg text-[16px] text-right text-text-primary"
-                     [ngClass]="ligne.nouvelle && !(ligne.prixUnitaire! > 0) ? 'border-warn' : 'border-border'">
-            </label>
-            <div class="col-span-1 sm:col-span-1 flex flex-col gap-1 sm:items-end">
-              <span class="sm:sr-only text-[14px] font-semibold text-text-secondary">Montant</span>
-              <span class="h-12 flex items-center justify-end text-[16px] font-bold">{{ montantLigne(ligne) | number:'1.0-0':'fr' }}</span>
-            </div>
-          </ng-container>
-          <div class="flex justify-end" [ngClass]="forfaitaire ? 'col-span-4 sm:col-span-1' : 'col-span-1'">
-            <button type="button" *ngIf="!estLigneVideFinale(i)" (click)="retirerLigne(i)" [attr.aria-label]="'Retirer la ligne ' + (i + 1)"
-                    class="w-12 h-12 inline-flex items-center justify-center rounded-lg text-text-muted hover:bg-warn-light hover:text-warn">
-              <mat-icon>delete_outline</mat-icon>
-            </button>
-          </div>
-          <div *ngIf="ligne.nouvelle" class="col-span-6 sm:col-span-12 flex items-start gap-1.5 text-[14px] text-amber-800">
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] shrink-0">new_releases</mat-icon>
-            <span>Prestation non paramétrée : elle sera ajoutée à votre liste de prestations
-              <ng-container *ngIf="nouveauService(ligne)">, dans le nouveau service « {{ ligne.service.trim() }} »,</ng-container>
-              <ng-container *ngIf="!forfaitaire">avec le prix saisi</ng-container>
-              <ng-container *ngIf="forfaitaire">
-                — prix de référence (non facturé) :
-                <input type="number" min="0" [(ngModel)]="ligne.prixUnitaire" aria-label="Prix de référence"
-                       class="h-10 w-28 px-2 ml-1 rounded border border-border bg-white text-[16px] text-right">
-              </ng-container>.
-            </span>
-          </div>
-          <!-- Prestation paramétrée modifiée : ce qui sera reporté au paramétrage à l'enregistrement -->
-          <div *ngIf="!ligne.nouvelle && (prixModifie(ligne) || serviceAReporter(ligne))"
-               class="col-span-6 sm:col-span-12 flex items-start gap-1.5 text-[14px] text-primary">
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] shrink-0">sync</mat-icon>
-            <span>
-              <ng-container *ngIf="prixModifie(ligne)">
-                Prix paramétré : {{ tarifDe(ligne)?.prix | number:'1.0-0':'fr' }} F — votre paramétrage passera à
-                {{ ligne.prixUnitaire | number:'1.0-0':'fr' }} F à l'enregistrement.
-              </ng-container>
-              <ng-container *ngIf="serviceAReporter(ligne) && nouveauService(ligne)">
-                Nouveau service « {{ ligne.service.trim() }} » : il sera ajouté à la liste, avec cette prestation.
-              </ng-container>
-              <ng-container *ngIf="serviceAReporter(ligne) && !nouveauService(ligne)">
-                La prestation sera rangée dans le service « {{ ligne.service.trim() }} »
-                <ng-container *ngIf="tarifDe(ligne)?.categorie">(au lieu de « {{ tarifDe(ligne)?.categorie }} »)</ng-container>.
-              </ng-container>
-            </span>
-          </div>
-        </div>
-
-
-
-        <!-- Totaux -->
-        <div class="grid gap-3 sm:grid-cols-3 p-4 rounded-lg bg-field">
-          <div>
-            <div class="text-[14px] text-text-secondary">{{ forfaitaire ? 'Forfait de la visite' : 'Total des prestations' }}</div>
-            <div class="text-[21px] font-bold">{{ total | number:'1.0-0':'fr' }} F</div>
-          </div>
-          <div>
-            <div class="text-[14px] text-text-secondary">Part SEN-CSU ({{ contributif ? '80' : '100' }} %)</div>
-            <div class="text-[21px] font-bold text-primary">{{ totalSencsu | number:'1.0-0':'fr' }} F</div>
-          </div>
-          <div>
-            <div class="text-[14px] text-text-secondary">Part patient ({{ contributif ? '20' : '0' }} %)</div>
-            <div class="text-[21px] font-bold">{{ totalPatient | number:'1.0-0':'fr' }} F</div>
-          </div>
-        </div>
-
-        <!-- Ticket de caisse : contributif, facultatif -->
-        <div *ngIf="contributif" class="max-w-[360px]">
-          <app-photo-piece libelle="Prendre en photo le ticket" [obligatoire]="false"
-                           aide="Facultatif : son absence ne bloque pas la facturation."
-                           [image]="pieces.TICKET_CAISSE || null"
-                           (imageChange)="onPiece('TICKET_CAISSE', $event)"
-                           (sortiePage)="garderBrouillon()"></app-photo-piece>
-        </div>
-
-        <div *ngIf="manques.length" class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[14px]">
-          <mat-icon class="shrink-0 !text-xl !w-5 !h-5">pending_actions</mat-icon>
-          <span>Le dossier sera enregistré <strong>« à compléter »</strong> ({{ manques.join(', ') }}). Il faudra le
-            compléter depuis « Mes factures » avant d'envoyer la facture.</span>
-        </div>
-
-        <!-- Plus d'écran « Récapitulatif » (supprimé le 07/10/2026) : on enregistre d'ici.
-             Bouton principal : « à compléter » s'il manque quelque chose (l'encadré ci-dessus
-             l'explique), sinon la validation ; « Enregistrer — à compléter » juste après, pour
-             garder le dossier ouvert à d'autres prestations (confirmé). -->
-        <div class="flex flex-col-reverse gap-3 mt-2 pt-4 border-t border-border-light sm:flex-row sm:items-center">
-          <button type="button" class="btn btn-outline" (click)="etape = 'eligibilite'">
-            <mat-icon>arrow_back</mat-icon> Patient
-          </button>
-          <button type="button" *ngIf="!manques.length" class="btn btn-outline max-sm:h-12 sm:order-2" [disabled]="enregistrement"
-                  (click)="enregistrerPlusTard()" title="D'autres prestations à ajouter plus tard : le dossier reste « à compléter »">
-            <mat-icon>bookmark_add</mat-icon> Enregistrer — à compléter
-          </button>
-          <button type="button" class="btn btn-primary max-sm:h-12 sm:order-1 sm:ml-auto" [disabled]="enregistrement"
-                  (click)="enregistrer(manques.length > 0)">
-            <mat-spinner *ngIf="enregistrement" diameter="18" class="!m-0"></mat-spinner>
-            <mat-icon *ngIf="!enregistrement">{{ manques.length ? 'bookmark_add' : 'task_alt' }}</mat-icon>
-            {{ manques.length ? 'Enregistrer — à compléter' : (modeModification ? 'Valider le dossier' : 'Valider la facturation') }}
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- ═══════════ 4. Validation ═══════════ -->
     <div *ngIf="etape === 'termine' && resultat" class="card anim-etape">

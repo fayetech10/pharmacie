@@ -27,6 +27,8 @@ export interface LignePatientListe {
   identiteVerifiee?: boolean;
   /** Ligne teintée : à compléter (ambre) ou pointée « vérifiée » (vert). */
   teinte?: 'ambre' | 'vert';
+  /** Bouton sur la ligne (ex. « Compléter ») : ouvre le patient, comme la ligne. */
+  action?: string;
 }
 
 /** Où en était la liste quand un patient a été ouvert (pour y revenir). */
@@ -39,7 +41,8 @@ export interface PositionListe {
  * Liste des patients d'une facture, identique partout (poste, centre, service régional,
  * pharmacie) : un tableau sans en-tête, une ligne par visite — nom et prénom, date, matricule.
  * Un clic sur la ligne ouvre l'écran de détail du patient, d'où « Retour » revient ici.
- * Aucune action dans la liste : elles sont sur l'écran du patient. Pas de photo.
+ * Les actions sont sur l'écran du patient ; une ligne peut seulement porter un bouton qui
+ * l'annonce (« Compléter » : le patient s'ouvre alors sur son formulaire). Pas de photo.
  */
 @Component({
   selector: 'app-liste-patients-facture',
@@ -73,8 +76,12 @@ export interface PositionListe {
             <td class="hidden sm:table-cell py-2.5 pl-2 pr-1 align-middle text-right whitespace-nowrap font-mono text-[13px] text-text-primary">
               {{ l.matricule || '—' }}
             </td>
-            <td class="py-2.5 pl-1 pr-3 w-8 align-middle">
-              <mat-icon class="!text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+            <td class="py-2.5 pl-1 pr-3 align-middle text-right" [class.w-8]="!l.action">
+              <button *ngIf="l.action" type="button" (click)="$event.stopPropagation(); ouvrir(l)"
+                      class="btn btn-primary btn-sm whitespace-nowrap">
+                <mat-icon>edit_note</mat-icon> {{ l.action }}
+              </button>
+              <mat-icon *ngIf="!l.action" class="!text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
             </td>
           </tr>
         </tbody>

@@ -169,6 +169,8 @@ export interface DossierPatient {
   typeAdhesion?: string;
   /** Saisie d'un centre sur lettre de garantie : la lettre identifie le patient. */
   lettreGarantieNumero?: string;
+  /** Date de prise en charge de la visite, fixée à la saisie : elle ne change plus ensuite. */
+  datePriseEnCharge?: string;
   pieces: TypePiece[];
   /** Pointé « vérifié » par le centre de rattachement pendant son contrôle (date, agent). */
   verifieCentreLe?: string | null;
@@ -373,6 +375,8 @@ export interface FactureStructureRequest {
   /** Mois / année de la facture visée (défaut : mois en cours). */
   mois?: number;
   annee?: number;
+  /** Date de prise en charge de la visite (aaaa-mm-jj), gardée par le dossier. */
+  datePriseEnCharge?: string;
   /** Photos du dossier patient par type ; chaîne vide = retirer la pièce. */
   pieces?: Partial<Record<TypePiece, string>>;
   /** Validation partielle : le dossier reste « à compléter ». */

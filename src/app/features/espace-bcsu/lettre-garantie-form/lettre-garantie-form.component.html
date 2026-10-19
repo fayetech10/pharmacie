@@ -29,9 +29,6 @@
           <div class="text-[14.5px] font-bold text-text-primary leading-tight">{{ libelleRegime(regime) }}</div>
         </div>
       </div>
-      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-light text-primary text-[12px] font-semibold">
-        <mat-icon class="!text-sm !w-3.5 !h-3.5">shield</mat-icon>{{ regleRegime }}
-      </span>
       <button type="button" *ngIf="etape !== 'termine'" class="btn btn-ghost btn-sm ml-auto" (click)="changerDeRegime()">
         <mat-icon>swap_horiz</mat-icon> Changer de régime
       </button>
