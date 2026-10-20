@@ -1,6 +1,6 @@
 {
   "name": "Gestion des Factures SENCSU",
-  "short_name": "CSU Sénégal",
+  "short_name": "SENCSU",
   "description": "Facturation CSU des postes et centres de santé, utilisable sans connexion.",
   "lang": "fr",
   "dir": "ltr",
