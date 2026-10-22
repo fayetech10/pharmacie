@@ -199,7 +199,6 @@ export class MainLayoutComponent implements OnInit {
         { label: 'Accueil du poste', icon: 'space_dashboard', link: '/dashboard/espace-poste', tab: 0, group: 'Général' },
         { label: 'Facturation CSU', icon: 'note_add', link: '/dashboard/espace-poste', tab: 1, group: 'Facturation CSU' },
         { label: 'Mes factures', icon: 'receipt_long', link: '/dashboard/espace-poste', tab: 2, group: 'Facturation CSU' },
-        { label: 'Facturation Hors CSU', icon: 'point_of_sale', link: '/dashboard/espace-poste', tab: 3, group: 'Hors CSU' },
         { label: 'Paramétrage', icon: 'tune', link: '/dashboard/espace-poste', tab: 4, group: 'Configuration' }
       ];
     }
