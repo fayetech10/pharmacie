@@ -141,12 +141,15 @@ export function tauxSencsuPoste(regime: Regime | null | undefined): number {
 }
 
 /**
- * Pièces sans lesquelles le dossier reste « à compléter » (miroir de
- * ServiceFacturation.piecesExigees). L'extrait de naissance des 0-5 ans est facultatif
- * depuis le 19/10/2026.
+ * Pièces sans lesquelles le dossier reste « à compléter » — ni validé ni envoyé (miroir de
+ * ServiceFacturation.piecesExigees) : CNI recto verso pour le Sésame ; photo de la carte pour
+ * les régimes à carte et, pour les contributifs, du ticket de caisse (23/10/2026). L'extrait
+ * de naissance des 0-5 ans est facultatif depuis le 19/10/2026.
  */
 export function piecesExigees(regime: Regime | null | undefined): TypePiece[] {
   if (regime === Regime.SESAME) return ['CNI_RECTO', 'CNI_VERSO'];
+  if (estContributif(regime)) return ['CARTE_ASSURE', 'TICKET_CAISSE'];
+  if (exigeCartePoste(regime)) return ['CARTE_ASSURE'];
   return [];
 }
 

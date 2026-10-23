@@ -218,13 +218,14 @@
           </ng-container>
 
           <!-- Photo de la carte d'assuré : sous le patient, sur sa propre ligne, avec un libellé
-               clair (demande du 19/10/2026) ; facultative. -->
+               clair (demande du 19/10/2026) ; obligatoire pour valider depuis le 23/10/2026 —
+               sans elle, le dossier reste « à compléter ». -->
           <div *ngIf="carteRequise && verification"
                class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
             <span class="text-[15px] font-semibold text-text-primary">
-              Prendre en photo la carte d'assuré <span class="font-normal text-text-secondary">(facultatif)</span>
+              Prendre en photo la carte d'assuré <span class="text-warn">*</span>
             </span>
-            <app-photo-piece [compact]="true" libelle="Carte d'assuré" [obligatoire]="false"
+            <app-photo-piece [compact]="true" libelle="Carte d'assuré" [obligatoire]="true"
                              [image]="pieces.CARTE_ASSURE || null"
                              (imageChange)="onPiece('CARTE_ASSURE', $event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
@@ -348,12 +349,15 @@
             </div>
           </div>
 
-          <!-- Ticket de caisse : contributif, facultatif ; une simple icône appareil photo -->
+          <!-- Ticket de caisse des contributifs (le patient paie sa part) : obligatoire pour valider
+               depuis le 23/10/2026, sauf saisie sur lettre de garantie. -->
           <div *ngIf="contributif" class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-white">
             <span class="text-[15px] font-semibold text-text-primary">
-              Ticket de caisse <span class="font-normal text-text-secondary">(facultatif)</span>
+              Ticket de caisse
+              <span *ngIf="!surLettre" class="text-warn">*</span>
+              <span *ngIf="surLettre" class="font-normal text-text-secondary">(facultatif)</span>
             </span>
-            <app-photo-piece [compact]="true" libelle="Ticket de caisse" [obligatoire]="false"
+            <app-photo-piece [compact]="true" libelle="Ticket de caisse" [obligatoire]="!surLettre"
                              [image]="pieces.TICKET_CAISSE || null"
                              (imageChange)="onPiece('TICKET_CAISSE', $event)"
                              (sortiePage)="garderBrouillon()"></app-photo-piece>
