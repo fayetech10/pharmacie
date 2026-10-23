@@ -500,12 +500,36 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * La dernière prestation est partie : le serveur a supprimé la facture vide (23/10/2026). On
+   * quitte ses écrans — sa page n'existe plus — pour la liste d'où on l'avait ouverte.
+   */
+  private quitterFactureSupprimee() {
+    this.snackBar.open('Plus aucune prestation : la facture a été supprimée.', 'Fermer', { duration: 5000 });
+    const f = this.facture;
+    if (this.contexte === 'espace-ps') {
+      const poste = this.auth.isPosteDeSante();
+      this.router.navigate([poste ? '/dashboard/espace-poste' : '/dashboard/espace-centre'], {
+        queryParams: f ? { tab: poste ? 2 : 3, regime: f.regime, annee: f.annee } : { tab: poste ? 2 : 3 }
+      });
+    } else if (this.depuisFacture) {
+      // Patient ouvert depuis la facture : on remonte d'un cran de plus, à l'écran d'avant elle.
+      history.go(-2);
+    } else {
+      this.location.back();
+    }
+  }
+
   /** Appel au serveur qui renvoie la facture à jour ; un seul traitement d'erreur. */
-  private executer(appel: () => Observable<FactureStructure>, message?: string, apres?: () => void) {
+  private executer(appel: () => Observable<FactureStructure | null>, message?: string, apres?: () => void) {
     this.occupe = true;
     appel().subscribe({
       next: facture => {
         this.occupe = false;
+        if (!facture) {
+          this.quitterFactureSupprimee();
+          return;
+        }
         this.facture = facture;
         this.construire();
         if (message) this.snackBar.open(message, 'Fermer', { duration: 3000 });

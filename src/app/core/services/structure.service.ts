@@ -246,17 +246,22 @@ export class StructureService {
     }
     return this.api.get<FactureStructure[]>('/factures-structure/postes-rattaches', { params: queryParams });
   }
+  /*
+   * Retraits (patient, prestation, dossier) : la facture à jour, ou `null` quand, vidée de sa
+   * dernière prestation, elle a été supprimée par le serveur (23/10/2026).
+   */
+
   /** Supprime la saisie complète d'un patient (par n° de LG) avant l'envoi mensuel. */
-  deleteFacturePatient(factureId: string, lettreNumero: string): Observable<FactureStructure> {
-    return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/patients?lettre=${encodeURIComponent(lettreNumero)}`);
+  deleteFacturePatient(factureId: string, lettreNumero: string): Observable<FactureStructure | null> {
+    return this.api.delete<FactureStructure | null>(`/factures-structure/${factureId}/patients?lettre=${encodeURIComponent(lettreNumero)}`);
   }
   /** Modifie une prestation (ligne) avant l'envoi mensuel. */
   updateFactureLigne(factureId: string, index: number, ligne: Partial<LigneFactureStructure>): Observable<FactureStructure> {
     return this.api.put<FactureStructure>(`/factures-structure/${factureId}/lignes/${index}`, ligne);
   }
   /** Supprime une prestation (ligne) avant l'envoi mensuel. */
-  deleteFactureLigne(factureId: string, index: number): Observable<FactureStructure> {
-    return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/lignes/${index}`);
+  deleteFactureLigne(factureId: string, index: number): Observable<FactureStructure | null> {
+    return this.api.delete<FactureStructure | null>(`/factures-structure/${factureId}/lignes/${index}`);
   }
 
   // ----- Dossiers patients (poste de santé) -----
@@ -265,8 +270,8 @@ export class StructureService {
   modifierDossier(factureId: string, dossierId: string, req: FactureStructureRequest): Observable<FactureStructure> {
     return this.api.put<FactureStructure>(`/factures-structure/${factureId}/dossiers/${dossierId}`, req);
   }
-  supprimerDossier(factureId: string, dossierId: string): Observable<FactureStructure> {
-    return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/dossiers/${dossierId}`);
+  supprimerDossier(factureId: string, dossierId: string): Observable<FactureStructure | null> {
+    return this.api.delete<FactureStructure | null>(`/factures-structure/${factureId}/dossiers/${dossierId}`);
   }
   /**
    * Photo justificative d'un dossier, lue à la demande. Pièces, fiche et attestation ont leur
