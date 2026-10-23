@@ -8,7 +8,6 @@ import {
   ActiviteDistrict, ActiviteStructure, ActivitesRegion, IndicateursActivite, ResumeFactureActivite
 } from '../../core/models/referentiel.model';
 import { apparenceStatut } from '../../core/models/statuts';
-import { IndicateurComponent } from '../../shared/indicateur/indicateur.component';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 import { RegimeBadgeComponent } from '../../shared/regime-badge/regime-badge.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
@@ -32,10 +31,7 @@ interface LigneStructure {
 interface LigneDistrict {
   cle: string;
   d: ActiviteDistrict;
-  puces: PuceStatut[];
   structures: LigneStructure[];
-  /** Structures du district sans aucune facture sur la période. */
-  sansSaisie: number;
   rejetees: number;
 }
 
@@ -53,8 +49,10 @@ const REJETS = ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'];
  * centres et postes de santé, sur un mois ou une année — factures et leur statut, patients,
  * visites, dossiers à compléter, part SEN-CSU, dernière saisie.
  *
- * <p>Présentation (23/10/2026) : les districts les uns sous les autres, chacun avec ses centres
- * et postes en rangée horizontale de cartes ; les factures d'une structure en modale.</p>
+ * <p>Présentation (23/10/2026) : un bandeau de chiffres, des filtres en pastilles, puis les
+ * districts les uns sous les autres, chacun avec ses centres et postes en rangée de cartes — les
+ * structures sans saisie en retrait, à la fin ; les factures d'une structure en modale. Aucun
+ * texte qui répète ce que la mise en page montre déjà.</p>
  *
  * <p>Le serveur impose la région (celle du compte) ; toutes les structures actives sont listées,
  * à zéro quand elles n'ont rien saisi — ce sont celles à relancer. Brouillons compris : un poste
@@ -63,20 +61,50 @@ const REJETS = ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'];
 @Component({
   selector: 'app-regional-activites',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, IndicateurComponent, StatusBadgeComponent,
+  imports: [CommonModule, FormsModule, MatIconModule, StatusBadgeComponent,
     RegimeBadgeComponent, PaginationComponent, PaginerPipe],
   templateUrl: './regional-activites.component.html',
   styles: [`
     /* Carte d'une structure : elle s'enfonce à l'appui (le clic est entendu) ; le soulèvement
-       au survol est réservé à la souris — au doigt, il resterait collé après le toucher. */
+       au survol est réservé à la souris — au doigt, il resterait collé après le toucher. Une
+       structure sans saisie n'a rien à ouvrir : sa carte, en retrait, ne réagit pas. */
     .carte-structure {
       transition: transform 160ms var(--ease-out), box-shadow 200ms ease;
     }
-    .carte-structure:active { transform: scale(0.98); }
+    .carte-structure:disabled { cursor: default; color: inherit; }
+    .carte-structure:not(:disabled):active { transform: scale(0.98); }
+    .fleche-carte { transition: transform 160ms var(--ease-out); }
     @media (hover: hover) and (pointer: fine) {
-      .carte-structure:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-      .carte-structure:hover:active { transform: translateY(-2px) scale(0.98); }
+      .carte-structure:not(:disabled):hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+      .carte-structure:not(:disabled):hover:active { transform: translateY(-2px) scale(0.98); }
+      .carte-structure:not(:disabled):hover .fleche-carte { transform: translateX(2px); }
     }
+
+    /* Pastilles de filtre (situation, type) : l'active en aplat vert, comme les onglets. */
+    .puce {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-light);
+      background: #fff;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 120ms var(--ease-out);
+    }
+    .puce:active { transform: scale(0.97); }
+    @media (hover: hover) and (pointer: fine) {
+      .puce:hover { border-color: var(--primary); color: var(--primary-dark); }
+    }
+    .puce-active,
+    .puce-active:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .puce-compte { font-size: 12px; font-variant-numeric: tabular-nums; opacity: 0.75; }
 
     /* Flèches des rangées : même logique, appui visible, survol à la souris seulement. */
     .fleche {
@@ -102,12 +130,21 @@ export class RegionalActivitesComponent implements OnInit {
   recherche = '';
 
   readonly situations: { cle: FiltreSituation; libelle: string }[] = [
-    { cle: 'TOUTES', libelle: 'Toutes les situations' },
-    { cle: 'SANS_SAISIE', libelle: 'Aucune saisie sur la période' },
-    { cle: 'A_COMPLETER', libelle: 'Dossiers à compléter' },
-    { cle: 'AU_DISTRICT', libelle: 'En attente du district' },
-    { cle: 'REJETEES', libelle: 'Factures rejetées' }
+    { cle: 'TOUTES', libelle: 'Toutes' },
+    { cle: 'SANS_SAISIE', libelle: 'Sans saisie' },
+    { cle: 'A_COMPLETER', libelle: 'À compléter' },
+    { cle: 'AU_DISTRICT', libelle: 'Au district' },
+    { cle: 'REJETEES', libelle: 'Rejetées' }
   ];
+
+  readonly types: { cle: FiltreType; libelle: string }[] = [
+    { cle: '', libelle: 'Tous' },
+    { cle: 'PS', libelle: 'Postes' },
+    { cle: 'CENTRES', libelle: 'Centres et EPS' }
+  ];
+
+  /** Structures par situation (recherche et type appliqués), pour les pastilles. */
+  comptes: Record<FiltreSituation, number> = { TOUTES: 0, SANS_SAISIE: 0, A_COMPLETER: 0, AU_DISTRICT: 0, REJETEES: 0 };
 
   chargement = true;
   erreur: string | null = null;
@@ -167,13 +204,21 @@ export class RegionalActivitesComponent implements OnInit {
     const terme = sansAccent(this.recherche.trim());
 
     const lignes: LigneDistrict[] = [];
+    const comptes: Record<FiltreSituation, number> = { TOUTES: 0, SANS_SAISIE: 0, A_COMPLETER: 0, AU_DISTRICT: 0, REJETEES: 0 };
     for (const d of donnees.districts) {
       // Le nom du district suffit à le garder entier ; sinon, seules ses structures qui
       // correspondent restent (chercher un poste sans savoir de quel district il dépend).
       const districtTrouve = !terme || sansAccent(`${d.nom} ${d.code || ''}`).includes(terme);
-      const structures = d.structures
+      const candidates = d.structures
         .filter(s => districtTrouve || sansAccent(`${s.nom} ${s.code || ''}`).includes(terme))
-        .filter(s => this.correspondType(s) && this.correspondSituation(s))
+        .filter(s => this.correspondType(s));
+      for (const s of candidates) {
+        for (const situation of this.situations) {
+          if (correspondSituation(s, situation.cle)) comptes[situation.cle]++;
+        }
+      }
+      const structures = candidates
+        .filter(s => correspondSituation(s, this.filtreSituation))
         .sort(this.comparateur())
         .map(s => ({ s, puces: puces(s.indicateurs), lisere: lisere(s.indicateurs) }));
       // Un filtre qui ne laisse aucune structure masque le district — sauf une recherche qui
@@ -182,12 +227,11 @@ export class RegionalActivitesComponent implements OnInit {
       if (!structures.length && (filtre || (terme && !districtTrouve))) continue;
       lignes.push({
         cle: this.cle(d), d, structures,
-        puces: puces(d.indicateurs),
-        sansSaisie: d.structures.filter(s => !s.indicateurs.nombreFactures).length,
         rejetees: REJETS.reduce((n, st) => n + (d.indicateurs.parStatut[st] || 0), 0)
       });
     }
     this.lignes = lignes;
+    this.comptes = comptes;
 
     // Indicateurs : le périmètre affiché (toute la région, ou les structures filtrées).
     const tout = !terme && !this.filtreType && this.filtreSituation === 'TOUTES';
@@ -205,6 +249,16 @@ export class RegionalActivitesComponent implements OnInit {
   filtrer(): void {
     this.interagi = true;
     this.construire();
+  }
+
+  choisirSituation(situation: FiltreSituation): void {
+    this.filtreSituation = situation;
+    this.filtrer();
+  }
+
+  choisirType(type: FiltreType): void {
+    this.filtreType = type;
+    this.filtrer();
   }
 
   changerPeriode(): void {
@@ -267,25 +321,20 @@ export class RegionalActivitesComponent implements OnInit {
     return true;
   }
 
-  private correspondSituation(s: ActiviteStructure): boolean {
-    const i = s.indicateurs;
-    switch (this.filtreSituation) {
-      case 'SANS_SAISIE': return i.nombreFactures === 0;
-      case 'A_COMPLETER': return i.dossiersACompleter > 0;
-      case 'AU_DISTRICT': return (i.parStatut['SOUMISE_CS'] || 0) > 0;
-      case 'REJETEES': return REJETS.some(st => (i.parStatut[st] || 0) > 0);
-      default: return true;
-    }
-  }
-
-  /** Tri des structures d'un district ; à défaut, l'ordre serveur (centres puis postes, par nom). */
+  /**
+   * Tri des structures d'un district. Quel que soit le tri, celles qui ont des factures sur la
+   * période passent en tête — brouillon ou toute autre étape (demande du 23/10/2026) : c'est
+   * leur activité que le service régional vient voir. Ensuite, le tri choisi ; à défaut,
+   * l'ordre serveur (centres puis postes, par nom), conservé par le tri stable.
+   */
   private comparateur(): (a: ActiviteStructure, b: ActiviteStructure) => number {
     const parNom = (a: ActiviteStructure, b: ActiviteStructure) => a.nom.localeCompare(b.nom, 'fr');
-    switch (this.tri) {
-      case 'MONTANT': return (a, b) => b.indicateurs.montantSencsu - a.indicateurs.montantSencsu || parNom(a, b);
-      case 'PATIENTS': return (a, b) => b.indicateurs.patients - a.indicateurs.patients || parNom(a, b);
-      default: return () => 0;
-    }
+    const saisie = (s: ActiviteStructure) => (s.indicateurs.nombreFactures > 0 ? 1 : 0);
+    const ensuite: (a: ActiviteStructure, b: ActiviteStructure) => number =
+      this.tri === 'MONTANT' ? (a, b) => b.indicateurs.montantSencsu - a.indicateurs.montantSencsu || parNom(a, b)
+        : this.tri === 'PATIENTS' ? (a, b) => b.indicateurs.patients - a.indicateurs.patients || parNom(a, b)
+          : () => 0;
+    return (a, b) => saisie(b) - saisie(a) || ensuite(a, b);
   }
 
   // ───────────────────────────── affichage ─────────────────────────────
@@ -313,6 +362,18 @@ function puces(i: IndicateursActivite): PuceStatut[] {
   return Object.keys(parStatut)
     .sort((a, b) => rang(a) - rang(b))
     .map(statut => ({ statut, libelle: `${apparenceStatut(statut).libelle} (${parStatut[statut]})` }));
+}
+
+/** La structure est-elle dans cette situation sur la période ? */
+function correspondSituation(s: ActiviteStructure, situation: FiltreSituation): boolean {
+  const i = s.indicateurs;
+  switch (situation) {
+    case 'SANS_SAISIE': return i.nombreFactures === 0;
+    case 'A_COMPLETER': return i.dossiersACompleter > 0;
+    case 'AU_DISTRICT': return (i.parStatut['SOUMISE_CS'] || 0) > 0;
+    case 'REJETEES': return REJETS.some(st => (i.parStatut[st] || 0) > 0);
+    default: return true;
+  }
 }
 
 function rang(statut: string): number {
