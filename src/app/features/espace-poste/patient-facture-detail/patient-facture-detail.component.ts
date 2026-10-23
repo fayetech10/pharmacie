@@ -18,7 +18,7 @@ import { PatientDetailComponent } from '../../patients/patient-detail/patient-de
 import { FacturationCsuPosteComponent } from '../facturation-csu/facturation-csu.component';
 import { DossierPatientContenuComponent } from '../dossier-patient-dialog/dossier-patient-contenu.component';
 import {
-  ContexteFacture, EchelonPointage, LigneIndexee, VisiteFacture, cheminFacture, clePatientVisite, dateFr,
+  ContexteFacture, EchelonPointage, LigneIndexee, VisiteFacture, cheminFacture, clePatientVisite, dateFr, dateHeureVisite,
   estContributif, estForfaitaire, estModifiable, exigeCartePoste, visiteACompleter, visitesFacture
 } from '../poste-facturation';
 
@@ -51,6 +51,7 @@ interface Info {
 })
 export class PatientFactureDetailComponent implements OnInit, OnDestroy {
   readonly dateFr = dateFr;
+  readonly dateHeure = dateHeureVisite;
 
   contexte: ContexteFacture = 'espace-ps';
   facture: FactureStructure | null = null;

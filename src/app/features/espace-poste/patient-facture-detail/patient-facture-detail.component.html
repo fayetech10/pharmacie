@@ -203,7 +203,7 @@
             <div class="section-icon"><mat-icon>medical_services</mat-icon></div>
             <div>
               <h2>Prestations</h2>
-              <p>Visite du {{ dateFr(v.date) }} – {{ v.lignes.length }} prestation(s)</p>
+              <p>Visite du {{ dateHeure(v) }} – {{ v.lignes.length }} prestation(s)</p>
             </div>
           </div>
         </div>
@@ -295,14 +295,14 @@
               <div *ngIf="autre === v"
                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-light text-primary text-[13px] font-semibold">
                 <mat-icon class="!text-base !w-4 !h-4">event</mat-icon>
-                <span class="flex-1">Visite du {{ dateFr(autre.date) }}</span>
+                <span class="flex-1">Visite du {{ dateHeure(autre) }}</span>
                 <span class="text-[12px]">affichée</span>
               </div>
               <a *ngIf="autre !== v" [routerLink]="lienVisite(autre)"
                  [replaceUrl]="true" [state]="etatNavigation"
                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-field hover:bg-border-light text-[13px] text-text-primary no-underline">
                 <mat-icon class="!text-base !w-4 !h-4 text-text-secondary">event</mat-icon>
-                <span class="flex-1 font-semibold">Visite du {{ dateFr(autre.date) }}</span>
+                <span class="flex-1 font-semibold">Visite du {{ dateHeure(autre) }}</span>
                 <app-status-badge *ngIf="autre.dossier?.statut === 'A_COMPLETER'" statut="A_COMPLETER" famille="dossier"
                                   [sansIcone]="true"></app-status-badge>
                 <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-muted">chevron_right</mat-icon>

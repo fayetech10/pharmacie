@@ -277,6 +277,22 @@ export interface VisiteFacture {
   nombre: number;
 }
 
+/**
+ * Date et heure d'une visite, pour les en-têtes : « 23/10/2026 à 10:35 ». L'heure est celle de
+ * l'enregistrement du dossier (la date de prise en charge n'en a pas) ; une visite saisie un
+ * autre jour le dit, plutôt que de faire passer l'heure de saisie pour celle de la visite.
+ * Les anciennes saisies sans dossier n'ont que leur date.
+ */
+export function dateHeureVisite(v: VisiteFacture): string {
+  const date = dateFr(v.date);
+  const creation = v.dossier?.createdAt;
+  if (!creation || creation.length < 16) return date;
+  const heure = creation.substring(11, 16);
+  return creation.substring(0, 10) === v.date
+    ? `${date} à ${heure}`
+    : `${date} (saisie le ${dateFr(creation.substring(0, 10))} à ${heure})`;
+}
+
 /** Clé « même patient » d'une visite : son matricule, à défaut prénom + nom + date de naissance. */
 export function clePatientVisite(v: VisiteFacture): string {
   return normaliser(v.matricule)
