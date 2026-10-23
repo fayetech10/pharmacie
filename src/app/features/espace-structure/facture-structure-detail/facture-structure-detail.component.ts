@@ -13,7 +13,7 @@ import { FactureStructure } from '../../../core/models/structure.model';
 import { Regime } from '../../../core/models/bcsu.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { factureModifiable } from '../../../core/models/statuts';
+import { apparenceStatut, factureModifiable, supprimableParServiceRegional } from '../../../core/models/statuts';
 import { finDuMoisAtteinte } from '../../../core/utils/fin-de-mois';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { RegimeBadgeComponent } from '../../../shared/regime-badge/regime-badge.component';
@@ -129,6 +129,15 @@ export class FactureStructureDetailComponent implements OnInit {
    */
   get canReviewPoste(): boolean {
     return !!this.facture && this.facture.statut === 'SOUMISE_CS' && this.auth.aCapaciteDistrict();
+  }
+
+  /**
+   * Le service régional supprime une facture de sa région, brouillon compris, tant que le
+   * niveau central ne l'a pas validée (23/10/2026). Ses patients et prestations se retirent,
+   * eux, depuis l'écran du patient.
+   */
+  get canSupprimer(): boolean {
+    return !!this.facture && this.auth.isServiceRegional() && supprimableParServiceRegional(this.facture.statut);
   }
 
   // ══════════════════════════ pointage des patients ══════════════════════════
@@ -336,6 +345,33 @@ export class FactureStructureDetailComponent implements OnInit {
     }).subscribe(ok => {
       if (ok) this.action(() => this.structureService.rejeterFacturePoste(this.facture!.id, ''), 'Facture renvoyée au poste.');
     });
+  }
+
+  supprimer() {
+    const f = this.facture!;
+    const statut = f.statut === 'BROUILLON' ? 'en brouillon' : 'à l\'étape « ' + this.libelleStatut + ' »';
+    this.confirm.ask({
+      title: 'Supprimer la facture',
+      message: `Supprimer la facture ${f.numero} de ${f.structureNom} (${this.periode}), ${statut}, `
+        + `et ses ${this.visites.length} visite(s) ? La suppression est définitive.`,
+      confirmText: 'Supprimer',
+      danger: true
+    }).subscribe(ok => {
+      if (!ok) return;
+      this.busy = true;
+      this.structureService.deleteFacture(f.id).subscribe({
+        next: () => {
+          this.busy = false;
+          this.snackBar.open('Facture supprimée.', 'Fermer', { duration: 3000 });
+          this.retour();
+        },
+        error: err => { this.busy = false; this.erreur(err); }
+      });
+    });
+  }
+
+  private get libelleStatut(): string {
+    return apparenceStatut(this.facture?.statut).libelle;
   }
 
   /** Appel au serveur qui renvoie la facture à jour ; un seul traitement d'erreur. */

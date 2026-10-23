@@ -220,7 +220,7 @@
                     <th class="py-1.5 px-2 text-right">Prix</th>
                     <th class="py-1.5 px-2 text-right">Montant</th>
                   </ng-container>
-                  <th *ngIf="peutCorrigerLignes" class="py-1.5 pl-2"></th>
+                  <th *ngIf="peutSupprimerLignes" class="py-1.5 pl-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -235,8 +235,9 @@
                     <td class="py-2 px-2 text-right">{{ ligne.prixUnitaire | number:'1.0-0':'fr' }}</td>
                     <td class="py-2 px-2 text-right font-semibold">{{ ligne.montant | number:'1.0-0':'fr' }}</td>
                   </ng-container>
-                  <td *ngIf="peutCorrigerLignes" class="py-1 pl-2 text-right whitespace-nowrap">
-                    <button type="button" class="btn btn-ghost btn-sm" (click)="corrigerLigne(ligne)" title="Modifier la prestation"
+                  <!-- Modifier : structure émettrice seulement ; Supprimer : elle, ou le service régional -->
+                  <td *ngIf="peutSupprimerLignes" class="py-1 pl-2 text-right whitespace-nowrap">
+                    <button type="button" *ngIf="peutCorrigerLignes" class="btn btn-ghost btn-sm" (click)="corrigerLigne(ligne)" title="Modifier la prestation"
                             [attr.aria-label]="'Modifier ' + ligne.designation">
                       <mat-icon>edit</mat-icon>
                     </button>

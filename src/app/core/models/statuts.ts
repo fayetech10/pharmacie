@@ -97,3 +97,12 @@ export function apparenceStatut(statut: string | null | undefined, famille: Fami
 export function factureModifiable(statut: string | null | undefined): boolean {
   return statut === 'BROUILLON' || statut === 'REJETEE_CS' || statut === 'REJETEE_SR' || statut === 'REJETEE_NC';
 }
+
+/**
+ * Le service régional peut supprimer la facture, ou un patient / une prestation qu'elle
+ * contient, à toute étape — brouillon compris — avant la validation nationale (23/10/2026 ;
+ * miroir de ServiceFacturation.factureDuServiceRegional).
+ */
+export function supprimableParServiceRegional(statut: string | null | undefined): boolean {
+  return !!statut && statut !== 'VALIDEE_NC' && statut !== 'PAYEE';
+}

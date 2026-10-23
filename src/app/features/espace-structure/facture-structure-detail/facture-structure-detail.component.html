@@ -96,6 +96,11 @@
                 <mat-icon>picture_as_pdf</mat-icon>
                 <span>Liste + facture</span>
               </button>
+              <!-- Service régional : suppression de la facture, brouillon compris (avant validation nationale) -->
+              <button mat-menu-item *ngIf="canSupprimer" (click)="supprimer()" [disabled]="busy">
+                <mat-icon class="!text-red-700">delete_outline</mat-icon>
+                <span class="text-red-700">Supprimer la facture</span>
+              </button>
             </mat-menu>
           </div>
         </div>

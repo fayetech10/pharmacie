@@ -12,6 +12,7 @@ import { DossierPatient, FactureStructure } from '../../../core/models/structure
 import { StructureService } from '../../../core/services/structure.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { supprimableParServiceRegional } from '../../../core/models/statuts';
 import { StatusBadgeComponent } from '../../../shared/status-badge/status-badge.component';
 import { PatientDetailComponent } from '../../patients/patient-detail/patient-detail.component';
 import { FacturationCsuPosteComponent } from '../facturation-csu/facturation-csu.component';
@@ -35,6 +36,8 @@ interface Info {
  *    un dossier « à compléter » s'ouvre directement sur son formulaire et, une fois enregistré,
  *    on passe au suivant à compléter (retour à la facture quand il n'en reste plus) ;
  *  - structure émettrice avant l'envoi : corriger ou supprimer une prestation, Retirer ;
+ *  - service régional, à toute étape avant la validation nationale (brouillon compris) :
+ *    supprimer une prestation, Retirer ;
  *  - contrôle (centre pour un poste, service régional) : pointer le patient « vérifié ».
  * Les autres visites du même patient dans le mois sont listées ; « Précédent / Suivant »
  * parcourt les patients de la facture. Pas de photo de l'assuré sur cet écran.
@@ -173,8 +176,22 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
       && this.auth.getCurrentUser()?.structureSanitaireId === this.facture?.structureSanitaireId;
   }
 
+  /**
+   * Service régional : supprime des prestations ou retire le patient d'une facture de sa région,
+   * même en brouillon, tant que le niveau central ne l'a pas validée (le serveur contrôle la région).
+   */
+  get peutSupprimerSR(): boolean {
+    return this.contexte === 'structure' && this.auth.isServiceRegional() && !!this.facture
+      && supprimableParServiceRegional(this.facture.statut);
+  }
+
+  /** Bouton « Supprimer » sur les prestations : la structure émettrice ou le service régional. */
+  get peutSupprimerLignes(): boolean {
+    return this.peutCorrigerLignes || this.peutSupprimerSR;
+  }
+
   get peutRetirer(): boolean {
-    return this.contexte === 'espace-ps' ? this.modifiable : this.peutCorrigerLignes;
+    return this.contexte === 'espace-ps' ? this.modifiable : this.peutSupprimerLignes;
   }
 
   /**
