@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -24,9 +24,11 @@ interface PuceStatut {
 interface LigneStructure {
   s: ActiviteStructure;
   puces: PuceStatut[];
+  /** Fond du liseré haut de la carte : gris sans saisie, rouge si rejet, ambre si dossiers à compléter. */
+  lisere: string;
 }
 
-/** Un district tel qu'affiché, avec ses structures filtrées et triées. */
+/** Un district tel qu'affiché (un bloc de la liste), avec ses structures filtrées et triées. */
 interface LigneDistrict {
   cle: string;
   d: ActiviteDistrict;
@@ -51,6 +53,9 @@ const REJETS = ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'];
  * centres et postes de santé, sur un mois ou une année — factures et leur statut, patients,
  * visites, dossiers à compléter, part SEN-CSU, dernière saisie.
  *
+ * <p>Présentation (23/10/2026) : les districts les uns sous les autres, chacun avec ses centres
+ * et postes en rangée horizontale de cartes ; les factures d'une structure en modale.</p>
+ *
  * <p>Le serveur impose la région (celle du compte) ; toutes les structures actives sont listées,
  * à zéro quand elles n'ont rien saisi — ce sont celles à relancer. Brouillons compris : un poste
  * garde sa facture en brouillon jusqu'à l'envoi de fin de mois.</p>
@@ -60,7 +65,28 @@ const REJETS = ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'];
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, IndicateurComponent, StatusBadgeComponent,
     RegimeBadgeComponent, PaginationComponent, PaginerPipe],
-  templateUrl: './regional-activites.component.html'
+  templateUrl: './regional-activites.component.html',
+  styles: [`
+    /* Carte d'une structure : elle s'enfonce à l'appui (le clic est entendu) ; le soulèvement
+       au survol est réservé à la souris — au doigt, il resterait collé après le toucher. */
+    .carte-structure {
+      transition: transform 160ms var(--ease-out), box-shadow 200ms ease;
+    }
+    .carte-structure:active { transform: scale(0.98); }
+    @media (hover: hover) and (pointer: fine) {
+      .carte-structure:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+      .carte-structure:hover:active { transform: translateY(-2px) scale(0.98); }
+    }
+
+    /* Flèches des rangées : même logique, appui visible, survol à la souris seulement. */
+    .fleche {
+      transition: color 150ms ease, border-color 150ms ease, transform 120ms var(--ease-out);
+    }
+    .fleche:active { transform: scale(0.94); }
+    @media (hover: hover) and (pointer: fine) {
+      .fleche:hover { border-color: var(--primary); color: var(--primary); }
+    }
+  `]
 })
 export class RegionalActivitesComponent implements OnInit {
   readonly moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -70,7 +96,6 @@ export class RegionalActivitesComponent implements OnInit {
 
   filtreMois = new Date().getMonth() + 1;
   filtreAnnee = new Date().getFullYear();
-  filtreDistrict = '';
   filtreType: FiltreType = '';
   filtreSituation: FiltreSituation = 'TOUTES';
   tri: Tri = 'NOM';
@@ -95,9 +120,15 @@ export class RegionalActivitesComponent implements OnInit {
   structuresAffichees = 0;
   structuresAyantSaisi = 0;
 
-  /** Districts dépliés (clé) et structure dont les factures sont ouvertes. */
-  private deplies = new Set<string>();
-  structureOuverte: string | null = null;
+  /** Structure dont les factures sont ouvertes (modale). */
+  structureOuverte: ActiviteStructure | null = null;
+
+  /**
+   * Vrai dès le premier filtre ou rechargement : les entrées en cascade ne jouent qu'à l'arrivée
+   * sur la page. Rejouées à chaque frappe ou filtre, elles retardaient la réponse (jusqu'à
+   * ~0,8 s pour la dernière carte) d'un geste répété des dizaines de fois.
+   */
+  interagi = false;
 
   constructor(private consolidation: ConsolidationService, private router: Router) {
     const an = new Date().getFullYear();
@@ -109,16 +140,13 @@ export class RegionalActivitesComponent implements OnInit {
   }
 
   charger(): void {
+    if (this.donnees) this.interagi = true;
     this.chargement = true;
     this.erreur = null;
     this.consolidation.getActivitesRegion({ mois: this.filtreMois || undefined, annee: this.filtreAnnee })
       .subscribe({
         next: donnees => {
           this.donnees = donnees;
-          // Le district filtré a pu disparaître (autre période) : on retombe sur « tous ».
-          if (this.filtreDistrict && !donnees.districts.some(d => this.cle(d) === this.filtreDistrict)) {
-            this.filtreDistrict = '';
-          }
           this.construire();
           this.chargement = false;
         },
@@ -140,8 +168,6 @@ export class RegionalActivitesComponent implements OnInit {
 
     const lignes: LigneDistrict[] = [];
     for (const d of donnees.districts) {
-      const cle = this.cle(d);
-      if (this.filtreDistrict && cle !== this.filtreDistrict) continue;
       // Le nom du district suffit à le garder entier ; sinon, seules ses structures qui
       // correspondent restent (chercher un poste sans savoir de quel district il dépend).
       const districtTrouve = !terme || sansAccent(`${d.nom} ${d.code || ''}`).includes(terme);
@@ -149,13 +175,13 @@ export class RegionalActivitesComponent implements OnInit {
         .filter(s => districtTrouve || sansAccent(`${s.nom} ${s.code || ''}`).includes(terme))
         .filter(s => this.correspondType(s) && this.correspondSituation(s))
         .sort(this.comparateur())
-        .map(s => ({ s, puces: puces(s.indicateurs) }));
+        .map(s => ({ s, puces: puces(s.indicateurs), lisere: lisere(s.indicateurs) }));
       // Un filtre qui ne laisse aucune structure masque le district — sauf une recherche qui
       // désigne le district lui-même (un district encore vide compris).
       const filtre = !!this.filtreType || this.filtreSituation !== 'TOUTES';
       if (!structures.length && (filtre || (terme && !districtTrouve))) continue;
       lignes.push({
-        cle, d, structures,
+        cle: this.cle(d), d, structures,
         puces: puces(d.indicateurs),
         sansSaisie: d.structures.filter(s => !s.indicateurs.nombreFactures).length,
         rejetees: REJETS.reduce((n, st) => n + (d.indicateurs.parStatut[st] || 0), 0)
@@ -163,8 +189,8 @@ export class RegionalActivitesComponent implements OnInit {
     }
     this.lignes = lignes;
 
-    // Indicateurs : le périmètre affiché (tout, ou le district / les structures filtrés).
-    const tout = !this.filtreDistrict && !terme && !this.filtreType && this.filtreSituation === 'TOUTES';
+    // Indicateurs : le périmètre affiché (toute la région, ou les structures filtrées).
+    const tout = !terme && !this.filtreType && this.filtreSituation === 'TOUTES';
     const structures = lignes.flatMap(l => l.structures.map(x => x.s));
     this.structuresAffichees = tout ? donnees.nombreStructures : structures.length;
     this.structuresAyantSaisi = tout ? donnees.structuresActives
@@ -173,51 +199,60 @@ export class RegionalActivitesComponent implements OnInit {
       : lignes.length === 1 && lignes[0].structures.length === lignes[0].d.structures.length
         ? lignes[0].d.indicateurs
         : additionner(structures.map(s => s.indicateurs));
+  }
 
-    // Un seul district à l'écran, ou une recherche : on l'ouvre d'office.
-    if (lignes.length === 1 || terme) lignes.forEach(l => this.deplies.add(l.cle));
+  /** Recherche, filtre ou tri changé par l'utilisateur : l'affichage suit sans animation d'entrée. */
+  filtrer(): void {
+    this.interagi = true;
+    this.construire();
   }
 
   changerPeriode(): void {
     this.structureOuverte = null;
+    this.interagi = true;
     this.charger();
   }
 
   get filtresActifs(): boolean {
-    return !!this.recherche.trim() || !!this.filtreDistrict || !!this.filtreType
+    return !!this.recherche.trim() || !!this.filtreType
       || this.filtreSituation !== 'TOUTES' || this.tri !== 'NOM';
   }
 
   reinitialiser(): void {
     this.recherche = '';
-    this.filtreDistrict = '';
     this.filtreType = '';
     this.filtreSituation = 'TOUTES';
     this.tri = 'NOM';
-    this.construire();
+    this.filtrer();
   }
 
   get libellePeriode(): string {
     return this.filtreMois ? `${this.moisNoms[this.filtreMois]} ${this.filtreAnnee}` : `Année ${this.filtreAnnee}`;
   }
 
-  // ───────────────────────────── dépliage ─────────────────────────────
+  // ───────────────────────────── navigation ─────────────────────────────
 
-  estDeplie(l: LigneDistrict): boolean {
-    return this.deplies.has(l.cle);
+  ouvrirStructure(s: ActiviteStructure): void {
+    this.structureOuverte = s;
   }
 
-  basculer(l: LigneDistrict): void {
-    if (this.deplies.has(l.cle)) this.deplies.delete(l.cle);
-    else this.deplies.add(l.cle);
-  }
-
-  basculerStructure(s: ActiviteStructure): void {
-    this.structureOuverte = this.structureOuverte === s.id ? null : s.id;
+  @HostListener('document:keydown.escape')
+  fermerStructure(): void {
+    this.structureOuverte = null;
   }
 
   ouvrirFacture(f: ResumeFactureActivite): void {
     this.router.navigate(['/dashboard/factures-structure', f.id]);
+  }
+
+  /**
+   * Flèches d'une rangée : avance d'un écran de cartes (moins une, qui reste en vue pour garder
+   * le fil), au lieu de 300 px fixes qui décalaient d'une carte et quart. Sans glissement pour
+   * qui a demandé à réduire les animations.
+   */
+  defiler(rangee: HTMLElement, sens: 1 | -1): void {
+    const doux = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rangee.scrollBy({ left: sens * Math.max(rangee.clientWidth - 290, 260), behavior: doux ? 'smooth' : 'auto' });
   }
 
   // ───────────────────────────── filtres ─────────────────────────────
@@ -283,6 +318,18 @@ function puces(i: IndicateursActivite): PuceStatut[] {
 function rang(statut: string): number {
   const i = ORDRE_STATUTS.indexOf(statut);
   return i < 0 ? ORDRE_STATUTS.length : i;
+}
+
+/**
+ * Couleur du liseré d'une carte de structure : ce qu'il faut voir d'abord en la parcourant.
+ * Un bandeau posé dans la carte, pas une bordure haute épaisse : celle-ci se raccordait en biseau
+ * aux bordures fines dans les coins arrondis.
+ */
+function lisere(i: IndicateursActivite): string {
+  if (!i.nombreFactures) return 'bg-slate-300';
+  if (REJETS.some(st => (i.parStatut[st] || 0) > 0)) return 'bg-red-500';
+  if (i.dossiersACompleter > 0) return 'bg-amber-400';
+  return 'bg-primary';
 }
 
 /**

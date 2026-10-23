@@ -1,4 +1,4 @@
-<div class="fade-in">
+<div class="fade-in" [class.sans-entree]="interagi">
 
   <div class="page-head">
     <div>
@@ -56,27 +56,22 @@
     <div class="relative flex-1 min-w-[220px]">
       <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 !text-xl !w-5 !h-5 text-text-muted">search</mat-icon>
       <input type="text" placeholder="Rechercher un district, un centre, un poste…"
-             [(ngModel)]="recherche" (ngModelChange)="construire()" aria-label="Rechercher"
+             [(ngModel)]="recherche" (ngModelChange)="filtrer()" aria-label="Rechercher"
              class="w-full h-10 pl-10 pr-9 rounded-lg text-[14px]">
-      <button type="button" *ngIf="recherche" aria-label="Effacer" (click)="recherche = ''; construire()"
+      <button type="button" *ngIf="recherche" aria-label="Effacer" (click)="recherche = ''; filtrer()"
               class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-full text-text-muted hover:bg-border-light">
         <mat-icon class="!text-base !w-4 !h-4">close</mat-icon>
       </button>
     </div>
 
     <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
-            [(ngModel)]="filtreDistrict" (ngModelChange)="construire()" aria-label="District">
-      <option value="">Tous les districts</option>
-      <option *ngFor="let d of donnees?.districts ?? []" [value]="cle(d)">{{ d.nom }}</option>
-    </select>
-    <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
-            [(ngModel)]="filtreType" (ngModelChange)="construire()" aria-label="Type de structure">
+            [(ngModel)]="filtreType" (ngModelChange)="filtrer()" aria-label="Type de structure">
       <option value="">Toutes les structures</option>
       <option value="PS">Postes de santé</option>
       <option value="CENTRES">Centres de santé et EPS</option>
     </select>
     <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
-            [(ngModel)]="filtreSituation" (ngModelChange)="construire()" aria-label="Situation">
+            [(ngModel)]="filtreSituation" (ngModelChange)="filtrer()" aria-label="Situation">
       <option *ngFor="let s of situations" [ngValue]="s.cle">{{ s.libelle }}</option>
     </select>
     <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
@@ -89,18 +84,29 @@
       <option *ngFor="let a of annees" [ngValue]="a">{{ a }}</option>
     </select>
     <select class="filter-field h-10 px-3 rounded-lg border border-border bg-field-bg text-[14px]"
-            [(ngModel)]="tri" (ngModelChange)="construire()" aria-label="Trier les structures">
+            [(ngModel)]="tri" (ngModelChange)="filtrer()" aria-label="Trier les structures">
       <option value="NOM">Centres puis postes, par nom</option>
       <option value="MONTANT">Part SEN-CSU décroissante</option>
       <option value="PATIENTS">Patients décroissants</option>
     </select>
   </div>
 
-  <!-- Chargement -->
-  <div class="space-y-3 animate-pulse my-4" *ngIf="chargement">
-    <div *ngFor="let i of [1,2,3,4]" class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-3">
-      <div class="h-5 bg-gray-200 rounded w-1/3"></div>
-      <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+  <!-- Chargement : la silhouette exacte des districts (en-tête teinté, cartes à leur taille),
+       pour que la page ne saute pas quand les données arrivent -->
+  <div class="my-4" *ngIf="chargement" aria-hidden="true">
+    <div *ngFor="let i of [1,2,3]" class="card animate-pulse">
+      <div class="section-header">
+        <div class="section-title-group min-w-0 flex-1">
+          <div class="section-icon"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 w-2/5 max-w-[260px] rounded bg-primary-100"></div>
+            <div class="h-3 w-1/4 max-w-[170px] rounded bg-primary-100"></div>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3 overflow-hidden px-4 sm:px-5 pt-4 pb-5">
+        <div *ngFor="let j of [1,2,3,4]" class="shrink-0 w-[250px] sm:w-[270px] h-[232px] rounded-xl bg-field"></div>
+      </div>
     </div>
   </div>
 
@@ -121,184 +127,197 @@
       </button>
     </div>
 
-    <!-- ═══════════ Les districts, dépliables vers leurs structures ═══════════ -->
-    <div class="card" *ngIf="lignes.length > 0">
-      <div class="section-body !p-0">
-        <div *ngFor="let l of lignes | paginer: pgD.page : pgD.taille; trackBy: trackDistrict"
-             class="border-b border-border-light last:border-b-0">
-          <button type="button" (click)="basculer(l)" [attr.aria-expanded]="estDeplie(l)"
-                  [attr.aria-label]="(estDeplie(l) ? 'Replier ' : 'Déplier ') + l.d.nom"
-                  class="w-full flex flex-wrap items-center gap-3 px-4 sm:px-5 py-3.5 text-left bg-transparent border-0 cursor-pointer transition-colors hover:bg-field">
-            <div class="section-icon shrink-0"><mat-icon>account_tree</mat-icon></div>
-            <span class="min-w-0 flex-1">
-              <strong class="block text-[15px] text-text-primary">
+    <!-- ═══════════ Les districts, les uns sous les autres ═══════════ -->
+    <div class="anim-cascade" *ngIf="lignes.length > 0">
+      <section *ngFor="let l of lignes | paginer: pgD.page : pgD.taille; trackBy: trackDistrict"
+               class="card" [attr.aria-label]="'District ' + l.d.nom">
+        <!-- En-tête du district -->
+        <div class="section-header">
+          <div class="section-title-group min-w-0 flex-1">
+            <div class="section-icon"><mat-icon>account_tree</mat-icon></div>
+            <div class="min-w-0">
+              <h2>
                 {{ l.d.nom }}
                 <span *ngIf="l.d.code" class="ml-1 font-mono text-[12px] font-semibold text-text-muted">{{ l.d.code }}</span>
                 <span *ngIf="!l.d.actif" class="ml-1 px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-slate-100 text-slate-700">Désactivé</span>
-              </strong>
-              <span class="block text-[13px] text-text-secondary">
+              </h2>
+              <p>
                 {{ l.d.nombrePostes }} poste{{ l.d.nombrePostes > 1 ? 's' : '' }} ·
-                {{ l.d.nombreCentres }} centre{{ l.d.nombreCentres > 1 ? 's' : '' }} ·
-                {{ l.d.structuresActives }}/{{ l.d.nombreStructures }} ont saisi
-                <ng-container *ngIf="l.d.nombreStructures">({{ l.d.tauxActivite | number:'1.0-1':'fr' }} %)</ng-container>
-              </span>
-            </span>
-            <span class="flex flex-wrap items-center gap-1.5">
-              <span *ngIf="l.sansSaisie" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
-                {{ l.sansSaisie }} sans saisie
-              </span>
-              <span *ngIf="l.d.indicateurs.dossiersACompleter" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 whitespace-nowrap">
-                {{ l.d.indicateurs.dossiersACompleter }} à compléter
-              </span>
-              <span *ngIf="l.d.indicateurs.parStatut['SOUMISE_CS']" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-blue-50 text-blue-700 whitespace-nowrap">
-                {{ l.d.indicateurs.parStatut['SOUMISE_CS'] }} au district
-              </span>
-              <span *ngIf="l.rejetees" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-red-50 text-red-700 whitespace-nowrap">
-                {{ l.rejetees }} rejetée{{ l.rejetees > 1 ? 's' : '' }}
-              </span>
-            </span>
-            <span class="text-right whitespace-nowrap">
-              <strong class="block text-[15px] text-primary">{{ l.d.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</strong>
-              <small class="block text-[12px] text-text-secondary">
-                {{ l.d.indicateurs.patients }} patient{{ l.d.indicateurs.patients > 1 ? 's' : '' }} ·
-                {{ l.d.indicateurs.visites }} visite{{ l.d.indicateurs.visites > 1 ? 's' : '' }}
-              </small>
-            </span>
-            <mat-icon class="!text-xl !w-5 !h-5 text-text-muted shrink-0">{{ estDeplie(l) ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-
-          <!-- Structures du district -->
-          <div *ngIf="estDeplie(l)" class="px-4 sm:px-5 pb-4">
-            <div *ngIf="l.puces.length" class="flex flex-wrap items-center gap-1.5 mb-3 text-[12.5px] text-text-secondary">
-              <span class="mr-1">Factures de la période :</span>
-              <app-status-badge *ngFor="let p of l.puces" [statut]="p.statut" [libelle]="p.libelle"></app-status-badge>
+                {{ l.d.nombreCentres }} centre{{ l.d.nombreCentres > 1 ? 's' : '' }}
+              </p>
+              <!-- Taux de saisie en jauge : on repère d'un coup d'œil le district à relancer -->
+              <div *ngIf="l.d.nombreStructures" class="mt-1.5 flex items-center gap-2 text-[12.5px] text-text-secondary">
+                <span class="w-24 sm:w-32 h-1.5 shrink-0 rounded-full bg-primary-100 overflow-hidden"
+                      role="progressbar" aria-label="Structures ayant saisi"
+                      aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="l.d.tauxActivite">
+                  <span class="block h-full rounded-full bg-primary" [style.width.%]="l.d.tauxActivite"></span>
+                </span>
+                <span>
+                  <strong class="tabular-nums text-text-primary">{{ l.d.structuresActives }}/{{ l.d.nombreStructures }}</strong>
+                  ont saisi ({{ l.d.tauxActivite | number:'1.0-1':'fr' }} %)
+                </span>
+              </div>
             </div>
+          </div>
+          <span class="flex flex-wrap items-center gap-1.5">
+            <span *ngIf="l.sansSaisie" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">
+              {{ l.sansSaisie }} sans saisie
+            </span>
+            <span *ngIf="l.d.indicateurs.dossiersACompleter" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 whitespace-nowrap">
+              {{ l.d.indicateurs.dossiersACompleter }} à compléter
+            </span>
+            <span *ngIf="l.d.indicateurs.parStatut['SOUMISE_CS']" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-blue-50 text-blue-700 whitespace-nowrap">
+              {{ l.d.indicateurs.parStatut['SOUMISE_CS'] }} au district
+            </span>
+            <span *ngIf="l.rejetees" class="px-2.5 py-1 rounded-full text-[12px] font-bold bg-red-50 text-red-700 whitespace-nowrap">
+              {{ l.rejetees }} rejetée{{ l.rejetees > 1 ? 's' : '' }}
+            </span>
+          </span>
+          <span class="text-right whitespace-nowrap">
+            <strong class="block text-[17px] tabular-nums text-primary">{{ l.d.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</strong>
+            <small class="block text-[12px] text-text-secondary">
+              {{ l.d.indicateurs.patients }} patient{{ l.d.indicateurs.patients > 1 ? 's' : '' }} ·
+              {{ l.d.indicateurs.visites }} visite{{ l.d.indicateurs.visites > 1 ? 's' : '' }}
+            </small>
+          </span>
+        </div>
 
-            <div *ngIf="!l.structures.length" class="text-[13px] text-text-muted py-2">
-              Aucune structure {{ filtresActifs ? 'pour ces filtres' : 'rattachée à ce district' }}.
-            </div>
+        <div class="px-4 sm:px-5 pt-3 pb-2">
+          <div *ngIf="!l.structures.length" class="text-[13px] text-text-muted pb-2">
+            Aucune structure {{ filtresActifs ? 'pour ces filtres' : 'rattachée à ce district' }}.
+          </div>
 
-            <!-- Ordinateur -->
-            <div class="overflow-x-auto desktop-only" *ngIf="l.structures.length">
-              <table class="premium-table w-full">
-                <thead>
-                  <tr>
-                    <th>Structure</th>
-                    <th>Factures de la période</th>
-                    <th class="text-center">Patients</th>
-                    <th class="text-center">Visites</th>
-                    <th class="text-center">À compléter</th>
-                    <th class="text-right">Part SEN-CSU</th>
-                    <th>Dernière saisie</th>
-                    <th class="w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <ng-container *ngFor="let x of l.structures | paginer: pgS.page : pgS.taille; trackBy: trackStructure">
-                    <tr (click)="basculerStructure(x.s)" class="cursor-pointer transition-colors hover:bg-primary-light/40"
-                        [attr.aria-expanded]="structureOuverte === x.s.id">
-                      <td>
-                        <ng-container *ngTemplateOutlet="identite; context: { $implicit: x.s }"></ng-container>
-                      </td>
-                      <td>
-                        <ng-container *ngTemplateOutlet="statuts; context: { $implicit: x }"></ng-container>
-                      </td>
-                      <td class="text-center tabular-nums">{{ x.s.indicateurs.patients }}</td>
-                      <td class="text-center tabular-nums">{{ x.s.indicateurs.visites }}</td>
-                      <td class="text-center tabular-nums">
-                        <span *ngIf="x.s.indicateurs.dossiersACompleter; else zero"
-                              class="px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-amber-50 text-amber-800">
-                          {{ x.s.indicateurs.dossiersACompleter }}
-                        </span>
-                      </td>
-                      <td class="text-right font-semibold whitespace-nowrap">{{ x.s.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</td>
-                      <td class="whitespace-nowrap text-text-secondary">
-                        {{ x.s.indicateurs.derniereSaisie ? (x.s.indicateurs.derniereSaisie | date:'dd/MM/yyyy HH:mm') : '—' }}
-                      </td>
-                      <td class="text-right">
-                        <mat-icon class="!text-xl !w-5 !h-5 text-text-muted">{{ structureOuverte === x.s.id ? 'expand_less' : 'expand_more' }}</mat-icon>
-                      </td>
-                    </tr>
-                    <tr *ngIf="structureOuverte === x.s.id">
-                      <td colspan="8" class="bg-field/40">
-                        <ng-container *ngTemplateOutlet="factures; context: { $implicit: x.s }"></ng-container>
-                      </td>
-                    </tr>
-                  </ng-container>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Mobile -->
-            <div class="m-cards" *ngIf="l.structures.length">
-              <div class="m-card cursor-pointer" *ngFor="let x of l.structures | paginer: pgS.page : pgS.taille; trackBy: trackStructure"
-                   (click)="basculerStructure(x.s)" role="button" tabindex="0" (keydown.enter)="basculerStructure(x.s)"
-                   [attr.aria-expanded]="structureOuverte === x.s.id">
-                <div class="m-card-top">
-                  <ng-container *ngTemplateOutlet="identite; context: { $implicit: x.s }"></ng-container>
-                  <strong class="whitespace-nowrap text-primary">{{ x.s.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F</strong>
-                </div>
-                <div class="m-row">
-                  <span>{{ x.s.indicateurs.patients }} patient(s) · {{ x.s.indicateurs.visites }} visite(s)</span>
-                  <span *ngIf="x.s.indicateurs.dossiersACompleter" class="font-semibold text-amber-800">
-                    {{ x.s.indicateurs.dossiersACompleter }} à compléter
-                  </span>
-                </div>
-                <div class="mt-2">
-                  <ng-container *ngTemplateOutlet="statuts; context: { $implicit: x }"></ng-container>
-                </div>
-                <div *ngIf="x.s.indicateurs.derniereSaisie" class="mt-1 text-[12px] text-text-muted">
-                  Dernière saisie le {{ x.s.indicateurs.derniereSaisie | date:'dd/MM/yyyy à HH:mm' }}
-                </div>
-                <div *ngIf="structureOuverte === x.s.id" class="mt-3 pt-2 border-t border-border-light">
-                  <ng-container *ngTemplateOutlet="factures; context: { $implicit: x.s }"></ng-container>
-                </div>
+          <ng-container *ngIf="l.structures.length">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <span class="flex flex-wrap items-center gap-1.5 text-[12.5px] text-text-secondary">
+                <ng-container *ngIf="l.puces.length">
+                  <span class="mr-1">Factures de la période :</span>
+                  <app-status-badge *ngFor="let p of l.puces" [statut]="p.statut" [libelle]="p.libelle"></app-status-badge>
+                </ng-container>
+              </span>
+              <div class="hidden md:flex items-center gap-1.5" *ngIf="l.structures.length > 1">
+                <button type="button" aria-label="Structures précédentes" (click)="defiler(rangee, -1)"
+                        class="fleche w-8 h-8 inline-flex items-center justify-center rounded-full border border-border bg-white text-text-secondary cursor-pointer">
+                  <mat-icon class="!text-xl !w-5 !h-5">chevron_left</mat-icon>
+                </button>
+                <button type="button" aria-label="Structures suivantes" (click)="defiler(rangee, 1)"
+                        class="fleche w-8 h-8 inline-flex items-center justify-center rounded-full border border-border bg-white text-text-secondary cursor-pointer">
+                  <mat-icon class="!text-xl !w-5 !h-5">chevron_right</mat-icon>
+                </button>
               </div>
             </div>
 
-            <app-pagination #pgS [total]="l.structures.length"></app-pagination>
-          </div>
+            <!-- Ses centres et postes, en rangée horizontale de cartes : un clic ouvre les factures.
+                 La rangée déborde jusqu'aux bords du district (marges négatives) : les cartes
+                 défilent sous le cadre au lieu d'être coupées net à 16 px du bord. -->
+            <div #rangee class="-mx-4 sm:-mx-5 px-4 sm:px-5 scroll-px-4 sm:scroll-px-5 flex gap-3 overflow-x-auto overscroll-x-contain snap-x pt-1.5 pb-3 anim-cascade">
+              <button type="button" *ngFor="let x of l.structures; trackBy: trackStructure"
+                      (click)="ouvrirStructure(x.s)" [attr.aria-label]="'Voir les factures de ' + x.s.nom"
+                      class="carte-structure group relative overflow-hidden snap-start shrink-0 w-[250px] sm:w-[270px] flex flex-col gap-3 px-4 pt-5 pb-4 rounded-xl border border-border bg-white text-left [font:inherit] shadow-sm cursor-pointer">
+                <!-- Liseré : ce qu'il faut voir d'abord (gris sans saisie, rouge rejet, ambre à compléter) -->
+                <span aria-hidden="true" class="absolute inset-x-0 top-0 h-1" [ngClass]="x.lisere"></span>
+                <!-- Identité -->
+                <span class="flex items-start gap-3">
+                  <span class="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center"
+                        [ngClass]="x.s.type === 'PS' ? 'bg-teal-50 text-teal-700' : 'bg-indigo-50 text-indigo-700'">
+                    <mat-icon>{{ x.s.type === 'PS' ? 'medical_services' : 'local_hospital' }}</mat-icon>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <strong class="block text-[14.5px] leading-snug text-text-primary">{{ x.s.nom }}</strong>
+                    <span class="flex flex-wrap items-center gap-1 mt-1">
+                      <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">{{ typeLibelle(x.s.type) }}</span>
+                      <span *ngIf="x.s.siegeDistrict" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Siège du district</span>
+                      <span *ngIf="!x.s.actif" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700">Désactivée</span>
+                    </span>
+                  </span>
+                </span>
+                <span *ngIf="x.s.code || (x.s.type === 'PS' && x.s.structureRattachementNom)" class="-mt-1 text-[12px] text-text-muted">
+                  <span *ngIf="x.s.code" class="font-mono">{{ x.s.code }}</span>
+                  <span *ngIf="x.s.type === 'PS' && x.s.structureRattachementNom">{{ x.s.code ? ' · ' : '' }}rattaché à {{ x.s.structureRattachementNom }}</span>
+                </span>
+
+                <!-- Chiffres de la période -->
+                <span class="grid grid-cols-3 gap-2">
+                  <span class="rounded-lg bg-field px-2 py-1.5 text-center">
+                    <strong class="block text-[15px] tabular-nums text-text-primary">{{ x.s.indicateurs.patients }}</strong>
+                    <small class="block text-[11px] text-text-muted">Patients</small>
+                  </span>
+                  <span class="rounded-lg bg-field px-2 py-1.5 text-center">
+                    <strong class="block text-[15px] tabular-nums text-text-primary">{{ x.s.indicateurs.visites }}</strong>
+                    <small class="block text-[11px] text-text-muted">Visites</small>
+                  </span>
+                  <span class="rounded-lg px-2 py-1.5 text-center"
+                        [ngClass]="x.s.indicateurs.dossiersACompleter ? 'bg-amber-50' : 'bg-field'">
+                    <strong class="block text-[15px] tabular-nums"
+                            [ngClass]="x.s.indicateurs.dossiersACompleter ? 'text-amber-800' : 'text-text-primary'">{{ x.s.indicateurs.dossiersACompleter }}</strong>
+                    <small class="block text-[11px]"
+                           [ngClass]="x.s.indicateurs.dossiersACompleter ? 'text-amber-700' : 'text-text-muted'">À compléter</small>
+                  </span>
+                </span>
+
+                <!-- Part SEN-CSU et statuts des factures -->
+                <span class="flex items-baseline justify-between gap-2">
+                  <small class="text-[12px] text-text-secondary">Part SEN-CSU</small>
+                  <strong class="text-[17px] tabular-nums whitespace-nowrap"
+                          [ngClass]="x.s.indicateurs.nombreFactures ? 'text-primary' : 'text-text-muted'">
+                    {{ x.s.indicateurs.montantSencsu | number:'1.0-0':'fr' }} F
+                  </strong>
+                </span>
+                <span class="flex flex-wrap items-center gap-1">
+                  <app-status-badge *ngFor="let p of x.puces" [statut]="p.statut" [libelle]="p.libelle" [sansIcone]="true"></app-status-badge>
+                  <span *ngIf="!x.s.indicateurs.nombreFactures" class="text-[12.5px] italic text-text-muted">Aucune saisie sur la période</span>
+                </span>
+
+                <!-- Dernière saisie, accès aux factures -->
+                <span class="mt-auto pt-2.5 flex items-center justify-between gap-2 border-t border-border-light text-[12px] text-text-muted">
+                  <span class="inline-flex items-center gap-1 min-w-0">
+                    <mat-icon class="!text-base !w-4 !h-4 shrink-0">schedule</mat-icon>
+                    <span class="truncate">{{ x.s.indicateurs.derniereSaisie ? (x.s.indicateurs.derniereSaisie | date:'dd/MM/yyyy HH:mm') : 'Jamais sur la période' }}</span>
+                  </span>
+                  <span class="inline-flex items-center font-semibold text-primary whitespace-nowrap group-hover:underline">
+                    {{ x.s.factures.length }} facture{{ x.s.factures.length > 1 ? 's' : '' }}
+                    <mat-icon class="!text-lg !w-[18px] !h-[18px]">chevron_right</mat-icon>
+                  </span>
+                </span>
+              </button>
+            </div>
+          </ng-container>
         </div>
-      </div>
+      </section>
     </div>
     <app-pagination #pgD [total]="lignes.length"></app-pagination>
   </ng-container>
 
-  <!-- ═══════════ Gabarits partagés ordinateur / mobile ═══════════ -->
-
-  <ng-template #zero><span class="text-text-muted">0</span></ng-template>
-
-  <!-- Nom de la structure, type, siège, rattachement -->
-  <ng-template #identite let-s>
-    <span class="min-w-0">
-      <strong class="block text-[14px] text-text-primary">{{ s.nom }}</strong>
-      <span class="flex flex-wrap items-center gap-1.5 mt-0.5 text-[12px] text-text-secondary">
-        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">{{ typeLibelle(s.type) }}</span>
-        <span *ngIf="s.siegeDistrict" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">Siège du district</span>
-        <span *ngIf="!s.actif" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700">Désactivée</span>
-        <span *ngIf="s.code" class="font-mono">{{ s.code }}</span>
-        <span *ngIf="s.type === 'PS' && s.structureRattachementNom">· rattaché à {{ s.structureRattachementNom }}</span>
-      </span>
-    </span>
-  </ng-template>
-
-  <!-- Statuts des factures de la structure (nombre par statut) -->
-  <ng-template #statuts let-x>
-    <span class="flex flex-wrap items-center gap-1">
-      <app-status-badge *ngFor="let p of x.puces" [statut]="p.statut" [libelle]="p.libelle" [sansIcone]="true"></app-status-badge>
-      <span *ngIf="!x.s.indicateurs.nombreFactures" class="text-[12.5px] italic text-text-muted">Aucune saisie</span>
-    </span>
-  </ng-template>
+  <!-- ═══════════ Factures d'une structure (modale) ═══════════ -->
+  <div class="modal-overlay" *ngIf="structureOuverte as s" (click)="fermerStructure()">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="activite-structure-titre" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="section-icon"><mat-icon>{{ s.type === 'PS' ? 'medical_services' : 'local_hospital' }}</mat-icon></div>
+          <div class="min-w-0">
+            <h2 id="activite-structure-titre" class="truncate">{{ s.nom }}</h2>
+            <p class="m-0 text-[13px] text-text-secondary">{{ typeLibelle(s.type) }} · factures · {{ libellePeriode }}</p>
+          </div>
+        </div>
+        <button type="button" class="close-btn" (click)="fermerStructure()" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body !p-3 sm:!p-4">
+        <ng-container *ngTemplateOutlet="factures; context: { $implicit: s }"></ng-container>
+      </div>
+    </div>
+  </div>
 
   <!-- Factures de la structure sur la période : un clic ouvre la facture -->
   <ng-template #factures let-s>
-    <div *ngIf="!s.factures.length" class="py-2 text-[13px] italic text-text-muted">
+    <div *ngIf="!s.factures.length" class="py-6 text-center text-[13px] italic text-text-muted">
       Aucune facture sur {{ filtreMois ? 'ce mois' : 'cette année' }}.
     </div>
     <div *ngFor="let f of s.factures; trackBy: trackFacture"
-         (click)="ouvrirFacture(f); $event.stopPropagation()" (keydown.enter)="ouvrirFacture(f)"
+         (click)="ouvrirFacture(f)" (keydown.enter)="ouvrirFacture(f)"
          role="button" tabindex="0" [attr.aria-label]="'Ouvrir la facture ' + (f.numero || '')"
-         class="flex flex-wrap items-center gap-3 py-2.5 px-2 rounded-lg border-b border-border-light last:border-b-0 cursor-pointer transition-colors hover:bg-white">
+         class="flex flex-wrap items-center gap-3 py-2.5 px-2 rounded-lg border-b border-border-light last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-field active:bg-primary-light">
       <app-regime-badge [regime]="f.regime"></app-regime-badge>
       <span class="font-semibold whitespace-nowrap">{{ f.numero || 'Sans numéro' }}</span>
       <span *ngIf="!filtreMois" class="text-[12.5px] text-text-secondary">{{ moisNoms[f.mois] }}</span>
