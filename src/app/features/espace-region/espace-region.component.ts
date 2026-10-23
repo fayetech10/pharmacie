@@ -10,8 +10,6 @@ import { RegionalStructuresFacturesComponent } from '../regional-factures/region
 import { ImportFacturesComponent } from '../regional-factures/import-factures/import-factures.component';
 import { RegionalActivitesComponent } from '../regional-activites/regional-activites.component';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
-import { AuthService } from '../../core/services/auth.service';
-import { RegionService } from '../../core/services/region.service';
 
 type StatutGroupKey = 'TOUTES' | 'RECUES' | 'VALIDEES' | 'REJETEES' | 'PAYEES';
 
@@ -55,7 +53,6 @@ export class EspaceRegionComponent implements OnInit {
 
   /** Nombre de factures par statut, pour les badges de notification. */
   counts: StatutCounts = {};
-  regionName: string | null = null;
 
   /**
    * Prestataire ciblé depuis le tableau de bord (clic sur le classement) : restreint
@@ -68,9 +65,7 @@ export class EspaceRegionComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private factureCount: FactureCountService,
-    private authService: AuthService,
-    private regionService: RegionService
+    private factureCount: FactureCountService
   ) {}
 
   ngOnInit() {
@@ -102,16 +97,6 @@ export class EspaceRegionComponent implements OnInit {
         setTimeout(() => this.markActiveTabSeen(), 0);
       });
     this.factureCount.refresh();
-
-    const user = this.authService.getCurrentUser();
-    if (user?.regionId) {
-      this.regionService.getAll().subscribe(regions => {
-        const region = regions.find(r => r.id === user.regionId);
-        if (region) {
-          this.regionName = region.nom;
-        }
-      });
-    }
   }
 
   onTabChange(index: number) {

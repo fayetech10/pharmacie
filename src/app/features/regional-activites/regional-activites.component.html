@@ -1,20 +1,6 @@
 <div class="fade-in" [class.sans-entree]="interagi">
 
-  <div class="page-head">
-    <div>
-      <h1>Activités du réseau</h1>
-      <p>{{ donnees?.regionNom ? 'Région de ' + donnees?.regionNom + ' · ' : '' }}{{ libellePeriode }}</p>
-    </div>
-    <div class="page-head-actions">
-      <button type="button" class="btn btn-ghost btn-sm" *ngIf="filtresActifs" (click)="reinitialiser()">
-        <mat-icon>filter_alt_off</mat-icon> Réinitialiser
-      </button>
-      <button type="button" class="btn btn-outline btn-sm !px-2" (click)="charger()" [disabled]="chargement"
-              aria-label="Actualiser" title="Actualiser">
-        <mat-icon class="!m-0" [class.animate-spin]="chargement">refresh</mat-icon>
-      </button>
-    </div>
-  </div>
+  <!-- Plus de titre ni de sous-titre (23/10/2026) : la page s'ouvre sur ses chiffres. -->
 
   <!-- ===== Chiffres du périmètre affiché : un seul bandeau ===== -->
   <div class="card !mb-4" [class.animate-pulse]="chargement">
@@ -84,6 +70,13 @@
         <option value="MONTANT">Trier par montant</option>
         <option value="PATIENTS">Trier par patients</option>
       </select>
+      <button type="button" class="btn btn-ghost btn-sm" *ngIf="filtresActifs" (click)="reinitialiser()">
+        <mat-icon>filter_alt_off</mat-icon> Réinitialiser
+      </button>
+      <button type="button" class="btn btn-outline btn-sm !px-2 h-10" (click)="charger()" [disabled]="chargement"
+              aria-label="Actualiser" title="Actualiser">
+        <mat-icon class="!m-0" [class.animate-spin]="chargement">refresh</mat-icon>
+      </button>
     </div>
 
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2">

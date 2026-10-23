@@ -1,11 +1,5 @@
     <div class="fade-in">
-      <div class="page-head max-md:hidden">
-        <div>
-          <h1>Espace principal<ng-container *ngIf="regionName"> - {{ regionName }}</ng-container></h1>
-          <p>Supervisez et validez les factures de votre région</p>
-        </div>
-      </div>
-
+      <!-- Plus de titre d'espace (23/10/2026) : la barre latérale dit déjà où l'on est. -->
       <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
 
         <!-- ===================== ONGLET 1 : TABLEAU DE BORD ===================== -->
