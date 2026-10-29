@@ -1,0 +1,289 @@
+/* ============================================================
+   ACTIVITÉS DU RÉSEAU — ESPACE RÉGIONAL
+   ============================================================ */
+
+/* ─── Cartes statistiques du bandeau KPI ─── */
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.08);
+  border-color: rgba(4, 120, 87, 0.3);
+}
+
+.kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─── Barre d'outils / Filtres ─── */
+.toolbar-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.search-input {
+  width: 100%;
+  height: 42px;
+  padding-left: 42px;
+  padding-right: 36px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-size: 14px;
+  transition: all 150ms ease;
+}
+
+.search-input:focus {
+  background-color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.12);
+  outline: none;
+}
+
+.select-control {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.select-control:focus {
+  background-color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.12);
+  outline: none;
+}
+
+/* ─── District Card ─── */
+.district-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  margin-bottom: 24px;
+  overflow: hidden;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.district-card:hover {
+  box-shadow: 0 6px 18px -4px rgba(15, 23, 42, 0.06);
+}
+
+.district-card.district-vide {
+  background: #fbfcfd;
+  border: 1px solid #e8eef3;
+  opacity: 0.88;
+}
+
+.district-header {
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 50%, #ffffff 100%);
+  border-bottom: 1px solid #eef2f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.district-header-vide {
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.district-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #065f46;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─── Cartes des structures (Postes, Centres, EPS) ─── */
+.carte-structure {
+  width: 275px;
+  min-width: 275px;
+  min-height: 200px;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  font: inherit;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 150ms ease;
+}
+
+.carte-structure-active {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+
+.carte-structure-active:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -4px rgba(4, 120, 87, 0.12);
+  border-color: #a7f3d0;
+}
+
+.carte-structure-active:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.carte-structure-vide {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  cursor: default;
+  color: inherit;
+  opacity: 0.82;
+}
+
+.structure-type-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.structure-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+/* Rangée défilante */
+.scroll-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overscroll-x: contain;
+  scroll-snap-type: x mandatory;
+  padding: 16px 20px;
+  scroll-padding: 0 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.scroll-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scroll-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-row::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 999px;
+}
+
+/* Flèches de navigation */
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 150ms ease;
+}
+
+.scroll-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.scroll-btn:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+/* Modale */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 18px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+  animation: modalIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
