@@ -1340,27 +1340,50 @@ button, a { transition: all var(--transition); }
 }
 
 /* ============================================================
-   SQUELETTES DE CHARGEMENT (remplacent les spinners bloquants
-   pour les chargements > 300 ms : la structure reste stable, CLS ≈ 0)
+   SQUELETTES DE CHARGEMENT — shimmer raffiné
+   Remplacent les spinners bloquants pour les chargements > 300 ms :
+   la structure reste stable, CLS ≈ 0. L'animation-delay est supportée
+   pour un effet de cascade (les blocs apparaissent progressivement).
    ============================================================ */
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: var(--border-light);
+  background: #EEF1F5;
   border-radius: var(--radius-sm);
   min-height: 12px;
+  /* Apparition décalée : le bloc est invisible puis glisse en position.
+     animation-delay est posé en inline style (le composant l'injecte). */
+  animation: skeletonFadeUp 0.35s ease both;
 }
 .skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
-  animation: skeletonShimmer 1.4s ease infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 40%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.45) 60%,
+    transparent 100%
+  );
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+/* Micro fade-in pour chaque bloc squelette */
+@keyframes skeletonFadeUp {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes skeletonShimmer {
+  0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+/* Variante titre : plus haut, plus rond */
+.skeleton-title { border-radius: var(--radius-sm); }
+/* Variante KPI : arrondi comme les cartes */
+.skeleton-kpi { border-radius: var(--radius-lg); }
 
 /* ============================================================
    MOBILE : lisibilité & anti-zoom iOS

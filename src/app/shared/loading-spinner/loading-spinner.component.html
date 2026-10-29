@@ -1,3 +1,10 @@
-<div class="top-progress" *ngIf="showLoader$ | async">
-  <div class="top-progress-bar"></div>
+<div class="progress-track"
+     [class.active]="phase === 'loading'"
+     [class.finishing]="phase === 'finishing'"
+     role="progressbar"
+     aria-valuemin="0"
+     aria-valuemax="100"
+     [attr.aria-valuenow]="progress">
+  <div class="progress-bar" [style.width.%]="progress"></div>
+  <div class="progress-spinner" *ngIf="phase === 'loading'"></div>
 </div>

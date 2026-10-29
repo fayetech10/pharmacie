@@ -42,22 +42,66 @@ function cleDePage(url: string): string {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <!-- Ancre de hauteur nulle : le squelette se pose sur le contenu masqué sans le décaler. -->
+    <!-- Squelette de page enrichi — apparaît si l'attente se prolonge au-delà de DELAI_SQUELETTE_MS -->
     <div *ngIf="!prete && squelette" class="relative">
-      <div class="absolute inset-x-0 top-0" role="status" aria-live="polite">
+      <div class="absolute inset-x-0 top-0 skeleton-container" role="status" aria-live="polite">
         <span class="sr-only">Chargement de la page…</span>
-        <div class="flex flex-col gap-2 mb-6">
-          <div class="skeleton h-7 w-2/3 max-w-[320px]"></div>
-          <div class="skeleton h-4 w-1/2 max-w-[240px]"></div>
+
+        <!-- En-tête de page simulé -->
+        <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+          <div class="flex flex-col gap-2.5 flex-1">
+            <div class="skeleton skeleton-title h-7 w-2/3 max-w-[320px]"></div>
+            <div class="skeleton h-4 w-2/5 max-w-[200px]" style="animation-delay: 50ms"></div>
+          </div>
+          <div class="skeleton h-10 w-[130px] rounded-md max-sm:hidden" style="animation-delay: 100ms"></div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <div class="skeleton h-[84px]"></div>
-          <div class="skeleton h-[84px] max-sm:hidden"></div>
-          <div class="skeleton h-[84px] max-sm:hidden"></div>
+
+        <!-- Cartes KPI simulées -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div *ngFor="let k of kpis; let i = index"
+               class="skeleton skeleton-kpi h-[76px] sm:h-[84px]"
+               [style.animation-delay.ms]="80 + i * 60"></div>
         </div>
-        <div class="card p-5 flex flex-col gap-4">
-          <div class="skeleton h-5 w-1/3"></div>
-          <div *ngFor="let largeur of lignes" class="skeleton h-4" [style.width.%]="largeur"></div>
+
+        <!-- Barre de filtres simulée -->
+        <div class="flex gap-3 mb-5 flex-wrap">
+          <div class="skeleton h-[42px] flex-1 min-w-[200px]" style="animation-delay: 340ms"></div>
+          <div class="skeleton h-[42px] w-[140px] max-sm:hidden" style="animation-delay: 400ms"></div>
+        </div>
+
+        <!-- Tableau simulé (desktop) -->
+        <div class="card p-0 overflow-hidden max-sm:hidden" style="animation-delay: 460ms">
+          <!-- En-tête tableau -->
+          <div class="flex gap-4 px-5 py-3.5 border-b border-border-light bg-[#FAFBFC]">
+            <div *ngFor="let col of tableauCols; let i = index"
+                 class="skeleton h-3.5"
+                 [style.width.%]="col"
+                 [style.animation-delay.ms]="500 + i * 40"></div>
+          </div>
+          <!-- Lignes -->
+          <div *ngFor="let row of lignesTableau; let r = index"
+               class="flex gap-4 px-5 py-4 border-b border-border-light last:border-0">
+            <div *ngFor="let col of tableauCols; let c = index"
+                 class="skeleton h-3.5"
+                 [style.width.%]="col - 5 + r * 2"
+                 [style.animation-delay.ms]="560 + r * 50 + c * 30"></div>
+          </div>
+        </div>
+
+        <!-- Cartes mobiles simulées (mobile) -->
+        <div class="sm:hidden flex flex-col gap-3">
+          <div *ngFor="let row of lignesMobiles; let i = index"
+               class="card p-4">
+            <div class="flex justify-between mb-3">
+              <div class="skeleton h-5 w-1/2" [style.animation-delay.ms]="500 + i * 80"></div>
+              <div class="skeleton h-5 w-1/4" [style.animation-delay.ms]="530 + i * 80"></div>
+            </div>
+            <div class="skeleton h-4 w-1/3 mb-3" [style.animation-delay.ms]="560 + i * 80"></div>
+            <div class="flex justify-between items-center">
+              <div class="skeleton h-6 w-1/3" [style.animation-delay.ms]="590 + i * 80"></div>
+              <div class="skeleton h-8 w-8 rounded-full" [style.animation-delay.ms]="620 + i * 80"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -71,10 +115,18 @@ function cleDePage(url: string): string {
     </div>
   `,
   styles: [`
+    /* Le conteneur de squelettes entre avec un fondu doux */
+    .skeleton-container {
+      animation: skeletonFadeIn 300ms ease-out backwards;
+    }
+    @keyframes skeletonFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+    }
+
     /* Masqué mais toujours mis en page : graphiques et tableaux se dimensionnent normalement. */
     .attente-page-masquee { visibility: hidden; }
     /* Opacité seule (pas de transform) : les éléments position: fixed des écrans restent intacts. */
-    .attente-page-revelee { animation: attentePageRevelee 200ms ease-out backwards; }
+    .attente-page-revelee { animation: attentePageRevelee 250ms ease-out backwards; }
     @keyframes attentePageRevelee { from { opacity: 0; } }
   `]
 })
@@ -88,7 +140,15 @@ export class AttentePageComponent {
   squelette = false;
   /** Rien à attendre au premier rendu : page affichée d'un coup, sans animations d'entrée. */
   immediate = false;
-  readonly lignes = [92, 78, 85, 64, 88];
+
+  /** 4 cartes KPI skeleton */
+  readonly kpis = [0, 1, 2, 3];
+  /** Largeurs variées des colonnes du tableau squelette */
+  readonly tableauCols = [18, 22, 15, 25, 12, 8];
+  /** Lignes du tableau squelette */
+  readonly lignesTableau = [0, 1, 2, 3, 4];
+  /** Cartes mobiles */
+  readonly lignesMobiles = [0, 1, 2, 3];
 
   private clePage = '';
   private attente?: Subscription;
