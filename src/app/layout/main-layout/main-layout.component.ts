@@ -59,6 +59,14 @@ export class MainLayoutComponent implements OnInit {
   /** Nombre de factures par statut, pour les badges de la navigation. */
   counts: StatutCounts = {};
   regionName: string | null = null;
+  sidebarCollapsed = false;
+
+  toggleSidebar(): void {
+    this.sidebarCollapsed = !this.sidebarCollapsed;
+    try {
+      localStorage.setItem('csu_sidebar_collapsed', String(this.sidebarCollapsed));
+    } catch (_) {}
+  }
 
   // Modales de pointage (BCSU)
   showArriveeModal = false;
@@ -290,6 +298,12 @@ export class MainLayoutComponent implements OnInit {
   horsLigneActif = false;
 
   ngOnInit() {
+    try {
+      const saved = localStorage.getItem('csu_sidebar_collapsed');
+      if (saved !== null) {
+        this.sidebarCollapsed = saved === 'true';
+      }
+    } catch (_) {}
     this.currentUser = this.authService.getCurrentUser();
     this.horsLigneActif = this.authService.isPosteDeSante() || this.authService.isCentreDeSante();
     if (this.currentUser?.regionId) {

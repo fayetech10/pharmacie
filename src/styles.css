@@ -65,26 +65,22 @@
   --gold-hover: var(--primary-hover);
   --gold-light: var(--primary-light);
 
-  /* Surfaces & texte. Fond de page vert d'eau (19/10/2026, application plus colorée) :
-     les cartes blanches cernées de vert foncé s'en détachent nettement. */
-  --bg: #EEF6F1;
+  /* Surfaces & texte : clarté, respiration et crédibilité institutionnelle */
+  --bg: #F8FAFC;
   --card-bg: #FFFFFF;
-  --text-primary: #101828;
+  --text-primary: #0F172A;
   --text-secondary: #475467;
-  --text-muted: #98A2B3;
-  /* Filet des encadrés (cartes, boîtes, tableaux, fenêtres) et des onglets : vert foncé
-     (demande du 19/10/2026, pour mieux distinguer les blocs ; avant : gris #E4E7EC). Les
-     séparateurs internes (--border-light) restent clairs pour ne pas alourdir les listes. */
-  --border-cadre: #065F46;  /* emerald-800 */
+  --text-muted: #94A3B8;
+  /* Filet des encadrés : délimitation neutre, subtile et précise */
+  --border-cadre: #E2E8F0;
   --border: var(--border-cadre);
-  --border-light: #F2F4F7;
-  /* Filet appuyé : sépare l'en-tête d'un tableau de son corps sans aplat de fond. */
-  --border-strong: var(--border-cadre);
-  --field-bg: #F2F8F4;
-  /* Fond « rempli » des champs de formulaire (design sans bordure, tout le projet),
-     légèrement teinté de vert depuis le 19/10/2026. */
-  --field-fill: #E8F1EB;
-  --field-fill-hover: #DEEBE2;
+  --border-light: #F1F5F9;
+  /* Filet appuyé : sépare l'en-tête d'un tableau de son corps */
+  --border-strong: #CBD5E1;
+  --field-bg: #F8FAFC;
+  /* Fond « rempli » doux des champs de formulaire */
+  --field-fill: #F1F5F9;
+  --field-fill-hover: #E2E8F0;
 
   /* Élévation — volontairement quasi nulle.
      Une carte posée dans la page se délimite au filet ; seuls les éléments qui
@@ -94,12 +90,9 @@
   --shadow-md: 0 4px 12px -2px rgba(16, 24, 40, 0.06);
   --shadow-lg: 0 16px 32px -8px rgba(16, 24, 40, 0.12);
 
-  /* Anneau de focus — un seul token pour tout le projet (accessibilité clavier). */
+  /* Anneau de focus — repère visible net (accessibilité clavier WCAG 2.4.7) */
   --ring: 0 0 0 3px rgba(4, 120, 87, 0.18);
-  /* Focus des CHAMPS DE SAISIE : AUCUN indicateur (choix explicite).
-     Le champ garde exactement la même apparence au clic — ni anneau, ni contour, ni
-     changement de fond. Pour rétablir un repère discret : 0 0 0 3px rgba(16,24,40,.10). */
-  --ring-field: none;
+  --ring-field: 0 0 0 2px var(--primary);
 
   /* Rayons & rythme — resserrés : un rayon plus court lit « précis » */
   --radius-sm: 6px;
@@ -217,12 +210,12 @@ textarea:hover:not(:focus) {
   background-color: var(--field-fill-hover) !important;
 }
 
-/* Focus : le champ ne change pas d'apparence (ni fond blanc, ni anneau, ni contour). */
+/* Focus : repère net et accessible (WCAG 2.4.7) */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']):focus,
 select:focus,
 textarea:focus {
-  background-color: var(--field-fill) !important;
-  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  box-shadow: 0 0 0 2px var(--primary) !important;
   outline: none !important;
 }
 
@@ -255,10 +248,8 @@ input[readonly], textarea[readonly] {
   background-color: var(--field-fill-hover) !important;
 }
 .mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
-  /* Focus : apparence inchangée. !important pour qu'aucun composant ne réintroduise
-     un fond blanc ou un anneau coloré. */
-  background-color: var(--field-fill) !important;
-  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  box-shadow: 0 0 0 2px var(--primary) !important;
 }
 /* L'input DANS un champ Material reste transparent : le fond/anneau sont
    portés par le conteneur (évite le double-fond). */
@@ -302,7 +293,7 @@ input[readonly], textarea[readonly] {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 2px;
-  color: var(--primary-dark);
+  color: var(--text-primary);
 }
 .page-head p {
   color: var(--text-secondary);
@@ -318,7 +309,7 @@ input[readonly], textarea[readonly] {
 
 /* Compat : anciens en-têtes encore utilisés */
 .page-header { margin-bottom: var(--sp-6); }
-.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--primary-dark); }
+.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--text-primary); }
 .page-header p { color: var(--text-secondary); margin: 0; font-size: 15px; }
 
 /* ============================================================
@@ -346,29 +337,28 @@ input[readonly], textarea[readonly] {
   color: #fff !important;
 }
 
-/* En-tête de section teinté (19/10/2026, application plus colorée) : un fond vert très
-   clair et un titre vert foncé annoncent chaque carte ; le filet vert pâle le sépare du corps. */
+/* En-tête de section épuré et sobre */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
   padding: var(--sp-4) var(--sp-5);
-  border-bottom: 1px solid var(--primary-100);
+  border-bottom: 1px solid var(--border-light);
   flex-wrap: wrap;
-  background: linear-gradient(90deg, var(--primary-light) 0%, #F7FCF9 100%);
+  background: var(--card-bg);
 }
 .section-title-group { display: flex; align-items: center; gap: var(--sp-3); }
-.section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--primary-dark); margin: 0; }
-.section-title-group p { margin: 2px 0 0; font-size: 14px; color: var(--text-secondary); }
-/* Icône de section : pastille verte (19/10/2026 ; elle était neutre et transparente). */
+.section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.section-title-group p { margin: 2px 0 0; font-size: 13.5px; color: var(--text-secondary); }
+/* Icône de section : sobre et discrète */
 .section-icon {
   color: var(--primary);
-  background: var(--primary-100);
+  background: var(--primary-light);
   border-radius: var(--radius-sm);
-  font-size: 20px;
-  width: 34px;
-  height: 34px;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -523,31 +513,28 @@ input[readonly], textarea[readonly] {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  transition: border-color var(--transition);
 }
 .kpi-card:hover {
-  border-color: var(--primary-200);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-color: #CBD5E1;
 }
 .kpi-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  /* Pastille colorée (19/10/2026 ; elle était grise) : vert par défaut, teinte de la variante sinon. */
-  color: var(--primary);
-  background: var(--primary-100);
-  border: 0;
+  color: var(--text-secondary);
+  background: var(--border-light);
+  border: 1px solid var(--border);
 }
 .kpi-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
-.kpi-icon.blue  { color: #1D4ED8; background: #DBEAFE; }
-.kpi-icon.green { color: var(--primary); background: var(--primary-100); }
-.kpi-icon.amber { color: #B45309; background: #FEF3C7; }
-.kpi-icon.red   { color: #DC2626; background: #FEE2E2; }
+.kpi-icon.blue  { color: #2563EB; background: #EFF6FF; border-color: #DBEAFE; }
+.kpi-icon.green { color: var(--primary); background: var(--primary-light); border-color: var(--primary-200); }
+.kpi-icon.amber { color: #D97706; background: #FFFBEB; border-color: #FEF3C7; }
+.kpi-icon.red   { color: #DC2626; background: #FEF2F2; border-color: #FEE2E2; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
 .kpi-value {
   font-size: 24px;
@@ -1044,7 +1031,7 @@ mat-icon.inline-ic {
 .mat-mdc-tab-header { border-bottom: none !important; }
 .mat-mdc-tab-labels {
   gap: 6px;
-  background: #EEF1F5;
+  background: var(--field-fill);
   border-radius: var(--radius);
   padding: 4px;
   width: max-content;
@@ -1060,7 +1047,7 @@ mat-icon.inline-ic {
 .mat-mdc-tab .mdc-tab__text-label { color: var(--text-secondary); font-weight: 600; letter-spacing: 0; }
 .mat-mdc-tab:hover .mdc-tab__text-label { color: var(--text-primary); }
 .mat-mdc-tab.mdc-tab--active { background: #fff; box-shadow: var(--shadow-sm); }
-.mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: var(--ink) !important; font-weight: 700; }
+.mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: var(--text-primary) !important; font-weight: 700; }
 .mat-mdc-tab .mdc-tab-indicator { display: none !important; }
 .mat-mdc-tab .mdc-tab__ripple::before { border-radius: var(--radius-sm); }
 @media (max-width: 768px) {
@@ -1276,16 +1263,16 @@ button, a { transition: all var(--transition); }
 /* En-tête teinté vert clair, texte vert foncé (19/10/2026, application plus colorée),
    détaché du corps par le filet vert foncé. */
 .premium-table thead tr {
-  background: var(--primary-light) !important;
-  border-bottom: 1px solid var(--border-strong) !important;
+  background: var(--border-light) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .premium-table th.mat-header-cell {
-  color: var(--primary-dark);
+  color: var(--text-secondary);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   padding: 12px 20px;
   border-bottom: none;
   white-space: nowrap;
@@ -1303,11 +1290,11 @@ button, a { transition: all var(--transition); }
    patients, bons de commande…). :where() ramène la spécificité à zéro : les utilitaires
    Tailwind posés sur une cellule (text-right, px-…) gardent la main. */
 :where(.premium-table > thead > tr > th:not(.mat-header-cell)) {
-  color: var(--primary-dark);
+  color: var(--text-secondary);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   padding: 12px 20px;
   white-space: nowrap;
   text-align: left;

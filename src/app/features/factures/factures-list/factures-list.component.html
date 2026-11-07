@@ -172,23 +172,17 @@
                 </button>
               </div>
 
-              <!-- Vignettes des prestataires (défilement horizontal) -->
-              <div class="flex items-center gap-1.5 pb-4 px-2 md:px-4" *ngIf="visibleProviderGroups.length > 0">
-                <button type="button" (click)="scrollProviders(-1)" aria-label="Faire défiler vers la gauche"
-                        class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
-                               bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
-                  <mat-icon class="!text-[20px] !w-5 !h-5">chevron_left</mat-icon>
-                </button>
-
-                <div #providerTrack class="flex-1 flex items-stretch gap-3 overflow-x-auto scroll-smooth px-1 py-1">
+              <!-- Grille des prestataires -->
+              <div class="pb-4 px-2 md:px-4" *ngIf="visibleProviderGroups.length > 0">
+                <div #providerTrack class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto p-1">
                   <button type="button" *ngFor="let g of visibleProviderGroups; trackBy: trackByProvider"
                           (click)="selectProvider(g.providerId)"
                           [attr.aria-pressed]="g.providerId === selectedProviderKey"
                           [attr.aria-label]="'Voir les factures de ' + g.providerNom"
-                          class="relative shrink-0 w-[232px] text-left rounded-xl border p-3 cursor-pointer transition-all"
+                          class="relative text-left rounded-xl border p-3 cursor-pointer transition-colors"
                           [ngClass]="g.providerId === selectedProviderKey
-                                     ? 'border-primary bg-primary-light shadow-md -translate-y-0.5'
-                                     : 'border-border bg-white hover:border-primary-200 hover:shadow-sm hover:-translate-y-0.5'">
+                                     ? 'border-primary bg-primary-light ring-1 ring-primary/20'
+                                     : 'border-border bg-white hover:border-primary-200 hover:bg-slate-50/50'">
 
                     <!-- Ligne 1 : pastille d'initiales + nom + régime -->
                     <span class="flex items-start gap-2.5">
@@ -226,12 +220,6 @@
                     </span>
                   </button>
                 </div>
-
-                <button type="button" (click)="scrollProviders(1)" aria-label="Faire défiler vers la droite"
-                        class="hidden md:flex shrink-0 w-8 h-8 items-center justify-center rounded-full border border-border
-                               bg-white text-text-secondary hover:text-primary hover:border-primary-200 hover:shadow-sm transition-all">
-                  <mat-icon class="!text-[20px] !w-5 !h-5">chevron_right</mat-icon>
-                </button>
               </div>
 
               <!-- Aucun résultat -->

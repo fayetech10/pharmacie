@@ -2,14 +2,36 @@
   <!-- ============================================================
        SIDEBAR DESKTOP (≥ md)
        ============================================================ -->
-  <aside class="sidebar-desktop hidden md:flex">
+  <aside class="sidebar-desktop hidden md:flex" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-brand">
-      <a routerLink="/dashboard" class="flex items-center gap-3 no-underline">
-        <span class="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+      <div class="flex items-center justify-between w-full" *ngIf="!sidebarCollapsed">
+        <a routerLink="/dashboard" class="flex items-center gap-3 no-underline min-w-0">
+          <span class="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            <img [src]="brandLogo" alt="Logo CSU" class="w-6 h-6 object-contain block" />
+          </span>
+          <span class="text-[17px] font-normal tracking-[-0.01em] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
+        </a>
+        <button type="button"
+                class="sidebar-toggle-btn"
+                (click)="toggleSidebar()"
+                title="Réduire la barre latérale"
+                aria-label="Réduire la barre latérale">
+          <mat-icon class="!text-[20px] !w-5 !h-5">chevron_left</mat-icon>
+        </button>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 w-full py-0.5" *ngIf="sidebarCollapsed">
+        <a routerLink="/dashboard" title="CSU Sénégal" class="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
           <img [src]="brandLogo" alt="Logo CSU" class="w-6 h-6 object-contain block" />
-        </span>
-        <span class="text-[17px] font-normal tracking-[-0.01em] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
-      </a>
+        </a>
+        <button type="button"
+                class="sidebar-toggle-btn"
+                (click)="toggleSidebar()"
+                title="Agrandir la barre latérale"
+                aria-label="Agrandir la barre latérale">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">chevron_right</mat-icon>
+        </button>
+      </div>
     </div>
 
     <nav class="sidebar-nav" aria-label="Navigation principale">
@@ -17,32 +39,32 @@
         <div class="nav-group-header" *ngIf="group.name !== 'Général'">
           {{ group.name }}
         </div>
-        <div class="nav-group-spacer" *ngIf="group.name !== 'Général'"></div>
         <a *ngFor="let item of group.items"
            [routerLink]="item.link"
            [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
            [class.active]="isNavActive(item)"
+           [title]="item.label"
            class="sidebar-nav-link">
           <span class="relative flex items-center justify-center shrink-0">
             <mat-icon>{{ item.icon }}</mat-icon>
             <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center"
                   *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
           </span>
-          <span class="sidebar-nav-label">{{ item.label }}</span>
+          <span class="sidebar-nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
         </a>
       </ng-container>
     </nav>
 
     <div class="sidebar-footer">
-      <button type="button" class="sidebar-user-btn" [matMenuTriggerFor]="userMenu" aria-label="Menu du compte">
+      <button type="button" class="sidebar-user-btn" [matMenuTriggerFor]="userMenu" [attr.aria-label]="'Menu du compte: ' + currentUser?.prenom + ' ' + currentUser?.nom" [title]="currentUser?.prenom + ' ' + currentUser?.nom">
         <span class="w-9 h-9 rounded-xl bg-white text-ink flex items-center justify-center text-[13px] font-bold tracking-[0.02em] shrink-0">
           {{ initials }}
         </span>
-        <span class="flex flex-col items-start min-w-0">
+        <span class="flex flex-col items-start min-w-0" *ngIf="!sidebarCollapsed">
           <span class="text-[13px] font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis w-full text-left">{{ currentUser?.prenom }} {{ currentUser?.nom }}</span>
           <span class="text-[11.5px] text-ink-text whitespace-nowrap overflow-hidden text-ellipsis w-full text-left">{{ getRoleLabel(currentUser?.role || '') }}</span>
         </span>
-        <mat-icon class="ml-auto text-ink-text text-[18px]">unfold_more</mat-icon>
+        <mat-icon class="ml-auto text-ink-text text-[18px]" *ngIf="!sidebarCollapsed">unfold_more</mat-icon>
       </button>
       <mat-menu #userMenu="matMenu" xPosition="after">
         <button mat-menu-item *ngIf="horsLigneActif && !installation.estInstallee" (click)="installation.reproposer()">
@@ -60,7 +82,7 @@
   <!-- ============================================================
        MAIN CONTENT WRAPPER
        ============================================================ -->
-  <div class="main-content-wrapper">
+  <div class="main-content-wrapper" [class.sidebar-collapsed]="sidebarCollapsed">
 
 <!-- ============================================================
      TOPBAR MOBILE (< md) — identité + compte (déconnexion incluse).
