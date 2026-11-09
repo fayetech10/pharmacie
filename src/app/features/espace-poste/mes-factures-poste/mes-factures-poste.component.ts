@@ -164,9 +164,26 @@ export class MesFacturesPosteComponent implements OnInit {
   }
 
   /**
-   * Factures d'un mois déjà écoulé restées en brouillon à cause de dossiers « à compléter » :
-   * la clôture mensuelle automatique les a laissées de côté (on n'envoie jamais un dossier
-   * incomplet). L'agent doit les compléter puis les envoyer depuis le menu de la facture.
+   * Factures d'un mois déjà écoulé prêtes à envoyer : brouillon de poste (pas d'étape CS/EPS),
+   * avec des prestations saisies et aucun dossier patient à compléter, pour un mois passé.
+   * L'envoi automatique ayant été supprimé, c'est l'agent qui doit les envoyer manuellement.
+   */
+  get facturesPretesAEnvoyer(): FactureStructure[] {
+    const now = new Date();
+    const anneeCourante = now.getFullYear();
+    const moisCourant = now.getMonth() + 1;
+    return this.facturesAnnee.filter(f =>
+      !f.etape
+      && estModifiable(f.statut)
+      && (f.nombreDossiersACompleter || 0) === 0
+      && (f.lignes?.length || 0) > 0
+      && (f.annee < anneeCourante || (f.annee === anneeCourante && f.mois < moisCourant))
+    );
+  }
+
+  /**
+   * Factures d'un mois déjà écoulé bloquées en brouillon : des dossiers patients restent
+   * « à compléter ». L'agent doit les compléter puis les envoyer depuis le menu de la facture.
    */
   get facturesEnAttente(): FactureStructure[] {
     const now = new Date();

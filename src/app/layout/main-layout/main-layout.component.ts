@@ -6,6 +6,8 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
+import { StructureService } from '../../core/services/structure.service';
+import { FactureStructure } from '../../core/models/structure.model';
 
 /** Ce que le service régional doit voir : factures reçues + décisions du niveau central. */
 const NOTIFIABLES_REGION = ['ENVOYEE', 'VALIDEE_NC', 'REJETEE_NC'];
@@ -55,6 +57,8 @@ interface NavItem {
 export class MainLayoutComponent implements OnInit {
   currentUser: LoginResponse | null = null;
   retards: Facture[] = [];
+  /** Factures du poste du mois écoulé prêtes à envoyer (l'envoi automatique a été supprimé). */
+  facturesPosteRetard: FactureStructure[] = [];
   currentUrl = '';
   /** Nombre de factures par statut, pour les badges de la navigation. */
   counts: StatutCounts = {};
@@ -291,7 +295,8 @@ export class MainLayoutComponent implements OnInit {
     private api: ApiService,
     private snackBar: MatSnackBar,
     private pointageUi: PointageUiService,
-    private regionService: RegionService
+    private regionService: RegionService,
+    private structureService: StructureService
   ) {}
 
   /** Postes et centres de santé : facturation possible hors ligne (enfants 0-5 ans, Plan Sésame). */
@@ -353,6 +358,21 @@ export class MainLayoutComponent implements OnInit {
       });
     }
 
+    if (this.authService.isPosteDeSante()) {
+      const now = new Date();
+      const anneeCourante = now.getFullYear();
+      const moisCourant = now.getMonth() + 1;
+      this.structureService.getFactures({ annee: anneeCourante }).subscribe(factures => {
+        this.facturesPosteRetard = (factures || []).filter(f =>
+          !f.etape
+          && f.statut === 'BROUILLON'
+          && (f.nombreDossiersACompleter || 0) === 0
+          && (f.lignes?.length || 0) > 0
+          && (f.annee < anneeCourante || (f.annee === anneeCourante && f.mois < moisCourant))
+        );
+      });
+    }
+
     // Modale d'arrivée automatique pour BCSU (premier accès de la journée).
     if (this.authService.isBcsu() && this.currentUser && !this.currentUser.pointageHeure) {
       this.showArriveeModal = true;
@@ -367,6 +387,11 @@ export class MainLayoutComponent implements OnInit {
   voirRetards() {
     // L'onglet « Mes factures » de l'espace pharmacie
     this.router.navigate(['/dashboard/espace-pharmacie/factures']);
+  }
+
+  voirFacturesPoste() {
+    // Onglet « Mes factures » (tab=2) de l'espace poste
+    this.router.navigate(['/dashboard/espace-poste'], { queryParams: { tab: 2 } });
   }
 
   ngOnDestroy() {}

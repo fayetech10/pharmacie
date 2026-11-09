@@ -6,14 +6,29 @@
     </div>
   </div>
 
-  <!-- Rappel : factures d'un mois clôturé non parties faute de dossiers complets.
-       L'envoi mensuel est automatique ; seules ces factures incomplètes attendent l'agent. -->
+  <!-- Alerte : factures du mois écoulé prêtes à envoyer (l'envoi n'est plus automatique). -->
+  <div *ngIf="facturesPretesAEnvoyer.length"
+       class="flex items-start gap-2.5 mb-4 py-3 px-4 rounded-lg bg-red-50 border border-red-200 text-red-900 text-[13px]">
+    <mat-icon class="shrink-0 !text-xl !w-5 !h-5 text-red-600">send</mat-icon>
+    <div class="min-w-0">
+      <strong>{{ facturesPretesAEnvoyer.length }} facture(s) du mois écoulé à envoyer</strong> :
+      l'envoi n'est plus automatique. Transmettez-les ({{ destinationEnvoi }}) depuis le menu de chaque facture.
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        <button type="button" *ngFor="let f of facturesPretesAEnvoyer" (click)="consulter(f)"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-red-300 text-red-900 text-[12px] font-semibold cursor-pointer hover:bg-red-100">
+          {{ libelleRegime(f.regime) }} · {{ moisNoms[f.mois] }} {{ f.annee }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rappel : factures d'un mois écoulé non parties faute de dossiers complets. -->
   <div *ngIf="facturesEnAttente.length"
        class="flex items-start gap-2.5 mb-4 py-3 px-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[13px]">
     <mat-icon class="shrink-0 !text-xl !w-5 !h-5 text-amber-600">pending_actions</mat-icon>
     <div class="min-w-0">
-      <strong>{{ facturesEnAttente.length }} facture(s) d'un mois déjà clôturé</strong> n'ont pas été envoyées
-      automatiquement : il reste des dossiers patients « à compléter ». Complétez-les puis envoyez-les
+      <strong>{{ facturesEnAttente.length }} facture(s) d'un mois écoulé</strong> n'ont pas pu être envoyées :
+      complétez les dossiers marqués « à compléter » puis envoyez-les
       ({{ destinationEnvoi }}) depuis le menu de chaque facture.
       <div class="flex flex-wrap gap-1.5 mt-2">
         <button type="button" *ngFor="let f of facturesEnAttente" (click)="consulter(f)"

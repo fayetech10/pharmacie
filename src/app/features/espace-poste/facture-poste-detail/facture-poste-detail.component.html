@@ -54,14 +54,13 @@
          class="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg text-[13px]"
          [ngClass]="f.etape === 'COMPLETE' ? 'bg-success-light text-success' : 'bg-primary-light text-primary'">
       <mat-icon class="shrink-0 !text-xl !w-5 !h-5">{{ f.etape === 'COMPLETE' ? 'task_alt' : 'info' }}</mat-icon>
-      <span *ngIf="f.etape === 'COMPLETE'">Facture complète : vérifiez-la, puis transmettez-la {{ destinationEnvoi }}.
-        Elle ne part pas seule à la clôture du mois.</span>
+      <span *ngIf="f.etape === 'COMPLETE'">Facture complète : vérifiez-la, puis transmettez-la {{ destinationEnvoi }}.</span>
       <span *ngIf="f.etape !== 'COMPLETE'">
         <ng-container *ngIf="aCompleter">{{ aCompleter }} patient(s) attendent encore leurs prestations ou leur ticket
           de caisse : importez la facture du mois et ajoutez les tickets (Facturation CSU → « Importer la facture du
           mois »), ou complétez-les ici.</ng-container>
         <ng-container *ngIf="!aCompleter">Aucune prestation pour l'instant : importez la facture du mois.</ng-container>
-        Une fois complète, c'est à vous de la transmettre {{ destinationEnvoi }} — elle ne part pas seule à la clôture du mois.
+        Une fois complète, c'est à vous de la transmettre {{ destinationEnvoi }}.
       </span>
     </div>
 
@@ -71,7 +70,7 @@
       <mat-icon class="shrink-0 !text-xl !w-5 !h-5">history</mat-icon>
       <span>Facture reprise de l'ancienne application<ng-container *ngIf="f.numeroOrigine"> (n° d'origine
         <span class="font-mono">{{ f.numeroOrigine }}</span>)</ng-container>, avec son statut d'origine.<ng-container
-        *ngIf="modifiable"> Elle ne part pas seule à la clôture du mois : envoyez-la une fois vérifiée.</ng-container></span>
+        *ngIf="modifiable"> Envoyez-la une fois vérifiée.</ng-container></span>
     </div>
 
     <!-- Facture rejetée : le motif reste affiché, c'est ce qu'il faut corriger avant de renvoyer -->
