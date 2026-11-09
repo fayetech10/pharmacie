@@ -174,9 +174,10 @@
             </div>
           </ng-container>
 
-          <!-- Carte contrôlée : la photo, le prénom, le nom et la saisie obligatoire du téléphone -->
-          <div *ngIf="carteRequise && verification" class="flex flex-col gap-3 p-3 rounded-xl border border-border bg-white">
-            <div class="flex items-center gap-3 sm:gap-4">
+          <!-- Carte contrôlée : la photo, le prénom et le nom -->
+          <div *ngIf="carteRequise && verification" class="p-3 rounded-xl border border-border bg-white"
+               [ngClass]="identiteVerrouillee && !contributif ? 'flex flex-col gap-3' : 'flex items-center gap-3 sm:gap-4'">
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
               <img *ngIf="carte?.photo" [src]="carte?.photo" alt="Photo du patient"
                    class="w-20 h-24 shrink-0 object-cover rounded-lg border border-border">
               <span *ngIf="!carte?.photo" aria-hidden="true"
@@ -197,12 +198,12 @@
               </div>
             </div>
 
-            <!-- Téléphone obligatoire (l'identité est verrouillée mais le téléphone reste obligatoire et modifiable) -->
-            <div *ngIf="identiteVerrouillee" class="pt-3 border-t border-border-light">
+            <!-- Téléphone obligatoire pour les régimes à carte hors classique (ex. BSF / CEC) -->
+            <div *ngIf="identiteVerrouillee && !contributif" class="pt-3 border-t border-border-light">
               <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
                 <span class="flex items-center justify-between">
                   <span>Numéro de téléphone <span class="text-warn">*</span></span>
-                  <span *ngIf="!patient.telephone?.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
+                  <span *ngIf="!patient.telephone.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
                 </span>
                 <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off" placeholder="Ex. 77 123 45 67" required
                        class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
@@ -454,12 +455,12 @@
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
           <span class="flex items-center justify-between">
-            <span>Téléphone{{ regime === Regime.ZERO_CINQ_ANS ? ' du parent' : '' }} <span class="text-warn">*</span></span>
-            <span *ngIf="!patient.telephone?.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
+            <span>Téléphone{{ regime === Regime.ZERO_CINQ_ANS ? ' du parent' : '' }} <span *ngIf="!contributif" class="text-warn">*</span></span>
+            <span *ngIf="!contributif && !patient.telephone.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
           </span>
-          <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off" placeholder="Ex. 77 123 45 67" required
+          <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off" placeholder="Ex. 77 123 45 67" [required]="!contributif"
                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
-                 [class.border-warn]="!patient.telephone.trim()">
+                 [class.border-warn]="!contributif && !patient.telephone.trim()">
         </label>
       </div>
     </ng-template>
