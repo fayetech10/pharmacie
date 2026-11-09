@@ -174,25 +174,40 @@
             </div>
           </ng-container>
 
-          <!-- Carte contrôlée : la photo, le prénom et le nom (la photo de la carte se prend en dessous) -->
-          <div *ngIf="carteRequise && verification" class="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-border bg-white">
-            <img *ngIf="carte?.photo" [src]="carte?.photo" alt="Photo du patient"
-                 class="w-20 h-24 shrink-0 object-cover rounded-lg border border-border">
-            <span *ngIf="!carte?.photo" aria-hidden="true"
-                  class="w-20 h-24 shrink-0 rounded-lg bg-field text-text-muted flex items-center justify-center">
-              <mat-icon class="!text-[40px] !w-10 !h-10">person</mat-icon>
-            </span>
-            <div class="flex-1 min-w-0 flex flex-col items-start gap-1">
-              <div class="text-[19px] font-bold text-text-primary leading-snug break-words">
-                {{ (patient.prenom + ' ' + patient.nom).trim() || patient.matricule }}
-              </div>
-              <span *ngIf="verification === 'VERIFIEE'" class="inline-flex items-center gap-1 text-[13px] font-semibold text-success">
-                <mat-icon class="!text-base !w-4 !h-4">verified</mat-icon> Éligible
+          <!-- Carte contrôlée : la photo, le prénom, le nom et la saisie obligatoire du téléphone -->
+          <div *ngIf="carteRequise && verification" class="flex flex-col gap-3 p-3 rounded-xl border border-border bg-white">
+            <div class="flex items-center gap-3 sm:gap-4">
+              <img *ngIf="carte?.photo" [src]="carte?.photo" alt="Photo du patient"
+                   class="w-20 h-24 shrink-0 object-cover rounded-lg border border-border">
+              <span *ngIf="!carte?.photo" aria-hidden="true"
+                    class="w-20 h-24 shrink-0 rounded-lg bg-field text-text-muted flex items-center justify-center">
+                <mat-icon class="!text-[40px] !w-10 !h-10">person</mat-icon>
               </span>
-              <button type="button" *ngIf="!modeModification" (click)="changerDeCarte()"
-                      class="inline-flex items-center gap-1 p-0 bg-transparent border-0 text-[13px] text-primary font-semibold underline cursor-pointer">
-                Autre code d'immatriculation
-              </button>
+              <div class="flex-1 min-w-0 flex flex-col items-start gap-1">
+                <div class="text-[19px] font-bold text-text-primary leading-snug break-words">
+                  {{ (patient.prenom + ' ' + patient.nom).trim() || patient.matricule }}
+                </div>
+                <span *ngIf="verification === 'VERIFIEE'" class="inline-flex items-center gap-1 text-[13px] font-semibold text-success">
+                  <mat-icon class="!text-base !w-4 !h-4">verified</mat-icon> Éligible
+                </span>
+                <button type="button" *ngIf="!modeModification" (click)="changerDeCarte()"
+                        class="inline-flex items-center gap-1 p-0 bg-transparent border-0 text-[13px] text-primary font-semibold underline cursor-pointer">
+                  Autre code d'immatriculation
+                </button>
+              </div>
+            </div>
+
+            <!-- Téléphone obligatoire (l'identité est verrouillée mais le téléphone reste obligatoire et modifiable) -->
+            <div *ngIf="identiteVerrouillee" class="pt-3 border-t border-border-light">
+              <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
+                <span class="flex items-center justify-between">
+                  <span>Numéro de téléphone <span class="text-warn">*</span></span>
+                  <span *ngIf="!patient.telephone?.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
+                </span>
+                <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off" placeholder="Ex. 77 123 45 67" required
+                       class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                       [class.border-warn]="!patient.telephone.trim()">
+              </label>
             </div>
           </div>
 
@@ -398,17 +413,19 @@
     <ng-template #champsIdentite>
       <div class="grid gap-3 sm:grid-cols-2 content-start">
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-          Prénom(s) <span class="sr-only">obligatoire</span>
-          <input [(ngModel)]="patient.prenom" autocomplete="off" [disabled]="identiteVerrouillee"
-                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <span>Prénom(s) <span class="text-warn">*</span></span>
+          <input [(ngModel)]="patient.prenom" autocomplete="off" [disabled]="identiteVerrouillee" required
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [class.border-warn]="!patient.prenom.trim()">
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-          Nom
-          <input [(ngModel)]="patient.nom" autocomplete="off" [disabled]="identiteVerrouillee"
-                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <span>Nom <span class="text-warn">*</span></span>
+          <input [(ngModel)]="patient.nom" autocomplete="off" [disabled]="identiteVerrouillee" required
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [class.border-warn]="!patient.nom.trim()">
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-          Date de naissance
+          <span>Date de naissance <span *ngIf="regime === Regime.ZERO_CINQ_ANS || regime === Regime.SESAME" class="text-warn">*</span></span>
           <app-champ-date [(ngModel)]="patient.dateNaissance" vue="multi-year"></app-champ-date>
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
@@ -436,9 +453,13 @@
                  class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
         </label>
         <label class="flex flex-col gap-1 text-[13px] font-semibold text-text-secondary">
-          Téléphone{{ regime === Regime.ZERO_CINQ_ANS ? ' du parent' : '' }}
-          <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off"
-                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary">
+          <span class="flex items-center justify-between">
+            <span>Téléphone{{ regime === Regime.ZERO_CINQ_ANS ? ' du parent' : '' }} <span class="text-warn">*</span></span>
+            <span *ngIf="!patient.telephone?.trim()" class="text-[12px] font-normal text-warn">Obligatoire</span>
+          </span>
+          <input type="tel" [(ngModel)]="patient.telephone" autocomplete="off" placeholder="Ex. 77 123 45 67" required
+                 class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[14px] font-normal text-text-primary"
+                 [class.border-warn]="!patient.telephone.trim()">
         </label>
       </div>
     </ng-template>

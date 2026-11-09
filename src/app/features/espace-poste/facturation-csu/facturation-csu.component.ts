@@ -630,6 +630,16 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   /** Identité contrôlée à l'enregistrement (tout est saisi sur le même écran). */
   private erreurIdentite(): string | null {
     if (!this.patient.prenom.trim() || !this.patient.nom.trim()) return 'Le prénom et le nom du patient sont obligatoires.';
+    const tel = (this.patient.telephone || '').trim();
+    if (!tel) {
+      return this.regime === Regime.ZERO_CINQ_ANS
+        ? 'Le numéro de téléphone du parent est obligatoire.'
+        : 'Le numéro de téléphone est obligatoire.';
+    }
+    const chiffres = tel.replace(/\D/g, '');
+    if (chiffres.length < 9) {
+      return 'Le numéro de téléphone doit comporter au moins 9 chiffres (ex. 77 123 45 67).';
+    }
     if (!this.patient.dateNaissance && (this.regime === Regime.ZERO_CINQ_ANS || this.regime === Regime.SESAME)) {
       return 'La date de naissance est obligatoire : elle conditionne le contrôle d\'âge du régime.';
     }
