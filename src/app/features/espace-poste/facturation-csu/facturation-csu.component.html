@@ -1,10 +1,10 @@
 <div class="fade-in">
 
-  <div class="page-head" *ngIf="!integre">
-    <div>
+  <app-page-header *ngIf="!integre">
+    <div page-header-title>
       <h1>{{ modeModification ? 'Compléter / modifier un dossier patient' : 'Facturation CSU' }}</h1>
     </div>
-  </div>
+  </app-page-header>
 
   <div *ngIf="chargement" class="card">
     <div class="section-body flex items-center justify-center gap-3 py-10">

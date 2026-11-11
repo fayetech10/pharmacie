@@ -118,11 +118,13 @@ function prestationsDuPoste(tarifs: TarifHorsCsu[] | null | undefined): TarifHor
  * <p>Les montants affichés sont un aperçu : le serveur recalcule tout (prix du référentiel,
  * forfait, parts) à l'enregistrement.</p>
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-facturation-csu-poste',
   standalone: true,
   imports: [ChampDateComponent, CommonModule, FormsModule, MatIconModule, MatSnackBarModule,
-    MatProgressSpinnerModule, MatDialogModule, PhotoPieceComponent],
+    MatProgressSpinnerModule, MatDialogModule, PhotoPieceComponent, PageHeaderComponent],
   templateUrl: './facturation-csu.component.html'
 })
 export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
@@ -961,9 +963,14 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       partiel,
       datePriseEnCharge: this.dateSoins
     };
-    if (!this.modeModification && this.mois && this.annee) {
-      requete.mois = this.mois;
-      requete.annee = this.annee;
+    // Toujours dériver mois/année de la date de prise en charge : le patient
+    // doit figurer dans la facture du mois choisi, pas celle du mois en cours.
+    if (this.dateSoins) {
+      const [annee, mois] = this.dateSoins.split('-').map(Number);
+      if (annee > 0 && mois >= 1 && mois <= 12) {
+        requete.mois = mois;
+        requete.annee = annee;
+      }
     }
     return requete;
   }

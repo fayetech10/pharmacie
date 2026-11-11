@@ -153,6 +153,8 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
   }
 };
 
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-facture-structure-form',
   standalone: true,
@@ -160,8 +162,7 @@ const CHAMPS_PAR_REGIME: Record<string, CategorieChamps> = {
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatInputModule,
     MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule,
     MatDatepickerModule,
-    QrScannerComponent, RegimeTuilesComponent
-  ],
+    QrScannerComponent, RegimeTuilesComponent, PageHeaderComponent],
   templateUrl: './facture-structure-form.component.html'
 })
 export class FactureStructureFormComponent implements OnInit {
@@ -740,6 +741,23 @@ export class FactureStructureFormComponent implements OnInit {
     // le régime. Le serveur relit la lettre et impose ses valeurs — l'écran ne pourrait de
     // toute façon pas faire autorité sur ce que l'agent BCSU a accordé.
     
+    // ── Dériver mois/année de la datePriseEnCharge de la première ligne ──
+    // Le patient doit figurer dans la facture du mois de sa prise en charge,
+    // pas dans la facture du mois en cours.
+    const premiereDatePEC = this.lignes
+      .map(l => l.datePriseEnCharge)
+      .find(d => !!d);
+    if (premiereDatePEC) {
+      req.datePriseEnCharge = typeof premiereDatePEC === 'string'
+        ? premiereDatePEC.substring(0, 10)
+        : premiereDatePEC;
+      const parts = String(req.datePriseEnCharge).split('-').map(Number);
+      if (parts[0] > 0 && parts[1] >= 1 && parts[1] <= 12) {
+        req.annee = parts[0];
+        req.mois = parts[1];
+      }
+    }
+
     this.structureService.createFacture(req).subscribe({
       next: (facture) => {
         this.isSubmitting = false;
