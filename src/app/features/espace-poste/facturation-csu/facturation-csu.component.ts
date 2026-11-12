@@ -343,7 +343,11 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   }
 
   get alerteAge(): string | null {
-    return controleAge(this.regime, this.patient.dateNaissance ? new Date(this.patient.dateNaissance) : null);
+    return controleAge(
+      this.regime,
+      this.patient.dateNaissance ? new Date(this.patient.dateNaissance) : null,
+      this.dateSoins
+    );
   }
 
   /** Lignes réellement saisies (une ligne vide est ignorée). */
@@ -459,7 +463,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.refus = '';
     this.siteEnPanne = false;
     this.carte = null;
-    this.carteCsuService.verifier(code).subscribe({
+    this.carteCsuService.verifier(code, this.dateSoins).subscribe({
       next: carte => {
         this.controleEnCours = false;
         this.carte = carte;
@@ -491,6 +495,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   }
 
   private motifRefus(carte: CarteCsu): string {
+    const dateRef = this.dateSoins ? new Date(this.dateSoins) : new Date();
     if (!carte.carteActive) {
       return `Carte non valide (${(carte.etat || 'inactive').toLowerCase()}) — La facturation ne peut pas être effectuée.`;
     }
@@ -498,7 +503,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       return `Bénéficiaire en période d'observation : la prise en charge ne sera ouverte que le `
         + `${this.dateFr(carte.dateDebutDroits)} — La facturation ne peut pas être effectuée.`;
     }
-    if (carte.dateDebut && new Date(carte.dateDebut) > new Date()) {
+    if (carte.dateDebut && new Date(carte.dateDebut) > dateRef) {
       return `Carte pas encore valide (adhésion le ${this.dateFr(carte.dateDebut)}) — La facturation ne peut pas être effectuée.`;
     }
     return `Carte expirée${carte.dateFin ? ' le ' + this.dateFr(carte.dateFin) : ''} — La facturation ne peut pas être effectuée.`;

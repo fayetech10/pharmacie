@@ -73,11 +73,13 @@ const LIBELLES_PHOTOS: Record<PhotoKey, string> = {
  *
  * <p>Sert aussi à modifier une lettre ({@code /lettres-garantie/:id/edit}).</p>
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-lettre-garantie-form',
   standalone: true,
   imports: [ChampDateComponent, CommonModule, FormsModule, RouterModule, MatIconModule, MatProgressSpinnerModule,
-    MatSnackBarModule, MatDialogModule, PhotoPieceComponent],
+    MatSnackBarModule, MatDialogModule, PhotoPieceComponent, PageHeaderComponent],
   templateUrl: './lettre-garantie-form.component.html'
 })
 export class LettreGarantieFormComponent implements OnInit {
@@ -369,7 +371,7 @@ export class LettreGarantieFormComponent implements OnInit {
     this.refus = '';
     this.siteEnPanne = false;
     this.carte = null;
-    this.carteCsuService.verifier(code).subscribe({
+    this.carteCsuService.verifier(code, this.datePriseEnCharge).subscribe({
       next: carte => {
         this.controleEnCours = false;
         this.carte = carte;
@@ -400,6 +402,7 @@ export class LettreGarantieFormComponent implements OnInit {
   }
 
   private motifRefus(carte: CarteCsu): string {
+    const dateRef = this.datePriseEnCharge ? new Date(this.datePriseEnCharge) : new Date();
     if (!carte.carteActive) {
       return `Carte non valide (${(carte.etat || 'inactive').toLowerCase()}) — La prise en charge ne peut pas être accordée.`;
     }
@@ -407,7 +410,7 @@ export class LettreGarantieFormComponent implements OnInit {
       return `Bénéficiaire en période d'observation : la prise en charge ne sera ouverte que le `
         + `${this.dateFr(carte.dateDebutDroits)} — La prise en charge ne peut pas être accordée.`;
     }
-    if (carte.dateDebut && new Date(carte.dateDebut) > new Date()) {
+    if (carte.dateDebut && new Date(carte.dateDebut) > dateRef) {
       return `Carte pas encore valide (adhésion le ${this.dateFr(carte.dateDebut)}) — La prise en charge ne peut pas être accordée.`;
     }
     return `Carte expirée${carte.dateFin ? ' le ' + this.dateFr(carte.dateFin) : ''} — La prise en charge ne peut pas être accordée.`;

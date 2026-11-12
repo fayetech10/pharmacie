@@ -13,9 +13,13 @@ export class CarteCsuService {
 
   constructor(private api: ApiService) {}
 
-  verifier(code: string): Observable<CarteCsu> {
+  verifier(code: string, datePriseEnCharge?: string): Observable<CarteCsu> {
+    let params = new HttpParams().set('code', code);
+    if (datePriseEnCharge) {
+      params = params.set('date', datePriseEnCharge);
+    }
     return this.api.get<CarteCsu>('/carte-csu', {
-      params: new HttpParams().set('code', code),
+      params,
       skipLoading: true
     });
   }

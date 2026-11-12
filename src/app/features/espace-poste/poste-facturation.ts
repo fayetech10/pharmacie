@@ -154,18 +154,26 @@ export function piecesExigees(regime: Regime | null | undefined): TypePiece[] {
 }
 
 /** Âge limite des régimes qui en ont un (miroir de Regime.ageMaximumAnnees / ageMinimumAnnees). */
-export function controleAge(regime: Regime | null | undefined, naissance: Date | null): string | null {
+export function controleAge(
+  regime: Regime | null | undefined,
+  naissance: Date | null,
+  dateReference?: Date | string | null
+): string | null {
   if (!naissance || isNaN(naissance.getTime())) return null;
-  const aujourdhui = new Date();
-  let age = aujourdhui.getFullYear() - naissance.getFullYear();
-  const m = aujourdhui.getMonth() - naissance.getMonth();
-  if (m < 0 || (m === 0 && aujourdhui.getDate() < naissance.getDate())) age--;
-  if (age < 0) return 'La date de naissance est dans le futur.';
+  const ref = dateReference
+    ? (typeof dateReference === 'string' ? new Date(dateReference) : dateReference)
+    : new Date();
+  if (isNaN(ref.getTime())) return null;
+
+  let age = ref.getFullYear() - naissance.getFullYear();
+  const m = ref.getMonth() - naissance.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < naissance.getDate())) age--;
+  if (age < 0) return 'La date de naissance est postérieure à la date de prise en charge.';
   if (regime === Regime.ZERO_CINQ_ANS && age >= 5) {
-    return `Ce patient a ${age} ans : le régime est réservé aux enfants de moins de 5 ans.`;
+    return `Ce patient avait ${age} ans à la date de prise en charge : le régime est réservé aux enfants de moins de 5 ans.`;
   }
   if (regime === Regime.SESAME && age < 60) {
-    return `Ce patient a ${age} ans : le Plan Sésame est réservé aux personnes de 60 ans et plus.`;
+    return `Ce patient avait ${age} ans à la date de prise en charge : le Plan Sésame est réservé aux personnes de 60 ans et plus.`;
   }
   return null;
 }
