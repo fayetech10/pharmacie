@@ -1,0 +1,1066 @@
+<div class="space-y-5 fade-in">
+
+  <!-- ========================================================================= -->
+  <!-- 1. VUE LISTE : SUPERVISION DES PRESTATAIRES (Structures & Pharmacies)     -->
+  <!-- ========================================================================= -->
+  <div *ngIf="vueMode === 'LISTE'" class="space-y-5">
+
+    <!-- Bandeau d'en-tête -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+          <mat-icon>app_registration</mat-icon>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-slate-900 leading-tight">Suivi de l'enregistrement des prestataires</h2>
+          <p class="text-xs text-slate-500">Suivez en direct les saisies, corrections et envois des hôpitaux et postes de santé.</p>
+        </div>
+      </div>
+
+      <!-- Ordre de lecture : avancement par district, puis hôpitaux et pharmacies. -->
+      <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
+        <button type="button"
+                (click)="activeTab = 0"
+                [ngClass]="activeTab === 0 ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+          <mat-icon class="!text-sm !w-4 !h-4">map</mat-icon>
+          Districts
+          <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"
+                [ngClass]="activeTab === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'">
+            {{ totalDistricts }}
+          </span>
+        </button>
+
+        <button type="button"
+                (click)="activeTab = 1"
+                [ngClass]="activeTab === 1 ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+          <mat-icon class="!text-sm !w-4 !h-4">local_hospital</mat-icon>
+          Hôpitaux
+          <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"
+                [ngClass]="activeTab === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'">
+            {{ totalStructuresAControler }}/{{ totalStructuresActives }} à suivre
+          </span>
+        </button>
+
+        <button type="button"
+                (click)="activeTab = 2"
+                [ngClass]="activeTab === 2 ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+          <mat-icon class="!text-sm !w-4 !h-4">local_pharmacy</mat-icon>
+          Pharmacies d'officine
+          <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"
+                [ngClass]="activeTab === 2 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'">
+            {{ totalPharmaciesAControler }}/{{ totalPharmaciesActives }} à suivre
+          </span>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+        <label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+          <mat-icon class="!h-4 !w-4 !text-base text-emerald-700">calendar_month</mat-icon>
+          Période
+          <select [(ngModel)]="moisSuivi" (ngModelChange)="changerPeriode()" aria-label="Mois suivi" class="min-w-24 border-0 bg-transparent text-sm font-bold text-slate-800 outline-none">
+            <option *ngFor="let nomMois of moisDisponibles; let index = index" [ngValue]="index + 1">{{ nomMois }}</option>
+          </select>
+          <select [(ngModel)]="annee" (ngModelChange)="changerPeriode()" aria-label="Année suivie" class="border-0 bg-transparent text-sm font-bold text-slate-800 outline-none">
+            <option *ngFor="let anneeDisponible of anneesDisponibles" [ngValue]="anneeDisponible">{{ anneeDisponible }}</option>
+          </select>
+        </label>
+        <span *ngIf="!erreurChargement" class="text-[11px] text-slate-500" [matTooltip]="'Actualisation automatique toutes les 15 secondes lorsque cet onglet est visible'">
+          <mat-icon class="!h-3.5 !w-3.5 !text-sm align-middle" [ngClass]="actualisationEnCours ? 'text-emerald-600 animate-spin' : 'text-emerald-600'">sync</mat-icon>
+          {{ actualisationEnCours ? 'Synchronisation…' : 'Mis à jour à ' + (derniereMiseAJour | date:'HH:mm:ss') }}
+        </span>
+        <span *ngIf="erreurChargement" role="status" class="text-[11px] font-semibold text-rose-700">
+          <mat-icon class="!h-3.5 !w-3.5 !text-sm align-middle">cloud_off</mat-icon> Synchronisation impossible
+        </span>
+        <button type="button" (click)="actualiserMaintenant()" [disabled]="actualisationEnCours"
+                class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
+                aria-label="Actualiser le suivi maintenant">
+          <mat-icon class="!h-4 !w-4 !text-base" [ngClass]="actualisationEnCours ? 'animate-spin' : ''">refresh</mat-icon>
+          Actualiser
+        </button>
+      </div>
+    </div>
+
+    <!-- SOUS-ONGLET 1 : SYNTHÈSE PAR DISTRICT -->
+    <div *ngIf="activeTab === 0" class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="relative flex-1 min-w-[240px]">
+          <mat-icon class="absolute left-3 top-2.5 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
+          <input type="search" [(ngModel)]="searchStructure"
+                 placeholder="Rechercher un district..."
+                 class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-600 focus:bg-white transition" />
+        </div>
+        <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+          <mat-icon class="!h-4 !w-4 !text-base">filter_list</mat-icon>
+          <label for="filtre-statut-districts">Statut</label>
+          <select id="filtre-statut-districts" [(ngModel)]="filtreStatutSuivi" class="min-h-8 bg-transparent font-bold outline-none">
+            <option value="">Tous les districts ({{ totalDistricts }})</option>
+            <option value="A_SAISIR">À commencer ({{ compterStatut(districts, 'A_SAISIR') }})</option>
+            <option value="EN_COURS">Saisies en cours ({{ compterStatut(districts, 'EN_COURS') }})</option>
+            <option value="A_CORRIGER">À corriger ({{ compterStatut(districts, 'A_CORRIGER') }})</option>
+            <option value="ENVOYEE">Tous les postes ont envoyé ({{ compterStatut(districts, 'ENVOYEE') }})</option>
+          </select>
+          <span class="text-slate-400">·</span> {{ moisDisponibles[moisSuivi - 1] }} {{ annee }}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">District sanitaire</th>
+                <th class="py-3 px-4">Suivi du mois</th>
+                <th class="py-3 px-4">Saisie enregistrée</th>
+                <th class="py-3 px-4">Postes ayant saisi</th>
+                <th class="py-3 px-4 text-right">Détail</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr *ngFor="let d of districtsFiltres" (click)="ouvrirDistrict(d)"
+                  class="cursor-pointer transition-colors hover:bg-emerald-50/60 group">
+                <td class="py-3 px-4">
+                  <div class="font-semibold text-slate-900">{{ d.nom }}</div>
+                  <div class="text-[11px] text-slate-400 font-mono">{{ d.code }}</div>
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(d.statutSuiviPeriode)">
+                    <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(d.statutSuiviPeriode) }}</mat-icon>
+                    {{ getLibelleSuivi(d.statutSuiviPeriode) }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-slate-600">
+                  <strong class="text-slate-900">{{ d.nombreFactures }}</strong> facture(s)
+                  <span class="text-slate-400">·</span> {{ d.nombreBeneficiaires }} bénéficiaire(s)
+                </td>
+                <td class="py-3 px-4">
+                  <div class="font-semibold text-slate-900">{{ d.nombrePostesAvecSaisie }} / {{ d.nombrePostes }}</div>
+                  <div class="mt-1 h-1.5 w-28 max-w-full overflow-hidden rounded-full bg-slate-100" role="progressbar"
+                       [attr.aria-valuenow]="d.nombrePostesAvecSaisie" [attr.aria-valuemin]="0" [attr.aria-valuemax]="d.nombrePostes">
+                    <div class="h-full rounded-full bg-emerald-500" [style.width.%]="d.nombrePostes ? d.nombrePostesAvecSaisie * 100 / d.nombrePostes : 0"></div>
+                  </div>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <span class="inline-flex items-center gap-1 font-semibold text-emerald-700">Voir les postes <mat-icon class="!h-4 !w-4 !text-base">arrow_forward</mat-icon></span>
+                </td>
+              </tr>
+              <tr *ngIf="districtsFiltres.length === 0">
+                <td colspan="5" class="py-10 text-center">
+                  <mat-icon class="!h-8 !w-8 !text-3xl text-slate-400">location_searching</mat-icon>
+                  <p class="mt-2 text-sm font-semibold text-slate-800">Aucun district pour ces critères</p>
+                  <p class="mt-1 text-xs text-slate-500">Changez le statut ou la recherche.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOUS-ONGLET 2 : HÔPITAUX -->
+    <div *ngIf="activeTab === 1" class="space-y-4">
+      <!-- Barre d'outils et filtres pour les hôpitaux -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="relative flex-1 min-w-[260px]">
+          <mat-icon class="absolute left-3 top-2.5 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
+          <input type="text"
+                 [(ngModel)]="searchStructure"
+                 placeholder="Rechercher un hôpital (nom, code, district)..."
+                 class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-600 focus:bg-white transition" />
+        </div>
+
+        <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+          <mat-icon class="!h-4 !w-4 !text-base">filter_list</mat-icon>
+          <label for="filtre-statut-structures">Statut</label>
+          <select id="filtre-statut-structures" [(ngModel)]="filtreStatutSuivi" class="min-h-8 bg-transparent font-bold outline-none">
+            <option value="">Tous ({{ totalStructuresActives }})</option>
+            <option value="A_SAISIR">À commencer ({{ compterStatut(hopitauxActifs, 'A_SAISIR') }})</option>
+            <option value="EN_COURS">En cours ({{ compterStatut(hopitauxActifs, 'EN_COURS') }})</option>
+            <option value="A_CORRIGER">À corriger ({{ compterStatut(hopitauxActifs, 'A_CORRIGER') }})</option>
+            <option value="ENVOYEE">Envoyées ({{ compterStatut(hopitauxActifs, 'ENVOYEE') }})</option>
+          </select>
+          <span class="text-slate-400">·</span> {{ moisDisponibles[moisSuivi - 1] }} {{ annee }}
+        </div>
+      </div>
+
+      <!-- Tableau des hôpitaux -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Hôpital</th>
+                <th class="py-3 px-3">Code</th>
+                <th class="py-3 px-4">District de rattachement</th>
+                <th class="py-3 px-4">Saisie enregistrée</th>
+                <th class="py-3 px-4">Suivi du mois</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr *ngFor="let s of structuresFiltrees"
+                  (click)="ouvrirFacturesPrestataire(s)"
+                  class="hover:bg-emerald-50/50 transition-colors cursor-pointer group">
+                <td class="py-3 px-4 font-semibold text-slate-900">
+                  <div>{{ s.nom }}</div>
+                  <div class="text-[11px] font-normal text-slate-400 font-mono">{{ s.code }}</div>
+                </td>
+                <td class="py-3 px-3 font-mono text-slate-500">{{ s.code }}</td>
+                <td class="py-3 px-4 text-slate-600">{{ s.districtNom }}</td>
+                <td class="py-3 px-4 text-slate-600">
+                  <strong class="text-slate-800">{{ s.nombreFactures }}</strong> facture(s)
+                  <span class="text-slate-400">·</span> {{ s.nombreBeneficiaires }} bénéficiaire(s)
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(s.statutSuiviPeriode)">
+                    <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(s.statutSuiviPeriode) }}</mat-icon>
+                    {{ getLibelleSuivi(s.statutSuiviPeriode) }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="structuresFiltrees.length === 0">
+                <td colspan="5" class="py-10 text-center">
+                  <mat-icon class="!h-8 !w-8 !text-3xl text-emerald-600">task_alt</mat-icon>
+                  <p class="mt-2 text-sm font-semibold text-slate-800">Aucun hôpital pour ces critères</p>
+                  <p class="mt-1 text-xs text-slate-500">Modifiez le statut ou la recherche pour afficher d'autres hôpitaux.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOUS-ONGLET 2 : PHARMACIES D'OFFICINE -->
+    <div *ngIf="activeTab === 2" class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="relative flex-1 min-w-[260px]">
+          <mat-icon class="absolute left-3 top-2.5 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
+          <input type="text"
+                 [(ngModel)]="searchPharmacie"
+                 placeholder="Rechercher une pharmacie (nom, code, ville)..."
+                 class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-600 focus:bg-white transition" />
+        </div>
+
+        <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+          <mat-icon class="!h-4 !w-4 !text-base">filter_list</mat-icon>
+          <label for="filtre-statut-pharmacies">Statut</label>
+          <select id="filtre-statut-pharmacies" [(ngModel)]="filtreStatutSuivi" class="min-h-8 bg-transparent font-bold outline-none">
+            <option value="">Tous ({{ totalPharmaciesActives }})</option>
+            <option value="A_SAISIR">À commencer ({{ compterStatut(pharmacies, 'A_SAISIR') }})</option>
+            <option value="EN_COURS">En cours ({{ compterStatut(pharmacies, 'EN_COURS') }})</option>
+            <option value="A_CORRIGER">À corriger ({{ compterStatut(pharmacies, 'A_CORRIGER') }})</option>
+            <option value="ENVOYEE">Envoyées ({{ compterStatut(pharmacies, 'ENVOYEE') }})</option>
+          </select>
+          <span class="text-slate-400">·</span> {{ moisDisponibles[moisSuivi - 1] }} {{ annee }}
+        </div>
+      </div>
+
+      <!-- Tableau des pharmacies -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Pharmacie d'officine</th>
+                <th class="py-3 px-4">Ville / Commune</th>
+                <th class="py-3 px-4">Contact</th>
+                <th class="py-3 px-4">Saisie enregistrée</th>
+                <th class="py-3 px-4">Suivi du mois</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr *ngFor="let p of pharmaciesFiltrees"
+                  (click)="ouvrirFacturesPrestataire(p)"
+                  class="hover:bg-emerald-50/50 transition-colors cursor-pointer group">
+                <td class="py-3 px-4 font-semibold text-slate-900">
+                  <div>{{ p.nom }}</div>
+                  <div class="text-[11px] font-normal text-slate-400 font-mono">{{ p.code }}</div>
+                </td>
+                <td class="py-3 px-4 text-slate-700">{{ p.ville }}</td>
+                <td class="py-3 px-4 text-slate-600 font-mono text-xs">{{ p.telephone }}</td>
+                <td class="py-3 px-4 text-slate-600">
+                  <strong class="text-slate-800">{{ p.nombreFactures }}</strong> facture(s)
+                  <span class="text-slate-400">·</span> {{ p.nombreBeneficiaires }} bénéficiaire(s)
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(p.statutSuiviPeriode)">
+                    <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(p.statutSuiviPeriode) }}</mat-icon>
+                    {{ getLibelleSuivi(p.statutSuiviPeriode) }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="pharmaciesFiltrees.length === 0">
+                <td colspan="5" class="py-10 text-center">
+                  <mat-icon class="!h-8 !w-8 !text-3xl text-emerald-600">task_alt</mat-icon>
+                  <p class="mt-2 text-sm font-semibold text-slate-800">Aucune pharmacie à relancer</p>
+                  <p class="mt-1 text-xs text-slate-500">Les pharmacies de cette période ont envoyé leur facture ou ne correspondent pas à la recherche.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 1.5 VUE POSTES POLARISÉS DU DISTRICT SANITAIRE                           -->
+  <!-- ========================================================================= -->
+  <div *ngIf="vueMode === 'POSTES' && districtSelectionne" class="fade-in space-y-4">
+    <!-- En-tête District Sanitaire -->
+    <div class="bg-white rounded-lg border border-slate-200/80 px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 uppercase">
+            {{ districtSelectionne.code }}
+          </span>
+          <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+            District Sanitaire
+          </span>
+          <h2 class="text-base font-semibold text-slate-900 tracking-tight">{{ districtSelectionne.nom }}</h2>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">
+          Postes ayant saisi : <strong class="text-emerald-700">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</strong> · Hôpitaux : <strong class="text-indigo-700">{{ hopitauxDuDistrict.length }}</strong> · Période : <strong class="text-slate-700">{{ moisDisponibles[moisSuivi - 1] }} {{ annee }}</strong>
+        </p>
+      </div>
+
+      <button (click)="fermerVuePostes()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer">
+        <mat-icon class="!text-sm !w-4 !h-4 text-slate-500">arrow_back</mat-icon>
+        Retour aux districts
+      </button>
+    </div>
+
+    <!-- Synthèse de l'avancement des postes pour le mois sélectionné -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes du district</div>
+        <div class="text-xl font-bold text-slate-900 mt-0.5">{{ postesPolarisesDuDistrict.length }}</div>
+      </div>
+      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes ayant saisi</div>
+        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</div>
+      </div>
+      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Factures envoyées</div>
+        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesAvecFacture }}</div>
+      </div>
+      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes sans saisie</div>
+        <div class="text-xl font-bold text-amber-700 mt-0.5">{{ postesPolarisesDuDistrict.length - totalPostesAvecSaisie }}</div>
+      </div>
+    </div>
+
+    <!-- Les hôpitaux du district sont toujours présentés avant les postes polarisés. -->
+    <div class="card">
+      <div class="section-header flex flex-wrap items-center justify-between gap-3">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>domain</mat-icon></div>
+          <div>
+            <h2>Hôpitaux et postes du district</h2>
+            <p>Les hôpitaux du district apparaissent en premier, au-dessus des postes polarisés.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <label class="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-field-bg px-2.5 py-1.5 text-xs font-semibold text-text-muted">
+          <input type="checkbox" [(ngModel)]="inclurePostesSansSaisie" class="accent-emerald-700">
+          Inclure les postes sans saisie
+        </label>
+        <label class="flex items-center gap-2 rounded-lg border border-border bg-field-bg px-2.5 py-1.5 text-xs font-semibold text-text-muted">
+          Statut
+          <select [(ngModel)]="filtreStatutSuivi" class="bg-transparent font-bold text-slate-800 outline-none">
+            <option value="">Tous</option><option value="A_SAISIR">À commencer</option><option value="EN_COURS">En cours</option><option value="A_CORRIGER">À corriger</option><option value="ENVOYEE">Envoyées</option>
+          </select>
+        </label>
+        <div class="relative w-full sm:w-72">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
+          <input type="search" [(ngModel)]="searchPoste" placeholder="Rechercher un hôpital ou un poste..."
+                 class="h-9 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[13px] outline-none focus:border-emerald-600 focus:bg-white transition">
+        </div>
+        </div>
+      </div>
+
+      <div class="section-body p-0">
+        <div class="border-b border-slate-200">
+          <div class="flex items-center justify-between px-4 py-3 bg-indigo-50/60">
+            <h3 class="text-sm font-semibold text-slate-900">Hôpitaux du district</h3>
+            <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-800">
+              {{ totalHopitauxAvecSaisie }} / {{ hopitauxDuDistrict.length }} avec saisie
+            </span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Hôpital</th>
+                  <th class="py-3 px-4">Saisie enregistrée</th>
+                  <th class="py-3 px-4">Suivi du mois</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 font-medium">
+                <tr *ngFor="let h of hopitauxFiltres" (click)="ouvrirFacturesPoste(h)"
+                    class="cursor-pointer transition-colors hover:bg-indigo-50/50 group">
+                  <td class="py-3 px-4 font-semibold text-slate-900">
+                    <div class="flex items-center gap-1.5"><mat-icon class="!h-4 !w-4 !text-base text-indigo-700">local_hospital</mat-icon>{{ h.nom }}</div>
+                    <div class="text-[11px] font-normal text-slate-400 font-mono">{{ h.code }}</div>
+                  </td>
+                  <td class="py-3 px-4 text-slate-600">
+                    <strong class="text-slate-800">{{ h.nombreFactures }}</strong> facture(s)
+                    <span class="text-slate-400">·</span> {{ h.nombreBeneficiaires }} bénéficiaire(s)
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(h.statutSuiviPeriode)">
+                      <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(h.statutSuiviPeriode) }}</mat-icon>
+                      {{ getLibelleSuivi(h.statutSuiviPeriode) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="hopitauxFiltres.length === 0">
+                  <td colspan="3" class="py-6 text-center text-xs text-slate-500">Aucun hôpital ne correspond aux filtres du district.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-50">
+            <h3 class="text-sm font-semibold text-slate-900">Postes de santé polarisés</h3>
+            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+              {{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }} avec saisie
+            </span>
+          </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Poste de santé polarisé</th>
+                <th class="py-3 px-4">Saisie enregistrée</th>
+                <th class="py-3 px-4">Suivi du mois</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr *ngFor="let p of postesPolarisesFiltres"
+                  (click)="ouvrirFacturesPoste(p)"
+                  class="cursor-pointer transition-colors hover:bg-emerald-50/50 group">
+                <td class="py-3 px-4 font-bold text-slate-900">
+                  <div class="text-[13px] text-emerald-950 flex items-center gap-1.5">
+                    <mat-icon class="!text-sm !w-4 !h-4 text-emerald-700">medical_services</mat-icon>
+                    {{ p.nom }}
+                  </div>
+                  <div class="text-[11px] font-normal text-slate-400 font-mono">{{ p.code }}</div>
+                </td>
+                <td class="py-3 px-4 text-slate-600">
+                  <strong class="text-slate-800">{{ p.nombreFactures }}</strong> facture(s)
+                  <span class="text-slate-400">·</span> {{ p.nombreBeneficiaires }} bénéficiaire(s)
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(p.statutSuiviPeriode)">
+                    <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(p.statutSuiviPeriode) }}</mat-icon>
+                    {{ getLibelleSuivi(p.statutSuiviPeriode) }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="postesPolarisesFiltres.length === 0">
+                <td colspan="3" class="py-10 text-center">
+                  <mat-icon class="!h-8 !w-8 !text-3xl text-emerald-600">task_alt</mat-icon>
+                  <p class="mt-2 text-sm font-semibold text-slate-800">Aucune facture de poste pour ces critères</p>
+                  <p class="mt-1 text-xs text-slate-500">Activez « Inclure les postes sans saisie » ou modifiez les filtres.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. VUE FACTURES DU PRESTATAIRE / POSTE EN TEMPS RÉEL (PAR RÉGIME)        -->
+  <!-- ========================================================================= -->
+  <div *ngIf="vueMode === 'FACTURES' && prestataireSelectionne" class="space-y-4">
+    <!-- En-tête prestataire / poste -->
+    <div class="bg-white rounded-lg border border-slate-200/80 px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <!-- Fil d'Ariane pour les districts -->
+        <div *ngIf="districtSelectionne" class="flex items-center gap-1.5 text-xs text-slate-500 font-medium mb-1">
+          <span class="hover:underline cursor-pointer text-slate-700" (click)="retourAuxPostes()">{{ districtSelectionne.nom }}</span>
+          <span class="text-slate-300">/</span>
+          <span class="text-emerald-700 font-semibold">{{ posteSelectionne?.type === 'EPS' ? 'Hôpital du district' : 'Poste de santé polarisé' }}</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 uppercase">
+            {{ prestataireSelectionne.code }}
+          </span>
+          <h2 class="text-base font-semibold text-slate-900 tracking-tight">{{ prestataireSelectionne.nom }}</h2>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border" [ngClass]="getClasseSuivi(prestataireSelectionne.statutSuiviPeriode)">
+            <mat-icon class="!h-3.5 !w-3.5 !text-sm">{{ getIconeSuivi(prestataireSelectionne.statutSuiviPeriode) }}</mat-icon>
+            {{ getLibelleSuivi(prestataireSelectionne.statutSuiviPeriode) }}
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">
+          Année <strong>{{ annee }}</strong> · Factures émises : <strong class="text-slate-700">{{ facturesDuPrestataire.length }}</strong> · Total facturé : <strong class="text-slate-900 font-mono">{{ formatMontant(prestataireSelectionne.montantTotal) }}</strong>
+        </p>
+      </div>
+
+      <button (click)="fermerVueFactures()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer">
+        <mat-icon class="!text-sm !w-4 !h-4 text-slate-500">arrow_back</mat-icon>
+        {{ districtSelectionne ? 'Retour aux hôpitaux et postes' : 'Retour aux prestataires' }}
+      </button>
+    </div>
+
+    <!-- Barre de filtres par RÉGIME et recherche (spécification utilisateur) -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Boutons de filtres par Régimes -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-bold text-slate-600 mr-1 flex items-center gap-1">
+            <mat-icon class="!text-sm !w-4 !h-4 text-emerald-700">category</mat-icon>
+            Régime :
+          </span>
+          <button type="button"
+                  *ngFor="let r of regimesDisponibles"
+                  (click)="filtrerParRegime(r.code)"
+                  [ngClass]="filtreRegime === r.code ? 'bg-emerald-700 text-white shadow-xs font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold'"
+                  class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+            <span>{{ r.label }}</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px]"
+                  [ngClass]="filtreRegime === r.code ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-800'">
+              {{ countFacturesRegime(r.code) }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Recherche de facture -->
+        <div class="relative w-full sm:w-64">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
+          <input type="text"
+                 [(ngModel)]="searchFacture"
+                 placeholder="Rechercher une facture..."
+                 class="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-600 focus:bg-white transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau des factures en temps réel -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="py-3 px-3">Régime</th>
+              <th class="py-3 px-3">Période</th>
+              <th class="py-3 px-4 text-right">Montant Total</th>
+              <th class="py-3 px-4 text-right">Part SEN-CSU</th>
+              <th class="py-3 px-3 text-right w-8"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium">
+            <tr *ngFor="let f of facturesFiltrees"
+                (click)="ouvrirDetailFacture(f)"
+                class="hover:bg-emerald-50/40 cursor-pointer transition-colors group">
+              <td class="py-3 px-3">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold" [ngClass]="getRegimeBadgeClass(f.regime)">
+                  {{ getRegimeLabel(f.regime) }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-slate-700 font-bold">{{ getMoisLibelle(f.mois) }} {{ f.annee }}</td>
+              <td class="py-3 px-4 text-right font-bold font-mono text-slate-900">{{ formatMontant(f.montantTotal) }}</td>
+              <td class="py-3 px-4 text-right font-bold font-mono text-emerald-700">{{ formatMontant(f.montantSencsu) }}</td>
+              <td class="py-3 px-3 text-right">
+                <mat-icon class="!text-lg !w-5 !h-5 text-slate-400 group-hover:text-emerald-700 transition-colors">chevron_right</mat-icon>
+              </td>
+            </tr>
+            <tr *ngIf="facturesFiltrees.length === 0">
+              <td colspan="5" class="py-8 text-center text-slate-400 text-xs italic">
+                {{ facturesDuPrestataire.length ? 'Aucune facture ne correspond à ce régime ou filtre de recherche.' : 'Aucune facture enregistrée pour ce prestataire.' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 3. VUE BÉNÉFICIAIRES D'UNE FACTURE (STYLE POSTE DE SANTÉ)                  -->
+  <!-- ========================================================================= -->
+  <div *ngIf="vueMode === 'PATIENTS' && factureSelectionnee" class="fade-in space-y-4">
+
+    <!-- Retour aux factures et statut de la facture -->
+    <div class="flex items-center justify-between gap-2 mb-3 print:hidden">
+      <button type="button" (click)="fermerDetailFacture()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer">
+        <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Factures de {{ posteSelectionne?.nom || prestataireSelectionne?.nom || 'ce prestataire' }}
+      </button>
+
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold" [ngClass]="getRegimeBadgeClass(factureSelectionnee.regime)">
+          {{ getRegimeLabel(factureSelectionnee.regime) }}
+        </span>
+        <span [class]="getStatutBadgeClass(factureSelectionnee.statut)" class="px-2 py-0.5 rounded-full text-[11px] font-bold">
+          {{ getStatutLibelle(factureSelectionnee.statut) }}
+        </span>
+        <button type="button" (click)="ouvrirModalSupprimerFacture(factureSelectionnee)"
+                class="btn btn-outline btn-sm text-red-600 hover:bg-red-50 border-red-200">
+          <mat-icon class="!text-sm !w-4 !h-4">delete_forever</mat-icon> Supprimer la facture
+        </button>
+      </div>
+    </div>
+
+    <!-- Synthèse financière (style poste de santé) -->
+    <div class="flex flex-wrap gap-3 mb-4">
+      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted">Prix total</div>
+        <div class="text-[18px] font-bold font-mono">{{ formatMontant(factureSelectionnee.montantTotal) }}</div>
+      </div>
+      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted">Prix CSU (80%)</div>
+        <div class="text-[18px] font-bold font-mono text-primary">{{ formatMontant(factureSelectionnee.montantSencsu) }}</div>
+      </div>
+      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted">Patients</div>
+        <div class="text-[18px] font-bold">{{ patientsDeLaFacture.length }}</div>
+      </div>
+    </div>
+
+    <!-- Section Patients (style poste de santé) -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>groups</mat-icon></div>
+          <div>
+            <h2>Patients</h2>
+            <p>Facture N° {{ factureSelectionnee.numero }} – Régime : <span class="font-bold">{{ getRegimeLabel(factureSelectionnee.regime) }}</span> – {{ getMoisLibelle(factureSelectionnee.mois) }} {{ factureSelectionnee.annee }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-body flex flex-col gap-3">
+        <!-- Recherche d'un patient -->
+        <div class="relative" *ngIf="patientsDeLaFacture.length > 3">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
+          <input type="search" [(ngModel)]="searchPatient" placeholder="Rechercher un patient (nom, matricule, CNI)..."
+                 class="h-10 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px]">
+        </div>
+
+        <!-- Tableau des bénéficiaires (style poste de santé : nom, date, matricule & CNI, chevron) -->
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13.5px] border-collapse">
+            <tbody>
+              <tr *ngFor="let p of patientsFiltres" (click)="ouvrirPrestationsPatient(p)"
+                  class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field bg-white">
+                <td class="py-2.5 px-3 align-middle">
+                  <a (click)="$event.preventDefault()" class="font-semibold text-text-primary text-[14px] no-underline hover:underline">
+                    {{ p.prenom }} {{ p.nom }}
+                  </a>
+                  <span class="inline-flex items-center gap-1 ml-2 align-middle">
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">3 pièces</span>
+                  </span>
+                  <!-- Mobile : date, matricule & CNI sous le nom -->
+                  <div class="sm:hidden mt-0.5 text-[12.5px] text-text-secondary">
+                    {{ formatDate(p.datePriseEnCharge) }} · <span class="font-mono">{{ p.matricule }}</span><span *ngIf="p.cni"> · CNI {{ p.cni }}</span>
+                  </div>
+                </td>
+                <td class="hidden sm:table-cell py-2.5 px-2 align-middle whitespace-nowrap text-text-secondary">
+                  {{ formatDate(p.datePriseEnCharge) }}
+                </td>
+                <td class="hidden sm:table-cell py-2.5 pl-2 pr-1 align-middle text-right whitespace-nowrap font-mono text-[13px] text-text-primary">
+                  {{ p.matricule }}<span *ngIf="p.cni" class="text-text-muted ml-1.5 font-sans text-xs">· CNI {{ p.cni }}</span>
+                </td>
+                <td class="py-2.5 pl-1 pr-3 align-middle text-right w-8">
+                  <mat-icon class="!text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+                </td>
+              </tr>
+              <tr *ngIf="patientsFiltres.length === 0">
+                <td colspan="4" class="py-8 text-center text-text-muted text-[13.5px]">
+                  {{ patientsDeLaFacture.length ? 'Aucun patient ne correspond à cette recherche.' : 'Aucun patient sur cette facture.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. VUE PRESTATIONS DU PATIENT : DOSSIER DESSUS & PRESTATIONS EN DESSOUS    -->
+  <!-- ========================================================================= -->
+  <div *ngIf="vueMode === 'PRESTATIONS' && factureSelectionnee && patientSelectionne" class="fade-in space-y-4">
+
+    <!-- Retour à la facture -->
+    <div class="flex items-center justify-between gap-2 mb-3 print:hidden">
+      <button type="button" (click)="retourAuxPatients()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer">
+        <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Retour à la facture
+      </button>
+    </div>
+
+    <!-- Identité du patient avec bouton DOSSIER DESSUS (style poste de santé) -->
+    <div class="card mb-4">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>person</mat-icon></div>
+          <div class="min-w-0">
+            <h2 class="flex flex-wrap items-center gap-2">
+              <span>{{ patientSelectionne.prenom }} {{ patientSelectionne.nom }}</span>
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">3 pièces conformes</span>
+            </h2>
+            <p class="text-[12.5px] text-text-secondary mt-0.5">
+              Matricule : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.matricule }}</span>
+              <span *ngIf="patientSelectionne.cni"> · CNI : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.cni }}</span></span>
+              · Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }}
+            </p>
+          </div>
+        </div>
+        <div class="ml-auto flex gap-2 print:hidden">
+          <!-- BOUTON DOSSIER DESSUS -->
+          <button type="button" class="btn btn-outline btn-sm" (click)="ouvrirModalDossier()"
+                  title="Ouvrir le dossier patient (documents justificatifs)">
+            <mat-icon>folder_shared</mat-icon> Dossier
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prestations Card (style poste de santé) -->
+    <div class="card min-w-0">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="section-icon"><mat-icon>medical_services</mat-icon></div>
+          <div>
+            <h2>Prestations</h2>
+            <p>Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <div class="overflow-x-auto">
+          <table class="w-full text-[13px] border-collapse">
+            <thead>
+              <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
+                <th class="py-1.5 pr-2">Prestation</th>
+                <th class="py-1.5 px-2 text-center">Qté</th>
+                <th class="py-1.5 px-2 text-right">Prix</th>
+                <th class="py-1.5 px-2 text-right">Montant</th>
+                <th class="py-1.5 pl-2 text-right"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ligne of patientSelectionne.prestations" class="border-b border-border-light">
+                <td class="py-2 pr-2">
+                  <span class="font-medium text-text-primary">{{ ligne.designation }}</span>
+                  <span *ngIf="ligne.codeActe" class="block text-[11.5px] text-text-secondary font-mono">{{ ligne.codeActe }}</span>
+                </td>
+                <td class="py-2 px-2 text-center tabular-nums">{{ ligne.quantite }}</td>
+                <td class="py-2 px-2 text-right tabular-nums">{{ formatMontant(ligne.prixUnitaire) }}</td>
+                <td class="py-2 px-2 text-right font-semibold tabular-nums">{{ formatMontant(ligne.montant) }}</td>
+                <td class="py-1 pl-2 text-right whitespace-nowrap">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="ouvrirModalModifierPrestation(patientSelectionne, ligne)"
+                          title="Modifier la prestation">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50" (click)="ouvrirModalSupprimerPrestation(patientSelectionne, ligne)"
+                          title="Supprimer la prestation">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="patientSelectionne.prestations.length === 0">
+                <td colspan="5" class="py-4 text-center text-text-muted italic">Aucune prestation enregistrée pour ce patient.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totaux de la visite -->
+        <div *ngIf="patientSelectionne.prestations.length" class="mt-4 p-4 rounded-lg bg-field">
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Total</div>
+              <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal) }}</div>
+            </div>
+            <div>
+              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">SEN-CSU (80 %)</div>
+              <div class="mt-0.5 text-[16px] font-bold text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal * 0.8) }}</div>
+            </div>
+            <div>
+              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Patient (20 %)</div>
+              <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal * 0.2) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL DU DOSSIER PATIENT (3 PIÈCES JUSTIFICATIVES)                        -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" *ngIf="afficherModalDossier" (click)="fermerModalDossier()">
+    <div class="modal-card sm:w-[85vw] sm:max-w-4xl sm:max-h-[85vh] flex flex-col" role="dialog" aria-labelledby="titre-dossier" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="flex items-center gap-2">
+          <mat-icon class="text-text-secondary">folder_shared</mat-icon>
+          <h2 id="titre-dossier" class="text-base font-bold text-text-primary m-0">
+            Dossier patient – {{ patientSelectionne?.prenom }} {{ patientSelectionne?.nom }}
+          </h2>
+        </div>
+        <button type="button" class="close-btn" (click)="fermerModalDossier()" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="modal-body overflow-y-auto p-4 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 1. Carte d'assuré -->
+          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">badge</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Carte d'assuré</div>
+                  <div class="text-[11px] text-text-muted leading-tight truncate">Identification biométrique</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
+            </div>
+            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center">
+              <div class="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm mb-2">
+                {{ getInitiales(patientSelectionne?.prenom, patientSelectionne?.nom) }}
+              </div>
+              <div class="font-bold text-xs text-text-primary">{{ patientSelectionne?.prenom }} {{ patientSelectionne?.nom }}</div>
+              <div class="text-[11px] font-mono text-primary font-semibold mt-0.5">{{ patientSelectionne?.matricule }}</div>
+              <div class="text-[10px] text-text-muted mt-0.5">CNI : {{ patientSelectionne?.cni }}</div>
+              <div class="mt-2 text-[10px] font-semibold text-success bg-white px-2 py-0.5 rounded border border-border">
+                Identité validée SEN-CSU
+              </div>
+            </div>
+            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
+              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
+            </div>
+          </div>
+
+          <!-- 2. Ticket de caisse -->
+          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">receipt_long</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Ticket de caisse</div>
+                  <div class="text-[11px] text-text-muted leading-tight truncate">Ticket de caisse / quittance</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
+            </div>
+            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center font-mono">
+              <mat-icon class="text-text-muted/60 !text-3xl !w-8 !h-8 mb-1">receipt</mat-icon>
+              <div class="text-[11px] font-bold text-text-primary">Ticket N° TK-{{ patientSelectionne?.id || 101 }}</div>
+              <div class="text-[10px] text-text-muted mt-0.5">Date : {{ formatDate(patientSelectionne?.datePriseEnCharge) }}</div>
+              <div class="mt-2 text-xs font-bold text-text-primary">Ticket payé : {{ formatMontant((patientSelectionne?.montantTotal || 0) * 0.2) }}</div>
+              <div class="text-[10px] text-success font-sans font-semibold mt-1">Part patient acquittée</div>
+            </div>
+            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
+              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
+            </div>
+          </div>
+
+          <!-- 3. Feuille de soin -->
+          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">description</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Feuille de soins</div>
+                  <div class="text-[11px] text-text-muted leading-tight truncate">Feuille de soins / ordonnance</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
+            </div>
+            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center">
+              <mat-icon class="text-text-muted/60 !text-3xl !w-8 !h-8 mb-1">assignment_turned_in</mat-icon>
+              <div class="text-[11px] font-bold text-text-primary">Feuille N° FS-{{ patientSelectionne?.id || 202 }}</div>
+              <div class="text-[10px] text-text-muted mt-0.5">Visite du {{ formatDate(patientSelectionne?.datePriseEnCharge) }}</div>
+              <div class="mt-2 text-xs font-bold text-primary font-mono">Total : {{ formatMontant(patientSelectionne?.montantTotal || 0) }}</div>
+              <div class="text-[10px] text-text-muted mt-1 italic">Cachet & signature validés</div>
+            </div>
+            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
+              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer flex items-center justify-between p-3 border-t border-border bg-field-bg/30">
+        <span class="text-[11px] text-text-muted">
+          3 pièces justificatives conformes (Carte d'assuré, Ticket de caisse, Feuille de soins)
+        </span>
+        <button type="button" class="btn btn-outline btn-sm" (click)="fermerModalDossier()">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1 : MODIFIER UNE PRESTATION EN TEMPS RÉEL                           -->
+  <!-- ========================================================================= -->
+  <div *ngIf="afficherModalModifPrestation" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-lg w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">edit</mat-icon> Modifier la prestation
+        </h3>
+        <button (click)="afficherModalModifPrestation = false" class="text-slate-400 hover:text-slate-600 transition">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-slate-700">
+          Patient : <strong class="text-slate-900">{{ patientDePrestation?.prenom }} {{ patientDePrestation?.nom }}</strong> (<span class="font-mono">{{ patientDePrestation?.matricule }}</span>)
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Désignation de la prestation / acte / médicament :</label>
+          <input type="text"
+                 [(ngModel)]="formModifPrestation.designation"
+                 class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium"
+                 placeholder="Ex : Consultation générale, Amoxicilline 500mg..." />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Code acte / médicament :</label>
+            <input type="text"
+                   [(ngModel)]="formModifPrestation.codeActe"
+                   class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Quantité :</label>
+            <input type="number"
+                   [(ngModel)]="formModifPrestation.quantite"
+                   min="1"
+                   class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Prix Unitaire (F CFA) :</label>
+          <input type="number"
+                 [(ngModel)]="formModifPrestation.prixUnitaire"
+                 min="0"
+                 step="100"
+                 class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-slate-800 flex justify-between items-center">
+          <span class="font-medium text-slate-600">Nouveau montant calculé :</span>
+          <span class="font-mono text-sm font-semibold text-slate-900">{{ formatMontant(formModifPrestation.quantite * formModifPrestation.prixUnitaire) }}</span>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalModifPrestation = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition">
+          Annuler
+        </button>
+        <button (click)="sauvegarderPrestation()" class="px-4 py-1.5 rounded-md bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-2xs">
+          Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2 : CONFIRMER LA SUPPRESSION D'UNE PRESTATION                       -->
+  <!-- ========================================================================= -->
+  <div *ngIf="afficherModalSupprPrestation" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">warning</mat-icon> Supprimer la prestation
+        </h3>
+        <button (click)="afficherModalSupprPrestation = false" class="text-slate-400 hover:text-slate-600 transition">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs text-slate-700">
+        <p>Êtes-vous sûr de vouloir supprimer la prestation suivante ?</p>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
+          <div>Désignation : <strong class="text-slate-900">{{ prestationASupprimer?.designation }}</strong></div>
+          <div>Code : <strong class="font-mono text-slate-800">{{ prestationASupprimer?.codeActe }}</strong></div>
+          <div>Montant déduit : <strong class="text-rose-700 font-mono font-semibold">{{ formatMontant(prestationASupprimer?.montant || 0) }}</strong></div>
+          <div>Patient : <strong class="text-slate-900">{{ patientDePrestationASupprimer?.prenom }} {{ patientDePrestationASupprimer?.nom }}</strong></div>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Cette action recalculera immédiatement le total de la facture et mettra à jour les consolidations en temps réel.
+        </p>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalSupprPrestation = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition">
+          Annuler
+        </button>
+        <button (click)="confirmerSuppressionPrestation()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs">
+          Confirmer la suppression
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3 : CONFIRMER LA SUPPRESSION D'UNE FACTURE                          -->
+  <!-- ========================================================================= -->
+  <div *ngIf="afficherModalSupprFacture" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">delete_forever</mat-icon> Supprimer définitivement la facture
+        </h3>
+        <button (click)="afficherModalSupprFacture = false" class="text-slate-400 hover:text-slate-600 transition">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs text-slate-700">
+        <p>Êtes-vous sûr de vouloir supprimer définitivement cette facture ?</p>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
+          <div>Facture N° : <strong class="font-mono text-slate-900">{{ factureASupprimer?.numero }}</strong></div>
+          <div>Établissement : <strong class="text-slate-900">{{ factureASupprimer?.etablissementNom }}</strong></div>
+          <div>Période : <strong class="text-slate-900">{{ getMoisLibelle(factureASupprimer?.mois || 0) }} {{ factureASupprimer?.annee }}</strong></div>
+          <div>Montant total : <strong class="text-rose-700 font-mono font-semibold">{{ formatMontant(factureASupprimer?.montantTotal || 0) }}</strong></div>
+          <div>Bénéficiaires : <strong class="text-slate-900">{{ factureASupprimer?.nombreBeneficiaires }} patients</strong></div>
+        </div>
+        <p class="text-[11px] text-rose-600">
+          Attention : Cette suppression retirera définitivement la facture des calculs régionaux, du tableau de bord et de l'espace contrôleur.
+        </p>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalSupprFacture = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition">
+          Annuler
+        </button>
+        <button (click)="confirmerSuppressionFacture()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs">
+          Supprimer définitivement
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

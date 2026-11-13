@@ -1,0 +1,126 @@
+<div class="space-y-5 fade-in">
+
+  <!-- ================= BANDEAU D'EN-TÊTE ET FILTRES ================= -->
+  <div class="bg-white rounded-lg border border-slate-200/80 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="text-base font-semibold text-slate-900 tracking-tight">Suivi des Bureaux Régionaux CSU (BCSU)</h2>
+        <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 font-mono">Thiès</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5">Suivi consolidé des factures, paiements effectifs et régimes pris en charge par bureau</p>
+    </div>
+
+    <!-- Filtres de période -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs">
+        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Année :</span>
+        <select [(ngModel)]="annee" (change)="onFiltreChange()" class="bg-transparent font-semibold text-slate-800 border-none outline-none cursor-pointer">
+          <option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs">
+        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Trimestre :</span>
+        <select [(ngModel)]="trimestre" (change)="mois = null; onFiltreChange()" class="bg-transparent font-semibold text-slate-800 border-none outline-none cursor-pointer">
+          <option *ngFor="let t of trimestres" [ngValue]="t.valeur">{{ t.label }}</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs">
+        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Mois :</span>
+        <select [(ngModel)]="mois" (change)="trimestre = null; onFiltreChange()" class="bg-transparent font-semibold text-slate-800 border-none outline-none cursor-pointer">
+          <option *ngFor="let m of moisListe" [ngValue]="m.num">{{ m.nom }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TUILES DE SYNTHÈSE BCSU ================= -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-lg border border-slate-200/80 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Total Facturé BCSU</div>
+      <div class="text-2xl font-semibold font-mono tabular-nums text-slate-900 tracking-tight">{{ formatMontant(totalFacture) }}</div>
+      <div class="text-[11px] text-slate-500 mt-2">{{ bcsuRows.length }} bureaux régionaux</div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200/80 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Total Réglé / Payé</div>
+      <div class="text-2xl font-semibold font-mono tabular-nums text-emerald-700 tracking-tight">{{ formatMontant(totalPaye) }}</div>
+      <div class="text-[11px] text-emerald-700 font-medium font-mono mt-2">
+        {{ tauxReglePourcent }}% réglé
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200/80 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Reste à liquider</div>
+      <div class="text-2xl font-semibold font-mono tabular-nums text-amber-700 tracking-tight">{{ formatMontant(totalReste) }}</div>
+      <div class="text-[11px] text-amber-700 font-medium mt-2">En cours d'instruction</div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200/80 p-4">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Bénéficiaires Pris en Charge</div>
+      <div class="text-2xl font-semibold font-mono tabular-nums text-slate-900 tracking-tight">{{ totalBeneficiaires.toLocaleString('fr-FR') }}</div>
+      <div class="text-[11px] text-slate-500 mt-2">Dossiers & feuilles de soins</div>
+    </div>
+  </div>
+
+  <!-- ================= TABLEAU DE SUIVI DES BCSU ================= -->
+  <div class="bg-white rounded-lg border border-slate-200/80 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div>
+        <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider">Bureaux de la Couverture Sanitaire Universelle (Thiès)</h3>
+        <p class="text-[11px] text-slate-500 mt-0.5">Suivi de l'activité financière et opérationnelle par antenne BCSU</p>
+      </div>
+      <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">{{ bcsuRows.length }} zones BCSU</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">
+          <tr>
+            <th class="py-2.5 px-4">Bureau BCSU</th>
+            <th class="py-2.5 px-4">Responsable / Agent</th>
+            <th class="py-2.5 px-3 text-center">Structures</th>
+            <th class="py-2.5 px-3 text-right">Factures</th>
+            <th class="py-2.5 px-4 text-right">Montant facturé</th>
+            <th class="py-2.5 px-4 text-right">Montant réglé</th>
+            <th class="py-2.5 px-4 text-right">Reste dû</th>
+            <th class="py-2.5 px-4 text-center">Taux règlement</th>
+            <th class="py-2.5 px-4 text-right">Bénéficiaires</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr *ngFor="let b of bcsuRows" class="hover:bg-slate-50/60 transition-colors">
+            <td class="py-3 px-4 font-semibold text-slate-900">
+              <div class="flex items-center gap-2">
+                <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">apartment</mat-icon>
+                <div>
+                  <div class="text-xs">{{ b.bcsuNom }}</div>
+                  <div class="text-[10px] text-slate-400 font-mono">{{ b.bcsuId }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-slate-700 font-medium">{{ b.responsableNom }}</td>
+            <td class="py-3 px-3 text-center font-mono text-slate-700">{{ b.nombreStructures }}</td>
+            <td class="py-3 px-3 text-right font-mono text-slate-700">{{ b.nombreFactures }}</td>
+            <td class="py-3 px-4 text-right font-mono font-medium text-slate-900">{{ formatMontant(b.montantFacture) }}</td>
+            <td class="py-3 px-4 text-right font-mono font-medium text-emerald-700">{{ formatMontant(b.montantPaye) }}</td>
+            <td class="py-3 px-4 text-right font-mono font-medium text-amber-700">{{ formatMontant(b.resteAPayer) }}</td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <div class="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                  <div class="h-full bg-emerald-600 rounded-full" [style.width.%]="b.tauxPaiement"></div>
+                </div>
+                <span class="font-mono text-[11px] text-slate-700">{{ b.tauxPaiement }}%</span>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-right font-mono font-medium text-slate-900">
+              {{ b.nombreBeneficiaires.toLocaleString('fr-FR') }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

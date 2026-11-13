@@ -216,6 +216,8 @@ export class AuthService {
 
   isPharmacien(): boolean { return this.hasRole(Role.PHARMACIEN); }
   isServiceRegional(): boolean { return this.hasRole(Role.SERVICE_REGIONAL); }
+  isControleur(): boolean { return this.hasRole(Role.CONTROLEUR) || this.getCurrentUser()?.role === Role.CONTROLEUR; }
+  isAdminSR(): boolean { return (this.isServiceRegional() || this.isAdmin()) && !this.isControleur(); }
   isServiceCentral(): boolean { return this.hasRole(Role.SERVICE_CENTRAL); }
   isAdmin(): boolean { return this.hasRole(Role.ADMIN); }
   isBcsu(): boolean { return this.hasRole(Role.BCSU); }

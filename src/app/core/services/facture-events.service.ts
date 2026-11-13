@@ -1,5 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
+
+export interface FactureEnvoyeeEvent {
+  id: string;
+  type: 'STRUCTURE' | 'PHARMACIE';
+}
 
 /**
  * Bus d'événements « factures modifiées ».
@@ -15,8 +20,18 @@ export class FactureEventsService {
   /** Émis après toute modification de facture. */
   readonly changed$ = this.changedSubject.asObservable();
 
+  private readonly factureEnvoyeeSubject = new Subject<FactureEnvoyeeEvent>();
+  /** Émis dès qu'une facture est envoyée ou resoumise au Service Régional (pour assignation automatique). */
+  readonly factureEnvoyee$: Observable<FactureEnvoyeeEvent> = this.factureEnvoyeeSubject.asObservable();
+
   /** À appeler après une opération qui modifie les factures. */
   notifyChanged(): void {
     this.changedSubject.next();
+  }
+
+  /** Notifie l'envoi / la transmission d'une facture au SR pour déclencher l'assignation automatique immédiate. */
+  notifyFactureEnvoyee(id: string, type: 'STRUCTURE' | 'PHARMACIE' = 'STRUCTURE'): void {
+    this.factureEnvoyeeSubject.next({ id, type });
+    this.notifyChanged();
   }
 }

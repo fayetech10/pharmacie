@@ -82,7 +82,11 @@ export class FactureService {
   }
 
   envoyer(id: string): Observable<Facture> {
-    return this.api.post<Facture>(`/factures/${id}/envoyer`, {}).pipe(this.notify());
+    return this.api.post<Facture>(`/factures/${id}/envoyer`, {}).pipe(tap(() => this.events.notifyFactureEnvoyee(id, 'PHARMACIE')), this.notify());
+  }
+
+  assignerAutomatiquement(id: string): Observable<Facture> {
+    return this.api.post<Facture>(`/factures/${id}/assigner-automatiquement`, {}).pipe(this.notify());
   }
 
   valider(id: string, req?: ValidationRequest): Observable<Facture> {

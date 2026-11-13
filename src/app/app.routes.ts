@@ -39,7 +39,7 @@ export const routes: Routes = [
       {
         path: 'espace-region',
         canActivate: [roleGuard],
-        data: { roles: [Role.SERVICE_REGIONAL] },
+        data: { roles: [Role.SERVICE_REGIONAL, Role.CONTROLEUR, Role.ADMIN] },
         loadComponent: () => import('./features/espace-region/espace-region.component').then(m => m.EspaceRegionComponent)
       },
       {

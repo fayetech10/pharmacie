@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin } from 'rxjs';
+import { BehaviorSubject, forkJoin, Subject } from 'rxjs';
 import { FactureService } from './facture.service';
 import { StructureService } from './structure.service';
 import { AuthService } from './auth.service';
@@ -43,11 +43,14 @@ export function statutsStructure(statuts: string[]): string[] {
 export class FactureCountService {
   /** Préfixe de la clé localStorage ; la clé réelle est suffixée par l'userId. */
   private readonly STORAGE_PREFIX = 'csu_seen_factures';
+  private readonly NEW_STRUCTURE_STORAGE_PREFIX = 'csu_new_structure_factures';
   /** Ancienne clé globale (non scellée par utilisateur) : purgée au démarrage. */
   private readonly LEGACY_STORAGE_KEY = 'csu_seen_factures';
   private readonly countsSubject = new BehaviorSubject<StatutCounts>({});
   /** Émet le nombre de factures NON vues par statut ; mis à jour par refresh()/markSeen(). */
   readonly counts$ = this.countsSubject.asObservable();
+  private readonly newStructureIdsSubject = new Subject<readonly string[]>();
+  readonly newStructureIdsChanged$ = this.newStructureIdsSubject.asObservable();
   private loading = false;
   /** Demande de rafraîchissement reçue pendant un chargement : rejouée à la fin (jamais perdue). */
   private pendingRefresh = false;
@@ -62,6 +65,9 @@ export class FactureCountService {
   private seenUserId: string | null = null;
   /** IDs des factures présentes au dernier refresh, par statut. */
   private currentIds: Record<string, string[]> = {};
+  private knownStructureIds = new Set<string>();
+  private newStructureIds = new Set<string>();
+  private knownStructureIdsInitialized = false;
 
   constructor(
     private factureService: FactureService,
@@ -71,6 +77,7 @@ export class FactureCountService {
     // Purge l'ancien état « vu » global (partagé entre comptes) au profit des clés par utilisateur.
     try { localStorage.removeItem(this.LEGACY_STORAGE_KEY); } catch { /* mode privé : on ignore */ }
     this.loadSeenForCurrentUser();
+    this.loadNewStructureStateForCurrentUser();
   }
 
   /** Dernière valeur connue des compteurs (synchrone). */
@@ -103,6 +110,8 @@ export class FactureCountService {
         for (const f of pharmacieFactures) ajouter(String(f.statut), f.id);
         // Clés séparées : une facture de structure ne doit jamais compter chez les pharmacies.
         for (const f of structureFactures) ajouter(PREFIXE_STRUCTURE + String(f.statut), f.id);
+        const structuresTransmises = structureFactures.filter(f => String(f.statut) !== 'BROUILLON');
+        this.actualiserNouvellesFacturesStructures(new Set(structuresTransmises.map(f => String(f.id))));
         this.currentIds = current;
         this.loaded = true;
         this.pruneSeen(current);
@@ -144,6 +153,42 @@ export class FactureCountService {
     }
     if (this.appliquerVu(statuses)) {
       this.emitUnseen();
+    }
+  }
+
+  /** Indique si une facture de structure est arrivée depuis la dernière consultation. */
+  isNewStructureInvoice(id: string | undefined | null): boolean {
+    return !!id && this.newStructureIds.has(String(id));
+  }
+
+  /** Retire le repère « nouvelle facture » quand l'utilisateur ouvre la facture. */
+  markStructureInvoiceSeen(id: string | undefined | null): void {
+    if (!id) return;
+    this.syncUserScope();
+    if (this.newStructureIds.delete(String(id))) {
+      this.persistNewStructureState();
+      this.newStructureIdsSubject.next([...this.newStructureIds]);
+    }
+  }
+
+  /** Première lecture = référence existante; ensuite, les nouveaux IDs sont signalés. */
+  private actualiserNouvellesFacturesStructures(current: Set<string>): void {
+    const previousNew = [...this.newStructureIds].sort().join('|');
+    if (!this.knownStructureIdsInitialized) {
+      this.knownStructureIds = new Set(current);
+      this.knownStructureIdsInitialized = true;
+    } else {
+      for (const id of [...this.newStructureIds]) {
+        if (!current.has(id)) this.newStructureIds.delete(id);
+      }
+      for (const id of current) {
+        if (!this.knownStructureIds.has(id)) this.newStructureIds.add(id);
+      }
+      this.knownStructureIds = new Set(current);
+    }
+    this.persistNewStructureState();
+    if (previousNew !== [...this.newStructureIds].sort().join('|')) {
+      this.newStructureIdsSubject.next([...this.newStructureIds]);
     }
   }
 
@@ -198,6 +243,39 @@ export class FactureCountService {
     this.seenIds = this.loadSeen(this.storageKey(uid));
   }
 
+  private loadNewStructureStateForCurrentUser(): void {
+    try {
+      const raw = localStorage.getItem(this.newStructureStorageKey(this.seenUserId));
+      if (!raw) {
+        this.knownStructureIds = new Set();
+        this.newStructureIds = new Set();
+        this.knownStructureIdsInitialized = false;
+        return;
+      }
+      const state = JSON.parse(raw) as { known?: string[]; new?: string[] };
+      this.knownStructureIds = new Set(state.known || []);
+      this.newStructureIds = new Set(state.new || []);
+      this.knownStructureIdsInitialized = true;
+    } catch {
+      this.knownStructureIds = new Set();
+      this.newStructureIds = new Set();
+      this.knownStructureIdsInitialized = false;
+    }
+  }
+
+  private newStructureStorageKey(userId: string | null): string {
+    return `${this.NEW_STRUCTURE_STORAGE_PREFIX}_${userId ?? 'anon'}`;
+  }
+
+  private persistNewStructureState(): void {
+    try {
+      localStorage.setItem(this.newStructureStorageKey(this.seenUserId), JSON.stringify({
+        known: [...this.knownStructureIds],
+        new: [...this.newStructureIds]
+      }));
+    } catch { /* quota dépassé / mode privé : on ignore */ }
+  }
+
   /**
    * Si le compte connecté a changé depuis le dernier accès, recharge l'état « vu »
    * correspondant et oublie le dernier instantané de factures (qui appartenait à
@@ -210,6 +288,7 @@ export class FactureCountService {
       this.currentIds = {};
       this.loaded = false;
       this.pendingSeen.clear();
+      this.loadNewStructureStateForCurrentUser();
     }
   }
 

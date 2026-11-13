@@ -1,77 +1,140 @@
-    <div class="fade-in">
-      <!-- Plus de titre d'espace (23/10/2026) : la barre latérale dit déjà où l'on est. -->
-      <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+<div class="fade-in max-w-7xl mx-auto px-3 sm:px-6 pt-2 pb-4 space-y-5 md:-mt-6">
 
-        <!-- ===================== ONGLET 1 : TABLEAU DE BORD ===================== -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">insights</mat-icon> Tableau de bord
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <app-regional-dashboard></app-regional-dashboard>
-            </div>
-          </ng-template>
-        </mat-tab>
+  <!-- VUE CONTROLEUR SEUL (Pour l'agent au profil CONTROLEUR ou Admin en bascule) -->
+  <div *ngIf="showControleurView">
+    <app-espace-controleur></app-espace-controleur>
+  </div>
 
-        <!-- ===================== ONGLET 2 : FACTURES PHARMACIES ===================== -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">local_pharmacy</mat-icon> Factures pharmacies
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <!-- Ciblage d'un prestataire depuis le tableau de bord : filtre visible et effaçable -->
-              <div class="inline-flex items-center gap-2 mb-3 py-[7px] pr-2 pl-3 border border-primary-200 rounded-full bg-primary-light text-primary-hover text-[13px] font-semibold" *ngIf="pharmaProviderId">
-                <mat-icon class="!text-[17px] !w-[17px] !h-[17px] text-primary">filter_alt</mat-icon>
-                <span>Prestataire : <strong>{{ pharmaProviderNom || 'sélectionné' }}</strong></span>
-                <button type="button" class="inline-flex items-center justify-center w-6 h-6 border-0 rounded-full bg-transparent text-primary-hover cursor-pointer transition-colors hover:bg-primary-200" (click)="effacerPrestataire()" aria-label="Retirer le filtre prestataire">
-                  <mat-icon class="!text-[15px] !w-[15px] !h-[15px]">close</mat-icon>
-                </button>
-              </div>
+  <!-- VUE ADMINISTRATEUR SR (7 Onglets de la spécification + Import historique) -->
+  <div *ngIf="!showControleurView">
+    <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)" class="sr-tab-group">
 
-              <app-factures-list displayMode="PHARMACIE" [monthlyView]="true"
-                                 [allowedStatuses]="pharmaAllowed"
-                                 [providerId]="pharmaProviderId"
-                                 [showToolbar]="false"></app-factures-list>
-            </div>
-          </ng-template>
-        </mat-tab>
+      <!-- 1. TABLEAU DE BORD (Section 4.1) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">insights</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Tableau de bord</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-regional-dashboard></app-regional-dashboard>
+          </div>
+        </ng-template>
+      </mat-tab>
 
-        <!-- ===================== ONGLET 3 : FACTURES STRUCTURES SANITAIRES ===================== -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">local_hospital</mat-icon> Factures structures sanitaires
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <app-regional-structures-factures [allowedStatuses]="structAllowed"></app-regional-structures-factures>
-            </div>
-          </ng-template>
-        </mat-tab>
+      <!-- 2. SUIVI ENREGISTREMENT DES PRESTATAIRES (Section 4.2) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">app_registration</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Enregistrement prestataires</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-suivi-enregistrement></app-suivi-enregistrement>
+          </div>
+        </ng-template>
+      </mat-tab>
 
-        <!-- ===================== ONGLET 4 : IMPORT DES FACTURES (reprise de l'ancienne application) ===================== -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">upload_file</mat-icon> Import des factures
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <app-import-factures></app-import-factures>
-            </div>
-          </ng-template>
-        </mat-tab>
+      <!-- 3. FACTURES STRUCTURES SANITAIRES (Section 4.3) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">local_hospital</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Factures Structures</span>
+            <span *ngIf="notifStructures > 0" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-amber-50 text-amber-700 border border-amber-200">
+              {{ notifStructures }}
+            </span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-factures-structures></app-factures-structures>
+          </div>
+        </ng-template>
+      </mat-tab>
 
-        <!-- ===================== ONGLET 5 : ACTIVITÉS DES DISTRICTS ET POSTES ===================== -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="!text-lg !w-[18px] !h-[18px] mr-1.5 align-text-bottom">hub</mat-icon> Activités Districts & Postes
-          </ng-template>
-          <ng-template matTabContent>
-            <div class="pt-2 md:pt-6">
-              <app-regional-activites></app-regional-activites>
-            </div>
-          </ng-template>
-        </mat-tab>
-      </mat-tab-group>
-    </div>
+      <!-- 4. FACTURES PHARMACIES (Section 4.4) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">local_pharmacy</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Factures Pharmacies</span>
+            <span *ngIf="notifPharmacies > 0" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-amber-50 text-amber-700 border border-amber-200">
+              {{ notifPharmacies }}
+            </span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-factures-pharmacies></app-factures-pharmacies>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- 5. SUIVI DU TRAITEMENT (Section 4.5) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">assignment_ind</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Suivi du traitement</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-suivi-traitement></app-suivi-traitement>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- 6. SUIVI BCSU (Section 4.6) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">account_balance</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Suivi BCSU</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-suivi-bcsu></app-suivi-bcsu>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- 7. PARAMÉTRAGE (Section 4.7) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">tune</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Paramétrage</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-parametrage-sr></app-parametrage-sr>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- 8. IMPORT DES FACTURES (Archives / Reprise historique) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-1.5 py-1">
+            <mat-icon class="!text-lg !w-[18px] !h-[18px]">upload_file</mat-icon>
+            <span class="font-medium text-xs md:text-sm">Import historique</span>
+          </div>
+        </ng-template>
+        <ng-template matTabContent>
+          <div class="pt-2">
+            <app-import-factures></app-import-factures>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+    </mat-tab-group>
+  </div>
+</div>

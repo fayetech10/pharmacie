@@ -3,8 +3,11 @@ export enum StatutFacture {
   SOUMISE_CS = 'SOUMISE_CS',
   REJETEE_CS = 'REJETEE_CS',
   ENVOYEE = 'ENVOYEE',
+  A_TRAITER = 'A_TRAITER',
+  EN_COURS_SR = 'EN_COURS_SR',
   VALIDEE_SR = 'VALIDEE_SR',
   REJETEE_SR = 'REJETEE_SR',
+  ENVOYEE_NC = 'ENVOYEE_NC',
   VALIDEE_NC = 'VALIDEE_NC',
   REJETEE_NC = 'REJETEE_NC',
   PAYEE = 'PAYEE'
@@ -73,6 +76,9 @@ export interface Facture {
   lignes: LigneFacture[];
   historique: HistoriqueAction[];
   commentaireRejet?: string;
+  controleurId?: string;
+  controleurNom?: string;
+  dateAssignation?: string;
   createdAt: string;
   updatedAt: string;
 }

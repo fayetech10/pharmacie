@@ -1,0 +1,539 @@
+<div class="space-y-6">
+
+  <!-- ================= EN-TÊTE DU PARAMÉTRAGE REGIONAL ================= -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+        <mat-icon>tune</mat-icon>
+      </div>
+      <div>
+        <h2 class="text-base font-bold text-slate-900 leading-tight">Paramétrage du Service Régional (SEN-CSU Thiès)</h2>
+        <p class="text-xs text-slate-500">Administration des comptes, accès, structures, pharmacies et contrôleurs</p>
+      </div>
+    </div>
+
+    <!-- SOUS-ONGLETS DU PARAMÉTRAGE (Section 4.7) -->
+    <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold flex-wrap">
+      <button (click)="activeSubTab = 0"
+              [ngClass]="activeSubTab === 0 ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition">
+        <mat-icon class="!text-sm !w-4 !h-4">local_hospital</mat-icon> Structures sanitaires
+      </button>
+
+      <button (click)="activeSubTab = 1"
+              [ngClass]="activeSubTab === 1 ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition">
+        <mat-icon class="!text-sm !w-4 !h-4">local_pharmacy</mat-icon> Pharmacies
+      </button>
+
+      <button (click)="activeSubTab = 2"
+              [ngClass]="activeSubTab === 2 ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition">
+        <mat-icon class="!text-sm !w-4 !h-4">account_balance</mat-icon> BCSU
+      </button>
+
+      <button (click)="activeSubTab = 3"
+              [ngClass]="activeSubTab === 3 ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition">
+        <mat-icon class="!text-sm !w-4 !h-4">manage_accounts</mat-icon> Contrôleurs (SR)
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= SOUS-ONGLET 1 : STRUCTURES SANITAIRES ================= -->
+  <div *ngIf="activeSubTab === 0" class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-bold text-slate-800">Gestion des structures sanitaires enregistrées</h3>
+      <button (click)="afficherModalStructure = true"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+        <mat-icon class="!text-sm !w-4 !h-4">add</mat-icon> Nouvelle structure
+      </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+          <tr>
+            <th class="py-3 px-4">Code</th>
+            <th class="py-3 px-4">Nom de l'établissement</th>
+            <th class="py-3 px-3">Type</th>
+            <th class="py-3 px-4">Téléphone / Contact</th>
+            <th class="py-3 px-3 text-center">État</th>
+            <th class="py-3 px-4 text-center">Actions d'accès</th>
+            <th class="py-3 px-4 text-center">Modification</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          <tr *ngFor="let s of structures" class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-slate-700">{{ s.code }}</td>
+            <td class="py-3 px-4 font-bold text-slate-900">{{ s.nom }}</td>
+            <td class="py-3 px-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                    [ngClass]="s.typeStructure === 'EPS' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'">
+                {{ s.typeStructure }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-slate-600">{{ s.telephone || s.email || '—' }}</td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                    [ngClass]="s.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'">
+                {{ s.actif ? 'Actif' : 'Désactivé' }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button (click)="basculerStructure(s)"
+                        class="px-2 py-1 rounded text-[11px] font-semibold border transition"
+                        [ngClass]="s.actif ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'">
+                  {{ s.actif ? 'Désactiver' : 'Activer' }}
+                </button>
+                <button (click)="reinitialiserAccesStructure(s)"
+                        class="px-2 py-1 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                  Accès / Réinit
+                </button>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <button *ngIf="estPosteSante(s)" type="button" (click)="ouvrirModificationPoste(s)"
+                      class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600">
+                <mat-icon class="!h-4 !w-4 !text-base">edit</mat-icon>
+                Modifier le poste
+              </button>
+              <span *ngIf="!estPosteSante(s)" class="text-xs text-slate-300">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= SOUS-ONGLET 2 : PHARMACIES ================= -->
+  <div *ngIf="activeSubTab === 1" class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-bold text-slate-800">Gestion des officines de pharmacie conventionnées</h3>
+      <button (click)="afficherModalPharmacie = true"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+        <mat-icon class="!text-sm !w-4 !h-4">add</mat-icon> Nouvelle pharmacie
+      </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+          <tr>
+            <th class="py-3 px-4">Code</th>
+            <th class="py-3 px-4">Nom de l'officine</th>
+            <th class="py-3 px-4">Adresse / Ville</th>
+            <th class="py-3 px-4">Téléphone</th>
+            <th class="py-3 px-3 text-center">État</th>
+            <th class="py-3 px-4 text-center">Actions d'accès</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          <tr *ngFor="let p of pharmacies" class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-slate-700">{{ p.code }}</td>
+            <td class="py-3 px-4 font-bold text-slate-900">{{ p.nom }}</td>
+            <td class="py-3 px-4 text-slate-600">{{ p.adresse || 'Thiès' }}</td>
+            <td class="py-3 px-4 text-slate-600 font-mono">{{ p.telephone || '—' }}</td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                    [ngClass]="p.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'">
+                {{ p.actif ? 'Actif' : 'Désactivé' }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button (click)="basculerPharmacie(p)"
+                        class="px-2 py-1 rounded text-[11px] font-semibold border transition"
+                        [ngClass]="p.actif ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'">
+                  {{ p.actif ? 'Désactiver' : 'Activer' }}
+                </button>
+                <button (click)="afficherAcces({ titre: p.nom, identifiant: p.code, motDePasse: '••••••••', email: p.email || '', role: 'Pharmacien' })"
+                        class="px-2 py-1 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                  Accès
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= SOUS-ONGLET 3 : BCSU ================= -->
+  <div *ngIf="activeSubTab === 2" class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-bold text-slate-800">Comptes agents et bureaux régionaux (BCSU)</h3>
+      <button (click)="afficherModalBcsu = true"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+        <mat-icon class="!text-sm !w-4 !h-4">add</mat-icon> Nouvel agent BCSU
+      </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+          <tr>
+            <th class="py-3 px-4">Agent BCSU</th>
+            <th class="py-3 px-4">Identifiant / Username</th>
+            <th class="py-3 px-4">Email</th>
+            <th class="py-3 px-4">Téléphone</th>
+            <th class="py-3 px-3 text-center">État</th>
+            <th class="py-3 px-4 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          <tr *ngFor="let u of agentsBcsu" class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4 font-bold text-slate-900">{{ u.prenom }} {{ u.nom }}</td>
+            <td class="py-3 px-4 font-mono text-slate-600">{{ u.username }}</td>
+            <td class="py-3 px-4 text-slate-600">{{ u.email }}</td>
+            <td class="py-3 px-4 text-slate-600 font-mono">{{ u.telephone || '—' }}</td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                    [ngClass]="u.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'">
+                {{ u.actif ? 'Actif' : 'Désactivé' }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button (click)="basculerAgentBcsu(u)"
+                        class="px-2 py-1 rounded text-[11px] font-semibold border transition"
+                        [ngClass]="u.actif ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'">
+                  {{ u.actif ? 'Désactiver' : 'Activer' }}
+                </button>
+                <button (click)="reinitialiserAccesBcsu(u)"
+                        class="px-2 py-1 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                  Accès / Réinit
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= SOUS-ONGLET 4 : CONTRÔLEURS SR (CRÉATION, ACCÈS, ACTIVATION) ================= -->
+  <div *ngIf="activeSubTab === 3" class="space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-slate-800">Gestion des Contrôleurs du Service Régional</h3>
+        <p class="text-xs text-slate-500">Créez des accès individuels pour répartir le contrôle des factures (Section 2 & 4.7)</p>
+      </div>
+
+      <button (click)="afficherModalControleur = true"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+        <mat-icon class="!text-sm !w-4 !h-4">person_add</mat-icon> Nouveau contrôleur SR
+      </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+          <tr>
+            <th class="py-3 px-4">Contrôleur</th>
+            <th class="py-3 px-4">Identifiant de connexion</th>
+            <th class="py-3 px-4">Email de contact</th>
+            <th class="py-3 px-4">Téléphone</th>
+            <th class="py-3 px-3 text-center">Date création</th>
+            <th class="py-3 px-3 text-center">État du compte</th>
+            <th class="py-3 px-4 text-center">Gestion des accès</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          <tr *ngFor="let c of controleurs" class="hover:bg-slate-50 transition-colors">
+            <td class="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs uppercase">
+                {{ c.prenom.charAt(0) }}{{ c.nom.charAt(0) }}
+              </div>
+              <span>{{ c.prenom }} {{ c.nom }}</span>
+            </td>
+            <td class="py-3.5 px-4 font-mono font-bold text-emerald-800">{{ c.username }}</td>
+            <td class="py-3.5 px-4 text-slate-600">{{ c.email }}</td>
+            <td class="py-3.5 px-4 text-slate-600 font-mono">{{ c.telephone || '—' }}</td>
+            <td class="py-3.5 px-3 text-center text-slate-500">{{ c.dateCreation }}</td>
+            <td class="py-3.5 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                    [ngClass]="c.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'">
+                {{ c.actif ? 'Actif' : 'Désactivé' }}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <!-- Activation / Désactivation -->
+                <button (click)="basculerControleur(c)"
+                        class="px-2.5 py-1 rounded text-[11px] font-bold border transition"
+                        [ngClass]="c.actif ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'">
+                  {{ c.actif ? 'Désactiver' : 'Activer' }}
+                </button>
+
+                <!-- Afficher / Réinitialiser Accès -->
+                <button (click)="reinitialiserAccesControleur(c)"
+                        class="px-2.5 py-1 rounded text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                  Identifiants
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Création Contrôleur -->
+  <div *ngIf="afficherModalControleur" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">person_add</mat-icon> Créer un compte Contrôleur SR
+        </h3>
+        <button (click)="afficherModalControleur = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Prénom :</label>
+          <input type="text" [(ngModel)]="nouveauControleur.prenom" placeholder="ex: Cheikh" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nom :</label>
+          <input type="text" [(ngModel)]="nouveauControleur.nom" placeholder="ex: Diop" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Email professionnel :</label>
+          <input type="email" [(ngModel)]="nouveauControleur.email" placeholder="c.diop@sencsu.sn" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Téléphone :</label>
+          <input type="text" [(ngModel)]="nouveauControleur.telephone" placeholder="77 000 00 00" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium font-mono" />
+        </div>
+
+        <div class="p-3 bg-slate-50 border border-slate-200/80 text-slate-700 rounded-lg text-[11px] leading-relaxed">
+          L'identifiant (<span class="font-mono text-emerald-700">prenom.nom</span>) et un mot de passe temporaire seront générés automatiquement et affichés à l'écran.
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalControleur = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">
+          Annuler
+        </button>
+        <button (click)="creerControleur()" class="px-4 py-1.5 rounded-md bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-2xs cursor-pointer">
+          Créer le contrôleur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Affichage Accès et Identifiants -->
+  <div *ngIf="afficherModalAcces" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">key</mat-icon> Identifiants d'accès
+        </h3>
+        <button (click)="afficherModalAcces = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div class="text-sm font-semibold text-slate-900">{{ accesInfo.titre }}</div>
+        <div class="text-[11px] text-slate-500 font-mono">{{ accesInfo.role }}</div>
+
+        <div class="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-200/80">
+          <div>
+            <span class="text-[10px] text-slate-400 uppercase font-semibold block mb-0.5">Identifiant de connexion</span>
+            <div class="font-mono text-sm font-semibold text-slate-900 select-all">{{ accesInfo.identifiant }}</div>
+          </div>
+
+          <div>
+            <span class="text-[10px] text-slate-400 uppercase font-semibold block mb-0.5">Mot de passe temporaire</span>
+            <div class="font-mono text-sm font-semibold text-emerald-700 select-all">{{ accesInfo.motDePasse }}</div>
+          </div>
+
+          <div *ngIf="accesInfo.email">
+            <span class="text-[10px] text-slate-400 uppercase font-semibold block mb-0.5">Email associé</span>
+            <div class="text-xs text-slate-700">{{ accesInfo.email }}</div>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+          Ce mot de passe temporaire est à communiquer au titulaire du compte. Il lui sera demandé de le changer à sa première connexion.
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+        <button (click)="afficherModalAcces = false" class="px-4 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium text-xs hover:bg-slate-50 transition cursor-pointer">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de modification d'un poste de santé -->
+  <div *ngIf="afficherModalModificationPoste && posteEnModification" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="fermerModificationPoste()">
+    <section role="dialog" aria-modal="true" aria-labelledby="modifier-poste-titre"
+             class="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl"
+             (click)="$event.stopPropagation()">
+      <header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+        <div class="flex items-center gap-3">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><mat-icon>medical_services</mat-icon></span>
+          <div>
+            <h3 id="modifier-poste-titre" class="m-0 text-base font-bold text-slate-900">Modifier le poste de santé</h3>
+            <p class="m-0 mt-0.5 text-xs text-slate-500">{{ posteEnModification.code }} · Mise à jour des informations et du rattachement</p>
+          </div>
+        </div>
+        <button type="button" (click)="fermerModificationPoste()" [disabled]="enregistrementPosteEnCours"
+                class="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <div class="space-y-4 p-5">
+        <label class="block text-sm font-semibold text-slate-700">
+          Nom du poste <span class="text-rose-600">*</span>
+          <input [(ngModel)]="modificationPoste.nom" type="text" autocomplete="off"
+                 class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+        </label>
+
+        <label class="block text-sm font-semibold text-slate-700">
+          Centre de santé ou hôpital de rattachement <span class="text-rose-600">*</span>
+          <select [(ngModel)]="modificationPoste.structureRattachementId" (ngModelChange)="selectionnerCentrePoste()"
+                  class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+            <option value="">Choisir une structure sanitaire</option>
+            <option *ngFor="let centre of centresRattachementPoste" [value]="centre.id">{{ centre.nom }} ({{ centre.code }})</option>
+          </select>
+        </label>
+
+        <div *ngIf="centreRattachementSelectionne?.districtId" class="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
+          <mat-icon class="text-blue-700">account_tree</mat-icon>
+          Le poste sera rattaché au district de {{ centreRattachementSelectionne?.nom }}.
+        </div>
+
+        <label *ngIf="centreRattachementSelectionne && !centreRattachementSelectionne.districtId" class="block text-sm font-semibold text-slate-700">
+          District sanitaire <span class="text-rose-600">*</span>
+          <select [(ngModel)]="modificationPoste.districtId"
+                  class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+            <option value="">Choisir un district</option>
+            <option *ngFor="let district of districtsDuPoste" [value]="district.id">{{ district.nom }}</option>
+          </select>
+        </label>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="block text-sm font-semibold text-slate-700">
+            Téléphone
+            <input [(ngModel)]="modificationPoste.telephone" type="tel" autocomplete="tel"
+                   class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+          </label>
+          <label class="block text-sm font-semibold text-slate-700">
+            Email
+            <input [(ngModel)]="modificationPoste.email" type="email" autocomplete="email"
+                   class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+          </label>
+        </div>
+
+        <label class="block text-sm font-semibold text-slate-700">
+          Adresse
+          <input [(ngModel)]="modificationPoste.adresse" type="text" autocomplete="street-address"
+                 class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+        </label>
+      </div>
+
+      <footer class="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end">
+        <button type="button" (click)="fermerModificationPoste()" [disabled]="enregistrementPosteEnCours"
+                class="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50">Annuler</button>
+        <button type="button" (click)="enregistrerModificationPoste()" [disabled]="enregistrementPosteEnCours"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60">
+          <mat-icon class="!h-4 !w-4 !text-base">{{ enregistrementPosteEnCours ? 'hourglass_top' : 'save' }}</mat-icon>
+          {{ enregistrementPosteEnCours ? 'Enregistrement…' : 'Enregistrer les modifications' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Modal Nouvelle Structure -->
+  <div *ngIf="afficherModalStructure" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">add_business</mat-icon> Nouvelle structure sanitaire
+        </h3>
+        <button (click)="afficherModalStructure = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer"><mat-icon class="!text-lg !w-5 !h-5">close</mat-icon></button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nom de l'établissement :</label>
+          <input type="text" [(ngModel)]="nouvelleStructure.nom" placeholder="ex: Poste de santé de Keur Madaro" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Type d'établissement :</label>
+          <select [(ngModel)]="nouvelleStructure.typeStructure" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium">
+            <option value="CS">Centre de santé (CS)</option>
+            <option value="PS">Poste de santé (PS)</option>
+            <option value="EPS">Établissement Public de Santé (Hôpital EPS)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">District de rattachement :</label>
+          <select [(ngModel)]="nouvelleStructure.districtNom" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium">
+            <option value="" disabled>Choisir un district</option>
+            <option *ngFor="let d of districts" [value]="d.nom">{{ d.nom }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Email / Contact :</label>
+          <input type="email" [(ngModel)]="nouvelleStructure.email" placeholder="contact@structure.sn" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalStructure = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">Annuler</button>
+        <button (click)="creerStructure()" class="px-4 py-1.5 rounded-md bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-2xs cursor-pointer">Créer la structure</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nouvelle Pharmacie -->
+  <div *ngIf="afficherModalPharmacie" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">local_pharmacy</mat-icon> Nouvelle pharmacie d'officine
+        </h3>
+        <button (click)="afficherModalPharmacie = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer"><mat-icon class="!text-lg !w-5 !h-5">close</mat-icon></button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nom de la pharmacie :</label>
+          <input type="text" [(ngModel)]="nouvellePharmacie.nom" placeholder="ex: Pharmacie des Almadies Thiès" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Ville / Commune :</label>
+          <input type="text" [(ngModel)]="nouvellePharmacie.ville" placeholder="Thiès, Mbour, Tivaouane..." class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Téléphone :</label>
+          <input type="text" [(ngModel)]="nouvellePharmacie.telephone" placeholder="33 951 00 00" class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalPharmacie = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">Annuler</button>
+        <button (click)="creerPharmacie()" class="px-4 py-1.5 rounded-md bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-2xs cursor-pointer">Créer la pharmacie</button>
+      </div>
+    </div>
+  </div>
+
+</div>

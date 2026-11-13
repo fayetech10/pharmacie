@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
+import { FactureEventsService } from './facture-events.service';
 import { ApiService } from './api.service';
 import { StructureSanitaire, StructureSanitaireRequest, FactureStructure, FactureStructureRequest, ImportResult, LigneFactureStructure, AccesCompte, TypePiece, ResultatImportFactures, RapportRapprochement, RechercheTicket, TicketResume,
   VisiteTicket } from '../models/structure.model';
@@ -35,7 +36,7 @@ function paramsImport(choix: Partial<ChoixImportFacture>): HttpParams {
 })
 export class StructureService {
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private factureEvents: FactureEventsService) {}
 
   // ----- Gestion des structures (ADMIN / Service Régional) -----
   getStructures(): Observable<StructureSanitaire[]> {
@@ -194,15 +195,18 @@ export class StructureService {
     return this.api.put<FactureStructure>(`/factures-structure/${id}`, req);
   }
   envoyerFacture(id: string): Observable<FactureStructure> {
-    return this.api.post<FactureStructure>(`/factures-structure/${id}/envoyer`, {});
+    return this.api.post<FactureStructure>(`/factures-structure/${id}/envoyer`, {}).pipe(tap(() => this.factureEvents.notifyFactureEnvoyee(id, 'STRUCTURE')));
   }
   /** Envoi groupé de la facture mensuelle : tous les brouillons du régime + mois/année. */
   envoyerGroupe(regime: string, mois: number, annee: number): Observable<FactureStructure[]> {
-    return this.api.post<FactureStructure[]>('/factures-structure/envoyer-groupe', { regime, mois, annee });
+    return this.api.post<FactureStructure[]>('/factures-structure/envoyer-groupe', { regime, mois, annee }).pipe(tap(res => { if (Array.isArray(res)) res.forEach(f => this.factureEvents.notifyFactureEnvoyee(f.id, 'STRUCTURE')); }));
   }
   /** Service Régional : valide une facture reçue (ENVOYEE → VALIDEE_SR). */
   validerFacture(id: string, commentaire?: string): Observable<FactureStructure> {
     return this.api.post<FactureStructure>(`/factures-structure/${id}/valider`, { commentaire });
+  }
+  assignerFactureAutomatiquement(id: string): Observable<FactureStructure> {
+    return this.api.post<FactureStructure>(`/factures-structure/${id}/assigner-automatiquement`, {});
   }
   /** Service Régional : rejette une facture reçue (ENVOYEE → REJETEE_SR), motif obligatoire. */
   rejeterFacture(id: string, motif: string): Observable<FactureStructure> {
@@ -227,7 +231,7 @@ export class StructureService {
   }
 
   validerFacturePoste(id: string, commentaire?: string): Observable<FactureStructure> {
-    return this.api.post<FactureStructure>(`/factures-structure/${id}/valider-poste`, { commentaire });
+    return this.api.post<FactureStructure>(`/factures-structure/${id}/valider-poste`, { commentaire }).pipe(tap(() => this.factureEvents.notifyFactureEnvoyee(id, 'STRUCTURE')));
   }
   /** Centre de Santé : rejette la facture d'un poste (SOUMISE_CS → REJETEE_CS), motif obligatoire. */
   rejeterFacturePoste(id: string, motif: string): Observable<FactureStructure> {

@@ -77,6 +77,8 @@ export interface LigneFactureStructure {
   tarifId?: string;
   /** Dossier patient de la facture auquel appartient la ligne. */
   dossierId?: string;
+  statutLigne?: string;
+  motifRejet?: string;
   /**
    * « IMPORT » : apportée par l'import de fin de mois (centre / EPS), remplacée au prochain import.
    * À renvoyer tel quel quand la ligne est modifiée à l'écran.
@@ -213,7 +215,7 @@ export interface DocumentComplementaire {
 
 /** Statut réutilisé de la facture pharmacie (chaîne côté JSON). */
 export type StatutFactureStructure =
-  | 'BROUILLON' | 'SOUMISE_CS' | 'REJETEE_CS' | 'ENVOYEE' | 'VALIDEE_SR' | 'REJETEE_SR'
+  | 'BROUILLON' | 'SOUMISE_CS' | 'REJETEE_CS' | 'ENVOYEE' | 'A_TRAITER' | 'EN_COURS_SR' | 'VALIDEE_SR' | 'REJETEE_SR' | 'ENVOYEE_NC'
   | 'VALIDEE_NC' | 'REJETEE_NC' | 'PAYEE';
 
 export interface FactureStructure {
@@ -241,6 +243,9 @@ export interface FactureStructure {
   historique?: HistoriqueFacture[];
   typeStructure?: string;
   commentaireRejet?: string;
+  controleurId?: string;
+  controleurNom?: string;
+  dateAssignation?: string;
   /** Reprise de l'ancienne application (import du Service Régional) : statut d'origine conservé. */
   importee?: boolean | null;
   /** Numéro de la facture dans l'ancienne application. */
@@ -252,8 +257,8 @@ export interface FactureStructure {
    * est transmise par sa structure.
    */
   etape?: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /** Facture reconnue dans un fichier d'import : sans id ni numéro tant qu'elle n'est pas enregistrée. */

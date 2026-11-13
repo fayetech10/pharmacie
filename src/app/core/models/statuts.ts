@@ -28,9 +28,12 @@ export const STATUTS_FACTURE: Record<string, ApparenceStatut> = {
   // Noms historiques « CS » : le contrôle des factures de postes est fait par le district.
   SOUMISE_CS: { libelle: 'Envoyée au district', classe: BLEU, icone: 'send' },
   REJETEE_CS: { libelle: 'Rejetée par le district', classe: ROUGE, icone: 'cancel' },
-  ENVOYEE: { libelle: 'Transmise au service régional', classe: BLEU, icone: 'forward_to_inbox' },
-  VALIDEE_SR: { libelle: 'Validée (service régional)', classe: VERT, icone: 'task_alt' },
-  REJETEE_SR: { libelle: 'Rejetée (service régional)', classe: ROUGE, icone: 'cancel' },
+  ENVOYEE: { libelle: 'À traiter', classe: BLEU, icone: 'forward_to_inbox' },
+  A_TRAITER: { libelle: 'À traiter', classe: BLEU, icone: 'mark_email_unread' },
+  EN_COURS_SR: { libelle: 'En cours SR', classe: AMBRE, icone: 'pending' },
+  VALIDEE_SR: { libelle: 'Validée SR', classe: VERT, icone: 'task_alt' },
+  REJETEE_SR: { libelle: 'Rejetée SR', classe: ROUGE, icone: 'cancel' },
+  ENVOYEE_NC: { libelle: 'Envoyée au NC', classe: BLEU, icone: 'send' },
   VALIDEE_NC: { libelle: 'Validée (niveau central)', classe: VERT, icone: 'verified' },
   REJETEE_NC: { libelle: 'Rejetée (niveau central)', classe: ROUGE, icone: 'cancel' },
   PAYEE: { libelle: 'Payée', classe: VERT_FONCE, icone: 'payments' }

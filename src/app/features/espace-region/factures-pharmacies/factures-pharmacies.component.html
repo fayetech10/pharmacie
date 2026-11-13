@@ -1,0 +1,847 @@
+<div class="space-y-5">
+
+  <!-- ================= FIL D'ARIANE DE NAVIGATION ================= -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <!-- Échelon 1 -->
+      <button (click)="allerAuNiveau(1)"
+              [ngClass]="niveauEntonnoir === 1 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
+              class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
+        <mat-icon class="!text-sm !w-4 !h-4">local_pharmacy</mat-icon>
+        Pharmacies d'officine (Thiès)
+      </button>
+
+      <!-- Échelon 2 -->
+      <ng-container *ngIf="niveauEntonnoir >= 2">
+        <span class="text-slate-400 font-bold">/</span>
+        <button (click)="allerAuNiveau(2)"
+                [ngClass]="niveauEntonnoir === 2 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
+                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
+          <mat-icon class="!text-sm !w-4 !h-4">storefront</mat-icon>
+          {{ pharmacieSelectionnee?.nom }}
+        </button>
+      </ng-container>
+
+      <!-- Échelon 3 -->
+      <ng-container *ngIf="niveauEntonnoir >= 3">
+        <span class="text-slate-400 font-bold">/</span>
+        <button (click)="allerAuNiveau(3)"
+                [ngClass]="niveauEntonnoir === 3 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
+                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
+          <mat-icon class="!text-sm !w-4 !h-4">medication</mat-icon>
+          {{ regimeSelectionne?.libelle }}
+        </button>
+      </ng-container>
+
+      <!-- Échelon 4 -->
+      <ng-container *ngIf="niveauEntonnoir >= 4">
+        <span class="text-slate-400 font-bold">/</span>
+        <button (click)="allerAuNiveau(4)"
+                [ngClass]="niveauEntonnoir === 4 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
+                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
+          <mat-icon class="!text-sm !w-4 !h-4">receipt</mat-icon>
+          Facture {{ moisSelectionne?.nomMois }} {{ annee }}
+        </button>
+      </ng-container>
+
+      <!-- Échelon 5 -->
+      <ng-container *ngIf="niveauEntonnoir === 5 && patientSelectionne">
+        <span class="text-slate-400 font-bold">/</span>
+        <span class="font-bold text-emerald-800 py-1 px-2 bg-emerald-50 rounded">
+          Patient {{ patientSelectionne.nom }}
+        </span>
+      </ng-container>
+    </div>
+
+    <div class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+      Étape {{ niveauEntonnoir }}/5
+    </div>
+  </div>
+
+  <!-- ================= NIVEAU 1 : LISTE DES PHARMACIES ================= -->
+  <div *ngIf="niveauEntonnoir === 1" class="space-y-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">Pharmacies d'officine de la région de Thiès</h3>
+        <p class="text-xs text-slate-500">Sélectionnez une pharmacie pour explorer ses facturations par mois et régime</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-500">Année :</span>
+        <select [(ngModel)]="annee" (change)="initialiserPharmacies()" class="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 cursor-pointer">
+          <option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tableau des pharmacies -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="py-3 px-4">Pharmacie</th>
+              <th class="py-3 px-4">Ville / Commune</th>
+              <th class="py-3 px-4 text-right">Factures mensuelles</th>
+              <th class="py-3 px-4 text-right">Montant total facturé</th>
+              <th class="py-3 px-4 text-right">Bénéficiaires servis</th>
+              <th class="py-3 px-4 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium">
+            <tr *ngFor="let ph of pharmacies"
+                (click)="selectionnerPharmacie(ph)"
+                class="hover:bg-emerald-50/50 cursor-pointer transition-colors group">
+              <td class="py-3.5 px-4 font-bold text-slate-900 group-hover:text-emerald-700 flex items-center gap-2">
+                <mat-icon class="!text-slate-400 group-hover:!text-emerald-600">local_pharmacy</mat-icon>
+                <div>
+                  <div>{{ ph.nom }}</div>
+                  <div class="text-[11px] font-normal text-slate-400 font-mono">{{ ph.code }}</div>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-slate-700 font-semibold">{{ ph.ville }}</td>
+              <td class="py-3.5 px-4 text-right font-bold text-slate-800">{{ ph.nombreFactures }}</td>
+              <td class="py-3.5 px-4 text-right font-bold text-emerald-700">{{ formatMontant(ph.montantTotal) }}</td>
+              <td class="py-3.5 px-4 text-right font-semibold text-purple-900">{{ ph.nombreBeneficiaires.toLocaleString('fr-FR') }}</td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-flex items-center gap-1 text-emerald-700 font-bold group-hover:translate-x-1 transition-transform">
+                  Ouvrir factures <mat-icon class="!text-sm !w-4 !h-4">arrow_forward</mat-icon>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NIVEAU 2 : RÉGIME PHARMACIE ================= -->
+  <div *ngIf="niveauEntonnoir === 2" class="space-y-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">Régime conventionné — {{ pharmacieSelectionnee?.nom }}</h3>
+        <p class="text-xs text-slate-500">Sélectionnez le régime pour consulter les facturations mensuelles</p>
+      </div>
+      <button (click)="allerAuNiveau(1)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition cursor-pointer">
+        <mat-icon class="!text-sm !w-4 !h-4">arrow_back</mat-icon> Retour aux pharmacies
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngFor="let r of regimes"
+           (click)="selectionnerRegime(r)"
+           class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <mat-icon>medication</mat-icon>
+          </div>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+            {{ r.moisCount }} mois facturés
+          </span>
+        </div>
+
+        <h4 class="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+          {{ r.libelle }}
+        </h4>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+          <div>
+            <div class="text-[11px] text-slate-400">Total facturé</div>
+            <div class="font-bold text-emerald-700 font-mono">{{ formatMontant(r.montant) }}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] text-slate-400">Bénéficiaires</div>
+            <div class="font-semibold text-purple-900">{{ r.benef }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NIVEAU 3 : LES MOIS (MOIS FACTURÉS EN VERT) ================= -->
+  <div *ngIf="niveauEntonnoir === 3" class="space-y-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">
+          Suivi mensuel des factures officine — {{ pharmacieSelectionnee?.nom }}
+        </h3>
+        <p class="text-xs text-slate-500">
+          Les mois facturés par la pharmacie apparaissent en <span class="text-emerald-700 font-bold">VERT</span>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button (click)="allerAuNiveau(2)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition cursor-pointer">
+          <mat-icon class="!text-sm !w-4 !h-4">arrow_back</mat-icon> Régimes
+        </button>
+      </div>
+    </div>
+
+    <!-- Grille des 12 mois -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div *ngFor="let m of moisFiltres"
+           (click)="selectionnerMois(m)"
+           [ngClass]="m.facturee ? 'border-2 border-emerald-500 bg-emerald-50/40 hover:bg-emerald-100/40 cursor-pointer shadow-xs' : 'border border-slate-200 bg-slate-50/60 opacity-60 cursor-not-allowed'"
+           class="rounded-xl p-4 transition-all flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-800">{{ m.nomMois }}</span>
+            <span *ngIf="m.facturee" class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              <mat-icon class="!text-xs !w-3 !h-3">check_circle</mat-icon> Facturée
+            </span>
+            <span *ngIf="!m.facturee" class="text-[10px] text-slate-400 font-semibold">Non facturée</span>
+          </div>
+
+          <div *ngIf="m.facturee" class="space-y-1 my-2">
+            <div class="text-xs font-mono font-bold text-slate-900">{{ m.numeroFacture }}</div>
+            <div class="text-xs font-bold text-emerald-700 font-mono">{{ formatMontant(m.montantTotal || 0) }}</div>
+            <div class="text-[11px] text-slate-500">Bénéficiaires : <strong>{{ m.nombreBeneficiaires }}</strong></div>
+          </div>
+        </div>
+
+        <div *ngIf="m.facturee" class="pt-2 border-t border-emerald-200/60 mt-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-slate-500">Statut :</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  [ngClass]="{
+                    'bg-blue-100 text-blue-800': m.statut === 'A_TRAITER',
+                    'bg-amber-100 text-amber-800': m.statut === 'EN_COURS_SR',
+                    'bg-emerald-100 text-emerald-800': m.statut === 'VALIDEE_SR',
+                    'bg-red-100 text-red-800': m.statut === 'REJETEE_SR',
+                    'bg-blue-200 text-blue-900': m.statut === 'ENVOYEE_NC'
+                  }">
+              {{ m.statut === 'A_TRAITER' ? 'À traiter' : m.statut === 'EN_COURS_SR' ? 'En cours SR' : m.statut === 'VALIDEE_SR' ? 'Validée SR' : m.statut === 'REJETEE_SR' ? 'Rejetée SR' : m.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : m.statut }}
+            </span>
+          </div>
+          <div class="text-[10px] text-emerald-700 font-bold mt-1 text-right flex items-center justify-end gap-0.5">
+            Ouvrir la facture <mat-icon class="!text-xs !w-3 !h-3">chevron_right</mat-icon>
+          </div>
+        </div>
+
+        <div *ngIf="!m.facturee" class="text-xs text-slate-400 italic mt-4">
+          Aucune facture transmise.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NIVEAU 4 : FACTURE PHARMACIE (BÉNÉFICIAIRES STYLE POSTE DE SANTÉ) ================= -->
+  <div *ngIf="niveauEntonnoir === 4 && factureActiveResume" class="space-y-4">
+
+    <!-- En-tête Facture Officine -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Détail de facture officine</span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
+                  [ngClass]="{
+                    'bg-blue-50 text-blue-700 border border-blue-200': factureActiveResume.statut === 'A_TRAITER',
+                    'bg-amber-50 text-amber-700 border border-amber-200': factureActiveResume.statut === 'EN_COURS_SR',
+                    'bg-emerald-50 text-emerald-700 border border-emerald-200': factureActiveResume.statut === 'VALIDEE_SR',
+                    'bg-rose-50 text-rose-700 border border-rose-200': factureActiveResume.statut === 'REJETEE_SR',
+                    'bg-indigo-50 text-indigo-700 border border-indigo-200': factureActiveResume.statut === 'ENVOYEE_NC'
+                  }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}</span>
+          </div>
+          <h3 class="mt-1 text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+              Facture Officine {{ factureActiveResume.numero }} — {{ moisSelectionne?.nomMois }} {{ annee }}
+          </h3>
+          <div class="mt-3 flex flex-wrap gap-2 text-sm">
+            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Pharmacie</span> · <strong class="text-slate-800">{{ pharmacieSelectionnee?.nom }}</strong></span>
+            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Ville</span> · <strong class="text-slate-800">{{ pharmacieSelectionnee?.ville }}</strong></span>
+            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Contrôleur</span> · <strong class="text-slate-800">{{ factureActiveResume.controleurNom || 'Non assigné' }}</strong></span>
+          </div>
+        </div>
+
+        <div class="flex shrink-0 flex-wrap items-center gap-2">
+          <button (click)="allerAuNiveau(3)" class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon> Retour aux mois
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+          <div class="text-xs font-semibold text-slate-500">Montant total</div>
+          <div class="mt-1 text-lg font-bold font-mono text-slate-900">{{ formatMontant(factureActiveResume.montantTotal || 0) }}</div>
+        </div>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          <div class="text-xs font-semibold text-emerald-800">Part SEN-CSU <span class="font-normal text-emerald-700">(80 %)</span></div>
+          <div class="mt-1 text-lg font-bold font-mono text-emerald-800">{{ formatMontant(factureActiveResume.montantSencsu || 0) }}</div>
+        </div>
+        <div class="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3">
+          <div class="text-xs font-semibold text-violet-800">Bénéficiaires</div>
+          <div class="mt-1 text-lg font-bold text-violet-900">{{ patients.length }} <span class="text-sm font-medium">patients</span></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap items-center gap-2">
+          <button (click)="telechargerDossiersGlobaux()" [disabled]="telechargementEnCours" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-700 px-3.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">folder_zip</mat-icon> Dossiers ZIP
+          </button>
+          <button (click)="telechargerExcel()" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">table_view</mat-icon> Export Excel
+          </button>
+          <button (click)="ouvrirModalSupprimerFacture(factureActiveResume)" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">delete_outline</mat-icon> Supprimer
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          <span class="mr-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Décision SR</span>
+          <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="ouvrirModalRejetFacture()" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">close</mat-icon> Rejeter
+          </button>
+          <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="validerFacture()" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">task_alt</mat-icon> Valider la facture
+          </button>
+          <button *ngIf="factureActiveResume.statut === 'VALIDEE_SR'" (click)="envoyerAuNiveauCentral()" type="button"
+                  class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">send</mat-icon> Transmettre au central
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="factureActiveResume.statut === 'REJETEE_SR' && factureActiveResume.commentaireRejet"
+           class="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-900 flex items-start gap-2.5">
+        <mat-icon class="!text-rose-600 !w-5 !h-5 mt-0.5">error_outline</mat-icon>
+        <div><span class="font-bold">Motif du rejet :</span> {{ factureActiveResume.commentaireRejet }}</div>
+      </div>
+    </div>
+
+    <!-- SECTION PATIENTS / BÉNÉFICIAIRES (STYLE POSTE DE SANTÉ) -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+            <mat-icon class="!text-lg !w-5 !h-5">groups</mat-icon>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">Patients & Dispensations</h4>
+            <p class="text-[11px] text-slate-500">Facture N° {{ factureActiveResume.numero }} – Cliquez sur un patient pour accéder à ses médicaments et son dossier</p>
+          </div>
+        </div>
+
+        <div class="relative w-full sm:w-72">
+          <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
+          <input type="text"
+                 [(ngModel)]="searchPatient"
+                 placeholder="Rechercher un patient (nom, matricule, CNI)..."
+                 class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-emerald-600 transition" />
+        </div>
+      </div>
+
+      <!-- Tableau des patients (style poste de santé : Nom, 3 pièces, Date, Matricule & CNI, Chevron) -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <tbody class="divide-y divide-slate-100 font-medium">
+            <tr *ngFor="let p of patientsFiltres"
+                (click)="ouvrirMedicamentsPatient(p)"
+                class="cursor-pointer border-b border-slate-100 transition-colors hover:bg-emerald-50/40 bg-white">
+              <td class="py-3 px-4 align-middle">
+                <div class="flex items-center gap-2">
+                  <a (click)="$event.preventDefault()" class="font-bold text-slate-900 text-[13px] no-underline hover:underline">
+                    {{ p.nom }}
+                  </a>
+                  <span class="inline-flex items-center gap-1 ml-1 align-middle">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">3 pièces conformes</span>
+                  </span>
+                  <span *ngIf="p.statutLigne === 'REJETEE'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 ml-1">
+                    Rejeté
+                  </span>
+                </div>
+                <!-- Mobile : date, matricule & CNI sous le nom -->
+                <div class="sm:hidden mt-0.5 text-[11px] text-slate-500">
+                  {{ formatDate(p.datePriseEnCharge) }} · <span class="font-mono">{{ p.matricule }}</span><span *ngIf="p.cni"> · CNI {{ p.cni }}</span>
+                </div>
+              </td>
+
+              <td class="hidden sm:table-cell py-3 px-3 align-middle whitespace-nowrap text-slate-600">
+                {{ formatDate(p.datePriseEnCharge) }}
+              </td>
+
+              <td class="hidden sm:table-cell py-3 pl-3 pr-2 align-middle text-right whitespace-nowrap font-mono text-xs text-slate-900 font-semibold">
+                {{ p.matricule }}<span *ngIf="p.cni" class="text-slate-400 ml-1.5 font-sans text-[11px]">· CNI {{ p.cni }}</span>
+              </td>
+
+              <td class="py-3 px-3 align-middle text-right font-mono font-bold text-slate-900">
+                {{ formatMontant(p.montantTotal) }}
+              </td>
+
+              <td class="py-3 pl-1 pr-4 align-middle text-right w-8">
+                <mat-icon class="!text-lg !w-5 !h-5 text-slate-400">chevron_right</mat-icon>
+              </td>
+            </tr>
+
+            <tr *ngIf="patientsFiltres.length === 0">
+              <td colspan="5" class="py-8 text-center text-slate-400 text-xs italic">
+                Aucun patient ne correspond à la recherche.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NIVEAU 5 : PAGE MÉDICAMENTS DU PATIENT (DOSSIER DESSUS & MÉDICAMENTS EN DESSOUS) ================= -->
+  <div *ngIf="niveauEntonnoir === 5 && patientSelectionne && factureActiveResume" class="space-y-4">
+
+    <!-- Bouton Retour à la facture -->
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <button type="button" (click)="retourALaFacture()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer">
+        <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon>
+        Retour à la facture {{ factureActiveResume.numero }}
+      </button>
+
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+          Contributif CSU
+        </span>
+        <button (click)="ouvrirModalRejetPatient(patientSelectionne)"
+                type="button"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold border border-rose-200 transition cursor-pointer">
+          <mat-icon class="!text-xs !w-3.5 !h-3.5">block</mat-icon> Rejeter ce patient
+        </button>
+      </div>
+    </div>
+
+    <!-- Identité du patient avec bouton DOSSIER DESSUS (Style poste de santé) -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+            {{ getInitiales(patientSelectionne.nom) }}
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 m-0">
+              <span>{{ patientSelectionne.nom }}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">3 pièces conformes</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Matricule : <span class="font-mono font-medium text-slate-800">{{ patientSelectionne.matricule }}</span>
+              <span *ngIf="patientSelectionne.cni"> · CNI : <span class="font-mono font-medium text-slate-800">{{ patientSelectionne.cni }}</span></span>
+              · Dispensation du {{ formatDate(patientSelectionne.datePriseEnCharge) }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <!-- BOUTON DOSSIER DESSUS -->
+          <button type="button"
+                  (click)="voirDossierPatient(patientSelectionne)"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                  title="Ouvrir le dossier patient (documents justificatifs)">
+            <mat-icon class="!text-sm !w-4 !h-4">folder_shared</mat-icon>
+            Dossier (3 pièces)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Médicaments dispensés en dessous -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center gap-2">
+          <mat-icon class="text-emerald-700 !text-lg !w-5 !h-5">vaccines</mat-icon>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">Médicaments et produits délivrés</h4>
+            <p class="text-[11px] text-slate-500">Dispensation du {{ formatDate(patientSelectionne.datePriseEnCharge) }} – {{ patientSelectionne.medicaments.length }} produit(s)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-2">Médicament / Produit</th>
+                <th class="py-2 px-2 text-center">Qté</th>
+                <th class="py-2 px-2 text-right">Prix Unitaire</th>
+                <th class="py-2 px-2 text-right">Montant</th>
+                <th class="py-2 px-2 text-center">Statut</th>
+                <th class="py-2 pl-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr *ngFor="let m of patientSelectionne.medicaments; let mIdx = index" class="hover:bg-slate-50/60">
+                <td class="py-2.5 pr-2">
+                  <span class="font-bold text-slate-900">{{ m.medicament }}</span>
+                  <span *ngIf="m.codeProduit" class="block text-[11px] text-slate-400 font-mono">{{ m.codeProduit }}</span>
+                </td>
+                <td class="py-2.5 px-2 text-center font-bold text-slate-800">{{ m.quantite }}</td>
+                <td class="py-2.5 px-2 text-right font-mono text-slate-800">{{ formatMontant(m.prixUnitaire) }}</td>
+                <td class="py-2.5 px-2 text-right font-mono font-bold text-slate-900">{{ formatMontant(m.montant) }}</td>
+                <td class="py-2.5 px-2 text-center">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                        [ngClass]="m.statutLigne === 'REJETEE' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'">
+                    {{ m.statutLigne === 'REJETEE' ? 'Rejeté' : 'Conforme' }}
+                  </span>
+                </td>
+                <td class="py-2.5 pl-2 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1">
+                    <!-- Modifier médicament -->
+                    <button type="button"
+                            (click)="ouvrirModalModifMedicament(patientSelectionne, m)"
+                            class="p-1 rounded text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition cursor-pointer"
+                            title="Modifier le médicament">
+                      <mat-icon class="!text-sm !w-4 !h-4">edit</mat-icon>
+                    </button>
+
+                    <!-- Supprimer médicament -->
+                    <button type="button"
+                            (click)="ouvrirModalSupprMedicament(patientSelectionne, m)"
+                            class="p-1 rounded text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Supprimer cette ligne médicament">
+                      <mat-icon class="!text-sm !w-4 !h-4">delete_outline</mat-icon>
+                    </button>
+
+                    <!-- Rejeter médicament -->
+                    <button type="button"
+                            (click)="ouvrirModalRejetMedicament(patientSelectionne, mIdx)"
+                            class="p-1 rounded text-amber-700 hover:bg-amber-50 transition cursor-pointer"
+                            title="Rejeter ce produit (contrôle)">
+                      <mat-icon class="!text-sm !w-4 !h-4">block</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="patientSelectionne.medicaments.length === 0">
+                <td colspan="6" class="py-4 text-center text-slate-400 italic">Aucun médicament enregistré pour ce patient.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totaux de la dispensation -->
+        <div *ngIf="patientSelectionne.medicaments.length" class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Total</div>
+              <div class="mt-0.5 text-base font-bold text-slate-900 font-mono">{{ formatMontant(patientSelectionne.montantTotal) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">SEN-CSU (80 %)</div>
+              <div class="mt-0.5 text-base font-bold text-emerald-700 font-mono">{{ formatMontant(patientSelectionne.montantTotal * 0.8) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Patient (20 %)</div>
+              <div class="mt-0.5 text-base font-bold text-slate-700 font-mono">{{ formatMontant(patientSelectionne.montantTotal * 0.2) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL DOSSIER PATIENT PHARMACIE (3 PIÈCES) ================= -->
+  <div *ngIf="afficherModalDossier" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-4xl w-full shadow-lg border border-slate-200/80 overflow-hidden flex flex-col max-h-[85vh]">
+      <!-- Header -->
+      <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-white">
+        <div class="flex items-center gap-2">
+          <mat-icon class="!text-lg !w-5 !h-5 text-emerald-700">folder_shared</mat-icon>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900">Dossier patient pharmacie – {{ patientSelectionnePourDossier?.nom }}</h3>
+            <p class="text-[11px] text-slate-500 font-mono">Matricule : {{ patientSelectionnePourDossier?.matricule }}</p>
+          </div>
+        </div>
+        <button (click)="fermerModalDossier()" class="text-slate-400 hover:text-slate-600 p-1 rounded-md transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Contenu : 3 Pièces -->
+      <div class="p-5 overflow-y-auto space-y-4 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 1. Carte d'assuré -->
+          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">badge</mat-icon>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-slate-900">Carte d'assuré</div>
+                  <div class="text-[10px] text-slate-400">Identification CSU</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Conforme</span>
+            </div>
+            <div class="p-4 bg-slate-50/60 flex flex-col items-center justify-center min-h-[160px] text-center">
+              <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm mb-2">
+                {{ getInitiales(patientSelectionnePourDossier?.nom) }}
+              </div>
+              <div class="font-bold text-xs text-slate-900">{{ patientSelectionnePourDossier?.nom }}</div>
+              <div class="text-[11px] font-mono text-emerald-700 font-semibold mt-0.5">{{ patientSelectionnePourDossier?.matricule }}</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">CNI : {{ patientSelectionnePourDossier?.cni }}</div>
+            </div>
+            <div class="p-2 border-t border-slate-100 text-center text-[11px] text-slate-500 bg-white">
+              Identité validée SEN-CSU
+            </div>
+          </div>
+
+          <!-- 2. Ticket de caisse -->
+          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">receipt_long</mat-icon>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-slate-900">Ticket de caisse</div>
+                  <div class="text-[10px] text-slate-400">Quittance officine</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Conforme</span>
+            </div>
+            <div class="p-4 bg-slate-50/60 flex flex-col items-center justify-center min-h-[160px] text-center font-mono">
+              <mat-icon class="text-slate-400 !text-3xl !w-8 !h-8 mb-1">receipt</mat-icon>
+              <div class="text-[11px] font-bold text-slate-900">Ticket TK-{{ patientSelectionnePourDossier?.id || 'PH01' }}</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">Date : {{ formatDate(patientSelectionnePourDossier?.datePriseEnCharge) }}</div>
+              <div class="mt-2 text-xs font-bold text-slate-900">Ticket payé : {{ formatMontant((patientSelectionnePourDossier?.montantTotal || 0) * 0.2) }}</div>
+              <div class="text-[10px] text-emerald-700 font-sans font-semibold mt-1">Part patient acquittée (20%)</div>
+            </div>
+            <div class="p-2 border-t border-slate-100 text-center text-[11px] text-slate-500 bg-white">
+              Ticket réglé au comptoir
+            </div>
+          </div>
+
+          <!-- 3. Ordonnance médicale / Feuille de soins -->
+          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col shadow-xs">
+            <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <mat-icon class="!text-[16px] !w-4 !h-4">description</mat-icon>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-slate-900">Ordonnance médicale</div>
+                  <div class="text-[10px] text-slate-400">Prescription prescripteur</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Conforme</span>
+            </div>
+            <div class="p-4 bg-slate-50/60 flex flex-col items-center justify-center min-h-[160px] text-center">
+              <mat-icon class="text-slate-400 !text-3xl !w-8 !h-8 mb-1">medication</mat-icon>
+              <div class="text-[11px] font-bold text-slate-900">Prescription N° ORD-{{ patientSelectionnePourDossier?.id || '88' }}</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">Délivré le {{ formatDate(patientSelectionnePourDossier?.datePriseEnCharge) }}</div>
+              <div class="mt-2 text-xs font-bold text-emerald-700 font-mono">Total : {{ formatMontant(patientSelectionnePourDossier?.montantTotal || 0) }}</div>
+              <div class="text-[10px] text-slate-400 mt-1 italic">Prescription signée et tamponnée</div>
+            </div>
+            <div class="p-2 border-t border-slate-100 text-center text-[11px] text-slate-500 bg-white">
+              Ordonnance conforme aux référentiels
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Modal -->
+      <div class="px-5 py-3 border-t border-slate-200 flex justify-between items-center bg-slate-50">
+        <span class="text-[11px] text-slate-500">
+          3 pièces justificatives conformes (Carte d'assuré, Ticket de caisse, Ordonnance médicale)
+        </span>
+        <button (click)="fermerModalDossier()" class="px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-xs text-slate-800 transition cursor-pointer">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL MODIFIER MÉDICAMENT EN TEMPS RÉEL ================= -->
+  <div *ngIf="afficherModalModifMedicament" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-lg w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-emerald-700">edit</mat-icon> Modifier le médicament délivré
+        </h3>
+        <button (click)="afficherModalModifMedicament = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-slate-700">
+          Patient : <strong class="text-slate-900">{{ patientDeMedicament?.nom }}</strong> (<span class="font-mono">{{ patientDeMedicament?.matricule }}</span>)
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Désignation du médicament / produit :</label>
+          <input type="text"
+                 [(ngModel)]="formModifMedicament.designation"
+                 class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-medium"
+                 placeholder="Ex : Paracétamol 500mg cp..." />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Code produit :</label>
+            <input type="text"
+                   [(ngModel)]="formModifMedicament.codeProduit"
+                   class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Quantité :</label>
+            <input type="number"
+                   [(ngModel)]="formModifMedicament.quantite"
+                   min="1"
+                   class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Prix Unitaire (F CFA) :</label>
+          <input type="number"
+                 [(ngModel)]="formModifMedicament.prixUnitaire"
+                 min="0"
+                 step="50"
+                 class="w-full p-2.5 bg-white border border-slate-300 rounded-md outline-none focus:border-emerald-600 text-xs font-mono font-medium" />
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-slate-800 flex justify-between items-center">
+          <span class="font-medium text-slate-600">Nouveau montant calculé :</span>
+          <span class="font-mono text-sm font-semibold text-slate-900">{{ formatMontant(formModifMedicament.quantite * formModifMedicament.prixUnitaire) }}</span>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalModifMedicament = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">
+          Annuler
+        </button>
+        <button (click)="sauvegarderMedicament()" class="px-4 py-1.5 rounded-md bg-emerald-700 text-white font-medium hover:bg-emerald-800 transition shadow-2xs cursor-pointer">
+          Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL SUPPRIMER MÉDICAMENT ================= -->
+  <div *ngIf="afficherModalSupprMedicament" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">warning</mat-icon> Supprimer la ligne médicament
+        </h3>
+        <button (click)="afficherModalSupprMedicament = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs text-slate-700">
+        <p>Êtes-vous sûr de vouloir supprimer la dispensation suivante ?</p>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
+          <div>Médicament : <strong class="text-slate-900">{{ medicamentASupprimer?.medicament }}</strong></div>
+          <div>Code : <strong class="font-mono text-slate-800">{{ medicamentASupprimer?.codeProduit }}</strong></div>
+          <div>Montant déduit : <strong class="text-rose-700 font-mono font-semibold">{{ formatMontant(medicamentASupprimer?.montant || 0) }}</strong></div>
+          <div>Patient : <strong class="text-slate-900">{{ patientDeMedicamentASupprimer?.nom }}</strong></div>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Cette action recalculera immédiatement le montant total de la facture officine en temps réel.
+        </p>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalSupprMedicament = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">
+          Annuler
+        </button>
+        <button (click)="confirmerSuppressionMedicament()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs cursor-pointer">
+          Confirmer la suppression
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL SUPPRIMER FACTURE ================= -->
+  <div *ngIf="afficherModalSupprFacture" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">delete_forever</mat-icon> Supprimer définitivement la facture officine
+        </h3>
+        <button (click)="afficherModalSupprFacture = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs text-slate-700">
+        <p>Êtes-vous sûr de vouloir supprimer définitivement cette facture ?</p>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
+          <div>Facture N° : <strong class="font-mono text-slate-900">{{ factureASupprimer?.numero }}</strong></div>
+          <div>Pharmacie : <strong class="text-slate-900">{{ factureASupprimer?.etablissementNom }}</strong></div>
+          <div>Période : <strong class="text-slate-900">{{ moisSelectionne?.nomMois }} {{ annee }}</strong></div>
+          <div>Montant total : <strong class="text-rose-700 font-mono font-semibold">{{ formatMontant(factureASupprimer?.montantTotal || 0) }}</strong></div>
+          <div>Bénéficiaires : <strong class="text-slate-900">{{ factureASupprimer?.nombreBeneficiaires }} patients</strong></div>
+        </div>
+        <p class="text-[11px] text-rose-600">
+          Attention : Cette suppression retirera définitivement la facture des consolidations régionales.
+        </p>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalSupprFacture = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition cursor-pointer">
+          Annuler
+        </button>
+        <button (click)="confirmerSuppressionFacture()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs cursor-pointer">
+          Supprimer définitivement
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL MOTIF DE REJET OBLIGATOIRE (3 NIVEAUX) ================= -->
+  <div *ngIf="afficherModalRejet" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-lg w-full shadow-lg border border-rose-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-rose-100 bg-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">cancel</mat-icon>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900">Notification de non-conformité — Rejet SR</h3>
+            <p class="text-[11px] text-rose-600">Niveau : {{ typeRejetActuel === 'FACTURE' ? 'Facture entière' : typeRejetActuel === 'PATIENT' ? 'Ligne patient' : 'Ligne médicament' }}</p>
+          </div>
+        </div>
+        <button (click)="afficherModalRejet = false" class="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <p class="text-slate-700">
+          Vous êtes sur le point de rejeter <strong class="text-slate-900">{{ cibleRejetNom }}</strong>.
+        </p>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1.5">
+            Explication de la non-conformité <span class="text-rose-600 font-semibold">* (Obligatoire)</span> :
+          </label>
+          <textarea [(ngModel)]="motifRejetInput"
+                    rows="4"
+                    placeholder="Précisez le motif précis de non-conformité (ex: Ordonnance illisible, posologie hors AMM, médicament hors liste conventionnée...)"
+                    class="w-full p-3 bg-white border border-slate-300 rounded-md outline-none focus:border-rose-600 text-xs"></textarea>
+        </div>
+
+        <div class="text-[11px] text-slate-500">
+          Cette notification sera immédiatement transmise à la pharmacie d'officine pour correction et justification.
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+        <button (click)="afficherModalRejet = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium text-xs hover:bg-slate-50 transition cursor-pointer">
+          Annuler
+        </button>
+        <button (click)="validerRejet()"
+                [disabled]="!motifRejetInput.trim()"
+                class="px-4 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition cursor-pointer">
+          Confirmer le rejet
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
