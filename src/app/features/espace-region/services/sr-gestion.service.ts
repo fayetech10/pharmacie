@@ -471,8 +471,8 @@ export class SrGestionService {
    * Récupère toutes les factures réelles depuis le backend (/api/factures-structure et /api/factures).
    */
   getToutesFacturesResumes(inclureBrouillons = false, rechargerFactures = false): Observable<FactureAssigneeResume[]> {
-    const facturesStructures$ = this.structureService.getFactures({ fresh: rechargerFactures });
-    const facturesPharmacies$ = this.factureService.getAll({ fresh: rechargerFactures });
+    const facturesStructures$ = this.structureService.getFactures();
+    const facturesPharmacies$ = this.factureService.getAll();
     return forkJoin({
       facturesStructures: rechargerFactures ? facturesStructures$ : facturesStructures$.pipe(catchError(() => of([]))),
       facturesPharmacies: rechargerFactures ? facturesPharmacies$ : facturesPharmacies$.pipe(catchError(() => of([]))),
@@ -769,7 +769,7 @@ export class SrGestionService {
     if (jour) params.push(`jour=${encodeURIComponent(jour)}`);
     return this.api.get<FactureSaisieSuivi[]>(
       `/factures-structure/suivi-saisies?${params.join('&')}`,
-      { skipLoading: true, fresh: true }
+      { skipLoading: true }
     );
   }
 
@@ -933,7 +933,7 @@ export class SrGestionService {
 
   /** Charge le contenu détaillé d'un brouillon de structure pour l'ouvrir depuis le suivi. */
   getFactureStructure(factureId: string): Observable<FactureStructure> {
-    return this.structureService.getFacture(factureId, { fresh: true });
+    return this.structureService.getFacture(factureId);
   }
 
   /**
