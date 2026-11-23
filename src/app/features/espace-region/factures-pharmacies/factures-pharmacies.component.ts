@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { SrGestionService, FactureAssigneeResume } from '../services/sr-gestion.service';
 import { DossiersGlobauxService } from '../services/dossiers-globaux.service';
 import { Facture, LigneFacture } from '../../../core/models/facture.model';
@@ -53,7 +54,7 @@ export interface PatientPharmacieDetail {
 @Component({
   selector: 'app-factures-pharmacies',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatSnackBarModule, MatMenuModule],
   templateUrl: './factures-pharmacies.component.html'
 })
 export class FacturesPharmaciesComponent implements OnInit {

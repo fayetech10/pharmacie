@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { BcsuService } from '../../../core/services/bcsu.service';
 import { LettreGarantie, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 
@@ -24,10 +25,12 @@ const STATUT_ICONS: Record<string, string> = {
   ANNULEE: 'cancel'
 };
 
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-lettres-garantie-list',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatMenuModule, SkeletonListComponent, PageHeaderComponent],
   templateUrl: './lettres-garantie-list.component.html'
 })
 export class LettresGarantieListComponent implements OnInit {

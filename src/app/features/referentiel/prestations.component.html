@@ -1,10 +1,10 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Référentiel des prestations</h1>
     </div>
-    <div class="page-head-actions flex items-center gap-2">
+    <div class="page-head-actions flex items-center gap-2" page-header-actions>
       <input type="file" #fichierImport class="hidden" accept=".xlsx,.xls" (change)="importer($event)">
       <button class="btn btn-outline" type="button" (click)="fichierImport.click()">
         <mat-icon>upload_file</mat-icon> Importer Excel
@@ -13,7 +13,7 @@
         <mat-icon>add</mat-icon> Nouvelle prestation
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Filtres -->
   <div class="filter-strip">
@@ -101,7 +101,8 @@
         <p>Aucune prestation ne correspond à ces critères.</p>
       </div>
 
-      <div class="overflow-x-auto" *ngIf="page && page.content.length > 0">
+      <!-- Version Desktop : Tableau -->
+      <div class="overflow-x-auto desktop-only" *ngIf="page && page.content.length > 0">
         <table class="w-full border-collapse text-[13.5px]">
           <thead>
             <tr class="text-left text-text-secondary border-b border-border">
@@ -143,6 +144,54 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Version Mobile : Cartes modernes -->
+      <div class="m-cards md:hidden" *ngIf="page && page.content.length > 0">
+        <div class="m-card clickable" *ngFor="let p of page.content; trackBy: trackPrestation"
+             [class.opacity-60]="!p.actif" (click)="modifier(p)" role="button" tabindex="0"
+             (keydown.enter)="modifier(p)" [attr.aria-label]="'Modifier ' + p.designation">
+          <div class="m-card-top">
+            <div class="min-w-0 pr-2">
+              <div class="m-title">{{ p.designation }}</div>
+              <div class="m-sub font-mono text-xs text-text-muted">{{ p.code }}</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="status-badge text-xs">{{ p.actif ? 'Active' : 'Désactivée' }}</span>
+              <button type="button" class="m-more-btn" [matMenuTriggerFor]="prestMenu" (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      aria-label="Actions de la prestation" title="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #prestMenu="matMenu" xPosition="before">
+                <button mat-menu-item (click)="modifier(p)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Modifier</span>
+                </button>
+                <button mat-menu-item (click)="basculerActivation(p)">
+                  <mat-icon>{{ p.actif ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+                  <span>{{ p.actif ? 'Désactiver' : 'Réactiver' }}</span>
+                </button>
+                <button mat-menu-item class="menu-item-danger" (click)="supprimer(p)">
+                  <mat-icon class="!text-warn">delete</mat-icon>
+                  <span class="text-warn">Supprimer</span>
+                </button>
+              </mat-menu>
+            </div>
+          </div>
+          <div class="m-row">
+            <span *ngIf="nomService(p.serviceId)">
+              <mat-icon class="inline-ic">medical_services</mat-icon>{{ nomService(p.serviceId) }}
+            </span>
+            <span *ngIf="p.depositaire" class="inline-flex items-center gap-1 text-primary text-xs font-semibold">
+              <mat-icon class="inline-ic !text-primary">inventory_2</mat-icon>Dépositaire
+            </span>
+          </div>
+          <div class="m-foot">
+            <span class="m-amount">{{ p.prix | number:'1.0-0':'fr' }} FCFA</span>
+            <mat-icon class="m-chevron">chevron_right</mat-icon>
+          </div>
+        </div>
       </div>
 
       <app-pagination [total]="page?.totalElements || 0" [page]="pageCourante" [taille]="taille"

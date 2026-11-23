@@ -88,7 +88,8 @@
           </div>
         </div>
         <div class="section-body">
-          <div class="overflow-x-auto">
+          <!-- Version Desktop : Tableau -->
+          <div class="overflow-x-auto desktop-only">
             <table class="w-full text-[13px] border-collapse">
               <thead>
                 <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
@@ -132,6 +133,53 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Version Mobile : Cartes individuelles -->
+          <div class="m-cards md:hidden" *ngIf="p.lignes.length > 0">
+            <div class="m-card" *ngFor="let item of p.lignes">
+              <div class="m-card-top">
+                <div class="min-w-0 pr-2">
+                  <div class="m-title text-[14.5px] uppercase font-bold">{{ item.ligne.medicament }}</div>
+                  <span *ngIf="item.ligne.ajouteParPharmacien"
+                        class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-amber-50 text-amber-800">
+                    Ajouté par le pharmacien
+                  </span>
+                  <span *ngIf="item.ligne.statutLigne === StatutLigne.REJETEE"
+                        class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-red-50 text-red-800">
+                    Rejeté<ng-container *ngIf="item.ligne.motifRejet"> : {{ item.ligne.motifRejet }}</ng-container>
+                  </span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0" *ngIf="peutCorriger">
+                  <button type="button" class="m-more-btn" [matMenuTriggerFor]="medLigneMenu"
+                          aria-label="Actions sur le médicament" title="Actions">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #medLigneMenu="matMenu" xPosition="before">
+                    <button mat-menu-item (click)="modifierLigne(item)" [disabled]="occupe">
+                      <mat-icon>edit</mat-icon>
+                      <span>Modifier</span>
+                    </button>
+                    <button mat-menu-item class="menu-item-danger" (click)="supprimerLigne(item)" [disabled]="occupe">
+                      <mat-icon class="!text-warn">delete_outline</mat-icon>
+                      <span class="text-warn">Supprimer</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
+              <div class="m-row">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-border-light text-xs font-semibold">
+                  Qté : {{ item.ligne.quantite }}
+                </span>
+                <span class="text-xs text-text-muted">
+                  {{ item.ligne.prixUnitaire | number:'1.0-0':'fr' }} F / unité
+                </span>
+              </div>
+              <div class="m-row !justify-between !items-baseline border-t border-border-light pt-2 mt-2">
+                <span class="text-xs text-text-muted">Part CSU : <strong>{{ item.ligne.montant / 2 | number:'1.0-0':'fr' }} F</strong></span>
+                <span class="m-amount">{{ item.ligne.montant | number:'1.0-0':'fr' }} F</span>
+              </div>
+            </div>
           </div>
 
           <!-- Totaux du patient -->

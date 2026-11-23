@@ -1,9 +1,9 @@
 <div class="fade-in">
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Paramétrage structures sanitaires</h1>
     </div>
-    <div class="page-head-actions flex items-center gap-2" *ngIf="peutGerer">
+    <div class="page-head-actions flex items-center gap-2" *ngIf="peutGerer" page-header-actions>
       <input type="file" accept=".xlsx" hidden #importPostesInput (change)="onImportFileSelected($event)">
 
       <button class="btn btn-primary flex-1 md:flex-none" (click)="openAdd()">
@@ -36,7 +36,7 @@
         </button>
       </mat-menu>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Résultat de l'import des postes de santé -->
   <div *ngIf="importResult" class="mb-4 py-3.5 px-4 rounded-[10px] bg-emerald-50 border border-emerald-200">
@@ -200,19 +200,34 @@
        [attr.tabindex]="peutGerer ? 0 : null"
        (keydown.enter)="peutGerer && openEdit(s)" [attr.aria-label]="peutGerer ? 'Modifier ' + s.nom : null">
     <div class="m-card-top">
-      <div class="min-w-0">
+      <div class="min-w-0 pr-2">
         <div class="m-title">{{ s.nom }}</div>
         <div class="m-sub break-words">{{ s.code }} · {{ s.email || '—' }}</div>
       </div>
-      <div class="m-actions" *ngIf="peutGerer" (click)="$event.stopPropagation()">
-        <button class="action-btn" (click)="openEdit(s)" title="Modifier"><mat-icon>edit</mat-icon></button>
-        <button class="action-btn" (click)="reinitialiserMotDePasse(s)" [disabled]="actionEnCours === s.id"
-                title="Réinitialiser le mot de passe"><mat-icon>lock_reset</mat-icon></button>
-        <button class="action-btn" (click)="basculerActivation(s)" [disabled]="actionEnCours === s.id"
-                [title]="s.actif ? 'Désactiver' : 'Réactiver'">
-          <mat-icon>{{ s.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+      <div class="flex items-center gap-1.5 shrink-0" *ngIf="peutGerer">
+        <button type="button" class="m-more-btn" [matMenuTriggerFor]="structMenu" (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                aria-label="Actions de la structure" title="Actions">
+          <mat-icon>more_vert</mat-icon>
         </button>
-        <button class="action-btn danger" *ngIf="peutSupprimerImporter" (click)="delete(s)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+        <mat-menu #structMenu="matMenu" xPosition="before">
+          <button mat-menu-item (click)="openEdit(s)">
+            <mat-icon>edit</mat-icon>
+            <span>Modifier</span>
+          </button>
+          <button mat-menu-item (click)="reinitialiserMotDePasse(s)" [disabled]="actionEnCours === s.id">
+            <mat-icon>lock_reset</mat-icon>
+            <span>Réinitialiser mot de passe</span>
+          </button>
+          <button mat-menu-item (click)="basculerActivation(s)" [disabled]="actionEnCours === s.id">
+            <mat-icon>{{ s.actif ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+            <span>{{ s.actif ? 'Désactiver' : 'Réactiver' }}</span>
+          </button>
+          <button mat-menu-item class="menu-item-danger" *ngIf="peutSupprimerImporter" (click)="delete(s)">
+            <mat-icon class="!text-warn">delete</mat-icon>
+            <span class="text-warn">Supprimer</span>
+          </button>
+        </mat-menu>
       </div>
     </div>
     <div class="m-row">
@@ -234,6 +249,10 @@
     </div>
     <div class="m-row" *ngIf="getBcsuNom(s.bcsuId) !== '-'">
       <span><mat-icon class="inline-ic">badge</mat-icon>{{ getBcsuNom(s.bcsuId) }}</span>
+    </div>
+    <div class="m-foot">
+      <span class="text-xs text-text-muted font-mono">{{ s.code }}</span>
+      <mat-icon class="m-chevron">chevron_right</mat-icon>
     </div>
   </div>
 </div>

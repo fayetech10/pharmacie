@@ -5,11 +5,11 @@
     <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Retour à la facture
   </a>
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>{{ isEditMode ? 'Corriger la facture' : 'Facturation pharmacie' }}</h1>
     </div>
-    <div class="page-head-actions" *ngIf="facture && factureLignesCount > 0">
+    <div class="page-head-actions" *ngIf="facture && factureLignesCount > 0" page-header-actions>
       <button type="button" class="btn btn-primary" *ngIf="finDuMois; else envoiPlusTard" (click)="envoyerFacture()">
         <mat-icon>send</mat-icon> Envoyer la facture
       </button>
@@ -19,7 +19,7 @@
         </span>
       </ng-template>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- ═══════════ Bandeau : facture du mois et règle de prise en charge ═══════════ -->
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 py-3 px-4 rounded-lg border border-border bg-white">

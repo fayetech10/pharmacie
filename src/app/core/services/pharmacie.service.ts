@@ -25,6 +25,10 @@ export class PharmacieService {
     return this.api.put<Pharmacie>(`/pharmacies/${id}`, req);
   }
 
+  basculerActivation(id: string, actif: boolean): Observable<Pharmacie> {
+    return this.api.put<Pharmacie>(`/pharmacies/${id}/activation?actif=${actif}`, {});
+  }
+
   delete(id: string): Observable<void> {
     return this.api.delete<void>(`/pharmacies/${id}`);
   }

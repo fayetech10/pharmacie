@@ -1,14 +1,13 @@
 <div class="fade-in">
 
-  <div class="page-head flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-    <div>
+  <app-page-header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+    <div page-header-title>
       <h1 class="text-2xl font-bold text-text-primary">Module Hors CSU</h1>
-      <p class="text-sm text-text-secondary">Facturation des patients payants, caisse et suivi des factures par service.</p>
     </div>
     <div>
       <app-onglets [onglets]="onglets" [(selection)]="ongletActif"></app-onglets>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <!-- ONGLET 1 : NOUVELLE FACTURE & CAISSE                                      -->

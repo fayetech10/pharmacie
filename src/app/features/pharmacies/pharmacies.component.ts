@@ -18,14 +18,15 @@ import { ConfirmService } from '../../core/services/confirm.service';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-pharmacies',
   standalone: true,
   imports: [PaginationComponent, PaginerPipe, 
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatIconModule, 
     MatInputModule, MatButtonModule, MatSelectModule, MatTableModule, 
-    MatSortModule, MatMenuModule, MatSnackBarModule
-  ],
+    MatSortModule, MatMenuModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './pharmacies.component.html'
 })
 export class PharmaciesComponent implements OnInit {

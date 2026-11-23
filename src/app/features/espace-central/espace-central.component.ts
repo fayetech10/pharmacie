@@ -8,10 +8,12 @@ import { CentralFacturesStructureComponent } from './central-factures-structure.
 import { CentralFacturesPharmacieComponent } from './central-factures-pharmacie.component';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
 
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-espace-central',
   standalone: true,
-  imports: [CommonModule, MatTabsModule, AdminRegionsComponent, CentralFacturesStructureComponent, CentralFacturesPharmacieComponent],
+  imports: [CommonModule, MatTabsModule, AdminRegionsComponent, CentralFacturesStructureComponent, CentralFacturesPharmacieComponent, PageHeaderComponent],
   templateUrl: './espace-central.component.html',
   styleUrls: ['./espace-central.component.css']
 })

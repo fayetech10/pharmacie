@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { RegionService, Region } from '../../core/services/region.service';
 import { PharmacieService } from '../../core/services/pharmacie.service';
@@ -21,6 +22,7 @@ import { StatsComponent, StatsScope } from '../stats/stats.component';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 interface RegionSummary {
   region: Region;
   pharmacyCount: number;
@@ -49,7 +51,7 @@ type DrillLevel = 'regions' | 'pharmacies' | 'structures' | 'factures' | 'factur
 @Component({
   selector: 'app-admin-regions',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, 
+  imports: [PaginationComponent, PaginerPipe, PageHeaderComponent,
     CommonModule,
     RouterModule,
     FormsModule,
@@ -58,6 +60,7 @@ type DrillLevel = 'regions' | 'pharmacies' | 'structures' | 'factures' | 'factur
     MatButtonModule,
     MatTableModule,
     MatSnackBarModule,
+    MatMenuModule,
     StatusBadgeComponent,
     StatsComponent
   ],

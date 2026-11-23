@@ -16,7 +16,7 @@ import { CarteCsuService } from '../../../core/services/carte-csu.service';
 import {
   LettreGarantie, LettreGarantieRequest, Patient, PrestationGarantie, Regime
 } from '../../../core/models/bcsu.model';
-import { CarteCsu, VerificationCarte, categorieCompatible, refusCategorie } from '../../../core/models/carte-csu.model';
+import { CarteCsu, categorieCompatible, refusCategorie } from '../../../core/models/carte-csu.model';
 import { LISTE_PRESTATIONS } from '../../../core/models/prestations';
 import { ocrCni, RepriseCni } from '../../../core/utils/document-ocr';
 import { renderCarteAssureToDataUrl } from '../../../core/utils/carte-assure-image';
@@ -138,7 +138,7 @@ export class LettreGarantieFormComponent implements OnInit {
   carte: CarteCsu | null = null;
   refus = '';
   siteEnPanne = false;
-  verification: VerificationCarte | null = null;
+  verification: 'VERIFIEE' | null = null;
   /** Nom validé par le contrôle d'éligibilité : il n'est plus modifiable. */
   identiteVerrouillee = false;
   /** Carte d'assuré en cours de reconstitution depuis le contrôle (évite d'afficher la prise de photo). */
@@ -280,6 +280,15 @@ export class LettreGarantieFormComponent implements OnInit {
     return !!this.refus && !!this.carte?.carteValide && categorieCompatible(this.carte.categorie, this.regime) === false;
   }
 
+  get datePriseEnChargeAvantAdhesion(): boolean {
+    return !!this.carte?.dateDebut && !!this.datePriseEnCharge && this.datePriseEnCharge < this.carte.dateDebut;
+  }
+
+  get carteExpireePourPriseEnCharge(): boolean {
+    return !!this.carte?.carteActive && !!this.carte.dateFin && !!this.datePriseEnCharge &&
+      this.datePriseEnCharge > this.carte.dateFin;
+  }
+
   get ageCalcule(): string {
     if (!this.beneficiaire.dateNaissance) return '';
     const naissance = new Date(this.beneficiaire.dateNaissance);
@@ -411,7 +420,7 @@ export class LettreGarantieFormComponent implements OnInit {
         + `${this.dateFr(carte.dateDebutDroits)} — La prise en charge ne peut pas être accordée.`;
     }
     if (carte.dateDebut && new Date(carte.dateDebut) > dateRef) {
-      return `Carte pas encore valide (adhésion le ${this.dateFr(carte.dateDebut)}) — La prise en charge ne peut pas être accordée.`;
+      return `Date de prise en charge du ${this.dateFr(this.datePriseEnCharge)} antérieure à l'adhésion du ${this.dateFr(carte.dateDebut)} — la carte ne couvrait pas ces soins. La prise en charge ne peut pas être accordée.`;
     }
     return `Carte expirée${carte.dateFin ? ' le ' + this.dateFr(carte.dateFin) : ''} — La prise en charge ne peut pas être accordée.`;
   }
@@ -458,15 +467,6 @@ export class LettreGarantieFormComponent implements OnInit {
 
     this.snackBar.open(existant ? 'Patient déjà connu : son dossier sera complété.' : 'Informations reprises de la carte CSU.',
       'Fermer', { duration: 3500 });
-    this.etape = 'eligibilite';
-  }
-
-  /** Système de vérification injoignable : seule dérogation, consignée sur la lettre. */
-  continuerSansVerification() {
-    this.verification = 'NON_VERIFIEE_PANNE';
-    this.identiteVerrouillee = false;
-    this.beneficiaire.numeroAssure = this.codeImmatriculation.replace(/\s+/g, '').toUpperCase();
-    this.siteEnPanne = false;
     this.etape = 'eligibilite';
   }
 
@@ -566,6 +566,9 @@ export class LettreGarantieFormComponent implements OnInit {
     const b = this.beneficiaire;
     if (!b.prenom.trim() || !b.nom.trim()) return 'Le prénom et le nom du bénéficiaire sont obligatoires.';
     if (this.carteRequise && !b.numeroAssure.trim()) return 'Le code d\'immatriculation est obligatoire.';
+    if (this.carteRequise && this.verification !== 'VERIFIEE') {
+      return 'Vérifiez la carte CSU avant de poursuivre. La saisie est bloquée si le système est indisponible.';
+    }
     if (this.cniObligatoire && !b.numeroCni.trim()) {
       return 'Le n° de CNI est obligatoire : c\'est lui qui rapproche le patient du fichier de facturation de la structure.';
     }
@@ -642,7 +645,7 @@ export class LettreGarantieFormComponent implements OnInit {
       carteAssureRecto: this.photos.carteAssureRecto || undefined,
       autreDocument: this.photos.autreDocument || undefined,
       autreDocumentTitre: this.photos.autreDocument ? 'Extrait de naissance' : undefined,
-      // Mention du dossier : carte vérifiée, ou non vérifiée pour cause de panne du site.
+      // Les nouveaux dossiers à carte ne sont enregistrés qu'après un contrôle réussi.
       verificationCarte: this.carteRequise ? (this.verification ?? undefined) : undefined,
       datePriseEnCharge: this.datePriseEnCharge,
       accompagnantNom: enfant ? this.accompagnant.nom.trim() || undefined : undefined,
@@ -712,7 +715,8 @@ export class LettreGarantieFormComponent implements OnInit {
         this.regime = lettre.regime;
         this.categorie = categorieDe(lettre.regime, CATEGORIES_BCSU) || null;
         this.selectedPatientId = lettre.patientId || null;
-        this.verification = (lettre.verificationCarte as VerificationCarte) || null;
+        // Les anciennes lettres non vérifiées doivent repasser le contrôle officiel.
+        this.verification = lettre.verificationCarte === 'VERIFIEE' ? 'VERIFIEE' : null;
         this.identiteVerrouillee = this.verification === 'VERIFIEE';
         this.motif = lettre.prestations?.[0]?.designation || this.motifOptions[0] || '';
         this.beneficiaire = {

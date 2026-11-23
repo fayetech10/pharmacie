@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ReferentielService } from '../../core/services/referentiel.service';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -20,10 +21,12 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
  * <p>La recherche est paginée côté serveur : le référentiel national compte plusieurs
  * centaines d'actes, tout charger à chaque frappe serait inutilisable.</p>
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-prestations',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, MatMenuModule, PageHeaderComponent],
   templateUrl: './prestations.component.html'
 })
 export class PrestationsComponent implements OnInit {

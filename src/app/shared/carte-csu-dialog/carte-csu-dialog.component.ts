@@ -20,8 +20,7 @@ export interface CarteCsuDialogData {
  * site officiel via le serveur et montre l'identité et l'état de la carte. Rend à
  * l'appelant :
  *  - `{ carte }` si l'agent remplit le formulaire — jamais avec une carte non valide ;
- *  - `{ panne: true }` s'il continue sans vérification, ce qui n'est proposé QUE si le
- *    site est injoignable (503) — une carte introuvable ou invalide reste bloquante ;
+ *  - `{ invalide: true }` s'il ferme après le refus d'une carte reconnue invalide ;
  *  - `undefined` sinon.
  */
 @Component({
@@ -134,12 +133,6 @@ export class CarteCsuDialogComponent implements OnInit {
   /** Fermer après avoir vu une carte refusée le signale à l'appelant. */
   fermer() {
     this.dialogRef.close(this.carte && !this.utilisable ? { invalide: true } : undefined);
-  }
-
-  continuerSansVerification() {
-    if (this.siteEnPanne) {
-      this.dialogRef.close({ panne: true });
-    }
   }
 
   private libelleEtat(etat?: string): string {

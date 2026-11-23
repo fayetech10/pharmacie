@@ -1,12 +1,10 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>{{ isEditMode ? 'Modifier la lettre de garantie' : 'Nouvelle lettre de garantie' }}</h1>
-      <p *ngIf="!isEditMode">Un bénéficiaire à la fois : son éligibilité est contrôlée, puis la lettre est générée —
-         la structure la reprendra au moment de facturer.</p>
     </div>
-  </div>
+  </app-page-header>
 
   <div *ngIf="chargement" class="card">
     <div class="section-body flex items-center justify-center gap-3 py-10">
@@ -151,7 +149,18 @@
                   {{ carte.prenom }} {{ carte.nom }} · {{ carte.codeImmatriculation }}
                   <ng-container *ngIf="carte.dateFin"> · validité jusqu'au {{ dateFr(carte.dateFin) }}</ng-container>
                 </span>
-                <span *ngIf="!refusDeCategorie" class="block mt-1 text-[12.5px]">Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.</span>
+                <span *ngIf="datePriseEnChargeAvantAdhesion" class="block mt-1 text-[12.5px]">
+                  La date de soins sélectionnée précède l'adhésion : cette carte ne peut pas couvrir une prise en charge antérieure à son début.
+                </span>
+                <span *ngIf="carte?.enPeriodeObservation" class="block mt-1 text-[12.5px]">
+                  Les droits seront ouverts le {{ dateFr(carte?.dateDebutDroits) }}.
+                </span>
+                <span *ngIf="carteExpireePourPriseEnCharge" class="block mt-1 text-[12.5px]">
+                  Le bénéficiaire doit renouveler sa carte auprès de sa mutuelle avant toute prise en charge CSU.
+                </span>
+                <span *ngIf="carte && !carte.carteActive && !refusDeCategorie" class="block mt-1 text-[12.5px]">
+                  La carte est inactive. Le bénéficiaire doit contacter sa mutuelle pour vérifier son adhésion.
+                </span>
                 <!-- Carte valide d'une autre catégorie (classique ↔ BSF / CEC) : refus, pas d'avertissement (19/10/2026). -->
                 <span *ngIf="refusDeCategorie" class="block mt-1 text-[12.5px]">Changez de régime pour celui de la carte, ou saisissez un autre code.</span>
               </div>
@@ -163,14 +172,10 @@
               <mat-icon class="shrink-0">cloud_off</mat-icon>
               <div class="min-w-0">
                 <strong class="block text-[14px]">Le système de gestion des assurés est injoignable.</strong>
-                <span class="block mt-1 text-[13px]">Réessayez dans un instant. En cas de panne persistante, saisissez le
-                  bénéficiaire à la main : la lettre portera la mention « carte non vérifiée ».</span>
+                <span class="block mt-1 text-[13px]">La lettre ne peut pas être créée sans vérification. Réessayez dans un instant.</span>
                 <div class="flex flex-wrap gap-2 mt-3">
                   <button type="button" class="btn btn-sm btn-outline" (click)="verifierEligibilite()">
                     <mat-icon>refresh</mat-icon> Réessayer
-                  </button>
-                  <button type="button" class="btn btn-sm btn-warning" (click)="continuerSansVerification()">
-                    Continuer sans vérification
                   </button>
                 </div>
               </div>
@@ -326,14 +331,6 @@
             <span *ngIf="carte?.dateFin">Couverture jusqu'au {{ dateFr(carte?.dateFin) }}</span>
           </div>
         </div>
-        <div *ngIf="carteRequise && verification === 'NON_VERIFIEE_PANNE'"
-             class="flex items-start gap-3 py-3 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13.5px]">
-          <mat-icon class="shrink-0">warning_amber</mat-icon>
-          <div>
-            <strong class="block">Carte non vérifiée (système indisponible)</strong>
-            Saisissez l'identité figurant sur la carte, et photographiez-la ci-dessous. La lettre portera cette mention.
-          </div>
-        </div>
         <div *ngIf="incoherenceCategorie"
              class="flex items-start gap-2 py-2.5 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-[13px]">
           <mat-icon class="shrink-0 !text-xl !w-5 !h-5">info</mat-icon>{{ incoherenceCategorie }}
@@ -380,7 +377,7 @@
           <ng-container *ngTemplateOutlet="champsIdentite"></ng-container>
         </ng-container>
 
-        <!-- Dérogation (panne) : identité saisie -->
+        <!-- Identité issue du contrôle officiel, affichée en lecture seule. -->
         <ng-container *ngIf="carteRequise && !identiteVerrouillee">
           <div class="flex justify-between gap-3 py-2 border-b border-border-light text-[13.5px]">
             <span class="text-text-secondary">Code d'immatriculation</span>
@@ -430,9 +427,9 @@
         </ng-container>
 
         <!-- Régimes à carte : la carte d'assuré de la liasse, à photographier si elle n'a pas été reconstituée -->
-        <div *ngIf="carteRequise && (verification === 'NON_VERIFIEE_PANNE' || (!photos.carteAssureRecto && !carteEnGeneration))"
+        <div *ngIf="carteRequise && !photos.carteAssureRecto && !carteEnGeneration"
              class="sm:max-w-[360px]">
-          <app-photo-piece libelle="Carte d'assuré (recto)" [obligatoire]="verification === 'NON_VERIFIEE_PANNE'"
+          <app-photo-piece libelle="Carte d'assuré (recto)" [obligatoire]="true"
                            [galerie]="true" [tailleMaxKo]="100" aide="Elle tient lieu de preuve dans le dossier."
                            [image]="photos.carteAssureRecto" (imageChange)="onPhoto('carteAssureRecto', $event)"></app-photo-piece>
         </div>

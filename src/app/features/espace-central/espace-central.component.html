@@ -1,10 +1,9 @@
 <div class="fade-in">
-  <div class="page-head max-md:hidden">
-    <div>
+  <app-page-header class="max-md:hidden">
+    <div page-header-title>
       <h1>Espace Central</h1>
-      <p>Supervisez au niveau national et effectuez les paiements</p>
     </div>
-  </div>
+  </app-page-header>
 
   <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)">
     <mat-tab label="Tableau de bord">

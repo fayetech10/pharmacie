@@ -36,17 +36,29 @@ interface ValeurChiffree {
   standalone: true,
   imports: [CommonModule, MatIconModule],
   host: { class: 'block' },
+  styleUrls: ['./indicateur.component.css'],
   template: `
-    <div class="h-full flex items-center gap-4 p-5 rounded-2xl border border-border bg-white shadow-sm transition duration-200"
-         [ngClass]="cliquable ? ['cursor-pointer', 'hover:shadow-md', 'hover:-translate-y-0.5', 'active:translate-y-0', teintes.survol] : []">
-      <span class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" [ngClass]="teintes.pastille">
+    <ng-template #contenu>
+      <span class="indicateur-icone" [ngClass]="teintes.pastille">
         <mat-icon>{{ icone }}</mat-icon>
       </span>
-      <span class="min-w-0">
-        <span #valeurAffichee class="block text-[22px] font-bold text-text-primary leading-tight truncate tabular-nums"></span>
-        <span class="block text-[12.5px] font-medium text-text-secondary">{{ libelle }}</span>
+      <span class="indicateur-texte">
+        <span #valeurAffichee class="indicateur-valeur"></span>
+        <span class="indicateur-libelle">{{ libelle }}</span>
       </span>
-    </div>
+    </ng-template>
+
+    <button *ngIf="cliquable; else indicateurStatique"
+            type="button"
+            class="indicateur-carte indicateur-carte--cliquable"
+            [ngClass]="teintes.survol">
+      <ng-container *ngTemplateOutlet="contenu"></ng-container>
+    </button>
+    <ng-template #indicateurStatique>
+      <div class="indicateur-carte">
+        <ng-container *ngTemplateOutlet="contenu"></ng-container>
+      </div>
+    </ng-template>
   `
 })
 export class IndicateurComponent implements OnChanges, OnInit, OnDestroy {

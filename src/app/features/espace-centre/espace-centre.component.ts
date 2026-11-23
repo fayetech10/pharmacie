@@ -17,6 +17,8 @@ import { ImportFactureCentreComponent } from './import-facture-centre/import-fac
 import { StructureService } from '../../core/services/structure.service';
 import { FactureStructure } from '../../core/models/structure.model';
 
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-espace-centre',
   standalone: true,
@@ -33,8 +35,7 @@ import { FactureStructure } from '../../core/models/structure.model';
     MesFacturesPosteComponent,
     ImportFactureCentreComponent,
     TuileActiviteComponent,
-    IndicateurComponent
-  ],
+    IndicateurComponent, PageHeaderComponent],
   templateUrl: './espace-centre.component.html'
 })
 export class EspaceCentreComponent implements OnInit {

@@ -44,10 +44,12 @@ import { finDuMoisAtteinte } from '../../../core/utils/fin-de-mois';
 
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-factures-structure-list',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, RegimeBadgeComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatSnackBarModule, SkeletonListComponent],
+  imports: [PaginationComponent, PaginerPipe, RegimeBadgeComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatSnackBarModule, SkeletonListComponent, PageHeaderComponent],
   templateUrl: './factures-structure-list.component.html'
 })
 export class FacturesStructureListComponent implements OnInit {

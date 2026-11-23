@@ -1,12 +1,11 @@
 <div class="fade-in">
   <!-- ═══════════ Accueil : indicateurs et activités, comme le poste de santé ═══════════ -->
   <div *ngIf="selectedTab === 0" class="flex flex-col gap-5">
-    <div class="page-head">
-      <div>
+    <app-page-header>
+      <div page-header-title>
         <h1>{{ structureNom }}</h1>
-        <p>Espace centre de santé · mis à jour à {{ derniereMiseAJour | date:'HH:mm' }}</p>
       </div>
-      <div class="page-head-actions print:hidden">
+      <div class="page-head-actions print:hidden" page-header-actions>
         <button type="button" class="btn btn-outline btn-sm" (click)="chargerStatistiques()">
           <mat-icon>refresh</mat-icon> Actualiser
         </button>
@@ -14,7 +13,7 @@
           <mat-icon>print</mat-icon> Imprimer
         </button>
       </div>
-    </div>
+    </app-page-header>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" [class.animate-pulse]="chargementStats">
       <app-indicateur icone="receipt_long" teinte="primary" [cliquable]="true" (click)="changerOnglet(3)"

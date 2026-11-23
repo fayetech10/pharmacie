@@ -16,7 +16,7 @@ export const homeRedirectGuard = (): UrlTree => {
   const router = inject(Router);
 
   if (auth.isPharmacien()) return router.parseUrl('/dashboard/espace-pharmacie');
-  if (auth.isServiceRegional()) return router.parseUrl('/dashboard/espace-region');
+  if (auth.isServiceRegional() || auth.isControleur()) return router.parseUrl('/dashboard/espace-region');
   if (auth.isServiceCentral()) return router.parseUrl('/dashboard/espace-central');
   if (auth.isAdmin()) return router.parseUrl('/dashboard/espace-admin');
   if (auth.isBcsu()) return router.parseUrl('/dashboard/espace-bcsu');

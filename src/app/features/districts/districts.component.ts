@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable } from 'rxjs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { DistrictService } from '../../core/services/district.service';
 import { Region, RegionService } from '../../core/services/region.service';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -19,10 +20,12 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
  * consolidation du §9. Une structure sans district n'apparaît dans aucune situation
  * globale, d'où l'affichage du nombre de structures rattachées en regard de chacun.</p>
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-districts',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, MatMenuModule, PageHeaderComponent],
   templateUrl: './districts.component.html'
 })
 export class DistrictsComponent implements OnInit {

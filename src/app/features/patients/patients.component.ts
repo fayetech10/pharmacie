@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatMenuModule } from '@angular/material/menu';
 import { RegimeBadgeComponent } from '../../shared/regime-badge/regime-badge.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PatientService } from '../../core/services/patient.service';
@@ -13,6 +14,8 @@ import { Patient, Regime, REGIME_LABELS, REGIME_OPTIONS } from '../../core/model
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-patients',
   standalone: true,
@@ -23,8 +26,8 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    RegimeBadgeComponent
-  ],
+    MatMenuModule,
+    RegimeBadgeComponent, PageHeaderComponent],
   templateUrl: './patients.component.html'
 })
 export class PatientsComponent implements OnInit {

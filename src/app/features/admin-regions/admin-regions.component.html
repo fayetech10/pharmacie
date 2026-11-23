@@ -22,8 +22,8 @@
       </ng-container>
     </nav>
 
-    <div class="page-header flex items-start justify-between gap-4 flex-wrap">
-      <div class="flex items-center gap-4 min-w-0">
+    <app-page-header class="items-start">
+      <div class="flex items-center gap-4 min-w-0" page-header-title>
         <button *ngIf="level !== 'regions'"
                 class="shrink-0 bg-white border border-border rounded-full w-11 h-11 flex items-center justify-center cursor-pointer shadow-sm transition-all duration-200 ease-smooth hover:bg-bg hover:scale-105"
                 (click)="goBack()" type="button" aria-label="Retour">
@@ -32,7 +32,6 @@
         <div class="min-w-0" [ngSwitch]="level">
           <ng-container *ngSwitchCase="'regions'">
             <h1 class="!text-[22px] md:!text-[26px] !font-extrabold">Factures par région</h1>
-            <p>Sélectionnez une région pour explorer ses structures de santé et leurs factures.</p>
           </ng-container>
           <ng-container *ngSwitchCase="'pharmacies'">
             <h1 class="!text-[22px] md:!text-[26px] !font-extrabold">Région : {{ selectedRegion?.region?.nom }}</h1>
@@ -58,7 +57,7 @@
         <button class="border-0 bg-transparent text-[13.5px] font-semibold py-2 px-[18px] max-md:flex-1 rounded-[9px] cursor-pointer transition-all duration-200 whitespace-nowrap"
                 [ngClass]="level === 'structures' ? 'bg-white text-primary shadow-sm' : 'text-text-secondary'" (click)="goToStructures()">Structures</button>
       </div>
-    </div>
+    </app-page-header>
 
     <!-- ===================== NIVEAU 1 : RÉGIONS ===================== -->
 
@@ -323,26 +322,37 @@
 
     <!-- Cartes mobiles : factures -->
     <div class="m-cards" *ngIf="(level === 'factures' || level === 'factures_structures') && displayedFactures.length > 0">
-      <div class="m-card" *ngFor="let f of displayedFactures | paginer: pgF.page : pgF.taille">
+      <a class="m-card clickable" *ngFor="let f of displayedFactures | paginer: pgF.page : pgF.taille"
+         [routerLink]="level === 'factures' ? ['/dashboard/factures', f.id] : ['/dashboard/factures-structure', f.id]"
+         role="button" tabindex="0" [attr.aria-label]="'Voir la facture ' + getMonthName(f.mois) + ' ' + f.annee">
         <div class="m-card-top">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="entity-icon month"><mat-icon>event</mat-icon></div>
+          <div class="flex items-center gap-2.5 min-w-0 pr-2">
+            <div class="entity-icon month shrink-0"><mat-icon>event</mat-icon></div>
             <div class="m-title">{{ getMonthName(f.mois) }} {{ f.annee }}</div>
           </div>
-          <app-status-badge [statut]="f.statut"></app-status-badge>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <app-status-badge [statut]="f.statut"></app-status-badge>
+            <button type="button" class="m-more-btn" [matMenuTriggerFor]="adminFactureMenu" (click)="$event.preventDefault(); $event.stopPropagation()"
+                    aria-label="Actions de la facture" title="Actions">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #adminFactureMenu="matMenu" xPosition="before">
+              <a mat-menu-item [routerLink]="level === 'factures' ? ['/dashboard/factures', f.id] : ['/dashboard/factures-structure', f.id]">
+                <mat-icon>visibility</mat-icon>
+                <span>Voir la facture</span>
+              </a>
+              <button mat-menu-item (click)="exportFacture(f)">
+                <mat-icon>download</mat-icon>
+                <span>Télécharger</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
         <div class="m-foot">
           <span class="m-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} CFA</span>
-          <div class="action-group">
-            <button class="action-btn success" (click)="exportFacture(f)" title="Télécharger">
-              <mat-icon>download</mat-icon>
-            </button>
-            <a class="action-btn" [routerLink]="level === 'factures' ? ['/dashboard/factures', f.id] : ['/dashboard/factures-structure', f.id]" title="Voir la facture">
-              <mat-icon>visibility</mat-icon>
-            </a>
-          </div>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
         </div>
-      </div>
+      </a>
     </div>
     <div class="empty-state md:!hidden" *ngIf="(level === 'factures' || level === 'factures_structures') && displayedFactures.length === 0">
       <mat-icon>receipt_long</mat-icon><p>Aucune facture pour ce filtre.</p>

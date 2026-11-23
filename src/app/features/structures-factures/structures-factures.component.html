@@ -47,7 +47,7 @@
       <p>Aucune facture ne correspond aux filtres sélectionnés.</p>
     </div>
 
-    <div class="sf-table" *ngIf="structureSummaries.length > 0">
+    <div class="sf-table desktop-only" *ngIf="structureSummaries.length > 0">
       <div class="sf-row sf-row--head sf-row--struct">
         <span>Structure</span>
         <span>Région</span>
@@ -64,6 +64,30 @@
         <span class="sf-center"><span class="sf-count">{{ s.nbFactures }}</span></span>
         <span class="sf-amount"><strong>{{ s.total | number:'1.0-0':'fr' }} F</strong></span>
         <span class="sf-chevron"><mat-icon>chevron_right</mat-icon></span>
+      </div>
+    </div>
+
+    <!-- Cartes mobiles (Niveau 1) -->
+    <div class="m-cards md:hidden" *ngIf="structureSummaries.length > 0">
+      <div class="m-card clickable" *ngFor="let s of structureSummaries" (click)="selectStructure(s)"
+           role="button" tabindex="0" (keydown.enter)="selectStructure(s)"
+           [attr.aria-label]="'Voir les factures de ' + s.structureNom">
+        <div class="m-card-top">
+          <div class="min-w-0">
+            <div class="m-title flex items-center gap-1.5">
+              <mat-icon class="!text-[18px] !w-[18px] !h-[18px] text-primary">local_hospital</mat-icon>
+              <span class="truncate">{{ s.structureNom }}</span>
+            </div>
+            <div class="m-sub">{{ s.regionNom }}</div>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">
+            {{ s.nbFactures }} facture{{ s.nbFactures > 1 ? 's' : '' }}
+          </span>
+        </div>
+        <div class="m-foot">
+          <span class="m-amount">{{ s.total | number:'1.0-0':'fr' }} FCFA</span>
+          <mat-icon class="m-chevron !text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+        </div>
       </div>
     </div>
   </ng-container>
@@ -111,7 +135,7 @@
           </div>
         </div>
 
-        <div class="sf-table">
+        <div class="sf-table desktop-only">
           <div class="sf-row sf-row--head sf-row--fact2">
             <span>N° Facture</span>
             <span>Bénéficiaires</span>
@@ -123,6 +147,25 @@
             <span>{{ nbBeneficiaires(f) }} bénéficiaire(s)</span>
             <span class="sf-amount"><strong>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong></span>
             <span><app-status-badge [statut]="f.statut"></app-status-badge></span>
+          </div>
+        </div>
+
+        <!-- Cartes mobiles (Niveau 2) -->
+        <div class="m-cards md:hidden">
+          <div class="m-card clickable" *ngFor="let f of g.factures | paginer: pgM.page : pgM.taille" (click)="openDetail(f)"
+               role="button" tabindex="0" (keydown.enter)="openDetail(f)"
+               [attr.aria-label]="'Voir la facture ' + f.numero">
+            <div class="m-card-top">
+              <div class="min-w-0">
+                <div class="m-title">{{ f.numero }}</div>
+                <div class="m-sub">{{ nbBeneficiaires(f) }} bénéficiaire(s)</div>
+              </div>
+              <app-status-badge [statut]="f.statut"></app-status-badge>
+            </div>
+            <div class="m-foot">
+              <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} FCFA</span>
+              <mat-icon class="m-chevron !text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+            </div>
           </div>
         </div>
 

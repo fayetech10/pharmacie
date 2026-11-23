@@ -3,11 +3,11 @@
       <input type="file" #singleFileInput style="display: none" (change)="onSingleFileSelected($event)" accept=".xlsx, .xls">
 
       <!-- En-tête Global -->
-      <div class="page-head" *ngIf="showToolbar">
-        <div>
+      <app-page-header *ngIf="showToolbar">
+        <div page-header-title>
           <h1>{{ authService.isPharmacien() ? 'Mes Factures' : 'Liste des Factures' }}</h1>
         </div>
-        <div class="page-head-actions" *ngIf="!authService.isPharmacien()">
+        <div class="page-head-actions" *ngIf="!authService.isPharmacien()" page-header-actions>
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
           <button class="btn btn-outline flex items-center gap-1.5" [matMenuTriggerFor]="actionsListMenu" type="button" aria-label="Actions">
             <mat-icon>more_vert</mat-icon>
@@ -28,7 +28,7 @@
             </button>
           </mat-menu>
         </div>
-      </div>
+      </app-page-header>
 
       <!-- ===================== VUE MENSUELLE ===================== -->
       <ng-container *ngIf="monthlyView">
@@ -327,30 +327,29 @@
         </div>
 
         <div class="m-cards">
-          <div class="m-card" *ngFor="let m of moisAnnee" [id]="'month-card-' + m">
+          <div class="m-card" *ngFor="let m of moisAnnee" [id]="'month-card-' + m"
+               [class.clickable]="!!factureDuMois(m, factures)"
+               (click)="factureDuMois(m, factures) && openFacture(factureDuMois(m, factures)!)"
+               [attr.role]="factureDuMois(m, factures) ? 'button' : null"
+               [attr.tabindex]="factureDuMois(m, factures) ? 0 : null"
+               (keydown.enter)="factureDuMois(m, factures) && openFacture(factureDuMois(m, factures)!)">
             <div class="m-card-top">
               <span class="m-title">{{ getMonthName(m) }}</span>
               <ng-container *ngIf="factureDuMois(m, factures) as f">
-                <ng-container *ngIf="menuActions; else badgeStatut">
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <app-status-badge [statut]="f.statut"></app-status-badge>
                   <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
-                </ng-container>
-                <ng-template #badgeStatut><app-status-badge [statut]="f.statut"></app-status-badge></ng-template>
+                </div>
               </ng-container>
               <span *ngIf="!factureDuMois(m, factures)" class="text-[12.5px] italic text-text-muted">Aucune facture</span>
             </div>
             <ng-container *ngIf="factureDuMois(m, factures) as f">
               <div class="m-row">
-                <span>{{ countPatients(f) }} patient(s)</span>
-                <strong>{{ f.montantTotal | number:'1.0-0':'fr' }} F</strong>
+                <span><mat-icon class="inline-ic">groups</mat-icon>{{ countPatients(f) }} patient(s)</span>
               </div>
-              <div *ngIf="!menuActions" class="m-foot flex-wrap">
-                <button type="button" class="btn btn-outline btn-sm" (click)="openFacture(f)"><mat-icon>visibility</mat-icon> Consulter</button>
-                <a class="btn btn-outline btn-sm" *ngIf="authService.isPharmacien() && (f.statut === 'BROUILLON' || f.statut === 'REJETEE_SR')"
-                   [routerLink]="['/dashboard/factures', f.id, 'edit']"><mat-icon>edit</mat-icon> Modifier</a>
-                <button type="button" class="btn btn-ghost btn-sm" (click)="exportSingleExcel(f)"><mat-icon>table_view</mat-icon> Excel</button>
-                <button type="button" class="btn btn-ghost btn-sm" (click)="exportSinglePdf(f)"><mat-icon>picture_as_pdf</mat-icon> PDF</button>
-                <button type="button" class="btn btn-primary btn-sm" *ngIf="showPaymentButton && f.statut === 'VALIDEE_NC'"
-                        (click)="payerFacture(f.id)"><mat-icon>payments</mat-icon> Payer</button>
+              <div class="m-foot">
+                <span class="m-amount">{{ f.montantTotal | number:'1.0-0':'fr' }} F</span>
+                <mat-icon class="m-chevron">chevron_right</mat-icon>
               </div>
             </ng-container>
           </div>
@@ -360,9 +359,10 @@
       <!-- Actions d'une facture (pharmacien, service régional), regroupées sous les trois points
            (tableau et cartes). Chaque entrée garde la condition de l'ancien bouton. -->
       <ng-template #boutonActions let-f>
-        <button type="button" class="btn btn-ghost btn-sm !px-2" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+        <button type="button" class="m-more-btn" [matMenuTriggerFor]="menuFacture" [matMenuTriggerData]="{ f: f }"
+                (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
                 aria-label="Actions de la facture" title="Actions">
-          <mat-icon class="!m-0">more_vert</mat-icon>
+          <mat-icon>more_vert</mat-icon>
         </button>
       </ng-template>
 
@@ -520,7 +520,10 @@
            [attr.aria-label]="'Voir la facture ' + (f.providerNom || 'Ma Pharmacie') + ' — ' + getMonthName(f.mois) + ' ' + f.annee">
           <div class="m-card-top">
             <h3 class="m-title">{{ f.providerNom || 'Ma Pharmacie' }}</h3>
-            <app-status-badge [statut]="f.statut"></app-status-badge>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <app-status-badge [statut]="f.statut"></app-status-badge>
+              <ng-container *ngTemplateOutlet="boutonActions; context: { $implicit: f }"></ng-container>
+            </div>
           </div>
           <div class="m-sub">{{ getMonthName(f.mois) }} {{ f.annee }} • <span class="id-chip">{{ f.id | slice:0:8 }}</span></div>
           <div class="m-foot">

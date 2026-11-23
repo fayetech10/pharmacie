@@ -1,16 +1,16 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Lettres de garantie</h1>
     </div>
-    <div class="page-head-actions flex items-center gap-2">
+    <div class="page-head-actions flex items-center gap-2" page-header-actions>
       <button class="btn btn-outline" type="button" [disabled]="exporting || loading" (click)="exporterExcel()">
         <mat-icon>download</mat-icon>
         {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Filtres. Les numéros sont de la forme G-THCS-0001 : le préfixe « LG- » de
        l'ancienne codification ne correspond à rien en base. -->
@@ -114,23 +114,39 @@
 
   <!-- Cartes mobiles -->
   <div class="m-cards md:hidden" *ngIf="!loading && filteredLettres.length > 0">
-    <a *ngFor="let l of filteredLettres | paginer: pg.page : pg.taille" class="m-card clickable" (click)="openDetail(l.id)"
-       role="button" tabindex="0" (keydown.enter)="openDetail(l.id)"
-       [attr.aria-label]="'Voir la lettre ' + l.numero">
+    <div *ngFor="let l of filteredLettres | paginer: pg.page : pg.taille" class="m-card clickable" (click)="openDetail(l.id)"
+         role="button" tabindex="0" (keydown.enter)="openDetail(l.id)"
+         [attr.aria-label]="'Voir la lettre ' + l.numero">
       <div class="m-card-top">
-        <h3 class="m-title">{{ l.patientPrenom }} {{ l.patientNom }}</h3>
-        <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">
-          {{ statutLabel(l.statut) }}
-        </span>
+        <div class="min-w-0 pr-2">
+          <h3 class="m-title">{{ l.patientPrenom }} {{ l.patientNom }}</h3>
+          <div class="m-sub font-mono">{{ l.numero }}</div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="m-chip" [ngClass]="{'danger': l.statut === 'ANNULEE', 'neutral': l.statut === 'BROUILLON'}">
+            {{ statutLabel(l.statut) }}
+          </span>
+          <button type="button" class="m-more-btn" [matMenuTriggerFor]="lettreMenu" (click)="$event.stopPropagation()"
+                  (keydown.enter)="$event.stopPropagation()"
+                  aria-label="Actions de la lettre" title="Actions">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #lettreMenu="matMenu" xPosition="before">
+            <button mat-menu-item (click)="openDetail(l.id)">
+              <mat-icon>visibility</mat-icon>
+              <span>Consulter</span>
+            </button>
+          </mat-menu>
+        </div>
       </div>
-      <div class="m-sub">{{ l.numero }} • {{ l.createdAt | date:'dd/MM/yyyy' }}</div>
+      <div class="m-row">
+        <span><mat-icon class="inline-ic">medical_services</mat-icon>{{ l.prestations && l.prestations.length > 0 ? l.prestations[0].designation : '—' }}</span>
+      </div>
       <div class="m-foot">
-        <span class="m-amount" style="font-size: 13px; font-weight: 500;">
-          {{ l.prestations && l.prestations.length > 0 ? l.prestations[0].designation : '—' }}
-        </span>
+        <span class="text-xs text-text-muted"><mat-icon class="inline-ic">event</mat-icon>{{ l.createdAt | date:'dd/MM/yyyy' }}</span>
         <mat-icon class="m-chevron">chevron_right</mat-icon>
       </div>
-    </a>
+    </div>
   </div>
   <app-pagination #pg [total]="filteredLettres.length"></app-pagination>
 

@@ -16,9 +16,6 @@ import { MAGASIN_SAISIES, enregistrer, lire, listerTout, memoriser, relire, supp
 /** Régimes facturables sans réseau : aucune carte à vérifier en ligne. */
 export const REGIMES_HORS_LIGNE: Regime[] = [Regime.ZERO_CINQ_ANS, Regime.SESAME];
 
-const MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août',
-  'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
 /** Nouvelle tentative d'envoi tant qu'il reste des saisies et que l'application est ouverte. */
 const INTERVALLE_SYNCHRO_MS = 60_000;
 /** Verrou de l'appareil (Web Locks) : une seule synchronisation à la fois, tous onglets confondus. */
@@ -35,10 +32,9 @@ export interface SaisieEnAttente {
   creeLe: string;
   requete: FactureStructureRequest;
   resume: { patient: string; regime: Regime; montant: number; dateSoins: string; partiel: boolean };
+  reporteDepuis?: string;
   etat: 'EN_ATTENTE' | 'ERREUR';
   erreur?: string;
-  /** Mois d'origine, quand la saisie a dû être reportée (mois déjà clôturé à l'envoi). */
-  reporteDepuis?: string;
 }
 
 /** PLUS_TARD : rien n'a été écrit (facture modifiée au même instant), la saisie reste en file. */
@@ -53,8 +49,8 @@ type IssueEnvoi = 'ENVOYE' | 'ERREUR' | 'PLUS_TARD' | 'ARRET';
  * de l'application, au réveil du téléphone, puis toutes les minutes tant qu'il en reste.</p>
  *
  * <p>Une saisie n'est envoyée qu'avec la session de l'agent qui l'a faite. Sa clé unique
- * empêche le serveur de la compter deux fois si une réponse s'est perdue. Si le mois des
- * soins a été clôturé entre-temps, la saisie est reportée sur la facture du mois en cours.</p>
+ * empêche le serveur de la compter deux fois si une réponse s'est perdue. Le mois de la
+ * facture reste celui de la date de prise en charge, y compris lors d'une synchronisation tardive.</p>
  *
  * <p>Les envois ne se chevauchent jamais : ces déclencheurs arrivent souvent ensemble (trois
  * d'un coup au démarrage), et chacun envoyait alors les mêmes saisies — le même patient
@@ -260,7 +256,6 @@ export class HorsLigneService implements OnDestroy {
     this.synchronisation$.next(true);
     let envoyes = 0;
     let erreurs = 0;
-    const reports = new Set<string>();
     try {
       for (const { id } of aEnvoyer.sort((a, b) => a.creeLe.localeCompare(b.creeLe))) {
         // Relue juste avant l'envoi : supprimée, refusée ou déjà partie entre-temps, elle ne
@@ -275,14 +270,13 @@ export class HorsLigneService implements OnDestroy {
           continue;
         }
         envoyes++;
-        if (saisie.reporteDepuis) reports.add(saisie.reporteDepuis);
       }
     } finally {
       this.synchronisation$.next(false);
       await this.rafraichir();
     }
     if (envoyes) this.saisiesEnvoyees$.next(envoyes);
-    this.annoncer(envoyes, erreurs, reports);
+    this.annoncer(envoyes, erreurs);
   }
 
   /** Envoie une saisie, toujours avec sa clé d'origine (le serveur reconnaît un renvoi). */
@@ -301,41 +295,32 @@ export class HorsLigneService implements OnDestroy {
         // écrit. Ce n'est ni un refus ni un mois clôturé — nouvel essai au prochain passage.
         return 'PLUS_TARD';
       }
-      const maintenant = new Date();
-      const mois = maintenant.getMonth() + 1;
-      const annee = maintenant.getFullYear();
-      const autreMois = saisie.requete.mois !== mois || saisie.requete.annee !== annee;
-      if (statut === 409 && autreMois && !saisie.reporteDepuis) {
-        // La facture du mois des soins est déjà partie (clôture automatique) : la saisie est
-        // reportée sur la facture du mois en cours, et l'agent en est averti.
-        saisie.reporteDepuis = `${MOIS[saisie.requete.mois || 0] || ''} ${saisie.requete.annee || ''}`.trim();
-        saisie.requete = { ...saisie.requete, mois, annee };
-        await enregistrer(MAGASIN_SAISIES, saisie);
-        return this.envoyer(saisie);
-      }
       const message = (err as HttpErrorResponse)?.error?.message;
       await enregistrer(MAGASIN_SAISIES, {
-        ...saisie, etat: 'ERREUR', erreur: typeof message === 'string' && message ? message : 'Envoi refusé par le serveur.'
+        ...saisie,
+        etat: 'ERREUR',
+        erreur: typeof message === 'string' && message
+          ? message
+          : statut === 409
+            ? 'La facture du mois choisi est clôturée. Le patient n’a pas été déplacé vers le mois en cours.'
+            : 'Envoi refusé par le serveur.'
       } as SaisieEnAttente);
       return 'ERREUR';
     }
   }
 
-  private annoncer(envoyes: number, erreurs: number, reports: Set<string>) {
+  private annoncer(envoyes: number, erreurs: number) {
     if (!envoyes && !erreurs) return;
     const parties: string[] = [];
     if (envoyes) {
       parties.push(`${envoyes} patient${envoyes > 1 ? 's' : ''} enregistré${envoyes > 1 ? 's' : ''} hors ligne `
         + `${envoyes > 1 ? 'ont' : 'a'} été envoyé${envoyes > 1 ? 's' : ''}`);
     }
-    if (reports.size) {
-      parties.push(`reporté(s) sur le mois en cours (${[...reports].join(', ')} déjà clôturé)`);
-    }
     if (erreurs) {
       parties.push(`${erreurs} refusé${erreurs > 1 ? 's' : ''} : voir « Mes factures »`);
     }
     this.snackBar.open(parties.join(' — ') + '.', 'Fermer',
-      { duration: erreurs || reports.size ? 10_000 : 5000, panelClass: erreurs ? 'error-snackbar' : undefined });
+      { duration: erreurs ? 10_000 : 5000, panelClass: erreurs ? 'error-snackbar' : undefined });
   }
 
   /** Saisies de l'agent connecté (celles d'un autre agent n'attendent que sa propre session). */

@@ -73,6 +73,7 @@ export class EspaceControleurComponent implements OnInit {
   groupeOuvertId: string | null = null;
   patients: PatientControleLigne[] = [];
   patientSelectionne: PatientControleLigne | null = null;
+  afficherIdentitePatient = false;
   searchPatient = '';
   filtreEtatPatient: 'TOUS' | 'CONFORMES' | 'REJETES' = 'TOUS';
 
@@ -296,6 +297,7 @@ export class EspaceControleurComponent implements OnInit {
 
   ouvrirPatient(patient: PatientControleLigne): void {
     this.patientSelectionne = patient;
+    this.afficherIdentitePatient = false;
   }
 
   private chargerPatientsFacture(fac: FactureAssigneeResume): void {
@@ -442,6 +444,7 @@ export class EspaceControleurComponent implements OnInit {
 
   allerAuPatient(p: PatientControleLigne): void {
     this.patientSelectionne = p;
+    this.afficherIdentitePatient = false;
   }
 
   selectionnerMotifFrequent(motif: string): void {

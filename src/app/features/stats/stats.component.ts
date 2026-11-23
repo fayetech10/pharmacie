@@ -37,10 +37,12 @@ interface FunnelStage {
   bottleneck: boolean; // plus forte déperdition du parcours
 }
 
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-stats',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule, BaseChartDirective],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, BaseChartDirective, PageHeaderComponent],
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.css']
 })

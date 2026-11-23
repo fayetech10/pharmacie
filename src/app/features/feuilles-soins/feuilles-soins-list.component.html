@@ -1,15 +1,15 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Feuilles de soins</h1>
     </div>
-    <div class="page-head-actions" *ngIf="canDelivrer">
+    <div class="page-head-actions" *ngIf="canDelivrer" page-header-actions>
       <a class="btn btn-primary" routerLink="/dashboard/feuilles-soins/new">
         <mat-icon>note_add</mat-icon> Délivrer une feuille de soins
       </a>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Structure sanitaire : retrouver la feuille présentée par le patient -->
   <div *ngIf="isStructure" class="card">
@@ -125,16 +125,33 @@
       <div class="m-card clickable" *ngFor="let f of filtered | paginer: pg.page : pg.taille" (click)="open(f.id)"
            tabindex="0" role="button" (keydown.enter)="open(f.id)" [attr.aria-label]="'Ouvrir la feuille ' + f.numero">
         <div class="m-card-top">
-          <span class="m-title font-mono">{{ f.numero }}</span>
-          <app-status-badge [statut]="f.statut" famille="feuille"></app-status-badge>
+          <div class="min-w-0 pr-2">
+            <span class="m-title font-mono">{{ f.numero }}</span>
+            <div class="m-sub">{{ f.patientPrenom }} {{ f.patientNom }}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <app-status-badge [statut]="f.statut" famille="feuille"></app-status-badge>
+            <button type="button" class="m-more-btn" [matMenuTriggerFor]="feuilleMenu" (click)="$event.stopPropagation()"
+                    (keydown.enter)="$event.stopPropagation()"
+                    aria-label="Actions de la feuille" title="Actions">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #feuilleMenu="matMenu" xPosition="before">
+              <button mat-menu-item (click)="open(f.id)">
+                <mat-icon>visibility</mat-icon>
+                <span>Consulter</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
         <div class="m-row">
-          <span>{{ f.patientPrenom }} {{ f.patientNom }}</span>
           <app-regime-badge [regime]="f.regime"></app-regime-badge>
+          <span *ngIf="f.structureNom"><mat-icon class="inline-ic">local_hospital</mat-icon>{{ f.structureNom }}</span>
+          <span class="text-xs text-text-muted"><mat-icon class="inline-ic">event</mat-icon>{{ f.createdAt | date:'dd/MM/yyyy' }}</span>
         </div>
-        <div class="m-row">
-          <span>{{ f.structureNom || '—' }}</span>
-          <strong>{{ f.montantTotalAssureur | number:'1.0-0':'fr' }} F</strong>
+        <div class="m-foot">
+          <span class="m-amount">{{ f.montantTotalAssureur | number:'1.0-0':'fr' }} F</span>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
         </div>
       </div>
     </div>

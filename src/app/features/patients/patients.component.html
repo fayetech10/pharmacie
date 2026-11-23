@@ -1,15 +1,15 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Patients enregistrés</h1>
     </div>
-    <div class="page-head-actions">
+    <div class="page-head-actions" page-header-actions>
       <button type="button" class="btn btn-outline" [disabled]="exporting || filteredPatients.length === 0" (click)="exporter()">
         <mat-icon>table_view</mat-icon> {{ exporting ? 'Export…' : 'Exporter (Excel)' }}
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Filtres : toujours visibles, comme « Mes factures » du poste -->
   <div class="card">
@@ -128,12 +128,42 @@
            tabindex="0" role="button" (keydown.enter)="openPatientDossier(p.id!)"
            [attr.aria-label]="'Consulter le dossier de ' + p.prenom + ' ' + p.nom">
         <div class="m-card-top">
-          <span class="m-title">{{ p.prenom }} {{ p.nom }}</span>
-          <app-regime-badge [regime]="p.regime"></app-regime-badge>
+          <div class="min-w-0 pr-2">
+            <span class="m-title">{{ p.prenom }} {{ p.nom }}</span>
+            <div class="m-sub" *ngIf="sexeLabel(p) || age(p) !== null">
+              <span *ngIf="sexeLabel(p)">{{ sexeLabel(p) }}</span>
+              <span *ngIf="sexeLabel(p) && age(p) !== null"> · </span>
+              <span *ngIf="age(p) !== null">{{ age(p) }} ans</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <app-regime-badge [regime]="p.regime"></app-regime-badge>
+            <button type="button" class="m-more-btn" [matMenuTriggerFor]="patientMenu" (click)="$event.stopPropagation()"
+                    (keydown.enter)="$event.stopPropagation()"
+                    aria-label="Actions du bénéficiaire" title="Actions">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #patientMenu="matMenu" xPosition="before">
+              <button mat-menu-item (click)="openPatientDossier(p.id!)">
+                <mat-icon>folder_shared</mat-icon>
+                <span>Dossier patient</span>
+              </button>
+              <a mat-menu-item *ngIf="p.telephone" [href]="'tel:' + p.telephone" (click)="$event.stopPropagation()">
+                <mat-icon>call</mat-icon>
+                <span>Appeler ({{ p.telephone }})</span>
+              </a>
+            </mat-menu>
+          </div>
         </div>
         <div class="m-row">
-          <span>{{ p.telephone || '—' }}</span>
-          <span>Enregistré le {{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</span>
+          <span *ngIf="p.telephone"><mat-icon class="inline-ic">call</mat-icon>{{ p.telephone }}</span>
+          <span *ngIf="p.numeroCni || p.numeroAssure" class="font-mono text-xs">
+            <mat-icon class="inline-ic">badge</mat-icon>{{ p.numeroCni || p.numeroAssure }}
+          </span>
+        </div>
+        <div class="m-foot">
+          <span class="text-xs text-text-muted">Enregistré le {{ p.createdAt ? (p.createdAt | date:'dd/MM/yyyy') : '—' }}</span>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
         </div>
       </div>
     </div>

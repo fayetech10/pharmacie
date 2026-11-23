@@ -409,7 +409,7 @@
             <div class="section-icon"><mat-icon>person</mat-icon></div>
             <div class="min-w-0">
               <h2 class="flex flex-wrap items-center gap-2">
-                <span>{{ patient.prenom || patient.nom ? (patient.prenom + ' ' + patient.nom).trim() : 'Nom non renseigné' }}</span>
+                <span>Patient</span>
                 <span [class]="patient.statutDossier === 'COMPLET' ? 'bg-success-light text-success' : 'bg-amber-100 text-amber-800'"
                       class="px-2 py-0.5 rounded-full text-[11px] font-bold">
                   {{ patient.pieces.length ? patient.pieces.length + ' pièces' : 'Dossier complet' }}
@@ -422,18 +422,47 @@
                 </span>
               </h2>
               <p class="text-xs text-text-secondary mt-0.5">
-                {{ factureEnControle.etablissementNom }} · Matricule : <span class="font-mono">{{ patient.matricule || '—' }}</span>
-                <span *ngIf="patient.cni"> · CNI : <span class="font-mono">{{ patient.cni }}</span></span>
-                · Visite du {{ formatDate(patient.datePriseEnCharge) }}
+                {{ factureEnControle.etablissementNom }} · Visite du {{ formatDate(patient.datePriseEnCharge) }}
               </p>
             </div>
           </div>
           <div class="ml-auto flex gap-2 print:hidden">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 !px-2"
+                    (click)="afficherIdentitePatient = !afficherIdentitePatient"
+                    [attr.aria-label]="afficherIdentitePatient ? 'Masquer les informations du patient' : 'Afficher les informations du patient'"
+                    [attr.aria-expanded]="afficherIdentitePatient" aria-controls="infos-patient-controleur"
+                    title="Afficher ou masquer les informations du patient">
+              <mat-icon>{{ afficherIdentitePatient ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             <button type="button" class="btn btn-outline btn-sm" (click)="voirDossier(patient)"
                     title="Ouvrir le dossier patient (documents justificatifs)">
               <mat-icon>folder_shared</mat-icon> Dossier ({{ patient.pieces.length || 3 }})
             </button>
           </div>
+        </div>
+        <div *ngIf="afficherIdentitePatient" id="infos-patient-controleur" class="section-body border-t border-border-light">
+          <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+            <div class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Nom complet</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary break-words">{{ patient.prenom }} {{ patient.nom }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Matricule</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary font-mono break-words">{{ patient.matricule || '—' }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">N° de CNI</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary font-mono break-words">{{ patient.cni || '—' }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Sexe</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary">{{ patient.sexe || '—' }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Date de naissance</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary">{{ patient.dateNaissance ? formatDate(patient.dateNaissance) : '—' }}</dd>
+            </div>
+          </dl>
         </div>
       </div>
 

@@ -28,14 +28,15 @@ import { MatButtonModule } from '@angular/material/button';
  * <p>L'accueil porte aussi le bouton « Lettres du mois » : le registre PDF des lettres de
  * l'agent pour un mois (N° de lettre, nom, prénom).</p>
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-espace-bcsu',
   standalone: true,
   imports: [
     CommonModule, FormsModule, LettreGarantieFormComponent, PatientsComponent,
     ConstatsBcsuComponent, ParametrageBcsuComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule,
-    MatSnackBarModule, TuileActiviteComponent
-  ],
+    MatSnackBarModule, TuileActiviteComponent, PageHeaderComponent],
   templateUrl: './espace-bcsu.component.html'
 })
 export class EspaceBcsuComponent implements OnInit {

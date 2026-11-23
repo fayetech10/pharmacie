@@ -76,7 +76,7 @@
 
     <!-- Tableau des pharmacies -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto desktop-only">
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
             <tr>
@@ -111,6 +111,33 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Cartes mobiles Niveau 1 : Pharmacies -->
+      <div class="m-cards md:hidden p-3">
+        <div class="m-card clickable" *ngFor="let ph of pharmacies" (click)="selectionnerPharmacie(ph)"
+             role="button" tabindex="0" (keydown.enter)="selectionnerPharmacie(ph)"
+             [attr.aria-label]="'Ouvrir les factures de ' + ph.nom">
+          <div class="m-card-top">
+            <div class="min-w-0">
+              <div class="m-title flex items-center gap-1.5">
+                <mat-icon class="!text-[18px] !w-[18px] !h-[18px] text-emerald-600">local_pharmacy</mat-icon>
+                <span class="truncate">{{ ph.nom }}</span>
+              </div>
+              <div class="m-sub">{{ ph.ville }} <span *ngIf="ph.code" class="font-mono">· {{ ph.code }}</span></div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800">
+              {{ ph.nombreFactures }} fact.
+            </span>
+          </div>
+          <div class="m-row">
+            <span><mat-icon class="inline-ic">people</mat-icon>{{ ph.nombreBeneficiaires.toLocaleString('fr-FR') }} bénéficiaires</span>
+          </div>
+          <div class="m-foot">
+            <span class="m-amount">{{ formatMontant(ph.montantTotal) }}</span>
+            <mat-icon class="m-chevron !text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -336,8 +363,8 @@
         </div>
       </div>
 
-      <!-- Tableau des patients (style poste de santé : Nom, 3 pièces, Date, Matricule & CNI, Chevron) -->
-      <div class="overflow-x-auto">
+      <!-- Tableau des patients (Desktop) -->
+      <div class="overflow-x-auto desktop-only">
         <table class="w-full text-xs">
           <tbody class="divide-y divide-slate-100 font-medium">
             <tr *ngFor="let p of patientsFiltres"
@@ -355,17 +382,13 @@
                     Rejeté
                   </span>
                 </div>
-                <!-- Mobile : date, matricule & CNI sous le nom -->
-                <div class="sm:hidden mt-0.5 text-[11px] text-slate-500">
-                  {{ formatDate(p.datePriseEnCharge) }} · <span class="font-mono">{{ p.matricule }}</span><span *ngIf="p.cni"> · CNI {{ p.cni }}</span>
-                </div>
               </td>
 
-              <td class="hidden sm:table-cell py-3 px-3 align-middle whitespace-nowrap text-slate-600">
+              <td class="py-3 px-3 align-middle whitespace-nowrap text-slate-600">
                 {{ formatDate(p.datePriseEnCharge) }}
               </td>
 
-              <td class="hidden sm:table-cell py-3 pl-3 pr-2 align-middle text-right whitespace-nowrap font-mono text-xs text-slate-900 font-semibold">
+              <td class="py-3 pl-3 pr-2 align-middle text-right whitespace-nowrap font-mono text-xs text-slate-900 font-semibold">
                 {{ p.matricule }}<span *ngIf="p.cni" class="text-slate-400 ml-1.5 font-sans text-[11px]">· CNI {{ p.cni }}</span>
               </td>
 
@@ -385,6 +408,36 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Cartes mobiles Niveau 4 : Patients -->
+      <div class="m-cards md:hidden p-3" *ngIf="patientsFiltres.length > 0">
+        <div class="m-card clickable" *ngFor="let p of patientsFiltres" (click)="ouvrirMedicamentsPatient(p)"
+             role="button" tabindex="0" (keydown.enter)="ouvrirMedicamentsPatient(p)"
+             [attr.aria-label]="'Ouvrir les médicaments de ' + p.nom">
+          <div class="m-card-top">
+            <div class="min-w-0">
+              <div class="m-title">{{ p.nom }}</div>
+              <div class="m-sub font-mono">{{ p.matricule }}<span *ngIf="p.cni"> · CNI {{ p.cni }}</span></div>
+            </div>
+            <span *ngIf="p.statutLigne === 'REJETEE'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+              Rejeté
+            </span>
+            <span *ngIf="p.statutLigne !== 'REJETEE'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              3 pièces
+            </span>
+          </div>
+          <div class="m-row">
+            <span><mat-icon class="inline-ic">event</mat-icon>{{ formatDate(p.datePriseEnCharge) }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="m-amount">{{ formatMontant(p.montantTotal) }}</span>
+            <mat-icon class="m-chevron !text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="patientsFiltres.length === 0" class="md:hidden p-6 text-center text-slate-400 text-xs italic">
+        Aucun patient ne correspond à la recherche.
       </div>
     </div>
   </div>
@@ -458,7 +511,7 @@
       </div>
 
       <div class="p-4">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto desktop-only">
           <table class="w-full text-xs">
             <thead>
               <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
@@ -519,6 +572,58 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Cartes mobiles Niveau 5 : Médicaments -->
+        <div class="m-cards md:hidden">
+          <div class="m-card" *ngFor="let m of patientSelectionne.medicaments; let mIdx = index">
+            <div class="m-card-top">
+              <div class="min-w-0">
+                <div class="m-title">{{ m.medicament }}</div>
+                <div class="m-sub font-mono" *ngIf="m.codeProduit">{{ m.codeProduit }}</div>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                      [ngClass]="m.statutLigne === 'REJETEE' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'">
+                  {{ m.statutLigne === 'REJETEE' ? 'Rejeté' : 'Conforme' }}
+                </span>
+                <button type="button" class="m-more-btn"
+                        [matMenuTriggerFor]="menuMed"
+                        [matMenuTriggerData]="{ m: m, idx: mIdx }"
+                        (click)="$event.stopPropagation()"
+                        aria-label="Actions du médicament">
+                  <mat-icon class="!text-[20px] !w-5 !h-5 text-text-secondary">more_vert</mat-icon>
+                </button>
+              </div>
+            </div>
+            <div class="m-row">
+              <span>Qté : <strong>{{ m.quantite }}</strong></span>
+              <span>PU : {{ formatMontant(m.prixUnitaire) }}</span>
+            </div>
+            <div class="m-foot">
+              <span class="m-amount">{{ formatMontant(m.montant) }}</span>
+            </div>
+          </div>
+          <div *ngIf="patientSelectionne.medicaments.length === 0" class="p-4 text-center text-slate-400 text-xs italic">
+            Aucun médicament enregistré pour ce patient.
+          </div>
+        </div>
+
+        <mat-menu #menuMed="matMenu" xPosition="before">
+          <ng-template matMenuContent let-m="m" let-idx="idx">
+            <button mat-menu-item (click)="ouvrirModalModifMedicament(patientSelectionne, m)">
+              <mat-icon>edit</mat-icon>
+              <span>Modifier</span>
+            </button>
+            <button mat-menu-item (click)="ouvrirModalRejetMedicament(patientSelectionne, idx)">
+              <mat-icon>block</mat-icon>
+              <span>Rejeter</span>
+            </button>
+            <button mat-menu-item class="menu-item-danger text-warn" (click)="ouvrirModalSupprMedicament(patientSelectionne, m)">
+              <mat-icon class="text-warn">delete_outline</mat-icon>
+              <span>Supprimer</span>
+            </button>
+          </ng-template>
+        </mat-menu>
 
         <!-- Totaux de la dispensation -->
         <div *ngIf="patientSelectionne.medicaments.length" class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">

@@ -21,10 +21,12 @@ import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
  * ligne <b>au nom de la structure</b>, qui prime sur la nationale sans la modifier — c'est
  * ce qui permet à deux postes d'avoir deux prix sur la même prestation.</p>
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-parametres-structure',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './parametres-structure.component.html'
 })
 export class ParametresStructureComponent implements OnInit {

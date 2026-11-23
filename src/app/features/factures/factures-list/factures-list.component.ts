@@ -45,6 +45,8 @@ export interface ProviderGroup {
   factures: UnifiedFacture[];
 }
 
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-factures-list',
   standalone: true,
@@ -61,8 +63,7 @@ export interface ProviderGroup {
     FormsModule,
     StatusBadgeComponent,
     MatSnackBarModule,
-    MatMenuModule
-  ],
+    MatMenuModule, PageHeaderComponent],
   templateUrl: './factures-list.component.html',
   styleUrls: ['./factures-list.component.css']
 })

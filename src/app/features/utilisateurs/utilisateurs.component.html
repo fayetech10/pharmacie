@@ -1,15 +1,15 @@
     <div class="users-page fade-in">
       <!-- En-tête -->
-      <div class="page-head">
-        <div>
+      <app-page-header>
+        <div page-header-title>
           <h1>{{ isRegional ? 'Gestion des agents BCSU' : 'Gestion des Utilisateurs' }}</h1>
         </div>
-        <div class="page-head-actions">
+        <div class="page-head-actions" page-header-actions>
           <button class="btn btn-primary" (click)="openAddModal()">
             <mat-icon>person_add</mat-icon> {{ isRegional ? 'Ajouter un agent BCSU' : 'Ajouter un utilisateur' }}
           </button>
         </div>
-      </div>
+      </app-page-header>
 
       <!-- Bandeau de synthèse -->
       <div class="summary-strip" *ngIf="users.length">
@@ -126,17 +126,32 @@
                 <div class="m-sub break-words">{{ u.username || u.email }}</div>
               </div>
             </div>
-            <div class="m-actions" (click)="$event.stopPropagation()">
-              <button class="action-btn" (click)="openEditModal(u)" title="Modifier"><mat-icon>edit</mat-icon></button>
-              <ng-container *ngIf="!estMoi(u)">
-                <button class="action-btn" (click)="reinitialiserMotDePasse(u)" [disabled]="actionEnCours === u.id"
-                        title="Réinitialiser le mot de passe"><mat-icon>lock_reset</mat-icon></button>
-                <button class="action-btn" (click)="basculerActivation(u)" [disabled]="actionEnCours === u.id"
-                        [title]="u.actif ? 'Désactiver' : 'Réactiver'">
-                  <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" class="m-more-btn" [matMenuTriggerFor]="userMenu" (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      aria-label="Actions utilisateur" title="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #userMenu="matMenu" xPosition="before">
+                <button mat-menu-item (click)="openEditModal(u)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Modifier</span>
                 </button>
-              </ng-container>
-              <button class="action-btn danger" (click)="deleteUser(u)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+                <ng-container *ngIf="!estMoi(u)">
+                  <button mat-menu-item (click)="reinitialiserMotDePasse(u)" [disabled]="actionEnCours === u.id">
+                    <mat-icon>lock_reset</mat-icon>
+                    <span>Réinitialiser mot de passe</span>
+                  </button>
+                  <button mat-menu-item (click)="basculerActivation(u)" [disabled]="actionEnCours === u.id">
+                    <mat-icon>{{ u.actif ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+                    <span>{{ u.actif ? 'Désactiver' : 'Réactiver' }}</span>
+                  </button>
+                </ng-container>
+                <button mat-menu-item class="menu-item-danger" (click)="deleteUser(u)">
+                  <mat-icon class="!text-warn">delete</mat-icon>
+                  <span class="text-warn">Supprimer</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
           <div class="m-row">
@@ -148,6 +163,10 @@
           <div class="m-row" *ngIf="getRegionNom(u.regionId) !== '-' || getRattachementNom(u) !== '-'">
             <span *ngIf="getRegionNom(u.regionId) !== '-'"><mat-icon class="inline-ic">map</mat-icon>{{ getRegionNom(u.regionId) }}</span>
             <span *ngIf="getRattachementNom(u) !== '-'"><mat-icon class="inline-ic">business</mat-icon>{{ getRattachementNom(u) }}</span>
+          </div>
+          <div class="m-foot">
+            <span class="text-xs text-text-muted">{{ u.telephone || u.username }}</span>
+            <mat-icon class="m-chevron">chevron_right</mat-icon>
           </div>
         </div>
       </div>

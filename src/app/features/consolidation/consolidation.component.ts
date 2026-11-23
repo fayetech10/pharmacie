@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
@@ -24,10 +25,12 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
  * les structures qui n'ont pas facturé — car c'est l'information sur laquelle le
  * district agit réellement en fin de mois.</p>
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-consolidation',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, StatusBadgeComponent, RegimeBadgeComponent],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, StatusBadgeComponent, RegimeBadgeComponent, PageHeaderComponent],
   templateUrl: './consolidation.component.html'
 })
 export class ConsolidationComponent implements OnInit {
@@ -57,8 +60,15 @@ export class ConsolidationComponent implements OnInit {
     private consolidation: ConsolidationService,
     private districtService: DistrictService,
     private auth: AuthService,
+    private router: Router,
     private snackBar: MatSnackBar
   ) {}
+
+  ouvrirFacture(f: FactureStructure): void {
+    if (f.id) {
+      this.router.navigate(['/dashboard/factures-structure', f.id]);
+    }
+  }
 
   ngOnInit(): void {
     const districtCompte = this.auth.getDistrictId();

@@ -22,10 +22,10 @@
         <mat-icon class="shrink-0">error_outline</mat-icon>
         <span>{{ erreur }}</span>
       </div>
-      <!-- Panne du site : seule dérogation à la vérification. -->
+      <!-- La panne bloque le parcours : seule une nouvelle vérification peut le débloquer. -->
       <div *ngIf="siteEnPanne" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-        Le site de vérification est indisponible. Vous pouvez continuer <strong>sans vérification</strong> :
-        le dossier portera la mention « carte non vérifiée ». Joignez une photo de la carte comme pièce.
+        Le site de vérification est indisponible. La saisie reste bloquée jusqu’au rétablissement du service.
+        Réessayez dans un instant.
       </div>
       <a *ngIf="!siteEnPanne" [href]="lienOfficiel" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-teal-700">
         Ouvrir la carte sur carte.sencsu.sn
@@ -83,9 +83,6 @@
   <div mat-dialog-actions class="!px-6 !pb-5 flex justify-end gap-2">
     <button type="button" class="btn btn-ghost" (click)="fermer()">Fermer</button>
     <button type="button" class="btn btn-ghost" *ngIf="!chargement && erreur" (click)="verifier()">Réessayer</button>
-    <button type="button" class="btn btn-outline" *ngIf="!chargement && siteEnPanne" (click)="continuerSansVerification()">
-      Continuer sans vérification
-    </button>
     <button type="button" class="btn btn-primary" *ngIf="!chargement && utilisable" (click)="remplir()">
       Remplir le formulaire
     </button>

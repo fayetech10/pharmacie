@@ -1,10 +1,9 @@
-    <div class="page-head" *ngIf="!embedded">
-      <div>
+    <app-page-header *ngIf="!embedded">
+      <div page-header-title>
         <h1>Statistiques et analytiques</h1>
-        <p>Aide à la décision · {{ scopeLabel }}</p>
       </div>
       <span class="scope-chip"><mat-icon>{{ scopeIcon }}</mat-icon> {{ scopeLabel }}</span>
-    </div>
+    </app-page-header>
 
     <ng-container *ngIf="s">
       <!-- ============ KPI PRINCIPAUX (toujours visibles) ============ -->

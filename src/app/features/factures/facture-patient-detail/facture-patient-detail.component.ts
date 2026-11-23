@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Facture, LigneFacture, StatutLigne } from '../../../core/models/facture.model';
@@ -26,7 +27,7 @@ const MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
 @Component({
   selector: 'app-facture-patient-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule, StatusBadgeComponent],
+  imports: [CommonModule, RouterModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule, MatMenuModule, StatusBadgeComponent],
   templateUrl: './facture-patient-detail.component.html'
 })
 export class FacturePatientDetailComponent implements OnInit {

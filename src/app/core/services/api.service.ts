@@ -56,12 +56,12 @@ export class ApiService {
    * @param opts.arrierePlan ne retient pas l'affichage de la page (compteurs, contenus qui ont
    *   leur propre indicateur de chargement) — voir `ARRIERE_PLAN`.
    */
-  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean; arrierePlan?: boolean; params?: any }): Observable<T> {
+  get<T>(path: string, opts?: { skipLoading?: boolean; cacheFirst?: boolean; arrierePlan?: boolean; fresh?: boolean; params?: any }): Observable<T> {
     let url = `${this.baseUrl}${path}`;
     if (opts?.params) {
       url += (url.includes('?') ? '&' : '?') + opts.params.toString();
     }
-    const entree = this.cache.get(url);
+    const entree = opts?.fresh ? undefined : this.cache.get(url);
     const hasCache = entree !== undefined;
 
     // Cache-first : on renvoie le cache tel quel, aucune requête de revalidation.

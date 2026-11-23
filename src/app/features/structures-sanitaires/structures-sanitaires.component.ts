@@ -30,14 +30,15 @@ function normaliser(s: string | null | undefined): string {
 /** Valeur du filtre district désignant les structures sans district (hors de toute consolidation). */
 const SANS_DISTRICT = '__sans_district__';
 
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-structures-sanitaires',
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, MatCardModule, MatButtonModule,
     MatIconModule, MatTableModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatSortModule, MatMenuModule, PaginationComponent, PaginerPipe
-  ],
+    MatSortModule, MatMenuModule, PaginationComponent, PaginerPipe, PageHeaderComponent],
   templateUrl: './structures-sanitaires.component.html'
 })
 export class StructuresSanitairesComponent implements OnInit {

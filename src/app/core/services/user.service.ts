@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { Observable } from 'rxjs';
+import { Observable, catchError } from 'rxjs';
 import { User } from '../models/user.model';
 
 @Injectable({
@@ -10,28 +10,40 @@ export class UserService {
   constructor(private api: ApiService) {}
 
   getAll(): Observable<User[]> {
-    return this.api.get<User[]>('/users');
+    return this.api.get<User[]>('/utilisateurs').pipe(
+      catchError(() => this.api.get<User[]>('/users'))
+    );
   }
 
   /** Agents BCSU (formulaire structures) : accessible au SR, contrairement à getAll() (Admin). */
   getBcsu(): Observable<User[]> {
-    return this.api.get<User[]>('/users/bcsu');
+    return this.api.get<User[]>('/utilisateurs?role=BCSU').pipe(
+      catchError(() => this.api.get<User[]>('/users/bcsu'))
+    );
   }
 
   getById(id: string): Observable<User> {
-    return this.api.get<User>(`/users/${id}`);
+    return this.api.get<User>(`/utilisateurs/${id}`).pipe(
+      catchError(() => this.api.get<User>(`/users/${id}`))
+    );
   }
 
   create(user: any): Observable<{ utilisateur: User; motDePasseTemporaire: string }> {
-    return this.api.post<{ utilisateur: User; motDePasseTemporaire: string }>('/users', user);
+    return this.api.post<{ utilisateur: User; motDePasseTemporaire: string }>('/utilisateurs', user).pipe(
+      catchError(() => this.api.post<{ utilisateur: User; motDePasseTemporaire: string }>('/users', user))
+    );
   }
 
   update(id: string, user: any): Observable<User> {
-    return this.api.put<User>(`/users/${id}`, user);
+    return this.api.put<User>(`/utilisateurs/${id}`, user).pipe(
+      catchError(() => this.api.put<User>(`/users/${id}`, user))
+    );
   }
 
   delete(id: string): Observable<void> {
-    return this.api.delete<void>(`/users/${id}`);
+    return this.api.delete<void>(`/utilisateurs/${id}`).pipe(
+      catchError(() => this.api.delete<void>(`/users/${id}`))
+    );
   }
 
   // Activation et réinitialisation passent par le service d'identité (/utilisateurs) : la

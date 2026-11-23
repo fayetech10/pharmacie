@@ -11,10 +11,12 @@ import { Constat, Regime, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/mo
  * Onglet « Constats » de l'espace BCSU : formulaire de saisie des constats rencontrés
  * (par régime, dans la structure) + liste des constats déjà enregistrés par l'agent.
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-constats-bcsu',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatCardModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatCardModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './constats-bcsu.component.html'
 })
 export class ConstatsBcsuComponent implements OnInit {

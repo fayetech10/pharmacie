@@ -13,7 +13,7 @@ import { StructureService } from '../../../core/services/structure.service';
 import { FeuilleSoinsService } from '../../../core/services/feuille-soins.service';
 import { LettreGarantie, REGIME_LABELS, Regime, tauxBeneficiaire, tauxSencsu, REGIME_OPTIONS, REGIME_OPTIONS_POSTE, REGIME_LABELS_POSTE, exigeCarteCsu } from '../../../core/models/bcsu.model';
 import { LigneFactureStructure, DocumentComplementaire, FactureStructureRequest } from '../../../core/models/structure.model';
-import { CarteCsu, ResultatCarteCsu, VerificationCarte } from '../../../core/models/carte-csu.model';
+import { CarteCsu, ResultatCarteCsu } from '../../../core/models/carte-csu.model';
 import { RegimeTuilesComponent } from '../../../shared/regime-tuiles/regime-tuiles.component';
 import { CarteCsuDialogComponent, CarteCsuDialogData } from '../../../shared/carte-csu-dialog/carte-csu-dialog.component';
 import { renderCarteAssureToDataUrl } from '../../../core/utils/carte-assure-image';
@@ -417,7 +417,7 @@ export class FactureStructureFormComponent implements OnInit {
   // ----- Régime puis carte CSU (poste de santé) -----
 
   /** Issue de la vérification de la carte du patient en cours (régimes à carte uniquement). */
-  verification: VerificationCarte | null = null;
+  verification: 'VERIFIEE' | null = null;
 
   /** Le régime choisi exige-t-il une carte CSU vérifiée (Classique, BSF / CEC) ? */
   get carteRequise(): boolean {
@@ -426,7 +426,7 @@ export class FactureStructureFormComponent implements OnInit {
 
   /**
    * Le reste du patient ne s'ouvre qu'une fois le régime choisi et, pour un régime à
-   * carte, la carte vérifiée — ou le site de vérification constaté en panne.
+   * carte, la carte vérifiée.
    */
   get patientAffiche(): boolean {
     return !!this.regime && (!this.carteRequise || this.verification !== null);
@@ -481,23 +481,13 @@ export class FactureStructureFormComponent implements OnInit {
     }).afterClosed().subscribe(resultat => {
       if (!resultat) return;
       if ('invalide' in resultat) {
-        // Une carte reconnue invalide annule toute dérogation (panne) accordée avant.
+        // Une carte reconnue invalide annule toute vérification précédente.
         this.annulerVerification();
         this.snackBar.open('Carte non valide : la prise en charge CSU est impossible avec cette carte.', 'Fermer', { duration: 5000, panelClass: 'error-snackbar' });
         return;
       }
       if ('carte' in resultat) this.appliquerCarteCsu(resultat.carte);
-      else this.continuerSansVerification();
     });
-  }
-
-  /** Site de vérification en panne : seule dérogation, consignée sur la facture. */
-  private continuerSansVerification() {
-    this.annulerVerification();
-    this.verification = 'NON_VERIFIEE_PANNE';
-    this.snackBar.open(
-      'Saisie sans vérification (site indisponible) : la facture portera la mention « carte non vérifiée ». Joignez une photo de la carte.',
-      'Fermer', { duration: 7000 });
   }
 
   private appliquerCarteCsu(carte: CarteCsu) {

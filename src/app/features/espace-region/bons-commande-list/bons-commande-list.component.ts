@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { BcsuService } from '../../../core/services/bcsu.service';
 import { BonCommande, REGIME_LABELS, REGIME_OPTIONS } from '../../../core/models/bcsu.model';
 
@@ -18,7 +19,7 @@ import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 @Component({
   selector: 'app-bons-commande-list',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, SkeletonListComponent, StatusBadgeComponent],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatMenuModule, SkeletonListComponent, StatusBadgeComponent],
   templateUrl: './bons-commande-list.component.html'
 })
 export class BonsCommandeListComponent implements OnInit {

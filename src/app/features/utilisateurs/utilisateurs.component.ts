@@ -15,11 +15,14 @@ import { MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { AuthService } from '../../core/services/auth.service';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-utilisateurs',
   standalone: true,
@@ -32,8 +35,8 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
     MatTableModule,
     MatInputModule,
     MatSelectModule,
-    MatSnackBarModule
-  ],
+    MatMenuModule,
+    MatSnackBarModule, PageHeaderComponent],
   templateUrl: './utilisateurs.component.html'
 })
 export class UtilisateursComponent implements OnInit {

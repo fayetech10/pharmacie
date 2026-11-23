@@ -27,6 +27,21 @@ module.exports = {
           DEFAULT: 'var(--accent)',
           light: 'var(--accent-light)',
         },
+        info: {
+          DEFAULT: 'var(--info)',
+          light: 'var(--info-light)',
+          border: 'var(--info-border)',
+        },
+        violet: {
+          DEFAULT: 'var(--violet)',
+          light: 'var(--violet-light)',
+          border: 'var(--violet-border)',
+        },
+        warning: {
+          DEFAULT: 'var(--warning)',
+          light: 'var(--warning-light)',
+          border: 'var(--warning-border)',
+        },
         warn: {
           DEFAULT: 'var(--warn)',
           light: 'var(--warn-light)',

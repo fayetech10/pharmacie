@@ -40,12 +40,8 @@ export interface CarteCsu {
 /** Issue de la vérification, enregistrée dans le dossier (lettre de garantie, ligne de facture). */
 export type VerificationCarte = 'VERIFIEE' | 'NON_VERIFIEE_PANNE';
 
-/**
- * Ce que rend le modal de vérification : une carte valide, l'accord de continuer sans
- * vérification — proposé UNIQUEMENT quand le site carte.sencsu.sn est en panne —, ou le
- * constat d'une carte invalide (qui annule toute dérogation accordée plus tôt).
- */
-export type ResultatCarteCsu = { carte: CarteCsu } | { panne: true } | { invalide: true };
+/** Résultat du modal : une carte valide, le refus d'une carte invalide, ou sa fermeture. */
+export type ResultatCarteCsu = { carte: CarteCsu } | { invalide: true };
 
 /**
  * La catégorie imprimée sur la carte correspond-elle au régime choisi ?

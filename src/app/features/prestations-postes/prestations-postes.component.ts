@@ -18,10 +18,12 @@ const POSTES = 'PS';
  * par chaque poste ; sans prix, elle lui est proposée et devient facturable dès qu'il fixe le sien
  * (écran Paramètres du poste). Administrée par import Excel « Service | Prestation | Prix (FCFA) ».
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-prestations-postes',
   standalone: true,
-  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule],
+  imports: [PaginationComponent, PaginerPipe, CommonModule, FormsModule, MatIconModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './prestations-postes.component.html'
 })
 export class PrestationsPostesComponent implements OnInit {

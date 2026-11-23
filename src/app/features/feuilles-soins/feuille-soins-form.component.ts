@@ -20,13 +20,14 @@ import { FeuilleSoinsRequest } from '../../core/models/feuille-soins.model';
  * sexe, âge, accompagnant), rattachement facultatif à une lettre de
  * garantie. La prise en charge sera remplie par la structure sanitaire.
  */
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-feuille-soins-form',
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule, MatCardModule,
-    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule
-  ],
+    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './feuille-soins-form.component.html'
 })
 export class FeuilleSoinsFormComponent implements OnInit {

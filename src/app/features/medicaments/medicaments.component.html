@@ -1,10 +1,10 @@
     <div class="fade-in">
       <!-- En-tête -->
-      <div class="page-head">
-        <div>
+      <app-page-header>
+        <div page-header-title>
           <h1>Gestion des Médicaments</h1>
         </div>
-        <div class="page-head-actions flex items-center gap-2">
+        <div class="page-head-actions flex items-center gap-2" page-header-actions>
           <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".xlsx, .xls">
           <input type="file" #exclusionInput style="display: none" (change)="onExclusionFileSelected($event)" accept=".xlsx, .xls">
 
@@ -28,7 +28,7 @@
             </button>
           </mat-menu>
         </div>
-      </div>
+      </app-page-header>
 
       <!-- Recherche + choix du référentiel (éligibles / exclusions) -->
       <div class="filter-strip">
@@ -180,25 +180,42 @@
              (click)="ouvrirEdition(m)" role="button" tabindex="0"
              (keydown.enter)="ouvrirEdition(m)" [attr.aria-label]="'Modifier ' + m.nom">
           <div class="m-card-top">
-            <div class="min-w-0">
+            <div class="min-w-0 pr-2">
               <div class="m-title">{{ m.nom }}</div>
               <div class="m-sub" *ngIf="m.dci || m.classeTherapeutique">
                 {{ m.dci }}<span *ngIf="m.dci && m.classeTherapeutique"> · </span>{{ m.classeTherapeutique }}
               </div>
             </div>
-            <div class="m-actions" (click)="$event.stopPropagation()">
-              <button class="action-btn" (click)="ouvrirEdition(m)" title="Modifier"><mat-icon>edit</mat-icon></button>
-              <button class="action-btn danger" (click)="supprimer(m)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" class="m-more-btn" [matMenuTriggerFor]="medMenu" (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      aria-label="Actions du médicament" title="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #medMenu="matMenu" xPosition="before">
+                <button mat-menu-item (click)="ouvrirEdition(m)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Modifier</span>
+                </button>
+                <button mat-menu-item class="menu-item-danger" (click)="supprimer(m)">
+                  <mat-icon class="!text-warn">delete</mat-icon>
+                  <span class="text-warn">Supprimer</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
           <div class="m-row">
             <span class="m-chip" [class.danger]="m.statut === 'EXCLU'">{{ m.statut === 'EXCLU' ? 'Exclu' : 'Éligible' }}</span>
             <span *ngIf="m.liste"><mat-icon class="inline-ic">list</mat-icon>{{ m.liste }}</span>
-            <span *ngIf="m.prixReference != null" class="m-amount">{{ m.prixReference | number:'1.0-0':'fr' }} F</span>
           </div>
           <div class="flex items-start gap-1.5 mt-2 text-[13px] text-orange-800" *ngIf="m.statut === 'EXCLU' && (m.motif || m.description)">
             <mat-icon class="!text-base !w-4 !h-4 shrink-0 mt-0.5 text-orange-600">block</mat-icon>
             <span><strong>{{ m.motif || '-' }}</strong><span *ngIf="m.description"> — {{ m.description }}</span></span>
+          </div>
+          <div class="m-foot">
+            <span *ngIf="m.prixReference != null" class="m-amount">{{ m.prixReference | number:'1.0-0':'fr' }} F</span>
+            <span *ngIf="m.prixReference == null" class="text-xs text-text-muted">Prix non renseigné</span>
+            <mat-icon class="m-chevron">chevron_right</mat-icon>
           </div>
         </div>
       </div>

@@ -18,6 +18,8 @@ export interface StatService {
   nbActes: number;
 }
 
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-hors-csu',
   standalone: true,
@@ -28,8 +30,7 @@ export interface StatService {
     CommonModule,
     FormsModule,
     MatIconModule,
-    MatSnackBarModule
-  ],
+    MatSnackBarModule, PageHeaderComponent],
   templateUrl: './hors-csu.component.html'
 })
 export class HorsCsuComponent implements OnInit {

@@ -6,16 +6,16 @@
     <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Tous les postes
   </button>
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>{{ posteId ? nomPosteCourant : 'Factures des postes de santé du district' }}</h1>
     </div>
-    <div class="page-head-actions flex items-center gap-2">
+    <div class="page-head-actions flex items-center gap-2" page-header-actions>
       <button type="button" class="btn btn-outline btn-sm" *ngIf="filtresActifs" (click)="reinitialiser()">
         Réinitialiser
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- ===== Bandeau de synthèse ===== -->
   <div class="kpi-grid" *ngIf="!loading && !posteId">

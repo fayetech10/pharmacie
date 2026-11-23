@@ -52,6 +52,7 @@ export class FactureStructureDetailComponent implements OnInit {
   /** Lignes de la liste des patients, après recherche et filtre de pointage. */
   lignes: LignePatientListe[] = [];
   loading = true;
+  loadError = '';
   busy = false;
   exporting = false;
   recherche = '';
@@ -72,7 +73,11 @@ export class FactureStructureDetailComponent implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return;
+    if (!id) {
+      this.loading = false;
+      this.loadError = 'Identifiant de facture manquant.';
+      return;
+    }
     this.etatRetour = this.etatListe.reprendre(this.cleEtat(id));
     this.recherche = this.etatRetour?.recherche || '';
     this.filtrePointage = (this.etatRetour?.filtre as FiltrePointage) || 'tous';
@@ -81,14 +86,25 @@ export class FactureStructureDetailComponent implements OnInit {
 
   private load(id: string) {
     this.loading = true;
+    this.loadError = '';
     this.structureService.getFacture(id).pipe(last()).subscribe({
       next: f => {
         this.appliquer(f);
         this.loading = false;
         EtatListeService.defiler(this.etatRetour);
       },
-      error: () => { this.loading = false; }
+      error: err => {
+        this.loading = false;
+        this.loadError = err?.status === 0
+          ? 'Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.'
+          : err?.error?.message || 'Le chargement de la facture a échoué. Réessayez.';
+      }
     });
+  }
+
+  recharger() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.load(id);
   }
 
   private appliquer(f: FactureStructure) {
@@ -220,6 +236,20 @@ export class FactureStructureDetailComponent implements OnInit {
     return 0;
   }
 
+  /** Aperçu fidèle des motifs qui seront agrégés par le backend au renvoi. */
+  private apercuMotifsRejet(district: boolean): string {
+    const dossiers = (this.facture?.dossiers || []).filter(d =>
+      district ? !!d.rejeteCentreLe : !!d.rejeteRegionLe);
+    const lignes = dossiers.slice(0, 4).map(d => {
+      const nom = [d.prenom, d.nom].filter(Boolean).join(' ').trim() || 'Patient sans nom';
+      const motif = (district ? d.rejeteCentreMotif : d.rejeteRegionMotif)?.trim() || 'Motif manquant';
+      const motifCourt = motif.length > 110 ? `${motif.slice(0, 107).trimEnd()}…` : motif;
+      return `• ${nom} — ${motifCourt}`;
+    });
+    if (dossiers.length > lignes.length) lignes.push(`… et ${dossiers.length - lignes.length} autre(s)`);
+    return lignes.join('\n');
+  }
+
   // ══════════════════════════ liste des patients ══════════════════════════
 
   /** Recalcule la liste affichée (chargement, recherche, filtre de pointage). */
@@ -316,7 +346,8 @@ export class FactureStructureDetailComponent implements OnInit {
     this.confirm.ask({
       title: 'Renvoyer la facture à la structure',
       message: `${this.nbRejetes} patient(s) rejeté(s) seront renvoyés à la structure pour correction. `
-        + 'Leur motif accompagne la facture.',
+        + 'Vérifiez les motifs qui accompagneront la facture :\n\n'
+        + this.apercuMotifsRejet(false),
       confirmText: 'Renvoyer',
       danger: true
     }).subscribe(ok => {
@@ -339,7 +370,8 @@ export class FactureStructureDetailComponent implements OnInit {
     this.confirm.ask({
       title: 'Renvoyer la facture au poste',
       message: `${this.nbRejetes} patient(s) rejeté(s) seront renvoyés au poste de santé pour correction. `
-        + 'Leur motif accompagne la facture.',
+        + 'Vérifiez les motifs qui accompagneront la facture :\n\n'
+        + this.apercuMotifsRejet(true),
       confirmText: 'Renvoyer',
       danger: true
     }).subscribe(ok => {

@@ -1,10 +1,10 @@
     <div class="fade-in">
       <!-- En-tête -->
-      <div class="page-head">
-        <div>
+      <app-page-header>
+        <div page-header-title>
           <h1>Paramétrage pharmacie</h1>
         </div>
-        <div class="page-head-actions flex items-center gap-2">
+        <div class="page-head-actions flex items-center gap-2" page-header-actions>
           <input type="file" #importInput hidden (change)="onImportFileSelected($event)" accept=".xlsx, .xls">
 
           <button class="btn btn-primary flex-1 md:flex-none" (click)="openModal()">
@@ -31,7 +31,7 @@
             </button>
           </mat-menu>
         </div>
-      </div>
+      </app-page-header>
 
       <!-- Recherche -->
       <div class="filter-strip">
@@ -148,22 +148,45 @@
              (click)="openModal(p)" role="button" tabindex="0"
              (keydown.enter)="openModal(p)" [attr.aria-label]="'Modifier ' + p.nom">
           <div class="m-card-top">
-            <div class="min-w-0">
+            <div class="min-w-0 pr-2">
               <div class="m-title">{{ p.nom }}</div>
-              <div class="m-sub">{{ p.code }}</div>
+              <div class="m-sub font-mono">{{ p.code }}</div>
             </div>
-            <div class="m-actions" (click)="$event.stopPropagation()">
-              <button class="action-btn" (click)="openModal(p)" title="Modifier"><mat-icon>edit</mat-icon></button>
-              <button class="action-btn danger" (click)="deletePharmacie(p.id)" title="Supprimer"><mat-icon>delete</mat-icon></button>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" class="m-more-btn" [matMenuTriggerFor]="pharmaMenu" (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      aria-label="Actions de la pharmacie" title="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #pharmaMenu="matMenu" xPosition="before">
+                <button mat-menu-item (click)="openModal(p)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Modifier</span>
+                </button>
+                <a mat-menu-item *ngIf="p.telephone" [href]="'tel:' + p.telephone" (click)="$event.stopPropagation()">
+                  <mat-icon>call</mat-icon>
+                  <span>Appeler</span>
+                </a>
+                <button mat-menu-item class="menu-item-danger" (click)="deletePharmacie(p.id)">
+                  <mat-icon class="!text-warn">delete</mat-icon>
+                  <span class="text-warn">Supprimer</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
-          <div class="m-meta"><mat-icon class="inline-ic">location_on</mat-icon>{{ p.adresse }}</div>
+          <div class="m-meta" *ngIf="p.adresse">
+            <mat-icon class="inline-ic">location_on</mat-icon>
+            <span class="truncate">{{ p.adresse }}</span>
+          </div>
           <div class="m-row">
-            <span><mat-icon class="inline-ic">call</mat-icon>{{ p.telephone }}</span>
-            <span *ngIf="p.email"><mat-icon class="inline-ic">mail</mat-icon>{{ p.email }}</span>
+            <span *ngIf="p.telephone"><mat-icon class="inline-ic">call</mat-icon>{{ p.telephone }}</span>
+            <span *ngIf="p.email" class="truncate"><mat-icon class="inline-ic">mail</mat-icon>{{ p.email }}</span>
           </div>
           <div class="m-foot">
-            <span class="inline-flex py-1 px-3 rounded-full bg-primary-light text-primary text-[12.5px] font-semibold">{{ getRegionName(p.regionId) }}</span>
+            <span class="inline-flex py-0.5 px-2.5 rounded-full bg-primary-light text-primary text-[12px] font-semibold">
+              {{ getRegionName(p.regionId) }}
+            </span>
+            <mat-icon class="m-chevron">chevron_right</mat-icon>
           </div>
         </div>
       </div>

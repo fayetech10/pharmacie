@@ -1,12 +1,10 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Prestations par défaut des postes</h1>
-      <p>Proposées à tous les postes de santé (et à eux seuls). Tarifées : facturables d'office ;
-        sans prix : chaque poste fixe le sien depuis ses Paramètres.</p>
     </div>
-    <div class="page-head-actions">
+    <div class="page-head-actions" page-header-actions>
       <input type="file" #fichierImport class="hidden" accept=".xlsx,.xls" (change)="importer($event)">
       <button class="btn btn-outline" type="button" (click)="telechargerModele()" [disabled]="!prestations.length">
         <mat-icon>download</mat-icon> Télécharger la liste
@@ -15,7 +13,7 @@
         <mat-icon>upload_file</mat-icon> {{ importEnCours ? 'Import en cours…' : 'Importer Excel' }}
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Résultat du dernier import -->
   <div class="card" *ngIf="resultatImport">

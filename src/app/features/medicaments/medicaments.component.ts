@@ -17,14 +17,15 @@ import { MatMenuModule } from '@angular/material/menu';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-medicaments',
   standalone: true,
   imports: [PaginationComponent, PaginerPipe, 
     CommonModule, ReactiveFormsModule, MatTableModule, MatSortModule,
     MatButtonModule, MatIconModule, MatCardModule, MatInputModule, MatSelectModule,
-    MatFormFieldModule, MatSnackBarModule, MatMenuModule
-  ],
+    MatFormFieldModule, MatSnackBarModule, MatMenuModule, PageHeaderComponent],
   templateUrl: './medicaments.component.html'
 })
 export class MedicamentsComponent implements OnInit {

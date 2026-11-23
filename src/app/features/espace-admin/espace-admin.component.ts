@@ -14,10 +14,12 @@ import { District } from '../../core/models/referentiel.model';
 import { Pharmacie } from '../../core/models/pharmacie.model';
 import { Region } from '../../core/services/region.service';
 
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-espace-admin',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatIconModule, MatButtonModule, TuileActiviteComponent, IndicateurComponent],
+  imports: [CommonModule, RouterModule, MatIconModule, MatButtonModule, TuileActiviteComponent, IndicateurComponent, PageHeaderComponent],
   templateUrl: './espace-admin.component.html'
 })
 export class EspaceAdminComponent implements OnInit {

@@ -168,14 +168,14 @@ export class StructureService {
   rechercherLettre(numero: string): Observable<LettreGarantie> {
     return this.api.get<LettreGarantie>(`/factures-structure/rechercher-lettre?numero=${encodeURIComponent(numero)}`, { skipLoading: true });
   }
-  getFactures(params?: { mois?: number; annee?: number; regime?: string }): Observable<FactureStructure[]> {
+  getFactures(params?: { mois?: number; annee?: number; regime?: string; fresh?: boolean }): Observable<FactureStructure[]> {
     let queryParams = new HttpParams();
     if (params) {
       if (params.mois) queryParams = queryParams.set('mois', params.mois.toString());
       if (params.annee) queryParams = queryParams.set('annee', params.annee.toString());
       if (params.regime) queryParams = queryParams.set('regime', params.regime);
     }
-    return this.api.get<FactureStructure[]>('/factures-structure', { params: queryParams });
+    return this.api.get<FactureStructure[]>('/factures-structure', { params: queryParams, fresh: params?.fresh });
   }
   /**
    * Identifiants + statuts des factures structure visibles, pour les badges de
@@ -185,8 +185,8 @@ export class StructureService {
     return this.api.get<FactureStatutLight[]>('/factures-structure/statuts', { skipLoading: true, arrierePlan: true });
   }
 
-  getFacture(id: string): Observable<FactureStructure> {
-    return this.api.get<FactureStructure>(`/factures-structure/${id}`);
+  getFacture(id: string, options?: { fresh?: boolean }): Observable<FactureStructure> {
+    return this.api.get<FactureStructure>(`/factures-structure/${id}`, { fresh: options?.fresh });
   }
   createFacture(req: FactureStructureRequest, options?: { silencieux?: boolean }): Observable<FactureStructure> {
     return this.api.post<FactureStructure>('/factures-structure', req, options);

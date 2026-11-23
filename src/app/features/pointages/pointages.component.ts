@@ -17,6 +17,8 @@ import { RegionService, Region } from '../../core/services/region.service';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-pointages',
   standalone: true,
@@ -30,8 +32,7 @@ import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
     FormsModule,
     MatButtonModule,
     MatDatepickerModule,
-    MatDialogModule
-  ],
+    MatDialogModule, PageHeaderComponent],
   templateUrl: './pointages.component.html'
 })
 export class PointagesComponent implements OnInit {

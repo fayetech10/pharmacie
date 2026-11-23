@@ -11,7 +11,17 @@
     </div>
   </div>
 
-  <div *ngIf="!loading && !facture" class="card">
+  <div *ngIf="!loading && loadError" class="card" role="alert">
+    <div class="section-body flex flex-col items-center gap-3 py-10 text-center">
+      <mat-icon class="!text-4xl !w-10 !h-10 text-warn">cloud_off</mat-icon>
+      <p class="m-0 text-text-secondary">{{ loadError }}</p>
+      <button type="button" class="btn btn-outline btn-sm" (click)="recharger()">
+        <mat-icon>refresh</mat-icon> Réessayer
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !loadError && !facture" class="card">
     <div class="section-body flex flex-col items-center gap-2 py-10 text-center text-text-secondary">
       <mat-icon class="!text-4xl !w-10 !h-10 text-text-muted">receipt_long</mat-icon>
       Facture introuvable, ou hors de votre périmètre.

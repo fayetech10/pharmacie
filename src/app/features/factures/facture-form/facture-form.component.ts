@@ -29,14 +29,15 @@ type PhotoKey = 'ticketCaisse' | 'bonCommande' | 'ordonnance';
  * poste de santé : un patient à la fois, en trois étapes (patient, médicaments,
  * dossier et validation).
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-facture-form',
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule, RouterModule,
     MatIconModule, MatSnackBarModule, MatProgressSpinnerModule, MatTooltipModule,
-    QrScannerComponent, PhotoPieceComponent, StatusBadgeComponent
-  ],
+    QrScannerComponent, PhotoPieceComponent, StatusBadgeComponent, PageHeaderComponent],
   templateUrl: './facture-form.component.html'
 })
 export class FactureFormComponent implements OnInit {

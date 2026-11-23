@@ -152,7 +152,7 @@ export class LoginComponent {
       this.router.navigate(['/dashboard/espace-pharmacie']);
     } else if (this.authService.isServiceCentral()) {
       this.router.navigate(['/dashboard/espace-central']);
-    } else if (this.authService.isServiceRegional()) {
+    } else if (this.authService.isServiceRegional() || this.authService.isControleur()) {
       this.router.navigate(['/dashboard/espace-region']);
     } else if (this.authService.isAdmin()) {
       this.router.navigate(['/dashboard/espace-admin']);

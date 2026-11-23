@@ -65,10 +65,12 @@ const STATUT_A_TRAITER = 'SOUMISE_CS';
  * Le poste ouvert est dans l'adresse (`?poste=`) : « Retour » depuis la facture revient à ses
  * factures, et « Tous les postes » à la liste.
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-postes-factures',
   standalone: true,
-  imports: [AvancementPointageComponent, PaginationComponent, PaginerPipe, StatusBadgeComponent, RegimeBadgeComponent,CommonModule, FormsModule, MatIconModule, MatCardModule, MatSnackBarModule],
+  imports: [AvancementPointageComponent, PaginationComponent, PaginerPipe, StatusBadgeComponent, RegimeBadgeComponent,CommonModule, FormsModule, MatIconModule, MatCardModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './postes-factures.component.html'
 })
 export class PostesFacturesComponent implements OnInit {

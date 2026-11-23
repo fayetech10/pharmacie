@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.indicateur-carte {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-height: 88px;
+  padding: var(--sp-5);
+  border: 1px solid var(--border-cadre);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  color: inherit;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+}
+
+.indicateur-carte--cliquable {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition);
+}
+
+.indicateur-carte--cliquable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.indicateur-carte--cliquable:active {
+  transform: translateY(0);
+}
+
+.indicateur-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+}
+
+.indicateur-icone mat-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+
+.indicateur-texte {
+  display: block;
+  min-width: 0;
+}
+
+.indicateur-valeur {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.indicateur-libelle {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicateur-carte--cliquable {
+    transition: none;
+  }
+
+  .indicateur-carte--cliquable:hover,
+  .indicateur-carte--cliquable:active {
+    transform: none;
+  }
+}

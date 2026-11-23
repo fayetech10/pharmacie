@@ -227,13 +227,13 @@
 
 }.input-wrapper.focused {
 
-  /* Focus : aucun changement d'apparence (ni couleur de cadre, ni anneau). */
-  border-color: #e2e8f0;
-  box-shadow: none;
+  /* Le champ global est sans contour : son conteneur porte le repère de focus. */
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.16);
 
 }.input-wrapper.focused mat-icon {
 
-  color: #94a3b8;
+  color: var(--primary);
 
 }/* Error States */
 .input-wrapper.has-error {
@@ -247,7 +247,10 @@
 
 }.toggle-password {
   @apply bg-transparent border-0 rounded-md flex items-center justify-center;
-  padding: 4px;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  flex-shrink: 0;
   color: #94a3b8;
   cursor: pointer;
 }.toggle-password:hover {

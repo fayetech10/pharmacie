@@ -21,10 +21,12 @@ interface Slot {
  * Paramétrage de l'agent BCSU : cachet et signature apposés automatiquement
  * sur les lettres de garantie (aperçu à l'écran + export PDF).
  */
+import { PageHeaderComponent } from '../../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-parametrage-bcsu',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatCardModule, MatSnackBarModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatCardModule, MatSnackBarModule, PageHeaderComponent],
   templateUrl: './parametrage-bcsu.component.html'
 })
 export class ParametrageBcsuComponent implements OnInit {

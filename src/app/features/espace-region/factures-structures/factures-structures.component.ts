@@ -7,9 +7,10 @@ import { catchError, map } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { SrGestionService, FactureAssigneeResume, PostePolariseRow } from '../services/sr-gestion.service';
 import { DossiersGlobauxService } from '../services/dossiers-globaux.service';
-import { FactureStructure, DossierPatient, LigneFactureStructure, StructureSanitaire, typeEffectifStructure } from '../../../core/models/structure.model';
+import { FactureStructure, DossierPatient, DocumentComplementaire, LigneFactureStructure, StructureSanitaire, TypePiece, typeEffectifStructure } from '../../../core/models/structure.model';
 import { StructureService } from '../../../core/services/structure.service';
 import { DistrictService } from '../../../core/services/district.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -17,6 +18,7 @@ import { District } from '../../../core/models/referentiel.model';
 import { apparenceStatut } from '../../../core/models/statuts';
 import { FactureCountService } from '../../../core/services/facture-count.service';
 import { telecharger } from '../../espace-poste/poste-facturation';
+import { DossierPatientContenuComponent } from '../../espace-poste/dossier-patient-dialog/dossier-patient-contenu.component';
 
 export interface StructureEntonnoir {
   id: string;
@@ -63,6 +65,21 @@ export interface PatientLigneDetail {
   sexe: string;
   dateNaissance: string;
   datePriseEnCharge?: string;
+  telephone?: string;
+  adresse?: string;
+  numeroRegistre?: string;
+  lettreNumero?: string;
+  service?: string;
+  ircIra?: string;
+  indicationCbt?: string;
+  verificationCarte?: string;
+  categorieCarte?: string;
+  etatCarte?: string;
+  dateDebutValiditeCarte?: string;
+  dateFinValiditeCarte?: string;
+  mutuelle?: string;
+  typeAdhesion?: string;
+  tauxCouverture?: number;
   statutDossier: string;
   montantTotal: number;
   statutLigne: string; // CONFORME, REJETEE
@@ -71,10 +88,16 @@ export interface PatientLigneDetail {
   pieces: string[];
 }
 
+interface InfoPatient {
+  libelle: string;
+  valeur: string;
+  mono?: boolean;
+}
+
 @Component({
   selector: 'app-factures-structures',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatSnackBarModule, MatMenuModule, DossierPatientContenuComponent],
   templateUrl: './factures-structures.component.html'
 })
 export class FacturesStructuresComponent implements OnInit {
@@ -117,6 +140,12 @@ export class FacturesStructuresComponent implements OnInit {
   patientSelectionne: PatientLigneDetail | null = null;
   patientSelectionnePourDossier: PatientLigneDetail | null = null;
   afficherModalDossier = false;
+  chargementDossier = false;
+  factureDossier: FactureStructure | null = null;
+  dossierActif: DossierPatient | null = null;
+  documentsDossier: DocumentComplementaire[] = [];
+  feuilleSoinsDossier?: { id: string; numero: string };
+  afficherIdentitePatient = false;
 
   // Recherche patient
   searchPatient = '';
@@ -548,6 +577,47 @@ export class FacturesStructuresComponent implements OnInit {
     );
   }
 
+  get identitePatient(): InfoPatient[] {
+    const p = this.patientSelectionne;
+    if (!p) return [];
+    return this.infosRenseignees([
+      { libelle: 'Nom complet', valeur: `${p.prenom} ${p.nom}`.trim() },
+      { libelle: 'Matricule', valeur: p.matricule, mono: true },
+      { libelle: 'Date de la visite', valeur: p.datePriseEnCharge ? this.formatDate(p.datePriseEnCharge) : '' },
+      { libelle: 'Date de naissance', valeur: p.dateNaissance ? this.formatDate(p.dateNaissance) : '' },
+      { libelle: 'Sexe', valeur: p.sexe === 'M' ? 'Masculin' : p.sexe === 'F' ? 'Féminin' : p.sexe },
+      { libelle: 'Téléphone', valeur: p.telephone || '' },
+      { libelle: 'Adresse', valeur: p.adresse || '' },
+      { libelle: 'N° de CNI', valeur: p.cni, mono: true },
+      { libelle: 'N° de registre', valeur: p.numeroRegistre || '', mono: true },
+      { libelle: 'Lettre de garantie', valeur: p.lettreNumero || '', mono: true },
+      { libelle: 'Service', valeur: p.service || '' },
+      { libelle: 'Dialyse (IRC / IRA)', valeur: p.ircIra || '' },
+      { libelle: 'Indication', valeur: p.indicationCbt || '' }
+    ]);
+  }
+
+  get cartePatient(): InfoPatient[] {
+    const p = this.patientSelectionne;
+    if (!p) return [];
+    const validite = p.dateDebutValiditeCarte || p.dateFinValiditeCarte
+      ? `${p.dateDebutValiditeCarte ? this.formatDate(p.dateDebutValiditeCarte) : '…'} au ${p.dateFinValiditeCarte ? this.formatDate(p.dateFinValiditeCarte) : '…'}` : '';
+    return this.infosRenseignees([
+      { libelle: 'Vérification', valeur: p.verificationCarte === 'VERIFIEE' ? 'Carte vérifiée en ligne'
+        : p.verificationCarte === 'NON_VERIFIEE_PANNE' ? 'Non vérifiée (système en panne)' : '' },
+      { libelle: 'Catégorie', valeur: p.categorieCarte || '' },
+      { libelle: 'État', valeur: p.etatCarte || '' },
+      { libelle: 'Validité', valeur: validite },
+      { libelle: 'Mutuelle', valeur: p.mutuelle || '' },
+      { libelle: "Type d'adhésion", valeur: p.typeAdhesion || '' },
+      { libelle: 'Taux de couverture', valeur: p.tauxCouverture != null ? `${p.tauxCouverture} %` : '' }
+    ]);
+  }
+
+  private infosRenseignees(infos: InfoPatient[]): InfoPatient[] {
+    return infos.filter(info => !!info.valeur && info.valeur.trim() !== '');
+  }
+
   // ===================== ACTIONS DU CONTRÔLEUR & DOSSIERS GLOBAUX =====================
 
   /**
@@ -720,10 +790,92 @@ export class FacturesStructuresComponent implements OnInit {
   voirDossierPatient(p: PatientLigneDetail): void {
     this.patientSelectionnePourDossier = p;
     this.afficherModalDossier = true;
+    this.chargementDossier = true;
+    this.factureDossier = null;
+    this.dossierActif = null;
+    this.documentsDossier = [];
+    this.feuilleSoinsDossier = undefined;
+    const factureId = this.factureActiveResume?.id;
+    if (!factureId || this.factureActiveResume?.typeEtablissement !== 'STRUCTURE') {
+      this.chargementDossier = false;
+      this.snackBar.open('Le dossier patient est indisponible pour cette facture.', 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.structureService.getFacture(factureId).subscribe({
+      next: facture => {
+        if (this.patientSelectionnePourDossier?.id !== p.id) return;
+        this.factureDossier = facture;
+        const dossier = (facture.dossiers || []).find(d =>
+          d.id === p.id ||
+          (!!p.matricule && d.matricule === p.matricule) ||
+          (!!p.lettreNumero && d.lettreGarantieNumero === p.lettreNumero) ||
+          (!!p.nom && !!p.prenom && d.nom?.toLowerCase() === p.nom.toLowerCase() && d.prenom?.toLowerCase() === p.prenom.toLowerCase() && (!p.dateNaissance || d.dateNaissance === p.dateNaissance))
+        );
+        const lignes = facture.lignes || [];
+        const lignesPatient = dossier
+          ? lignes.filter(l => l.dossierId === dossier.id ||
+              (!!dossier.matricule && l.patientMatricule === dossier.matricule) ||
+              (!!dossier.lettreGarantieNumero && l.lettreGarantieNumero === dossier.lettreGarantieNumero))
+          : lignes.filter(l =>
+              (!!p.matricule && l.patientMatricule === p.matricule) ||
+              (!!p.lettreNumero && l.lettreGarantieNumero === p.lettreNumero) ||
+              (!!p.id && l.patientId === p.id) ||
+              (!!p.nom && !!p.prenom && l.patientNom?.toLowerCase() === p.nom.toLowerCase() && l.patientPrenom?.toLowerCase() === p.prenom.toLowerCase() && (!p.dateNaissance || l.patientDateNaissance === p.dateNaissance))
+            );
+        this.dossierActif = dossier || {
+          id: lignesPatient[0]?.dossierId || p.id,
+          statut: p.statutDossier === 'A_COMPLETER' ? 'A_COMPLETER' : 'COMPLET',
+          nom: p.nom,
+          prenom: p.prenom,
+          sexe: p.sexe,
+          dateNaissance: p.dateNaissance,
+          telephone: p.telephone,
+          adresse: p.adresse,
+          matricule: p.matricule,
+          numeroCni: p.cni,
+          numeroRegistre: p.numeroRegistre,
+          identiteVerrouillee: false,
+          verificationCarte: p.verificationCarte,
+          categorieCarte: p.categorieCarte,
+          etatCarte: p.etatCarte,
+          tauxCouverture: p.tauxCouverture,
+          dateDebutValidite: p.dateDebutValiditeCarte,
+          dateFinValidite: p.dateFinValiditeCarte,
+          mutuelle: p.mutuelle,
+          typeAdhesion: p.typeAdhesion,
+          lettreGarantieNumero: p.lettreNumero,
+          datePriseEnCharge: p.datePriseEnCharge,
+          pieces: (p.pieces || []).filter((piece): piece is TypePiece =>
+            ['TICKET_CAISSE', 'CNI_RECTO', 'CNI_VERSO', 'EXTRAIT_NAISSANCE', 'CARTE_ASSURE', 'PHOTO_ASSURE'].includes(piece)
+          )
+        };
+        const lettreNumero = this.dossierActif.lettreGarantieNumero || p.lettreNumero;
+        this.documentsDossier = (facture.documentsComplementaires || []).filter(doc =>
+          (!!p.matricule && doc.patientMatricule === p.matricule) ||
+          (!!lettreNumero && doc.lettreGarantieNumero === lettreNumero)
+        );
+        const feuille = lignesPatient.find(l => l.feuilleSoinsId);
+        this.feuilleSoinsDossier = feuille?.feuilleSoinsId
+          ? { id: feuille.feuilleSoinsId, numero: feuille.feuilleSoinsNumero || feuille.feuilleSoinsId }
+          : undefined;
+        this.chargementDossier = false;
+      },
+      error: () => {
+        if (this.patientSelectionnePourDossier?.id !== p.id) return;
+        this.chargementDossier = false;
+        this.snackBar.open('Impossible de charger les pièces du dossier patient.', 'Fermer', { duration: 4500 });
+      }
+    });
   }
 
   fermerModalDossier(): void {
     this.afficherModalDossier = false;
+    this.patientSelectionnePourDossier = null;
+    this.chargementDossier = false;
+    this.factureDossier = null;
+    this.dossierActif = null;
+    this.documentsDossier = [];
+    this.feuilleSoinsDossier = undefined;
   }
 
   // ===================== NAVIGATION PATIENT & PRESTATIONS (STYLE POSTE DE SANTÉ) =====================
@@ -731,6 +883,7 @@ export class FacturesStructuresComponent implements OnInit {
   ouvrirPrestationsPatient(p: PatientLigneDetail): void {
     this.patientSelectionne = p;
     this.patientSelectionnePourDossier = p;
+    this.afficherIdentitePatient = false;
     this.niveauEntonnoir = 5;
   }
 

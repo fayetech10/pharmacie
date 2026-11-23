@@ -23,14 +23,14 @@ export class FactureService {
     return tap<T>(() => this.events.notifyChanged());
   }
 
-  getAll(params?: { mois?: number; annee?: number; regime?: string }): Observable<Facture[]> {
+  getAll(params?: { mois?: number; annee?: number; regime?: string; fresh?: boolean }): Observable<Facture[]> {
     let queryParams = new HttpParams();
     if (params) {
       if (params.mois) queryParams = queryParams.set('mois', params.mois.toString());
       if (params.annee) queryParams = queryParams.set('annee', params.annee.toString());
       if (params.regime) queryParams = queryParams.set('regime', params.regime); // Backend for Facture controller might not use regime, but we'll send it if present
     }
-    return this.api.get<Facture[]>('/factures', { params: queryParams });
+    return this.api.get<Facture[]>('/factures', { params: queryParams, fresh: params?.fresh });
   }
 
   /**

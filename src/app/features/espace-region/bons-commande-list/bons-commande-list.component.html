@@ -86,18 +86,35 @@
     </div>
 
     <div class="m-cards" *ngIf="filteredBons.length > 0">
-      <div class="m-card" *ngFor="let b of filteredBons | paginer: pg.page : pg.taille">
+      <div class="m-card clickable" *ngFor="let b of filteredBons | paginer: pg.page : pg.taille"
+           (click)="imprimer(b)" role="button" tabindex="0" (keydown.enter)="imprimer(b)"
+           [attr.aria-label]="'Imprimer le bon ' + b.numero">
         <div class="m-card-top">
-          <span class="m-title font-mono">{{ b.numero }}</span>
-          <app-status-badge [statut]="b.statut" famille="bon"></app-status-badge>
+          <div class="min-w-0 pr-2">
+            <span class="m-title font-mono">{{ b.numero }}</span>
+            <div class="m-sub">{{ b.patientPrenom }} {{ b.patientNom }}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <app-status-badge [statut]="b.statut" famille="bon"></app-status-badge>
+            <button type="button" class="m-more-btn" [matMenuTriggerFor]="bonMenu" (click)="$event.stopPropagation()"
+                    (keydown.enter)="$event.stopPropagation()"
+                    aria-label="Actions du bon" title="Actions">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #bonMenu="matMenu" xPosition="before">
+              <button mat-menu-item (click)="imprimer(b)">
+                <mat-icon>print</mat-icon>
+                <span>Imprimer</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
         <div class="m-row">
-          <span>{{ b.patientPrenom }} {{ b.patientNom }}</span>
-          <span>{{ b.createdAt | date:'dd/MM/yyyy' }}</span>
+          <span class="text-xs text-text-muted"><mat-icon class="inline-ic">event</mat-icon>{{ b.createdAt | date:'dd/MM/yyyy' }}</span>
         </div>
         <div class="m-foot">
-          <strong>{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong>
-          <button type="button" class="btn btn-outline btn-sm" (click)="imprimer(b)"><mat-icon>print</mat-icon> Imprimer</button>
+          <span class="m-amount">{{ b.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+          <mat-icon class="m-chevron">chevron_right</mat-icon>
         </div>
       </div>
     </div>

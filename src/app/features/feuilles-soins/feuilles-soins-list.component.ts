@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 import { RegimeBadgeComponent } from '../../shared/regime-badge/regime-badge.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { FeuilleSoinsService } from '../../core/services/feuille-soins.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeuilleSoins, StatutFeuilleSoins, STATUT_FEUILLE_LABELS } from '../../core/models/feuille-soins.model';
@@ -13,13 +14,14 @@ import { REGIME_LABELS, REGIME_OPTIONS } from '../../core/models/bcsu.model';
 
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../shared/pagination/paginer.pipe';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+
 @Component({
   selector: 'app-feuilles-soins-list',
   standalone: true,
   imports: [PaginationComponent, PaginerPipe, 
-    CommonModule, FormsModule, RouterModule, MatIconModule, MatSnackBarModule,
-    StatusBadgeComponent, RegimeBadgeComponent
-  ],
+    CommonModule, FormsModule, RouterModule, MatIconModule, MatSnackBarModule, MatMenuModule,
+    StatusBadgeComponent, RegimeBadgeComponent, PageHeaderComponent],
   templateUrl: './feuilles-soins-list.component.html'
 })
 export class FeuillesSoinsListComponent implements OnInit {

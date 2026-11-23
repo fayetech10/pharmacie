@@ -1,42 +1,155 @@
-<div class="fade-in flex flex-col gap-5">
+<div class="fade-in space-y-5">
 
-  <div class="page-head">
+  <!-- En-tête sobre et direct -->
+  <div class="flex items-center justify-between gap-4">
     <div>
-      <h1>Administration</h1>
-      <p>Organisation sanitaire, comptes et référentiels de la plateforme SEN-CSU.</p>
+      <h1 class="m-0 text-[18px] font-bold text-slate-900">Administration</h1>
+      <p class="m-0 mt-0.5 text-[12.5px] text-slate-400">Gestion des ressources et de la configuration du système</p>
     </div>
-    <div class="page-head-actions">
-      <button type="button" class="btn btn-outline btn-sm" (click)="chargerStatistiques()">
-        <mat-icon>refresh</mat-icon> Actualiser
+    <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600 cursor-pointer"
+            [class.animate-spin]="chargement"
+            (click)="chargerStatistiques()"
+            title="Actualiser">
+      <mat-icon class="!text-[16px] !w-4 !h-4">refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- KPI Cards : 4 compteurs clés -->
+  <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+
+    <button type="button"
+            class="admin-kpi-card group text-left"
+            (click)="naviguerVers('/dashboard/regions')"
+            [class.opacity-60]="chargement"
+            [class.animate-pulse]="chargement">
+      <div class="admin-kpi-card__icon bg-blue-50 text-blue-600 group-hover:bg-blue-100">
+        <mat-icon class="!text-[20px] !w-5 !h-5">map</mat-icon>
+      </div>
+      <div class="admin-kpi-card__value">{{ chargement ? '—' : stats.nbRegions }}</div>
+      <div class="admin-kpi-card__label">Régions médicales</div>
+      <div class="admin-kpi-card__link">
+        Gérer <mat-icon class="!text-[12px] !w-3 !h-3">arrow_forward</mat-icon>
+      </div>
+    </button>
+
+    <button type="button"
+            class="admin-kpi-card group text-left"
+            (click)="naviguerVers('/dashboard/districts')"
+            [class.opacity-60]="chargement"
+            [class.animate-pulse]="chargement">
+      <div class="admin-kpi-card__icon bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100">
+        <mat-icon class="!text-[20px] !w-5 !h-5">account_tree</mat-icon>
+      </div>
+      <div class="admin-kpi-card__value">{{ chargement ? '—' : stats.nbDistricts }}</div>
+      <div class="admin-kpi-card__label">Districts sanitaires</div>
+      <div class="admin-kpi-card__link">
+        Gérer <mat-icon class="!text-[12px] !w-3 !h-3">arrow_forward</mat-icon>
+      </div>
+    </button>
+
+    <button type="button"
+            class="admin-kpi-card group text-left"
+            (click)="naviguerVers('/dashboard/structures-sanitaires')"
+            [class.opacity-60]="chargement"
+            [class.animate-pulse]="chargement">
+      <div class="admin-kpi-card__icon bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100">
+        <mat-icon class="!text-[20px] !w-5 !h-5">local_hospital</mat-icon>
+      </div>
+      <div class="admin-kpi-card__value">{{ chargement ? '—' : stats.nbStructures }}</div>
+      <div class="admin-kpi-card__label">Structures sanitaires</div>
+      <div class="admin-kpi-card__link">
+        Gérer <mat-icon class="!text-[12px] !w-3 !h-3">arrow_forward</mat-icon>
+      </div>
+    </button>
+
+    <button type="button"
+            class="admin-kpi-card group text-left"
+            (click)="naviguerVers('/dashboard/pharmacies')"
+            [class.opacity-60]="chargement"
+            [class.animate-pulse]="chargement">
+      <div class="admin-kpi-card__icon bg-purple-50 text-purple-600 group-hover:bg-purple-100">
+        <mat-icon class="!text-[20px] !w-5 !h-5">local_pharmacy</mat-icon>
+      </div>
+      <div class="admin-kpi-card__value">{{ chargement ? '—' : stats.nbPharmacies }}</div>
+      <div class="admin-kpi-card__label">Pharmacies partenaires</div>
+      <div class="admin-kpi-card__link">
+        Gérer <mat-icon class="!text-[12px] !w-3 !h-3">arrow_forward</mat-icon>
+      </div>
+    </button>
+  </div>
+
+  <!-- Accès rapides — grille d'actions -->
+  <div>
+    <h2 class="mb-3 text-[13px] font-semibold text-slate-500 uppercase tracking-wider">Actions rapides</h2>
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/utilisateurs')">
+        <span class="admin-action-item__icon bg-blue-50 text-blue-600 group-hover:bg-blue-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">manage_accounts</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Utilisateurs</div>
+          <div class="admin-action-item__desc">Comptes, rôles et accès</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
       </button>
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/referentiel')">
+        <span class="admin-action-item__icon bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">price_change</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Référentiel des prestations</div>
+          <div class="admin-action-item__desc">Actes, tarification nationale</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
+      </button>
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/medicaments')">
+        <span class="admin-action-item__icon bg-rose-50 text-rose-600 group-hover:bg-rose-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">medication</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Médicaments</div>
+          <div class="admin-action-item__desc">Liste agréée CSU</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
+      </button>
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/regions')">
+        <span class="admin-action-item__icon bg-amber-50 text-amber-600 group-hover:bg-amber-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">map</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Régions médicales</div>
+          <div class="admin-action-item__desc">Services régionaux</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
+      </button>
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/districts')">
+        <span class="admin-action-item__icon bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">account_tree</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Districts sanitaires</div>
+          <div class="admin-action-item__desc">Maille de consolidation</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
+      </button>
+
+      <button type="button" class="admin-action-item group" (click)="naviguerVers('/dashboard/structures-sanitaires')">
+        <span class="admin-action-item__icon bg-teal-50 text-teal-600 group-hover:bg-teal-100">
+          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">local_hospital</mat-icon>
+        </span>
+        <div class="min-w-0 text-left">
+          <div class="admin-action-item__title">Structures sanitaires</div>
+          <div class="admin-action-item__desc">EPS, CS, postes de santé</div>
+        </div>
+        <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-slate-500 ml-auto flex-shrink-0 transition-colors">chevron_right</mat-icon>
+      </button>
+
     </div>
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" [class.animate-pulse]="chargement">
-    <app-indicateur icone="map" teinte="blue" [cliquable]="true" (click)="naviguerVers('/dashboard/regions')"
-                    [valeur]="chargement ? '…' : stats.nbRegions" libelle="Régions médicales"></app-indicateur>
-    <app-indicateur icone="account_tree" teinte="indigo" [cliquable]="true" (click)="naviguerVers('/dashboard/districts')"
-                    [valeur]="chargement ? '…' : stats.nbDistricts" libelle="Districts sanitaires"></app-indicateur>
-    <app-indicateur icone="local_hospital" teinte="emerald" [cliquable]="true" (click)="naviguerVers('/dashboard/structures-sanitaires')"
-                    [valeur]="chargement ? '…' : stats.nbStructures" libelle="Structures sanitaires"></app-indicateur>
-    <app-indicateur icone="local_pharmacy" teinte="purple" [cliquable]="true" (click)="naviguerVers('/dashboard/pharmacies')"
-                    [valeur]="chargement ? '…' : stats.nbPharmacies" libelle="Pharmacies partenaires"></app-indicateur>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    <app-tuile-activite icone="manage_accounts" teinte="blue" titre="Utilisateurs"
-                        description="Créer et administrer les comptes et leurs rôles sur tout le territoire."
-                        (click)="naviguerVers('/dashboard/utilisateurs')"></app-tuile-activite>
-    <app-tuile-activite icone="price_change" teinte="emerald" titre="Référentiel des prestations"
-                        description="Actes médicaux, prestations et tarification CSU nationale."
-                        (click)="naviguerVers('/dashboard/referentiel')"></app-tuile-activite>
-    <app-tuile-activite icone="medication" teinte="rose" titre="Médicaments"
-                        description="Liste des médicaments agréés et classement des médicaments non répertoriés."
-                        (click)="naviguerVers('/dashboard/medicaments')"></app-tuile-activite>
-    <app-tuile-activite icone="map" teinte="amber" titre="Régions"
-                        description="Régions médicales et leurs services régionaux."
-                        (click)="naviguerVers('/dashboard/regions')"></app-tuile-activite>
-    <app-tuile-activite icone="account_tree" teinte="indigo" titre="Districts sanitaires"
-                        description="La maille de rattachement et de consolidation des structures."
-                        (click)="naviguerVers('/dashboard/districts')"></app-tuile-activite>  </div>
 </div>

@@ -1,10 +1,10 @@
 <div class="fade-in">
 
-  <div class="page-head">
-    <div>
+  <app-page-header>
+    <div page-header-title>
       <h1>Consolidation district</h1>
     </div>
-    <div class="page-head-actions flex items-center gap-2">
+    <div class="page-head-actions flex items-center gap-2" page-header-actions>
       <!-- « Situation 0-5 ans » : un Excel (une feuille par poste / centre) + un PDF réunissant la
            « Liste + facture 0-5 ans » de chaque poste et centre du district. -->
       <button class="btn btn-outline" type="button" (click)="exporterSituationEnfants()"
@@ -20,7 +20,7 @@
         {{ export === 'pdf' ? 'Génération…' : 'Facture Globale' }}
       </button>
     </div>
-  </div>
+  </app-page-header>
 
   <!-- Filtres -->
   <div class="filter-strip">
@@ -165,7 +165,6 @@
           <div class="section-icon"><mat-icon>insights</mat-icon></div>
           <div>
             <h2>Suivi de la facturation</h2>
-            <p>Part SEN-CSU mois par mois sur {{ filtres.annee }}, et répartition par régime.</p>
           </div>
         </div>
       </div>
@@ -263,7 +262,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let f of factures | paginer: pgF.page : pgF.taille">
+              <tr *ngFor="let f of factures | paginer: pgF.page : pgF.taille"
+                  class="cursor-pointer hover:bg-primary-light/40 transition-colors" (click)="ouvrirFacture(f)">
                 <td class="font-semibold">
                   {{ f.structureNom }}
                   <span class="block text-[11.5px] text-text-muted font-normal">{{ f.typeStructure }}</span>
@@ -285,22 +285,23 @@
 
         <!-- Cartes mobiles -->
         <div class="m-cards" *ngIf="factures.length">
-          <div class="m-card" *ngFor="let f of factures | paginer: pgF.page : pgF.taille">
+          <div class="m-card clickable" *ngFor="let f of factures | paginer: pgF.page : pgF.taille"
+               (click)="ouvrirFacture(f)" role="button" tabindex="0" (keydown.enter)="ouvrirFacture(f)"
+               [attr.aria-label]="'Consulter la facture ' + f.numero">
             <div class="m-card-top">
-              <span class="m-title">{{ f.structureNom }}</span>
+              <div class="min-w-0 pr-2">
+                <span class="m-title">{{ f.structureNom }}</span>
+                <div class="m-sub font-mono">{{ f.numero }} · {{ moisNoms[f.mois] }} {{ f.annee }}</div>
+              </div>
               <app-status-badge [statut]="f.statut"></app-status-badge>
             </div>
             <div class="m-row">
-              <span class="font-mono text-[12px]">{{ f.numero }}</span>
-              <span>{{ moisNoms[f.mois] }} {{ f.annee }}</span>
-            </div>
-            <div class="m-row">
               <app-regime-badge [regime]="f.regime"></app-regime-badge>
-              <span>{{ patients(f) }} patient(s) · {{ prestations(f) }} prestation(s)</span>
+              <span>{{ patients(f) }} patient(s) · {{ prestations(f) }} acte(s)</span>
             </div>
-            <div class="m-row">
-              <span>Part SEN-CSU{{ estTransmise(f) ? '' : ' (en cours)' }}</span>
-              <strong>{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</strong>
+            <div class="m-foot">
+              <span class="m-amount">{{ f.montantTotalSencsu | number:'1.0-0':'fr' }} F</span>
+              <mat-icon class="m-chevron">chevron_right</mat-icon>
             </div>
           </div>
         </div>
