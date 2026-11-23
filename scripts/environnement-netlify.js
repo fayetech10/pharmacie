@@ -18,11 +18,11 @@ function echec(message) {
   process.exit(1);
 }
 
-const brute = (process.env.API_URL || '').trim().replace(/\/+$/, '');
+const defaut = 'https://api.sencsu.sn';
+let brute = (process.env.API_URL || '').trim().replace(/\/+$/, '');
 if (!brute) {
-  echec('API_URL absente. Dans Netlify (Site configuration → Environment variables) ou '
-    + 'Vercel (Settings → Environment Variables) : API_URL = https://api.votre-domaine '
-    + '(adresse HTTPS du VPS).');
+  console.warn(`\n[build:netlify] ATTENTION: API_URL non configurée dans Vercel/Netlify. Utilisation de la valeur par défaut « ${defaut} ».\n`);
+  brute = defaut;
 }
 
 let adresse;

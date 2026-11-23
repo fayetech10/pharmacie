@@ -53,10 +53,14 @@ export interface FactureAssigneeResume {
   dateAssignation?: string;
   commentaireRejet?: string;
   factureOrigine?: FactureStructure | Facture;
+  /** Résumé anonyme d'une facture encore en brouillon, fourni par /suivi-saisies. */
+  resumeSeul?: boolean;
 }
 
 /** Agrégat anonyme d'une facture, utilisé pour rendre les brouillons visibles au suivi. */
 interface FactureSaisieSuivi {
+  factureId: string;
+  numero: string;
   structureSanitaireId: string;
   mois: number;
   annee: number;
@@ -65,6 +69,7 @@ interface FactureSaisieSuivi {
   nombreBeneficiaires: number;
   montantTotal: number;
   montantSencsu: number;
+  derniereSaisie?: string;
 }
 
 export interface StatsRegimeSR {
@@ -80,6 +85,17 @@ export interface StatsRegimeSR {
   montantSencsuEnAttente: number;
   nombreBeneficiaires: number;
   nombreFactures: number;
+}
+
+export interface MontantMensuelSR {
+  mois: number;
+  montantFacture: number;
+  nombreFactures: number;
+}
+
+export interface TableauDeBordSR {
+  statsRegimes: StatsRegimeSR[];
+  montantsMensuels: MontantMensuelSR[];
 }
 
 export interface StructureEnregistrementRow {
@@ -105,6 +121,7 @@ export interface DistrictEnregistrementRow {
   nom: string;
   nombrePostes: number;
   nombrePostesAvecSaisie: number;
+  nombrePostesSaisisAujourdhui: number;
   nombreFactures: number;
   nombreBeneficiaires: number;
   montantTotal: number;
@@ -120,6 +137,7 @@ export interface PostePolariseRow {
   type: string; // 'PS' ou 'CS'
   actif: boolean;
   saisieActive: boolean;
+  saisieAujourdhui: boolean;
   factureEnvoyeePeriode: boolean;
   statutSuiviPeriode: 'A_SAISIR' | 'EN_COURS' | 'A_CORRIGER' | 'ENVOYEE';
   nombreFactures: number;
@@ -452,10 +470,12 @@ export class SrGestionService {
   /**
    * Récupère toutes les factures réelles depuis le backend (/api/factures-structure et /api/factures).
    */
-  getToutesFacturesResumes(inclureBrouillons = false): Observable<FactureAssigneeResume[]> {
+  getToutesFacturesResumes(inclureBrouillons = false, rechargerFactures = false): Observable<FactureAssigneeResume[]> {
+    const facturesStructures$ = this.structureService.getFactures({ fresh: rechargerFactures });
+    const facturesPharmacies$ = this.factureService.getAll({ fresh: rechargerFactures });
     return forkJoin({
-      facturesStructures: this.structureService.getFactures().pipe(catchError(() => of([]))),
-      facturesPharmacies: this.factureService.getAll().pipe(catchError(() => of([]))),
+      facturesStructures: rechargerFactures ? facturesStructures$ : facturesStructures$.pipe(catchError(() => of([]))),
+      facturesPharmacies: rechargerFactures ? facturesPharmacies$ : facturesPharmacies$.pipe(catchError(() => of([]))),
       structures: this.structureService.getStructures().pipe(catchError(() => of([]))),
       pharmacies: this.pharmacieService.getAll().pipe(catchError(() => of([]))),
       districts: this.districtService.getDistricts().pipe(catchError(() => of([])))
@@ -551,7 +571,7 @@ export class SrGestionService {
   /**
    * Calcule les agrégats réels du Tableau de bord à partir des factures du backend
    */
-  calculerTableauDeBord(filtres: { annee: number; trimestre?: number; mois?: number }): Observable<StatsRegimeSR[]> {
+  calculerTableauDeBord(filtres: { annee: number; trimestre?: number; mois?: number }): Observable<TableauDeBordSR> {
     return this.getToutesFacturesResumes().pipe(
       map(factures => {
         const filtrees = factures.filter(f => {
@@ -568,7 +588,7 @@ export class SrGestionService {
           return true;
         });
 
-        return this.REGIMES_LIST.map(r => {
+        const statsRegimes = this.REGIMES_LIST.map(r => {
           const fDuRegime = filtrees.filter(f => f.regime === r.code);
           const montantFacture = fDuRegime.reduce((s, f) => s + f.montantTotal, 0);
           const montantSencsuTotal = fDuRegime.reduce((s, f) => s + f.montantSencsu, 0);
@@ -590,6 +610,22 @@ export class SrGestionService {
             nombreFactures: fDuRegime.length
           };
         });
+
+        const moisAffiches = filtres.mois
+          ? [filtres.mois]
+          : filtres.trimestre
+            ? Array.from({ length: 3 }, (_, index) => (filtres.trimestre! - 1) * 3 + index + 1)
+            : Array.from({ length: 12 }, (_, index) => index + 1);
+        const montantsMensuels = moisAffiches.map(mois => {
+          const facturesDuMois = filtrees.filter(f => f.mois === mois);
+          return {
+            mois,
+            montantFacture: facturesDuMois.reduce((total, facture) => total + facture.montantTotal, 0),
+            nombreFactures: facturesDuMois.length
+          };
+        });
+
+        return { statsRegimes, montantsMensuels };
       })
     );
   }
@@ -606,10 +642,13 @@ export class SrGestionService {
       structures: this.structureService.getStructures(),
       pharmacies: this.pharmacieService.getAll(),
       districts: this.districtService.getDistricts(),
-      factures: this.getToutesFacturesResumes(true),
-      saisies: this.getSaisiesPourSuivi(annee, mois, trimestre)
+      // Le tableau récapitulatif doit contourner le cache : les factures du jour
+      // peuvent avoir été créées depuis une autre session/poste.
+      factures: this.getToutesFacturesResumes(true, true),
+      saisies: this.getSaisiesPourSuivi(annee, mois, trimestre),
+      saisiesAujourdhui: this.getSaisiesPourSuivi(new Date().getFullYear(), undefined, undefined, this.dateLocaleDuJour())
     }).pipe(
-      map(({ structures, pharmacies, districts, factures, saisies }) => {
+      map(({ structures, pharmacies, districts, factures, saisies, saisiesAujourdhui }) => {
         const districtMap = new Map<string, District>(districts.map(d => [d.id, d]));
 
         // La première vue est agrégée par district : seules les structures de type PS
@@ -629,6 +668,7 @@ export class SrGestionService {
             (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)
           ));
           const nombrePostesAvecSaisie = saisiesPostes.filter(fs => fs.length > 0).length;
+          const nombrePostesSaisisAujourdhui = postes.filter(poste => saisiesAujourdhui.some(f => f.structureSanitaireId === poste.id)).length;
           const facturesPostes = saisiesPostes.flat();
           const contientRejet = facturesPostes.some(f => ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
           const tousEnvoyes = postes.length > 0 && saisiesPostes.every(fs => fs.length > 0 && fs.every(f =>
@@ -643,6 +683,7 @@ export class SrGestionService {
             nom: d.nom,
             nombrePostes: postes.length,
             nombrePostesAvecSaisie,
+            nombrePostesSaisisAujourdhui,
             nombreFactures: facturesPostes.length,
             nombreBeneficiaires: facturesPostes.reduce((sum, f) => sum + f.nombreBeneficiaires, 0),
             montantTotal: facturesPostes.reduce((sum, f) => sum + f.montantTotal, 0),
@@ -720,15 +761,24 @@ export class SrGestionService {
     );
   }
 
-  private getSaisiesPourSuivi(annee: number, mois?: number, trimestre?: number): Observable<FactureSaisieSuivi[]> {
+  private getSaisiesPourSuivi(annee: number, mois?: number, trimestre?: number, jour?: string): Observable<FactureSaisieSuivi[]> {
     // Les brouillons changent depuis les postes (autre session) : bypass du cache GET de 60 s.
     const params = [`annee=${annee}`];
     if (mois !== undefined) params.push(`mois=${mois}`);
     if (trimestre !== undefined) params.push(`trimestre=${trimestre}`);
+    if (jour) params.push(`jour=${encodeURIComponent(jour)}`);
     return this.api.get<FactureSaisieSuivi[]>(
       `/factures-structure/suivi-saisies?${params.join('&')}`,
       { skipLoading: true, fresh: true }
     );
+  }
+
+  private dateLocaleDuJour(): string {
+    const parties = new Intl.DateTimeFormat('en', {
+      timeZone: 'Africa/Dakar', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const partie = (type: string) => parties.find(p => p.type === type)?.value || '';
+    return `${partie('year')}-${partie('month')}-${partie('day')}`;
   }
 
   /**
@@ -778,9 +828,11 @@ export class SrGestionService {
     return forkJoin({
       structures: this.structureService.getStructures().pipe(catchError(() => of([]))),
       districts: this.districtService.getDistricts().pipe(catchError(() => of([]))),
-      saisies: this.getSaisiesPourSuivi(annee, mois).pipe(catchError(() => of([])))
+      saisies: this.getSaisiesPourSuivi(annee, mois).pipe(catchError(() => of([]))),
+      saisiesAujourdhui: this.getSaisiesPourSuivi(new Date().getFullYear(), undefined, undefined, this.dateLocaleDuJour())
+        .pipe(catchError(() => of([])))
     }).pipe(
-      map(({ structures, districts, saisies }) => {
+      map(({ structures, districts, saisies, saisiesAujourdhui }) => {
         const district = districts.find(d => d.id === districtId);
         const districtNom = district?.nom || 'District Sanitaire';
 
@@ -820,6 +872,7 @@ export class SrGestionService {
             type: def.typeStructure || 'PS',
             actif: true,
             saisieActive: hasSaisie,
+            saisieAujourdhui: saisiesAujourdhui.some(f => f.structureSanitaireId === def.id),
             factureEnvoyeePeriode: statutSuiviPeriode === 'ENVOYEE',
             statutSuiviPeriode,
             nombreFactures: fSiennes.length,
@@ -839,12 +892,48 @@ export class SrGestionService {
    * Récupère en temps réel toutes les factures d'un prestataire
    */
   getFacturesParPrestataire(prestataireId: string, annee: number): Observable<FactureAssigneeResume[]> {
-    return this.getToutesFacturesResumes(true).pipe(
-      map(all => all.filter(f =>
-        (f.etablissementId === prestataireId || f.posteId === prestataireId || f.districtId === prestataireId) &&
-        f.annee === annee
-      ))
-    );
+    return forkJoin({
+      factures: this.getToutesFacturesResumes(true, true),
+      saisies: this.getSaisiesPourSuivi(annee).pipe(catchError(() => of([]))),
+      structures: this.structureService.getStructures().pipe(catchError(() => of([])))
+    }).pipe(map(({ factures, saisies, structures }) => {
+      const visibles = factures.filter(f => {
+        const idEtablissement = f.typeEtablissement === 'STRUCTURE'
+          ? (f.factureOrigine as FactureStructure | undefined)?.structureSanitaireId || f.etablissementId
+          : f.etablissementId;
+        return idEtablissement === prestataireId && f.annee === annee;
+      });
+      const idsVisibles = new Set(visibles.map(f => f.id));
+      const structure = structures.find(s => s.id === prestataireId);
+      const brouillons = saisies
+        .filter(f => f.structureSanitaireId === prestataireId && f.annee === annee && f.statut === 'BROUILLON' && !idsVisibles.has(f.factureId))
+        .map(f => ({
+          id: f.factureId,
+          numero: f.numero || `FAC-${f.mois}${f.annee}`,
+          typeEtablissement: 'STRUCTURE' as const,
+          etablissementId: prestataireId,
+          etablissementCode: structure?.code || prestataireId,
+          etablissementNom: structure?.nom || 'Poste de santé',
+          typeStructure: structure?.typeStructure || 'PS',
+          districtId: structure?.districtId,
+          districtNom: '',
+          posteId: prestataireId,
+          regime: f.regime,
+          mois: f.mois,
+          annee: f.annee,
+          montantTotal: f.montantTotal,
+          montantSencsu: f.montantSencsu,
+          nombreBeneficiaires: f.nombreBeneficiaires,
+          statut: f.statut,
+          resumeSeul: true
+        }));
+      return [...brouillons, ...visibles].sort((a, b) => b.annee - a.annee || b.mois - a.mois || a.regime.localeCompare(b.regime));
+    }));
+  }
+
+  /** Charge le contenu détaillé d'un brouillon de structure pour l'ouvrir depuis le suivi. */
+  getFactureStructure(factureId: string): Observable<FactureStructure> {
+    return this.structureService.getFacture(factureId, { fresh: true });
   }
 
   /**
@@ -868,7 +957,7 @@ export class SrGestionService {
             id: l.prestationId || `${d.id}-l${lIdx}`,
             dossierId: d.id,
             designation: l.designation,
-            codeActe: l.codeActe || `ACT-${lIdx + 1}`,
+            codeActe: l.codeActe || '',
             datePriseEnCharge: l.datePriseEnCharge || '',
             quantite: l.quantite || 1,
             prixUnitaire: l.prixUnitaire || 0,
@@ -889,6 +978,21 @@ export class SrGestionService {
             sexe: d.sexe || '',
             dateNaissance: d.dateNaissance || '',
             datePriseEnCharge: d.datePriseEnCharge || prestations[0]?.datePriseEnCharge || '',
+            telephone: d.telephone || matchingLines[0]?.patientTelephone || '',
+            adresse: d.adresse || matchingLines[0]?.patientAdresse || '',
+            numeroRegistre: d.numeroRegistre || matchingLines[0]?.numeroRegistre || '',
+            lettreNumero: d.lettreGarantieNumero || matchingLines[0]?.lettreGarantieNumero || '',
+            service: matchingLines[0]?.service || '',
+            ircIra: matchingLines[0]?.ircIra || '',
+            indicationCbt: matchingLines[0]?.indicationCbt || '',
+            verificationCarte: d.verificationCarte || matchingLines[0]?.verificationCarte || '',
+            categorieCarte: d.categorieCarte || '',
+            etatCarte: d.etatCarte || '',
+            dateDebutValiditeCarte: d.dateDebutValidite || '',
+            dateFinValiditeCarte: d.dateFinValidite || '',
+            mutuelle: d.mutuelle || '',
+            typeAdhesion: d.typeAdhesion || '',
+            tauxCouverture: d.tauxCouverture,
             statutDossier: d.statut || 'COMPLET',
             montantTotal: mntTotal,
             statutLigne: 'CONFORME',
@@ -914,7 +1018,7 @@ export class SrGestionService {
             id: l.prestationId || `${key}-l${lIdx}`,
             dossierId: key,
             designation: l.designation,
-            codeActe: l.codeActe || `ACT-${lIdx + 1}`,
+            codeActe: l.codeActe || '',
             datePriseEnCharge: l.datePriseEnCharge || '',
             quantite: l.quantite || 1,
             prixUnitaire: l.prixUnitaire || 0,
@@ -935,6 +1039,14 @@ export class SrGestionService {
             sexe: first.patientSexe || '',
             dateNaissance: first.patientDateNaissance || '',
             datePriseEnCharge: first.datePriseEnCharge || prestations.find(p => p.datePriseEnCharge)?.datePriseEnCharge || '',
+            telephone: first.patientTelephone || '',
+            adresse: first.patientAdresse || '',
+            numeroRegistre: first.numeroRegistre || '',
+            lettreNumero: first.lettreGarantieNumero || '',
+            service: first.service || '',
+            ircIra: first.ircIra || '',
+            indicationCbt: first.indicationCbt || '',
+            verificationCarte: first.verificationCarte || '',
             statutDossier: 'A_COMPLETER',
             montantTotal: mntTotal,
             statutLigne: 'CONFORME',

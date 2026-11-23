@@ -2,7 +2,7 @@ import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, interval } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { FactureService } from '../../core/services/facture.service';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
@@ -78,6 +78,42 @@ export class MainLayoutComponent implements OnInit {
 
   topNav: NavItem[] = [];
   topNavGroups: { name: string; items: NavItem[] }[] = [];
+
+  /**
+   * La barre de navigation mobile en bas d'écran est réservée exclusivement au Service Régional.
+   * Masquée pour le poste de santé et tous les autres rôles.
+   */
+  get showMobileBottomNav(): boolean {
+    return this.authService.isServiceRegional();
+  }
+
+  get mobileNavItems(): NavItem[] {
+    return this.topNav.slice(0, 4);
+  }
+
+  get mobileNavMore(): NavItem[] {
+    return this.topNav.slice(4);
+  }
+
+  labelMobileNav(item: NavItem): string {
+    const labels: Record<string, string> = {
+      'Tableau de bord': 'Accueil',
+      'Tableau de bord Centre': 'Accueil',
+      'Tableau de bord District': 'Accueil',
+      'Accueil du poste': 'Accueil',
+      'Enregistrement prestataires': 'Saisies',
+      'Factures structures': 'Structures',
+      'Factures des postes de santé': 'Postes',
+      'Facture Structure sanitaire': 'Structures',
+      'Facture Pharmacie': 'Pharmacies',
+      'Paramétrage structures sanitaires': 'Structures',
+      'Nouvelle lettre de garantie': 'Nouvelle lettre',
+      'Patients enregistrés': 'Patients',
+      'Hors CSU (patients payants)': 'Hors CSU',
+      'Consolidation district': 'Consolidation'
+    };
+    return labels[item.label] || item.label;
+  }
 
   private destroyRef = inject(DestroyRef);
 
@@ -159,6 +195,11 @@ export class MainLayoutComponent implements OnInit {
    * derrière un onglet in-page : la sidebar est la seule source de navigation.
    */
   private buildTopNav(): NavItem[] {
+    if (this.authService.isControleur()) {
+      return [
+        { label: 'Espace Contrôleur', icon: 'fact_check', link: '/dashboard/espace-region', group: 'Contrôle' }
+      ];
+    }
     if (this.authService.isPharmacien()) {
       // « Tableau de bord » retiré : il pointait vers /dashboard/espace-pharmacie, exactement
       // comme « Facturation » (l'espace pharmacie n'a qu'une vue, le formulaire de facturation).
@@ -170,20 +211,16 @@ export class MainLayoutComponent implements OnInit {
     if (this.authService.isServiceRegional()) {
       return [
         { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0, group: 'Général' },
-        // Activités des districts, centres et postes de santé de la région (14/10/2026).
-        { label: 'Activités districts et postes', icon: 'hub', link: '/dashboard/espace-region', tab: 4, group: 'Général' },
-        // Un badge par famille : une facture de structure ne s'affiche plus chez les pharmacies.
-        { label: 'Factures pharmacies', icon: 'receipt_long', link: '/dashboard/espace-region', tab: 1, statuts: NOTIFIABLES_REGION, group: 'Facturation' },
-        { label: 'Factures structures sanitaires', icon: 'request_quote', link: '/dashboard/espace-region', tab: 2, statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },
-        // Reprise des factures de l'ancienne application (09/10/2026).
-        { label: 'Import des factures', icon: 'upload_file', link: '/dashboard/espace-region', tab: 3, group: 'Facturation' },
-        { label: 'Paramétrage pharmacie', icon: 'local_pharmacy', link: '/dashboard/pharmacies', group: 'Réseau de santé' },
-        { label: 'Paramétrage structures sanitaires', icon: 'local_hospital', link: '/dashboard/structures-sanitaires', group: 'Réseau de santé' },
+        { label: 'Enregistrement prestataires', icon: 'app_registration', link: '/dashboard/espace-region', tab: 1, group: 'Suivi' },
+        { label: 'Factures structures', icon: 'local_hospital', link: '/dashboard/espace-region', tab: 2, statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },
+        { label: 'Factures pharmacies', icon: 'local_pharmacy', link: '/dashboard/espace-region', tab: 3, statuts: NOTIFIABLES_REGION, group: 'Facturation' },
+        { label: 'Suivi du traitement', icon: 'assignment_ind', link: '/dashboard/espace-region', tab: 4, group: 'Contrôle' },
+        { label: 'Suivi BCSU', icon: 'account_balance', link: '/dashboard/espace-region', tab: 5, group: 'Contrôle' },
+        { label: 'Paramétrage SR', icon: 'tune', link: '/dashboard/espace-region', tab: 6, group: 'Configuration' },
+        { label: 'Import historique', icon: 'upload_file', link: '/dashboard/espace-region', tab: 7, group: 'Configuration' },
         { label: 'Districts sanitaires', icon: 'account_tree', link: '/dashboard/districts', group: 'Réseau de santé' },
         { label: 'Patients', icon: 'group', link: '/dashboard/patients', group: 'Dossiers patients' },
-        { label: 'Agents BCSU', icon: 'manage_accounts', link: '/dashboard/utilisateurs', group: 'Gestion agents' },
-        { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion agents' },
-        { label: 'Statistiques', icon: 'bar_chart', link: '/dashboard/statistiques-agents', group: 'Gestion agents' }
+        { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion agents' }
       ];
     }
     if (this.authService.isServiceCentral()) {
@@ -345,6 +382,11 @@ export class MainLayoutComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(c => this.counts = c);
     if (this.countsEnabled) this.factureCount.refresh();
+    if (this.countsEnabled) {
+      interval(30_000)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.factureCount.refresh());
+    }
     // Recalcule les badges après toute modification de facture (sans recharger la page).
     this.factureEvents.changed$
       .pipe(takeUntilDestroyed(this.destroyRef))

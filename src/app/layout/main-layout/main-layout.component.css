@@ -23,16 +23,19 @@
 
 .sidebar-desktop {
   width: 240px;
-  background: var(--ink-gradient);
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(16, 185, 129, 0.12), transparent 38%),
+    linear-gradient(180deg, #10251F 0%, #0B1915 100%);
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
   z-index: 100;
   overflow: hidden;
-  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s ease;
+  box-shadow: 8px 0 28px rgba(4, 20, 15, 0.08);
 }
 
 .sidebar-desktop.collapsed {
@@ -40,11 +43,12 @@
 }
 
 .sidebar-brand {
-  min-height: 68px;
-  padding: 12px 18px;
+  min-height: 72px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .sidebar-desktop.collapsed .sidebar-brand {
@@ -53,22 +57,22 @@
 }
 
 .sidebar-toggle-btn {
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--ink-text);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #C1D2CC;
   cursor: pointer;
   flex-shrink: 0;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .sidebar-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.11);
   color: #FFFFFF;
   border-color: rgba(255, 255, 255, 0.22);
 }
@@ -80,7 +84,7 @@
 
 .sidebar-desktop.collapsed .sidebar-nav-link {
   width: 44px;
-  height: 42px;
+  min-height: 44px;
   padding: 0;
   justify-content: center;
   gap: 0;
@@ -112,27 +116,27 @@
 
 .sidebar-nav {
   flex: 1;
-  padding: 18px 14px;
+  padding: 14px 12px 18px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .nav-group-header {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.34);
-  margin-top: 20px;
-  margin-bottom: 6px;
-  padding: 0 12px;
-  letter-spacing: 0.09em;
-  transition: opacity 0.2s;
+  color: #91AAA0;
+  margin-top: 22px;
+  margin-bottom: 7px;
+  padding: 0 11px;
+  letter-spacing: 0.1em;
+  transition: opacity 0.18s ease;
 }
-.nav-group-header:first-child { margin-top: 2px; }
+.nav-group-header:first-child { margin-top: 4px; }
 
 .nav-group-spacer {
   height: 18px;
@@ -142,37 +146,43 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: 10px;
+  gap: 11px;
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
   text-decoration: none;
-  color: var(--ink-text);
-  font-size: 13.5px;
+  color: #B1C3BC;
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: -0.01em;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  letter-spacing: -0.005em;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
 .sidebar-nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #F3F7F5;
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(255, 255, 255, 0.055);
+  color: #FFFFFF;
 }
 
-/* Actif : pastille émeraude translucide + filet lumineux à gauche. */
+/* Actif : surface émeraude douce, filet latéral et icône teintée. */
 .sidebar-nav-link.active {
-  background: rgba(16, 185, 129, 0.14);
+  background: linear-gradient(100deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.1));
+  border-color: rgba(110, 231, 183, 0.16);
   color: #FFFFFF;
   font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 .sidebar-nav-link.active::before {
   content: '';
   position: absolute;
   left: -14px;
-  top: 8px;
-  bottom: 8px;
+  top: 9px;
+  bottom: 9px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #34D399;
+  background: #6EE7B7;
+  box-shadow: 0 0 10px rgba(110, 231, 183, 0.45);
 }
 .sidebar-nav-link.active mat-icon {
   color: #6EE7B7;
@@ -182,29 +192,69 @@
   font-size: 20px;
   width: 20px;
   height: 20px;
+  color: #92AAA0;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+.sidebar-nav-link:hover mat-icon { color: #D6E5DE; }
+.sidebar-nav-link.active mat-icon { transform: scale(1.04); }
+
+.sidebar-nav-link:focus-visible,
+.sidebar-toggle-btn:focus-visible,
+.sidebar-user-btn:focus-visible {
+  outline: 2px solid #6EE7B7;
+  outline-offset: 2px;
 }
 
 .sidebar-footer {
-  padding: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .sidebar-user-btn {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
+  min-height: 56px;
   padding: 8px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .sidebar-user-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-user-btn > span:first-child {
+  background: linear-gradient(145deg, #D1FAE5, #A7F3D0);
+  color: #064E3B;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+.nav-badge {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 2px solid #10251F;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 15px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-desktop,
+  .sidebar-nav-link,
+  .sidebar-nav-link mat-icon,
+  .sidebar-toggle-btn,
+  .sidebar-user-btn {
+    transition: none;
+  }
 }
 
 .main-content-wrapper {
