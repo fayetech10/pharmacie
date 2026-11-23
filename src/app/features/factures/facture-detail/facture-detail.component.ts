@@ -152,7 +152,7 @@ export class FactureDetailComponent implements OnInit {
     if (this.authService.isPharmacien()) {
       this.router.navigate(['/dashboard/espace-pharmacie/factures']);
     } else if (this.authService.isServiceRegional()) {
-      this.router.navigate(['/dashboard/espace-region'], { queryParams: { tab: 1 } });
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
     } else if (this.authService.isServiceCentral()) {
       this.router.navigate(['/dashboard/espace-central'], { queryParams: { tab: 1 } });
     } else {

@@ -6,6 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
+import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
 import { interval } from 'rxjs';
 
 import {
@@ -74,7 +77,7 @@ interface InfoPatient {
 @Component({
   selector: 'app-suivi-enregistrement',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTabsModule, MatTooltipModule, MatSnackBarModule, DossierPatientContenuComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTabsModule, MatTooltipModule, MatSnackBarModule, PaginationComponent, PaginerPipe, SkeletonListComponent, DossierPatientContenuComponent],
   templateUrl: './suivi-enregistrement.component.html'
 })
 export class SuiviEnregistrementComponent implements OnInit {
@@ -288,7 +291,6 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.vueMode = 'LISTE';
     this.districtSelectionne = null;
     this.postesDuDistrict = [];
-    this.chargerDonnees(false);
   }
 
   retourAuxPostes(): void {
@@ -296,9 +298,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.posteSelectionne = null;
     this.prestataireSelectionne = null;
     this.factureSelectionnee = null;
-    if (this.districtSelectionne) {
-      this.chargerPostesDuDistrict(this.districtSelectionne.id);
-    }
+    // Les postes restent en mémoire pendant la navigation interne.
   }
 
   fermerVueFactures(): void {
@@ -308,7 +308,7 @@ export class SuiviEnregistrementComponent implements OnInit {
       this.vueMode = 'LISTE';
       this.prestataireSelectionne = null;
       this.factureSelectionnee = null;
-      this.chargerDonnees(false);
+      // La liste générale reste en mémoire et est actualisée en arrière-plan.
     }
   }
 
@@ -808,7 +808,7 @@ export class SuiviEnregistrementComponent implements OnInit {
         if (!d.nom.toLowerCase().includes(q) && !d.code.toLowerCase().includes(q)) return false;
       }
       return true;
-    });
+    }).sort((a, b) => b.nombrePostesSaisisAujourdhui - a.nombrePostesSaisisAujourdhui);
   }
 
   get pharmaciesFiltrees(): PharmacieEnregistrementRow[] {

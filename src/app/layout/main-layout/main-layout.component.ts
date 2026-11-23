@@ -25,6 +25,7 @@ import { PointageUiService } from '../../core/services/pointage-ui.service';
 import { RegionService } from '../../core/services/region.service';
 import { BandeauHorsLigneComponent } from '../../shared/bandeau-hors-ligne/bandeau-hors-ligne.component';
 import { AttentePageComponent } from '../../shared/attente-page/attente-page.component';
+import { MobileCardTablesDirective } from '../../shared/mobile-card-table.directive';
 import { InstallationService } from '../../core/hors-ligne/installation.service';
 
 interface NavItem {
@@ -49,7 +50,8 @@ interface NavItem {
     MatMenuModule,
     MatSnackBarModule,
     BandeauHorsLigneComponent,
-    AttentePageComponent
+    AttentePageComponent,
+    MobileCardTablesDirective
   ],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.css']
@@ -210,14 +212,14 @@ export class MainLayoutComponent implements OnInit {
     }
     if (this.authService.isServiceRegional()) {
       return [
-        { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region', tab: 0, group: 'Général' },
-        { label: 'Enregistrement prestataires', icon: 'app_registration', link: '/dashboard/espace-region', tab: 1, group: 'Suivi' },
-        { label: 'Factures structures', icon: 'local_hospital', link: '/dashboard/espace-region', tab: 2, statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },
-        { label: 'Factures pharmacies', icon: 'local_pharmacy', link: '/dashboard/espace-region', tab: 3, statuts: NOTIFIABLES_REGION, group: 'Facturation' },
-        { label: 'Suivi du traitement', icon: 'assignment_ind', link: '/dashboard/espace-region', tab: 4, group: 'Contrôle' },
-        { label: 'Suivi BCSU', icon: 'account_balance', link: '/dashboard/espace-region', tab: 5, group: 'Contrôle' },
-        { label: 'Paramétrage SR', icon: 'tune', link: '/dashboard/espace-region', tab: 6, group: 'Configuration' },
-        { label: 'Import historique', icon: 'upload_file', link: '/dashboard/espace-region', tab: 7, group: 'Configuration' },
+        { label: 'Tableau de bord', icon: 'space_dashboard', link: '/dashboard/espace-region/tableau-de-bord', group: 'Général' },
+        { label: 'Enregistrement prestataires', icon: 'app_registration', link: '/dashboard/espace-region/enregistrement-prestataires', group: 'Suivi' },
+        { label: 'Factures structures', icon: 'local_hospital', link: '/dashboard/espace-region/factures-structures', statuts: statutsStructure(NOTIFIABLES_REGION), group: 'Facturation' },
+        { label: 'Factures pharmacies', icon: 'local_pharmacy', link: '/dashboard/espace-region/factures-pharmacies', statuts: NOTIFIABLES_REGION, group: 'Facturation' },
+        { label: 'Suivi du traitement', icon: 'assignment_ind', link: '/dashboard/espace-region/suivi-traitement', group: 'Contrôle' },
+        { label: 'Suivi BCSU', icon: 'account_balance', link: '/dashboard/espace-region/suivi-bcsu', group: 'Contrôle' },
+        { label: 'Paramétrage SR', icon: 'tune', link: '/dashboard/espace-region/parametrage', group: 'Configuration' },
+        { label: 'Import historique', icon: 'upload_file', link: '/dashboard/espace-region/import-historique', group: 'Configuration' },
         { label: 'Districts sanitaires', icon: 'account_tree', link: '/dashboard/districts', group: 'Réseau de santé' },
         { label: 'Patients', icon: 'group', link: '/dashboard/patients', group: 'Dossiers patients' },
         { label: 'Pointages', icon: 'fingerprint', link: '/dashboard/pointages', group: 'Gestion agents' }

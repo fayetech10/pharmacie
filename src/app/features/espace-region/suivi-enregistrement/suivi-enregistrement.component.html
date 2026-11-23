@@ -82,8 +82,10 @@
       </div>
     </div>
 
+    <app-skeleton-list *ngIf="loading" [rows]="6" [cols]="5"></app-skeleton-list>
+
     <!-- SOUS-ONGLET 1 : SYNTHÈSE PAR DISTRICT -->
-    <div *ngIf="activeTab === 0" class="space-y-4">
+    <div *ngIf="activeTab === 0 && !loading" class="space-y-4">
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
         <div class="relative flex-1 min-w-[240px]">
           <mat-icon class="absolute left-3 top-2.5 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
@@ -115,11 +117,10 @@
                 <th class="py-3 px-4">Saisie enregistrée</th>
                 <th class="py-3 px-4">Postes ayant saisi</th>
                 <th class="py-3 px-4">Saisis aujourd'hui</th>
-                <th class="py-3 px-4 text-right">Détail</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
-              <tr *ngFor="let d of districtsFiltres" (click)="ouvrirDistrict(d)"
+              <tr *ngFor="let d of districtsFiltres | paginer: pgDistrict.page : pgDistrict.taille" (click)="ouvrirDistrict(d)"
                   class="cursor-pointer transition-colors hover:bg-emerald-50/60 group">
                 <td class="py-3 px-4">
                   <div class="font-semibold text-slate-900">{{ d.nom }}</div>
@@ -147,12 +148,9 @@
                     {{ d.nombrePostesSaisisAujourdhui }} / {{ d.nombrePostes }}
                   </span>
                 </td>
-                <td class="py-3 px-4 text-right">
-                  <span class="inline-flex items-center gap-1 font-semibold text-emerald-700">Voir les postes <mat-icon class="!h-4 !w-4 !text-base">arrow_forward</mat-icon></span>
-                </td>
               </tr>
               <tr *ngIf="districtsFiltres.length === 0">
-                <td colspan="6" class="py-10 text-center">
+                <td colspan="5" class="py-10 text-center">
                   <mat-icon class="!h-8 !w-8 !text-3xl text-slate-400">location_searching</mat-icon>
                   <p class="mt-2 text-sm font-semibold text-slate-800">Aucun district pour ces critères</p>
                   <p class="mt-1 text-xs text-slate-500">Changez le statut ou la recherche.</p>
@@ -161,11 +159,12 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgDistrict [total]="districtsFiltres.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
       </div>
     </div>
 
     <!-- SOUS-ONGLET 2 : HÔPITAUX -->
-    <div *ngIf="activeTab === 1" class="space-y-4">
+    <div *ngIf="activeTab === 1 && !loading" class="space-y-4">
       <!-- Barre d'outils et filtres pour les hôpitaux -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
         <div class="relative flex-1 min-w-[260px]">
@@ -204,7 +203,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
-              <tr *ngFor="let s of structuresFiltrees"
+              <tr *ngFor="let s of structuresFiltrees | paginer: pgHopitaux.page : pgHopitaux.taille"
                   (click)="ouvrirFacturesPrestataire(s)"
                   class="hover:bg-emerald-50/50 transition-colors cursor-pointer group">
                 <td class="py-3 px-4 font-semibold text-slate-900">
@@ -234,11 +233,12 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgHopitaux [total]="structuresFiltrees.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
       </div>
     </div>
 
     <!-- SOUS-ONGLET 2 : PHARMACIES D'OFFICINE -->
-    <div *ngIf="activeTab === 2" class="space-y-4">
+    <div *ngIf="activeTab === 2 && !loading" class="space-y-4">
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
         <div class="relative flex-1 min-w-[260px]">
           <mat-icon class="absolute left-3 top-2.5 text-slate-400 !text-sm !w-4 !h-4">search</mat-icon>
@@ -276,7 +276,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
-              <tr *ngFor="let p of pharmaciesFiltrees"
+              <tr *ngFor="let p of pharmaciesFiltrees | paginer: pgPharmacies.page : pgPharmacies.taille"
                   (click)="ouvrirFacturesPrestataire(p)"
                   class="hover:bg-emerald-50/50 transition-colors cursor-pointer group">
                 <td class="py-3 px-4 font-semibold text-slate-900">
@@ -306,6 +306,7 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgPharmacies [total]="pharmaciesFiltrees.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
       </div>
     </div>
   </div>
@@ -410,7 +411,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 font-medium">
-                <tr *ngFor="let h of hopitauxFiltres" (click)="ouvrirFacturesPoste(h)"
+                <tr *ngFor="let h of hopitauxFiltres | paginer: pgHopitauxDistrict.page : pgHopitauxDistrict.taille" (click)="ouvrirFacturesPoste(h)"
                     class="cursor-pointer transition-colors hover:bg-indigo-50/50 group">
                   <td class="py-3 px-4 font-semibold text-slate-900">
                     <div class="flex items-center gap-1.5"><mat-icon class="!h-4 !w-4 !text-base text-indigo-700">local_hospital</mat-icon>{{ h.nom }}</div>
@@ -433,6 +434,7 @@
               </tbody>
             </table>
           </div>
+            <app-pagination #pgHopitauxDistrict [total]="hopitauxFiltres.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
         </div>
 
         <div>
@@ -453,7 +455,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
-              <tr *ngFor="let p of postesPolarisesFiltres"
+              <tr *ngFor="let p of postesPolarisesFiltres | paginer: pgPostesDistrict.page : pgPostesDistrict.taille"
                   (click)="ouvrirFacturesPoste(p)"
                   class="cursor-pointer transition-colors hover:bg-emerald-50/50 group">
                 <td class="py-3 px-4 font-bold text-slate-900">
@@ -491,6 +493,7 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgPostesDistrict [total]="postesPolarisesFiltres.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
         </div>
       </div>
     </div>
@@ -579,7 +582,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium">
-            <tr *ngFor="let f of facturesFiltrees"
+            <tr *ngFor="let f of facturesFiltrees | paginer: pgFactures.page : pgFactures.taille"
                 (click)="ouvrirDetailFacture(f)"
                 class="hover:bg-emerald-50/40 transition-colors group"
                 [ngClass]="f.resumeSeul ? 'cursor-pointer bg-amber-50/30' : 'cursor-pointer'">
@@ -620,6 +623,7 @@
           </tbody>
         </table>
       </div>
+            <app-pagination #pgFactures [total]="facturesFiltrees.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
     </div>
   </div>
 
@@ -694,7 +698,7 @@
         <div class="overflow-x-auto rounded-lg border border-border">
           <table class="w-full text-[13.5px] border-collapse">
             <tbody>
-              <tr *ngFor="let p of patientsFiltres" (click)="ouvrirPrestationsPatient(p)"
+              <tr *ngFor="let p of patientsFiltres | paginer: pgPatients.page : pgPatients.taille" (click)="ouvrirPrestationsPatient(p)"
                   class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field bg-white">
                 <td class="py-2.5 px-3 align-middle">
                   <a (click)="$event.preventDefault()" class="font-semibold text-text-primary text-[14px] no-underline hover:underline">
@@ -726,6 +730,7 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgPatients [total]="patientsFiltres.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
       </div>
     </div>
   </div>
@@ -818,7 +823,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let ligne of patientSelectionne.prestations" class="border-b border-border-light">
+              <tr *ngFor="let ligne of patientSelectionne.prestations | paginer: pgPrestations.page : pgPrestations.taille" class="border-b border-border-light">
                 <td class="py-2 pr-2">
                   <span class="font-medium text-text-primary">{{ ligne.designation }}</span>
                   <span *ngIf="ligne.codeActe" class="block text-[11.5px] text-text-secondary font-mono">{{ ligne.codeActe }}</span>
@@ -843,6 +848,7 @@
             </tbody>
           </table>
         </div>
+            <app-pagination #pgPrestations [total]="patientSelectionne.prestations.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
 
         <!-- Totaux de la visite -->
         <div *ngIf="patientSelectionne.prestations.length" class="mt-4 p-4 rounded-lg bg-field">

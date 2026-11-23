@@ -703,8 +703,8 @@ export class RegionalDashboardComponent implements OnInit {
   }
 
   naviguerVersPrestataires(type?: string): void {
-    this.router.navigate(['/dashboard/espace-region'], {
-      queryParams: { tab: 1, ...(type ? { type } : {}) }
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires'], {
+      queryParams: type ? { type } : undefined
     });
   }
 

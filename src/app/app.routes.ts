@@ -40,7 +40,18 @@ export const routes: Routes = [
         path: 'espace-region',
         canActivate: [roleGuard],
         data: { roles: [Role.SERVICE_REGIONAL, Role.CONTROLEUR, Role.ADMIN] },
-        loadComponent: () => import('./features/espace-region/espace-region.component').then(m => m.EspaceRegionComponent)
+        loadComponent: () => import('./features/espace-region/espace-region.component').then(m => m.EspaceRegionComponent),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'tableau-de-bord' },
+          { path: 'tableau-de-bord', loadComponent: () => import('./features/espace-region/regional-dashboard/regional-dashboard.component').then(m => m.RegionalDashboardComponent) },
+          { path: 'enregistrement-prestataires', loadComponent: () => import('./features/espace-region/suivi-enregistrement/suivi-enregistrement.component').then(m => m.SuiviEnregistrementComponent) },
+          { path: 'factures-structures', loadComponent: () => import('./features/espace-region/factures-structures/factures-structures.component').then(m => m.FacturesStructuresComponent) },
+          { path: 'factures-pharmacies', loadComponent: () => import('./features/espace-region/factures-pharmacies/factures-pharmacies.component').then(m => m.FacturesPharmaciesComponent) },
+          { path: 'suivi-traitement', loadComponent: () => import('./features/espace-region/suivi-traitement/suivi-traitement.component').then(m => m.SuiviTraitementComponent) },
+          { path: 'suivi-bcsu', loadComponent: () => import('./features/espace-region/suivi-bcsu/suivi-bcsu.component').then(m => m.SuiviBcsuComponent) },
+          { path: 'parametrage', loadComponent: () => import('./features/espace-region/parametrage-sr/parametrage-sr.component').then(m => m.ParametrageSrComponent) },
+          { path: 'import-historique', loadComponent: () => import('./features/regional-factures/import-factures/import-factures.component').then(m => m.ImportFacturesComponent) }
+        ]
       },
       {
         path: 'espace-central',
