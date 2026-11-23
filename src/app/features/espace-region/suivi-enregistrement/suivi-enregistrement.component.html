@@ -394,11 +394,11 @@
       </div>
 
       <div class="section-body p-0">
-        <div class="border-b border-slate-200">
+        <div class="border-b border-slate-200" *ngIf="hopitauxDuDistrict.length > 0">
           <div class="flex items-center justify-between px-4 py-3 bg-indigo-50/60">
             <h3 class="text-sm font-semibold text-slate-900">Hôpitaux du district</h3>
             <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-800">
-              {{ totalHopitauxAvecSaisie }} / {{ hopitauxDuDistrict.length }} avec saisie
+              {{ totalHopitauxAvecSaisie }} avec facture
             </span>
           </div>
           <div class="overflow-x-auto">
@@ -709,11 +709,11 @@
                   </span>
                   <!-- Mobile : date, matricule & CNI sous le nom -->
                   <div class="sm:hidden mt-0.5 text-[12.5px] text-text-secondary">
-                    {{ formatDate(p.datePriseEnCharge) }} · <span class="font-mono">{{ p.matricule }}</span><span *ngIf="p.cni"> · CNI {{ p.cni }}</span>
+                    {{ formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) }} · <span class="font-mono">{{ p.matricule }}</span><span *ngIf="p.cni"> · CNI {{ p.cni }}</span>
                   </div>
                 </td>
                 <td class="hidden sm:table-cell py-2.5 px-2 align-middle whitespace-nowrap text-text-secondary">
-                  {{ formatDate(p.datePriseEnCharge) }}
+                  {{ formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) }}
                 </td>
                 <td class="hidden sm:table-cell py-2.5 pl-2 pr-1 align-middle text-right whitespace-nowrap font-mono text-[13px] text-text-primary">
                   {{ p.matricule }}<span *ngIf="p.cni" class="text-text-muted ml-1.5 font-sans text-xs">· CNI {{ p.cni }}</span>
@@ -761,7 +761,7 @@
             <p class="text-[12.5px] text-text-secondary mt-0.5">
               Matricule : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.matricule }}</span>
               <span *ngIf="patientSelectionne.cni"> · CNI : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.cni }}</span></span>
-              · Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }}
+              · Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }}
             </p>
           </div>
         </div>
@@ -805,7 +805,7 @@
           <div class="section-icon"><mat-icon>medical_services</mat-icon></div>
           <div>
             <h2>Prestations</h2>
-            <p>Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
+            <p>Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
           </div>
         </div>
       </div>

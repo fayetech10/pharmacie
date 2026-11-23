@@ -633,7 +633,7 @@
               </td>
 
               <td class="py-3 px-3 align-middle whitespace-nowrap text-slate-600">
-                {{ formatDate(p.datePriseEnCharge) }}
+                {{ formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) }}
               </td>
 
               <td class="py-3 pl-3 pr-2 align-middle text-right whitespace-nowrap font-mono text-xs text-slate-900 font-semibold">
@@ -676,7 +676,7 @@
             </span>
           </div>
           <div class="m-row">
-            <span><mat-icon class="inline-ic">event</mat-icon>{{ formatDate(p.datePriseEnCharge) }}</span>
+            <span><mat-icon class="inline-ic">event</mat-icon>{{ formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) }}</span>
           </div>
           <div class="m-foot">
             <span class="m-amount">{{ formatMontant(p.montantTotal) }}</span>
@@ -728,7 +728,7 @@
             <p class="text-xs text-slate-500 mt-0.5">
               Matricule : <span class="font-mono font-medium text-slate-800">{{ patientSelectionne.matricule }}</span>
               <span *ngIf="patientSelectionne.cni"> · CNI : <span class="font-mono font-medium text-slate-800">{{ patientSelectionne.cni }}</span></span>
-              · Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }}
+              · Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }}
             </p>
           </div>
         </div>
@@ -778,7 +778,7 @@
           <mat-icon class="text-emerald-700 !text-lg !w-5 !h-5">medical_services</mat-icon>
           <div>
             <h4 class="text-sm font-bold text-slate-900">Prestations de soins</h4>
-            <p class="text-[11px] text-slate-500">Visite du {{ formatDate(patientSelectionne.datePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
+            <p class="text-[11px] text-slate-500">Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
           </div>
         </div>
       </div>

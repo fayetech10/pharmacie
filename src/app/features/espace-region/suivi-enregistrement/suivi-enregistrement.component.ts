@@ -29,6 +29,7 @@ export interface PrestationLigne {
   designation: string;
   codeActe: string;
   datePriseEnCharge?: string;
+  heurePriseEnCharge?: string;
   quantite: number;
   prixUnitaire: number;
   montant: number;
@@ -46,6 +47,7 @@ export interface PatientLigne {
   sexe: string;
   dateNaissance: string;
   datePriseEnCharge?: string;
+  heurePriseEnCharge?: string;
   telephone?: string;
   adresse?: string;
   numeroRegistre?: string;
@@ -376,7 +378,7 @@ export class SuiviEnregistrementComponent implements OnInit {
   }
 
   get hopitauxDuDistrict(): PostePolariseRow[] {
-    return this.postesDuDistrict.filter(p => p.type === 'EPS');
+    return this.postesDuDistrict.filter(p => p.type === 'EPS' && p.nombreFactures > 0);
   }
 
   get postesPolarisesDuDistrict(): PostePolariseRow[] {
@@ -610,7 +612,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     return this.infosRenseignees([
       { libelle: 'Nom complet', valeur: `${p.prenom} ${p.nom}`.trim() },
       { libelle: 'Matricule', valeur: p.matricule, mono: true },
-      { libelle: 'Date de la visite', valeur: p.datePriseEnCharge ? this.formatDate(p.datePriseEnCharge) : '' },
+      { libelle: 'Date de la visite', valeur: p.datePriseEnCharge ? this.formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) : '' },
       { libelle: 'Date de naissance', valeur: p.dateNaissance ? this.formatDate(p.dateNaissance) : '' },
       { libelle: 'Sexe', valeur: p.sexe === 'M' ? 'Masculin' : p.sexe === 'F' ? 'Féminin' : p.sexe },
       { libelle: 'Téléphone', valeur: p.telephone || '' },
@@ -774,6 +776,12 @@ export class SuiviEnregistrementComponent implements OnInit {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return d;
+  }
+
+  formatDateHeure(date?: string, heure?: string): string {
+    const jour = this.formatDate(date);
+    const h = (heure || '').substring(0, 5);
+    return h && jour !== '-' ? `${jour} à ${h}` : jour;
   }
 
   getInitiales(prenom?: string, nom?: string): string {

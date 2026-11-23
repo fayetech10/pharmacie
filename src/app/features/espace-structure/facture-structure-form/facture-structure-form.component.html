@@ -238,6 +238,14 @@
             <mat-label>{{ champs.puLabel }}</mat-label>
             <input matInput type="number" min="0" formControlName="prixUnitaire">
           </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Date de prise en charge</mat-label>
+            <input matInput type="date" formControlName="datePriseEnCharge">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Heure de prise en charge</mat-label>
+            <input matInput type="time" formControlName="heurePriseEnCharge">
+          </mat-form-field>
           <!-- Poste + 0-5 ans : le P.U est un forfait imposé (1400 F) → champ masqué, note à la place. -->
           <div *ngIf="puForfaitImpose"
                class="flex items-center gap-2 py-2 px-3 rounded-lg bg-primary-light text-primary">

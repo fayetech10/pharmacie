@@ -86,6 +86,7 @@ interface Brouillon {
   regime: Regime;
   patient: PatientSaisi;
   dateSoins: string;
+  heureSoins?: string;
   codeImmatriculation: string;
   carte: CarteCsu | null;
   verification: 'VERIFIEE' | 'NON_VERIFIEE_PANNE' | null;
@@ -173,6 +174,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
 
   patient: PatientSaisi = { ...PATIENT_VIDE };
   dateSoins = this.aujourdhui();
+  heureSoins = this.heureActuelle();
 
   // ----- Contrôle d'éligibilité (régimes à carte) -----
   codeImmatriculation = '';
@@ -295,6 +297,11 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
 
   get modeModification(): boolean {
     return !!this.factureId && !!this.dossierId;
+  }
+
+  get heureVisiteVerrouillee(): boolean {
+    return !!this.dossierExistant?.heurePriseEnCharge
+      || this.lignes.some(l => !!l.origine?.heurePriseEnCharge);
   }
 
   get carteRequise(): boolean {
@@ -579,6 +586,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     const brouillon: Brouillon = {
       enregistreLe: Date.now(), mois: this.mois, annee: this.annee, etape: this.etape, regime: this.regime,
       patient: this.patient, dateSoins: this.dateSoins,
+      heureSoins: this.heureSoins,
       codeImmatriculation: this.codeImmatriculation, carte: this.carte, verification: this.verification,
       identiteVerrouillee: this.identiteVerrouillee, pieces: this.pieces, lignes: this.lignes,
       cleSaisie: this.cleDeLaSaisie()
@@ -612,6 +620,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.categorie = categorieDe(brouillon.regime) || null;
     this.patient = { ...PATIENT_VIDE, ...brouillon.patient };
     this.dateSoins = brouillon.dateSoins;
+    this.heureSoins = brouillon.heureSoins || '';
     this.codeImmatriculation = brouillon.codeImmatriculation;
     this.carte = brouillon.carte;
     this.verification = brouillon.verification;
@@ -791,6 +800,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       this.snackBar.open(erreur, 'Fermer', { duration: 4500 });
       return;
     }
+    if (!this.heureSoins && !this.heureVisiteVerrouillee) {
+      this.snackBar.open('Indiquez l’heure réelle de prise en charge du patient.', 'Fermer', { duration: 4500 });
+      return;
+    }
     if (this.modeModification && this.horsLigne) {
       this.snackBar.open('Pas de connexion : un dossier déjà enregistré se modifie en ligne.', 'Fermer', { duration: 5000 });
       return;
@@ -949,7 +962,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       prixUnitaire: this.forfaitaire ? 0 : Number(l.prixUnitaire) || 0,
       tarifId: l.tarifId,
       prestationId: l.prestationId,
-      datePriseEnCharge: l.origine?.datePriseEnCharge || this.dateSoins
+      datePriseEnCharge: l.origine?.datePriseEnCharge || this.dateSoins,
+      heurePriseEnCharge: l.origine?.heurePriseEnCharge || this.heureSoins || undefined
     }));
     const requete: FactureStructureRequest = {
       regime: this.regime || undefined,
@@ -966,7 +980,8 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
       lignes,
       pieces: this.piecesAEnvoyer(),
       partiel,
-      datePriseEnCharge: this.dateSoins
+      datePriseEnCharge: this.dateSoins,
+      heurePriseEnCharge: this.heureSoins || undefined
     };
     // Toujours dériver mois/année de la date de prise en charge : le patient
     // doit figurer dans la facture du mois choisi, pas celle du mois en cours.
@@ -1069,8 +1084,10 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
         this.assurerUneLigne();
         // La date de prise en charge reste celle de la saisie, même complétée le lendemain :
         // celle du dossier, à défaut celle de ses prestations ou le jour de son enregistrement.
-        const premiereDate = (facture.lignes || []).find(l => l.dossierId === dossierId && l.datePriseEnCharge)?.datePriseEnCharge;
+        const premiereLigne = (facture.lignes || []).find(l => l.dossierId === dossierId);
+        const premiereDate = premiereLigne?.datePriseEnCharge;
         this.dateSoins = (dossier.datePriseEnCharge || premiereDate || dossier.createdAt || this.dateSoins).substring(0, 10);
+        this.heureSoins = (dossier.heurePriseEnCharge || premiereLigne?.heurePriseEnCharge || '').substring(0, 5);
         this.chargerPieces(factureId, dossier);
         this.etape = 'saisie';
       },
@@ -1118,6 +1135,11 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
   private aujourdhui(): string {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private heureActuelle(): string {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   trackIndex = (index: number) => index;

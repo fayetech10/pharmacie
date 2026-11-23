@@ -95,18 +95,36 @@
       <div class="section-body flex flex-col gap-5 text-[15px]">
 
         <!-- ─── Date de prise en charge, en tête (demande du 19/10/2026) ───
-             Le jour même par défaut, modifiable à la saisie. Quand on complète un dossier, elle
-             reste celle de la saisie : plus modifiable, même le lendemain. -->
+             Le jour et l'heure proposés par défaut sont modifiables à la saisie. Quand on
+             complète un dossier déjà horodaté, sa date et son heure restent celles de la visite. -->
         <div class="flex flex-col gap-1.5">
-          <label *ngIf="!modeModification" class="flex flex-col gap-1.5 max-w-[260px] text-[15px] font-semibold text-text-secondary">
+          <div *ngIf="!modeModification" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[560px]">
+          <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
             Date de prise en charge
             <app-champ-date [(ngModel)]="dateSoins" [grand]="true"></app-champ-date>
           </label>
+          <label class="flex flex-col gap-1.5 text-[15px] font-semibold text-text-secondary">
+            Heure de prise en charge
+            <input type="time" name="heureSoins" [(ngModel)]="heureSoins"
+                   [disabled]="heureVisiteVerrouillee"
+                   class="h-12 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-normal text-text-primary">
+          </label>
+          </div>
           <div *ngIf="modeModification" class="flex flex-col gap-1.5">
-            <span class="text-[15px] font-semibold text-text-secondary">Date de prise en charge</span>
+            <span class="text-[15px] font-semibold text-text-secondary">Date et heure de prise en charge</span>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span class="inline-flex items-center gap-1.5 text-[16px] font-bold text-text-primary">
               <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-secondary">lock</mat-icon>{{ dateFr(dateSoins) }}
             </span>
+            <label *ngIf="!heureVisiteVerrouillee" class="inline-flex items-center gap-2 text-[14px] font-semibold text-text-secondary">
+              Heure
+              <input type="time" name="heureSoins" [(ngModel)]="heureSoins"
+                     class="h-11 px-3 rounded-lg border border-border bg-field-bg text-[16px] font-normal text-text-primary">
+            </label>
+            <span *ngIf="heureVisiteVerrouillee" class="inline-flex items-center gap-1.5 text-[16px] font-bold text-text-primary">
+              <mat-icon class="!text-lg !w-[18px] !h-[18px] text-text-secondary">schedule</mat-icon>{{ heureSoins }}
+            </span>
+            </div>
           </div>
           <span *ngIf="mois && annee && !estMoisCourant" class="text-[13px] text-text-secondary">
             Facture de {{ moisLibelles[mois] }} {{ annee }}

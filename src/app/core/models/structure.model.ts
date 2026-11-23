@@ -88,6 +88,8 @@ export interface LigneFactureStructure {
   designation: string;
   codeActe?: string;
   datePriseEnCharge: string;
+  /** Heure réelle de la visite (HH:mm:ss), si elle a été renseignée. */
+  heurePriseEnCharge?: string;
   quantite: number;
   prixUnitaire: number;
   montant?: number;
@@ -173,6 +175,7 @@ export interface DossierPatient {
   lettreGarantieNumero?: string;
   /** Date de prise en charge de la visite, fixée à la saisie : elle ne change plus ensuite. */
   datePriseEnCharge?: string;
+  heurePriseEnCharge?: string;
   pieces: TypePiece[];
   /** Pointé « vérifié » par le centre de rattachement pendant son contrôle (date, agent). */
   verifieCentreLe?: string | null;
@@ -382,6 +385,8 @@ export interface FactureStructureRequest {
   annee?: number;
   /** Date de prise en charge de la visite (aaaa-mm-jj), gardée par le dossier. */
   datePriseEnCharge?: string;
+  /** Heure réelle de prise en charge / du rendez-vous (HH:mm). */
+  heurePriseEnCharge?: string;
   /** Photos du dossier patient par type ; chaîne vide = retirer la pièce. */
   pieces?: Partial<Record<TypePiece, string>>;
   /** Validation partielle : le dossier reste « à compléter ». */

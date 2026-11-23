@@ -286,19 +286,14 @@ export interface VisiteFacture {
 }
 
 /**
- * Date et heure d'une visite, pour les en-têtes : « 23/10/2026 à 10:35 ». L'heure est celle de
- * l'enregistrement du dossier (la date de prise en charge n'en a pas) ; une visite saisie un
- * autre jour le dit, plutôt que de faire passer l'heure de saisie pour celle de la visite.
- * Les anciennes saisies sans dossier n'ont que leur date.
+ * Date et heure réelles d'une visite, pour les en-têtes : « 23/10/2026 à 10:35 ».
+ * Les anciennes saisies sans heure renseignée n'affichent que leur date.
  */
 export function dateHeureVisite(v: VisiteFacture): string {
   const date = dateFr(v.date);
-  const creation = v.dossier?.createdAt;
-  if (!creation || creation.length < 16) return date;
-  const heure = creation.substring(11, 16);
-  return creation.substring(0, 10) === v.date
-    ? `${date} à ${heure}`
-    : `${date} (saisie le ${dateFr(creation.substring(0, 10))} à ${heure})`;
+  const heure = (v.dossier?.heurePriseEnCharge
+    || v.lignes.find(l => l.heurePriseEnCharge)?.heurePriseEnCharge || '').substring(0, 5);
+  return date && heure ? `${date} à ${heure}` : date;
 }
 
 /** Clé « même patient » d'une visite : son matricule, à défaut prénom + nom + date de naissance. */
@@ -386,7 +381,8 @@ export function visitesFacture(facture: FactureStructure | null | undefined): Vi
 
   for (const v of visites) {
     v.lignes.sort((a, b) => jour(a.datePriseEnCharge).localeCompare(jour(b.datePriseEnCharge)));
-    v.date = v.lignes.map(l => jour(l.datePriseEnCharge)).find(Boolean) || jour(v.dossier?.createdAt);
+    v.date = v.lignes.map(l => jour(l.datePriseEnCharge)).find(Boolean)
+      || jour(v.dossier?.datePriseEnCharge || v.dossier?.createdAt);
   }
   visites.sort((a, b) => a.date.localeCompare(b.date)
     || (a.dossier?.createdAt || '').localeCompare(b.dossier?.createdAt || ''));

@@ -241,6 +241,7 @@ export class FactureStructureFormComponent implements OnInit {
       designation: ['', Validators.required],
       codeActe: [''],
       datePriseEnCharge: [this.today(), Validators.required],
+      heurePriseEnCharge: [this.currentTime(), Validators.required],
       quantite: [1, [Validators.required, Validators.min(1)]],
       prixUnitaire: [0, [Validators.required, Validators.min(0)]],
       motifCesarienne: ['']
@@ -378,6 +379,11 @@ export class FactureStructureFormComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().substring(0, 10);
+  }
+
+  private currentTime(): string {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
 
   get regime(): Regime | null {
@@ -572,6 +578,7 @@ export class FactureStructureFormComponent implements OnInit {
       designation: c.designationAuto || '',
       codeActe: '',
       datePriseEnCharge: this.today(),
+      heurePriseEnCharge: this.currentTime(),
       quantite: 1,
       prixUnitaire: this.prixUnitaireInitial(regime),
       motifCesarienne: ''
@@ -608,6 +615,7 @@ export class FactureStructureFormComponent implements OnInit {
       designation: v.designation,
       codeActe: undefined,
       datePriseEnCharge: v.datePriseEnCharge,
+      heurePriseEnCharge: v.heurePriseEnCharge,
       quantite,
       prixUnitaire: v.prixUnitaire,
       montant,
@@ -623,7 +631,8 @@ export class FactureStructureFormComponent implements OnInit {
       typePrestation: typeConserve,
       designation: c.designationAuto || (typeConserve === CATEGORIE_DEPOSITAIRE ? '' : (typeConserve || '')),
       codeActe: '',
-      datePriseEnCharge: this.today(),
+      datePriseEnCharge: v.datePriseEnCharge,
+      heurePriseEnCharge: v.heurePriseEnCharge,
       quantite: 1,
       prixUnitaire: this.prixUnitaireInitial(this.regime),
       motifCesarienne: ''
@@ -691,6 +700,8 @@ export class FactureStructureFormComponent implements OnInit {
     }
     
     this.isSubmitting = true;
+    const heureVisite = this.prestationForm.get('heurePriseEnCharge')?.value
+      || this.lignes.find(l => l.heurePriseEnCharge)?.heurePriseEnCharge;
     
     const req: FactureStructureRequest = {
       // Le régime doit accompagner TOUTE saisie : c'est lui qui range le bénéficiaire dans
@@ -703,7 +714,8 @@ export class FactureStructureFormComponent implements OnInit {
       regime: this.regime ?? undefined,
       lettreGarantieNumero: this.lettre?.numero,
       feuilleSoinsId: this.feuilleSoins?.id,
-      lignes: this.lignes,
+      lignes: this.lignes.map(l => ({ ...l, heurePriseEnCharge: heureVisite || l.heurePriseEnCharge })),
+      heurePriseEnCharge: heureVisite,
       ticketCaisse: this.ticketCaisse || undefined,
       documentsComplementaires: this.documents.length ? this.documents : undefined
     };
