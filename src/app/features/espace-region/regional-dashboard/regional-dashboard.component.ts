@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 import { MontantMensuelSR, SrGestionService, StructureEnregistrementRow, FactureAssigneeResume, StatsRegimeSR } from '../services/sr-gestion.service';
 import { FactureEventsService } from '../../../core/services/facture-events.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -157,6 +157,12 @@ export class RegionalDashboardComponent implements OnInit {
     { regime: 'DIALYSE', codeRegime: 'DIALYSE', libelle: 'Prise en charge Dialyse', couleur: '#e11d48', montantFacture: 0, montantSencsuTotal: 0, montantSencsuTraite: 0, montantSencsuEnAttente: 0, nombreBeneficiaires: 0, nombreFactures: 0 }
   ];
 
+  // Propriété pré-calculée au lieu du getter (évite les recalculs à chaque cycle de change detection)
+  saisiesParTypeStructureCache: SaisieStructureTypeStats[] = [];
+
+  // Cache des infos de régime (évite ~35 appels switch/case par cycle de CD)
+  private regimeInfoCache = new Map<string, ReturnType<RegionalDashboardComponent['getRegimeInfo']>>();
+
   // Éléments visuels des mini-graphiques des KPI Cards
   miniBars: MiniBarItem[] = [];
   sparklinePoints = '0,25 30,22 60,18 90,15 120,8 150,2';
@@ -270,13 +276,17 @@ export class RegionalDashboardComponent implements OnInit {
   };
 
   get saisiesParTypeStructure(): SaisieStructureTypeStats[] {
+    return this.saisiesParTypeStructureCache;
+  }
+
+  private recalculerSaisiesParType(): void {
     const types: Array<Pick<SaisieStructureTypeStats, 'type' | 'libelle' | 'icone'>> = [
       { type: 'PS', libelle: 'Postes de santé', icone: 'medical_services' },
       { type: 'CS', libelle: 'Centres de santé', icone: 'local_hospital' },
       { type: 'EPS', libelle: 'Hôpitaux (EPS)', icone: 'domain' }
     ];
 
-    return types.map(type => {
+    this.saisiesParTypeStructureCache = types.map(type => {
       const structures = (this.structuresSuivies || []).filter(s => s?.actif && (s?.type || '').toUpperCase() === type.type);
       const saisissantes = structures.filter(s => s.saisieActive);
       return {
@@ -327,19 +337,25 @@ export class RegionalDashboardComponent implements OnInit {
     if (showLoader) this.loading = true;
     this.messageErreur = '';
 
+    // ── Un seul appel aux factures, partagé par tous les consommateurs ──
+    // Avant, 3 branches indépendantes appelaient chacune getToutesFacturesResumes(),
+    // ce qui déclenchait ~15 requêtes HTTP (structures, pharmacies, districts…)
+    // au lieu de ~5. On récupère les factures une seule fois et on les passe
+    // aux calculs côté client.
+    const factures$ = this.srService.getToutesFacturesResumes(true, false).pipe(
+      catchError(() => of([] as FactureAssigneeResume[])),
+      shareReplay(1)
+    );
+
     forkJoin({
-      dashboard: this.srService.calculerTableauDeBord({
-        annee: this.annee,
-        trimestre: this.trimestre ?? undefined,
-        mois: this.mois ?? undefined
-      }).pipe(catchError(() => of({ statsRegimes: [], montantsMensuels: [] }))),
+      factures: factures$,
       suivi: this.srService.getSuiviEnregistrement(this.annee, this.mois ?? undefined, this.trimestre ?? undefined)
-        .pipe(catchError(() => of({ districts: [], structures: [], pharmacies: [] }))),
-      toutesFactures: this.srService.getToutesFacturesResumes(true, false)
-        .pipe(catchError(() => of([])))
+        .pipe(catchError(() => of({ districts: [], structures: [], pharmacies: [] })))
     }).subscribe({
-      next: ({ dashboard, suivi, toutesFactures }) => {
-        // 1. Synthèse analytique et régimes
+      next: ({ factures, suivi }) => {
+        // ── 1. Calculer le tableau de bord à partir des factures déjà chargées ──
+        const dashboard = this.calculerTableauDeBordLocal(factures);
+
         let stats = (dashboard.statsRegimes && dashboard.statsRegimes.length > 0)
           ? [...dashboard.statsRegimes]
           : this.REGIMES_DEFAUT.map(r => ({ ...r }));
@@ -365,12 +381,12 @@ export class RegionalDashboardComponent implements OnInit {
         this.mettreAJourGraphiqueMensuel(montants);
         this.genererSparklines(montants);
 
-        // 2. Structures suivies
+        // ── 2. Structures suivies ──
         this.structuresSuivies = suivi.structures || [];
         this.mettreAJourGraphiquesStructures();
 
-        // 3. Factures et calculs par statut
-        this.toutesFactures = toutesFactures || [];
+        // ── 3. Factures et calculs par statut ──
+        this.toutesFactures = factures;
         this.calculerAttenteParNiveau(this.toutesFactures);
         this.calculerStatutsFactures(this.toutesFactures);
         this.appliquerFiltres();
@@ -382,6 +398,82 @@ export class RegionalDashboardComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  /**
+   * Calcule les agrégats du tableau de bord directement côté client à partir
+   * des factures déjà récupérées, éliminant un second appel réseau coûteux.
+   */
+  private calculerTableauDeBordLocal(factures: FactureAssigneeResume[]): {
+    statsRegimes: StatsRegimeSR[];
+    montantsMensuels: MontantMensuelSR[];
+  } {
+    const filtres = {
+      annee: this.annee,
+      trimestre: this.trimestre ?? undefined,
+      mois: this.mois ?? undefined
+    };
+
+    const filtrees = factures.filter(f => {
+      if (f.annee !== filtres.annee) return false;
+      if (filtres.mois && f.mois !== filtres.mois) return false;
+      if (filtres.trimestre) {
+        const m = f.mois;
+        const t = filtres.trimestre;
+        if (t === 1 && (m < 1 || m > 3)) return false;
+        if (t === 2 && (m < 4 || m > 6)) return false;
+        if (t === 3 && (m < 7 || m > 9)) return false;
+        if (t === 4 && (m < 10 || m > 12)) return false;
+      }
+      return true;
+    });
+
+    const REGIMES_LIST = [
+      { code: 'CONTRIBUTIF', libelle: 'Classique / Contributif (BSF, Mutuelles)', couleur: 'emerald' },
+      { code: 'ENFANTS_MOINS_5_ANS', libelle: 'Gratuité Enfants < 5 ans', couleur: 'blue' },
+      { code: 'PLAN_SESAME', libelle: 'Plan Sésame (60 ans et plus)', couleur: 'amber' },
+      { code: 'CESARIENNE', libelle: 'Maternité sans risque / Césarienne', couleur: 'purple' },
+      { code: 'DIALYSE', libelle: 'Prise en charge Dialyse', couleur: 'rose' }
+    ];
+
+    const statsRegimes = REGIMES_LIST.map(r => {
+      const fDuRegime = filtrees.filter(f => f.regime === r.code);
+      const montantFacture = fDuRegime.reduce((s, f) => s + f.montantTotal, 0);
+      const montantSencsuTotal = fDuRegime.reduce((s, f) => s + f.montantSencsu, 0);
+      const montantSencsuTraite = fDuRegime
+        .filter(f => f.statut === 'VALIDEE_SR' || f.statut === 'ENVOYEE_NC' || f.statut === 'PAYEE')
+        .reduce((s, f) => s + f.montantSencsu, 0);
+      const nombreBeneficiaires = fDuRegime.reduce((s, f) => s + f.nombreBeneficiaires, 0);
+
+      return {
+        regime: r.code,
+        codeRegime: r.code,
+        libelle: r.libelle,
+        couleur: r.couleur,
+        montantFacture,
+        montantSencsuTotal,
+        montantSencsuTraite,
+        montantSencsuEnAttente: Math.max(0, montantSencsuTotal - montantSencsuTraite),
+        nombreBeneficiaires,
+        nombreFactures: fDuRegime.length
+      };
+    });
+
+    const moisAffiches = filtres.mois
+      ? [filtres.mois]
+      : filtres.trimestre
+        ? Array.from({ length: 3 }, (_, index) => (filtres.trimestre! - 1) * 3 + index + 1)
+        : Array.from({ length: 12 }, (_, index) => index + 1);
+    const montantsMensuels = moisAffiches.map(mois => {
+      const facturesDuMois = filtrees.filter(f => f.mois === mois);
+      return {
+        mois,
+        montantFacture: facturesDuMois.reduce((total, facture) => total + facture.montantTotal, 0),
+        nombreFactures: facturesDuMois.length
+      };
+    });
+
+    return { statsRegimes, montantsMensuels };
   }
 
   private calculerAttenteParNiveau(factures: FactureAssigneeResume[]): void {
@@ -470,9 +562,13 @@ export class RegionalDashboardComponent implements OnInit {
     textClass: string;
     borderClass: string;
   } {
+    const cached = this.regimeInfoCache.get(code);
+    if (cached) return cached;
+
+    let result: ReturnType<RegionalDashboardComponent['getRegimeInfo']>;
     switch (code) {
       case 'CONTRIBUTIF':
-        return {
+        result = {
           labelCourt: 'Contributif',
           description: 'Mutuelles & BSF',
           icone: 'groups',
@@ -481,8 +577,9 @@ export class RegionalDashboardComponent implements OnInit {
           textClass: 'text-emerald-700',
           borderClass: 'border-emerald-200'
         };
+        break;
       case 'ENFANTS_MOINS_5_ANS':
-        return {
+        result = {
           labelCourt: '0 à 5 ans',
           description: 'Gratuité Enfants',
           icone: 'child_care',
@@ -491,8 +588,9 @@ export class RegionalDashboardComponent implements OnInit {
           textClass: 'text-blue-700',
           borderClass: 'border-blue-200'
         };
+        break;
       case 'PLAN_SESAME':
-        return {
+        result = {
           labelCourt: 'Plan Sésame',
           description: '60 ans et plus',
           icone: 'elderly',
@@ -501,8 +599,9 @@ export class RegionalDashboardComponent implements OnInit {
           textClass: 'text-amber-700',
           borderClass: 'border-amber-200'
         };
+        break;
       case 'CESARIENNE':
-        return {
+        result = {
           labelCourt: 'Césarienne',
           description: 'Maternité & gratuité',
           icone: 'pregnant_woman',
@@ -511,8 +610,9 @@ export class RegionalDashboardComponent implements OnInit {
           textClass: 'text-purple-700',
           borderClass: 'border-purple-200'
         };
+        break;
       case 'DIALYSE':
-        return {
+        result = {
           labelCourt: 'Dialyse',
           description: 'Prise en charge hémodialyse',
           icone: 'water_drop',
@@ -521,8 +621,9 @@ export class RegionalDashboardComponent implements OnInit {
           textClass: 'text-rose-700',
           borderClass: 'border-rose-200'
         };
+        break;
       default:
-        return {
+        result = {
           labelCourt: code,
           description: 'Régime CSU',
           icone: 'health_and_safety',
@@ -532,6 +633,8 @@ export class RegionalDashboardComponent implements OnInit {
           borderClass: 'border-slate-200'
         };
     }
+    this.regimeInfoCache.set(code, result);
+    return result;
   }
 
   private genererSparklines(montants: MontantMensuelSR[]): void {
@@ -853,7 +956,8 @@ export class RegionalDashboardComponent implements OnInit {
   }
 
   private mettreAJourGraphiquesStructures(): void {
-    const participation = this.saisiesParTypeStructure;
+    this.recalculerSaisiesParType();
+    const participation = this.saisiesParTypeStructureCache;
     this.participationChartData = {
       labels: participation.map(ligne => ligne.libelle),
       datasets: [

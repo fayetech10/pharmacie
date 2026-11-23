@@ -12,8 +12,10 @@ import { AfterViewInit, Directive, HostListener, Inject, OnDestroy } from '@angu
 })
 export class MobileCardTablesDirective implements AfterViewInit, OnDestroy {
   private observer?: MutationObserver;
+  private observedRoot?: HTMLElement;
   private openOverlay?: HTMLElement;
   private openTrigger?: HTMLButtonElement;
+  private readonly headersCache = new WeakMap<HTMLTableElement, string[]>();
   private readonly documentClickListener = (event: Event) => this.onDocumentClick(event as MouseEvent);
   private readonly documentKeyListener = (event: Event) => this.onDocumentKeydown(event as KeyboardEvent);
 
@@ -31,13 +33,10 @@ export class MobileCardTablesDirective implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     const win = this.document.defaultView;
-    if (!win || typeof MutationObserver === 'undefined') return;
-
-    this.observer = new MutationObserver(() => this.prepareTables());
-    this.observer.observe(this.document.body, { childList: true, subtree: true });
+    if (!win) return;
     this.document.addEventListener('click', this.documentClickListener, true);
     this.document.addEventListener('keydown', this.documentKeyListener, true);
-    this.prepareTables();
+    this.syncViewport();
   }
 
   ngOnDestroy(): void {
@@ -80,36 +79,123 @@ export class MobileCardTablesDirective implements AfterViewInit, OnDestroy {
   @HostListener('window:resize')
   onResize(): void {
     this.closeMenu();
-    this.prepareTables();
+    this.syncViewport();
   }
 
-  private prepareTables(): void {
-    const tables = this.document.querySelectorAll<HTMLTableElement>('main table:not([data-mobile-card-skip])');
+  private syncViewport(): void {
+    if (!this.isPhoneLayout()) {
+      this.observer?.disconnect();
+      this.observer = undefined;
+      if (this.observedRoot) this.clearMobileDecorations(this.observedRoot);
+      this.observedRoot = undefined;
+      return;
+    }
+
+    const root = this.document.querySelector<HTMLElement>('main');
+    if (!root || root === this.observedRoot) return;
+    this.observer?.disconnect();
+    this.observedRoot = root;
+
+    if (typeof MutationObserver !== 'undefined') {
+      this.observer = new MutationObserver(records => this.processMutations(records));
+      // Restrict observation to page content. Header, navigation, toasts and dialogs don't
+      // need table processing and were generating pointless whole-page work.
+      this.observer.observe(root, { childList: true, subtree: true });
+    }
+    this.prepareTables(root);
+  }
+
+  private prepareTables(root: ParentNode): void {
+    const tables = root.querySelectorAll<HTMLTableElement>('table:not([data-mobile-card-skip])');
     tables.forEach(table => {
-      table.classList.add('mobile-card-table');
-      const headers = this.headersOf(table);
-      Array.from(table.tBodies).forEach(body => Array.from(body.rows).forEach(row => {
-        this.labelCells(row, headers);
-        this.prepareRow(row, headers);
-      }));
+      this.prepareTable(table);
     });
-    this.prepareExistingCards();
+    root.querySelectorAll<HTMLElement>('.m-card').forEach(card => this.prepareCard(card));
   }
 
-  private prepareExistingCards(): void {
-    this.document.querySelectorAll<HTMLElement>('main .m-card').forEach(card => {
-      const groups = Array.from(card.querySelectorAll<HTMLElement>('.m-actions'));
-      const controls = groups.flatMap(group => this.actionElements(group));
-      if (controls.length > 1) {
-        groups.forEach(group => group.classList.add('mobile-card-action-group'));
-        if (!card.querySelector('[data-mobile-card-trigger]') && groups[0]) {
-          groups[0].appendChild(this.createTrigger());
+  private processMutations(records: MutationRecord[]): void {
+    if (!this.isPhoneLayout()) return;
+    const tables = new Set<HTMLTableElement>();
+    const rows = new Set<HTMLTableRowElement>();
+    const cards = new Set<HTMLElement>();
+
+    const addTree = (node: Node): void => {
+      if (!(node instanceof Element)) return;
+      if (node.matches('table:not([data-mobile-card-skip])')) tables.add(node as HTMLTableElement);
+      node.querySelectorAll<HTMLTableElement>('table:not([data-mobile-card-skip])').forEach(table => tables.add(table));
+      if (node.matches('tr')) rows.add(node as HTMLTableRowElement);
+      node.querySelectorAll<HTMLTableRowElement>('tr').forEach(row => rows.add(row));
+      if (node.matches('.m-card')) cards.add(node as HTMLElement);
+      node.querySelectorAll<HTMLElement>('.m-card').forEach(card => cards.add(card));
+    };
+
+    records.forEach(record => {
+      const target = record.target instanceof Element ? record.target : record.target.parentElement;
+      const table = target?.closest<HTMLTableElement>('table:not([data-mobile-card-skip])');
+      if (table) {
+        if (target === table || target?.closest('thead')) tables.add(table);
+        else {
+          const row = target?.closest<HTMLTableRowElement>('tbody tr');
+          if (row) rows.add(row);
         }
-      } else {
-        groups.forEach(group => group.classList.remove('mobile-card-action-group'));
-        card.querySelector('[data-mobile-card-trigger]')?.remove();
+      }
+      const card = target?.closest<HTMLElement>('.m-card');
+      if (card) cards.add(card);
+      record.addedNodes.forEach(addTree);
+    });
+
+    tables.forEach(table => this.prepareTable(table));
+    rows.forEach(row => {
+      if (row.isConnected && !tables.has(row.closest('table') as HTMLTableElement)) {
+        const table = row.closest<HTMLTableElement>('table:not([data-mobile-card-skip])');
+        if (table) {
+          const headers = this.headersCache.get(table) || this.headersOf(table);
+          this.labelCells(row, headers);
+          this.prepareRow(row, headers);
+        }
       }
     });
+    cards.forEach(card => this.prepareCard(card));
+  }
+
+  private prepareTable(table: HTMLTableElement): void {
+    if (!this.isPhoneLayout()) return;
+    table.classList.add('mobile-card-table');
+    const headers = this.headersOf(table);
+    this.headersCache.set(table, headers);
+    Array.from(table.tBodies).forEach(body => Array.from(body.rows).forEach(row => {
+      this.labelCells(row, headers);
+      this.prepareRow(row, headers);
+    }));
+  }
+
+  private prepareCard(card: HTMLElement): void {
+    if (!this.isPhoneLayout()) return;
+    const groups = Array.from(card.querySelectorAll<HTMLElement>('.m-actions'));
+    const controls = groups.flatMap(group => this.actionElements(group));
+    if (controls.length > 1) {
+      groups.forEach(group => group.classList.add('mobile-card-action-group'));
+      if (!card.querySelector('[data-mobile-card-trigger]') && groups[0]) {
+        groups[0].appendChild(this.createTrigger());
+      }
+    } else {
+      groups.forEach(group => group.classList.remove('mobile-card-action-group'));
+      card.querySelector('[data-mobile-card-trigger]')?.remove();
+    }
+  }
+
+  private clearMobileDecorations(root: ParentNode): void {
+    root.querySelectorAll('table.mobile-card-table').forEach(table => table.classList.remove('mobile-card-table'));
+    root.querySelectorAll('.mobile-card-action-source').forEach(cell => cell.classList.remove('mobile-card-action-source'));
+    root.querySelectorAll('[data-mobile-card-trigger-cell]').forEach(cell => cell.remove());
+    root.querySelectorAll('.mobile-card-action-group').forEach(group => group.classList.remove('mobile-card-action-group'));
+    root.querySelectorAll('[data-mobile-card-clickable], [data-mobile-card-primary-action]').forEach(row => {
+      row.removeAttribute('data-mobile-card-clickable');
+      row.removeAttribute('data-mobile-card-primary-action');
+      row.removeAttribute('tabindex');
+      row.removeAttribute('aria-label');
+    });
+    root.querySelectorAll('[data-mobile-label]').forEach(cell => cell.removeAttribute('data-mobile-label'));
   }
 
   private headersOf(table: HTMLTableElement): string[] {
@@ -167,8 +253,6 @@ export class MobileCardTablesDirective implements AfterViewInit, OnDestroy {
 
     actionCells.forEach(cell => cell.classList.remove('mobile-card-action-source'));
     this.removeTrigger(row);
-    actionElements = [];
-
     // A single view-only action is redundant on the card: the entire card opens it.
     if (detailAction && !dataLink) {
       actionCells.forEach(cell => cell.classList.add('mobile-card-action-source'));
