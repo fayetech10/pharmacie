@@ -162,8 +162,8 @@ export class MainLayoutComponent implements OnInit {
   /** Logo affiché dans la topbar : pharmacie pour le Pharmacien, CSU pour les autres. */
   get brandLogo(): string {
     return this.authService.isPharmacien()
-      ? 'assets/logo-pharmacie.png'
-      : 'assets/logo-csu.png';
+      ? 'assets/logo-pharmacie.webp'
+      : 'assets/logo-csu.webp';
   }
 
   get initials(): string {

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Observable, of, concat, EMPTY, asapScheduler } from 'rxjs';
-import { tap, catchError, distinctUntilChanged, observeOn, shareReplay, finalize } from 'rxjs/operators';
+import { tap, catchError, distinctUntilChanged, observeOn, shareReplay, finalize, timeout } from 'rxjs/operators';
 import { ARRIERE_PLAN, SKIP_LOADING } from '../interceptors/loading.interceptor';
 
 /**
@@ -108,6 +108,7 @@ export class ApiService {
     const request$ = this.http
       .get<T>(url, { context })
       .pipe(
+        timeout(25_000),
         tap(data => this.cache.set(url, { donnees: data, recueLe: Date.now() })),
         finalize(() => this.inFlight.delete(url)),
         shareReplay(1)
@@ -121,18 +122,21 @@ export class ApiService {
     const silencieux = !!options?.silencieux;
     return this.http.post<T>(`${this.baseUrl}${path}`, body,
       { context: new HttpContext().set(SKIP_LOADING, silencieux).set(ARRIERE_PLAN, silencieux) }).pipe(
+      timeout(30_000),
       tap(() => this.invalidateCache())
     );
   }
 
   put<T>(path: string, body: any): Observable<T> {
     return this.http.put<T>(`${this.baseUrl}${path}`, body).pipe(
+      timeout(30_000),
       tap(() => this.invalidateCache())
     );
   }
 
   delete<T>(path: string): Observable<T> {
     return this.http.delete<T>(`${this.baseUrl}${path}`).pipe(
+      timeout(30_000),
       tap(() => this.invalidateCache())
     );
   }

@@ -9,7 +9,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { PaginerPipe } from '../../../shared/pagination/paginer.pipe';
 import { SkeletonListComponent } from '../../../shared/skeleton-list/skeleton-list.component';
-import { interval } from 'rxjs';
+import { interval, Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 import {
   SrGestionService,
@@ -102,6 +103,36 @@ export class SuiviEnregistrementComponent implements OnInit {
   pharmacies: PharmacieEnregistrementRow[] = [];
   loading = false;
 
+  // ===================== DONNÉES FILTRÉES EN MÉMOIRE (ÉVITE LE RE-RENDER EN BOUCLE) =====================
+  districtsFiltres: DistrictEnregistrementRow[] = [];
+  structuresFiltrees: StructureEnregistrementRow[] = [];
+  pharmaciesFiltrees: PharmacieEnregistrementRow[] = [];
+  hopitauxActifs: StructureEnregistrementRow[] = [];
+  postesFiltres: PostePolariseRow[] = [];
+  hopitauxDuDistrict: PostePolariseRow[] = [];
+  postesPolarisesDuDistrict: PostePolariseRow[] = [];
+  hopitauxFiltres: PostePolariseRow[] = [];
+  postesPolarisesFiltres: PostePolariseRow[] = [];
+  facturesFiltrees: FactureAssigneeResume[] = [];
+  patientsFiltres: PatientLigne[] = [];
+  identitePatient: InfoPatient[] = [];
+  cartePatient: InfoPatient[] = [];
+
+  // Compteurs mémoïsés
+  totalStructuresAControler = 0;
+  totalPharmaciesAControler = 0;
+  totalStructuresActives = 0;
+  totalDistricts = 0;
+  totalPharmaciesActives = 0;
+  totalPostesAControler = 0;
+  totalPostesAvecFacture = 0;
+  totalPostesSaisisAujourdhui = 0;
+  totalPostesAvecSaisie = 0;
+  totalHopitauxAvecSaisie = 0;
+
+  // Debounce pour les filtres et recherches textuelles
+  filtreDebounce$ = new Subject<void>();
+
   // Filtres Structures
   searchStructure = '';
 
@@ -193,6 +224,13 @@ export class SuiviEnregistrementComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Écoute des changements de recherche/filtres avec debounce (250ms)
+    this.filtreDebounce$
+      .pipe(debounceTime(250), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.recalculerFiltres();
+      });
+
     this.chargerDonnees();
 
     // Réactivité en temps réel : si une facture ou prestation est modifiée n'importe où, recharger
@@ -200,9 +238,8 @@ export class SuiviEnregistrementComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.actualiserVues(false));
 
-    // Les événements locaux sont immédiats. Ce contrôle détecte aussi les saisies
-    // et envois réalisés depuis les postes/hôpitaux dans une autre session.
-    interval(15_000)
+    // Rafraîchissement automatique espacé (60 secondes) uniquement quand l'onglet est actif
+    interval(60_000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (!this.actualisationEnCours && document.visibilityState === 'visible') this.actualiserVues(false);
@@ -230,6 +267,7 @@ export class SuiviEnregistrementComponent implements OnInit {
         this.erreurChargement = false;
         this.actualisationEnCours = false;
         this.loading = false;
+        this.recalculerDistrictsEtStructures();
       },
       error: () => {
         this.erreurChargement = true;
@@ -276,6 +314,7 @@ export class SuiviEnregistrementComponent implements OnInit {
   chargerPostesDuDistrict(districtId: string): void {
     this.srService.getPostesPolarises(districtId, this.annee, this.moisSuivi).subscribe(list => {
       this.postesDuDistrict = list;
+      this.recalculerPostes();
     });
   }
 
@@ -316,6 +355,7 @@ export class SuiviEnregistrementComponent implements OnInit {
 
   filtrerParRegime(regimeCode: string): void {
     this.filtreRegime = regimeCode;
+    this.recalculerFactures();
   }
 
   countFacturesRegime(regimeCode: string): number {
@@ -337,6 +377,7 @@ export class SuiviEnregistrementComponent implements OnInit {
         if (requete !== this.requeteFacturesPrestataire || this.prestataireSelectionne?.id !== prestataireId || this.annee !== annee) return;
         this.facturesDuPrestataire = list;
         this.chargementFacturesPrestataire = false;
+        this.recalculerFactures();
       },
       error: () => {
         if (requete !== this.requeteFacturesPrestataire) return;
@@ -347,71 +388,104 @@ export class SuiviEnregistrementComponent implements OnInit {
     });
   }
 
-  get facturesFiltrees(): FactureAssigneeResume[] {
-    return this.facturesDuPrestataire.filter(f => {
-      if (this.filtreRegime && f.regime !== this.filtreRegime) {
-        return false;
-      }
-      if (this.searchFacture) {
-        const q = this.searchFacture.toLowerCase().trim();
-        const match = f.numero.toLowerCase().includes(q) ||
-          f.regime.toLowerCase().includes(q) ||
-          (f.controleurNom && f.controleurNom.toLowerCase().includes(q));
+  onFiltreChange(): void {
+    this.filtreDebounce$.next();
+  }
+
+  recalculerFiltres(): void {
+    this.recalculerDistrictsEtStructures();
+    this.recalculerPostes();
+    this.recalculerFactures();
+    this.recalculerPatients();
+  }
+
+  recalculerDistrictsEtStructures(): void {
+    const qStruct = (this.searchStructure || '').toLowerCase().trim();
+    const qPharma = (this.searchPharmacie || '').toLowerCase().trim();
+    const statut = this.filtreStatutSuivi;
+
+    this.hopitauxActifs = this.structures.filter(s => s.actif && s.type === 'EPS');
+
+    this.structuresFiltrees = this.hopitauxActifs.filter(s => {
+      if (statut && s.statutSuiviPeriode !== statut) return false;
+      if (qStruct) {
+        const match = s.nom.toLowerCase().includes(qStruct) ||
+                      s.code.toLowerCase().includes(qStruct) ||
+                      s.districtNom.toLowerCase().includes(qStruct);
         if (!match) return false;
       }
       return true;
     });
-  }
 
-  get postesFiltres(): PostePolariseRow[] {
-    const afficherSansSaisie = this.inclurePostesSansSaisie || this.filtreStatutSuivi === 'A_SAISIR';
-    const postes = this.postesDuDistrict.filter(p =>
-      (afficherSansSaisie || p.nombreFactures > 0) &&
-      (!this.filtreStatutSuivi || p.statutSuiviPeriode === this.filtreStatutSuivi)
-    );
-    if (!this.searchPoste) return postes;
-    const q = this.searchPoste.toLowerCase().trim();
-    return postes.filter(p =>
-      p.nom.toLowerCase().includes(q) ||
-      p.code.toLowerCase().includes(q)
-    );
-  }
+    this.districtsFiltres = this.districts.filter(d => {
+      if (statut && d.statutSuiviPeriode !== statut) return false;
+      if (qStruct) {
+        if (!d.nom.toLowerCase().includes(qStruct) && !d.code.toLowerCase().includes(qStruct)) return false;
+      }
+      return true;
+    }).sort((a, b) => b.nombrePostesSaisisAujourdhui - a.nombrePostesSaisisAujourdhui);
 
-  get hopitauxDuDistrict(): PostePolariseRow[] {
-    return this.postesDuDistrict.filter(p => p.type === 'EPS' && p.nombreFactures > 0);
-  }
-
-  get postesPolarisesDuDistrict(): PostePolariseRow[] {
-    return this.postesDuDistrict.filter(p => p.type === 'PS');
-  }
-
-  get hopitauxFiltres(): PostePolariseRow[] {
-    return this.hopitauxDuDistrict.filter(p => {
-      if (this.filtreStatutSuivi && p.statutSuiviPeriode !== this.filtreStatutSuivi) return false;
-      if (!this.searchPoste) return true;
-      const q = this.searchPoste.toLowerCase().trim();
-      return p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
+    this.pharmaciesFiltrees = this.pharmacies.filter(p => {
+      if (!p.actif) return false;
+      if (statut && p.statutSuiviPeriode !== statut) return false;
+      if (qPharma) {
+        const match = p.nom.toLowerCase().includes(qPharma) ||
+                      p.code.toLowerCase().includes(qPharma) ||
+                      p.ville.toLowerCase().includes(qPharma);
+        if (!match) return false;
+      }
+      return true;
     });
+
+    this.totalStructuresActives = this.hopitauxActifs.length;
+    this.totalStructuresAControler = this.hopitauxActifs.filter(s => !s.factureEnvoyeePeriode).length;
+    this.totalDistricts = this.districts.length;
+    this.totalPharmaciesActives = this.pharmacies.filter(p => p.actif).length;
+    this.totalPharmaciesAControler = this.pharmacies.filter(p => p.actif && !p.factureEnvoyeePeriode).length;
   }
 
-  get postesPolarisesFiltres(): PostePolariseRow[] {
-    return this.postesFiltres.filter(p => p.type === 'PS');
+  recalculerPostes(): void {
+    const qPoste = (this.searchPoste || '').toLowerCase().trim();
+    const statut = this.filtreStatutSuivi;
+    const afficherSansSaisie = this.inclurePostesSansSaisie || statut === 'A_SAISIR';
+
+    this.hopitauxDuDistrict = this.postesDuDistrict.filter(p => p.type === 'EPS' && p.nombreFactures > 0);
+    this.postesPolarisesDuDistrict = this.postesDuDistrict.filter(p => p.type === 'PS');
+
+    this.postesFiltres = this.postesDuDistrict.filter(p =>
+      (afficherSansSaisie || p.nombreFactures > 0) &&
+      (!statut || p.statutSuiviPeriode === statut) &&
+      (!qPoste || p.nom.toLowerCase().includes(qPoste) || p.code.toLowerCase().includes(qPoste))
+    );
+
+    this.hopitauxFiltres = this.hopitauxDuDistrict.filter(p =>
+      (!statut || p.statutSuiviPeriode === statut) &&
+      (!qPoste || p.nom.toLowerCase().includes(qPoste) || p.code.toLowerCase().includes(qPoste))
+    );
+
+    this.postesPolarisesFiltres = this.postesFiltres.filter(p => p.type === 'PS');
+
+    this.totalPostesAControler = this.postesPolarisesDuDistrict.filter(p => !p.factureEnvoyeePeriode).length;
+    this.totalPostesAvecFacture = this.postesPolarisesDuDistrict.filter(p => p.factureEnvoyeePeriode).length;
+    this.totalPostesSaisisAujourdhui = this.postesPolarisesDuDistrict.filter(p => p.saisieAujourdhui).length;
+    this.totalPostesAvecSaisie = this.postesPolarisesDuDistrict.filter(p => p.nombreFactures > 0).length;
+    this.totalHopitauxAvecSaisie = this.hopitauxDuDistrict.filter(p => p.nombreFactures > 0).length;
   }
 
-  get totalPostesAvecFacture(): number {
-    return this.postesPolarisesDuDistrict.filter(p => p.factureEnvoyeePeriode).length;
-  }
+  recalculerFactures(): void {
+    const qFac = (this.searchFacture || '').toLowerCase().trim();
+    const reg = this.filtreRegime;
 
-  get totalPostesSaisisAujourdhui(): number {
-    return this.postesPolarisesDuDistrict.filter(p => p.saisieAujourdhui).length;
-  }
-
-  get totalPostesAvecSaisie(): number {
-    return this.postesPolarisesDuDistrict.filter(p => p.nombreFactures > 0).length;
-  }
-
-  get totalHopitauxAvecSaisie(): number {
-    return this.hopitauxDuDistrict.filter(p => p.nombreFactures > 0).length;
+    this.facturesFiltrees = this.facturesDuPrestataire.filter(f => {
+      if (reg && f.regime !== reg) return false;
+      if (qFac) {
+        const match = f.numero.toLowerCase().includes(qFac) ||
+                      f.regime.toLowerCase().includes(qFac) ||
+                      (f.controleurNom && f.controleurNom.toLowerCase().includes(qFac));
+        if (!match) return false;
+      }
+      return true;
+    });
   }
 
   ouvrirDistrict(district: DistrictEnregistrementRow): void {
@@ -473,6 +547,7 @@ export class SuiviEnregistrementComponent implements OnInit {
             factureOrigine: facture
           };
           this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+          this.recalculerPatients();
           this.chargementDetailFacture = false;
         },
         error: () => {
@@ -486,6 +561,7 @@ export class SuiviEnregistrementComponent implements OnInit {
       return;
     }
     this.patientsDeLaFacture = this.srService.getPatientsPourFacture(f);
+    this.recalculerPatients();
   }
 
   fermerDetailFacture(): void {
@@ -503,6 +579,7 @@ export class SuiviEnregistrementComponent implements OnInit {
 
   ouvrirPrestationsPatient(patient: PatientLigne): void {
     this.patientSelectionne = patient;
+    this.actualiserIdentiteCartePatient();
     this.afficherIdentitePatient = false;
     this.vueMode = 'PRESTATIONS';
   }
@@ -512,6 +589,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.patientSelectionne = null;
     if (this.factureSelectionnee) {
       this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+      this.recalculerPatients();
     }
   }
 
@@ -532,20 +610,20 @@ export class SuiviEnregistrementComponent implements OnInit {
       return;
     }
     this.srService.getFactureStructure(factureId).subscribe({
-      next: facture => {
+      next: (facture: any) => {
         if (this.patientSelectionne?.id !== patient.id || this.factureSelectionnee?.id !== factureId) return;
         this.factureDossier = facture;
-        const dossier = (facture.dossiers || []).find(d =>
+        const dossier = (facture.dossiers || []).find((d: any) =>
           d.id === patient.id || (!!patient.matricule && d.matricule === patient.matricule) ||
           (!!patient.lettreNumero && d.lettreGarantieNumero === patient.lettreNumero) ||
           (!!patient.nom && !!patient.prenom && d.nom?.toLowerCase() === patient.nom.toLowerCase() && d.prenom?.toLowerCase() === patient.prenom.toLowerCase() && (!patient.dateNaissance || d.dateNaissance === patient.dateNaissance))
         );
-        const lignes = facture.lignes || [];
+        const lignes: any[] = facture.lignes || [];
         const lignesPatient = dossier
-          ? lignes.filter(l => l.dossierId === dossier.id ||
+          ? lignes.filter((l: any) => l.dossierId === dossier.id ||
               (!!dossier.matricule && l.patientMatricule === dossier.matricule) ||
               (!!dossier.lettreGarantieNumero && l.lettreGarantieNumero === dossier.lettreGarantieNumero))
-          : lignes.filter(l =>
+          : lignes.filter((l: any) =>
               (!!patient.matricule && l.patientMatricule === patient.matricule) ||
               (!!patient.lettreNumero && l.lettreGarantieNumero === patient.lettreNumero) ||
               (!!patient.id && l.patientId === patient.id) ||
@@ -565,12 +643,12 @@ export class SuiviEnregistrementComponent implements OnInit {
             ['TICKET_CAISSE', 'CNI_RECTO', 'CNI_VERSO', 'EXTRAIT_NAISSANCE', 'CARTE_ASSURE', 'PHOTO_ASSURE'].includes(piece)
           )
         };
-        const lettreNumero = this.dossierActif.lettreGarantieNumero || patient.lettreNumero;
-        this.documentsDossier = (facture.documentsComplementaires || []).filter(doc =>
+        const lettreNumero = this.dossierActif?.lettreGarantieNumero || patient.lettreNumero;
+        this.documentsDossier = (facture.documentsComplementaires || []).filter((doc: any) =>
           (!!patient.matricule && doc.patientMatricule === patient.matricule) ||
           (!!lettreNumero && doc.lettreGarantieNumero === lettreNumero)
         );
-        const feuille = lignesPatient.find(l => l.feuilleSoinsId);
+        const feuille = lignesPatient.find((l: any) => l.feuilleSoinsId);
         this.feuilleSoinsDossier = feuille?.feuilleSoinsId
           ? { id: feuille.feuilleSoinsId, numero: feuille.feuilleSoinsNumero || feuille.feuilleSoinsId }
           : undefined;
@@ -593,10 +671,13 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.feuilleSoinsDossier = undefined;
   }
 
-  get patientsFiltres(): PatientLigne[] {
-    if (!this.searchPatient) return this.patientsDeLaFacture;
-    const q = this.searchPatient.toLowerCase().trim();
-    return this.patientsDeLaFacture.filter(p =>
+  recalculerPatients(): void {
+    const q = (this.searchPatient || '').toLowerCase().trim();
+    if (!q) {
+      this.patientsFiltres = this.patientsDeLaFacture;
+      return;
+    }
+    this.patientsFiltres = this.patientsDeLaFacture.filter(p =>
       p.nom.toLowerCase().includes(q) ||
       p.prenom.toLowerCase().includes(q) ||
       p.matricule.toLowerCase().includes(q) ||
@@ -606,10 +687,14 @@ export class SuiviEnregistrementComponent implements OnInit {
     );
   }
 
-  get identitePatient(): InfoPatient[] {
+  actualiserIdentiteCartePatient(): void {
     const p = this.patientSelectionne;
-    if (!p) return [];
-    return this.infosRenseignees([
+    if (!p) {
+      this.identitePatient = [];
+      this.cartePatient = [];
+      return;
+    }
+    this.identitePatient = this.infosRenseignees([
       { libelle: 'Nom complet', valeur: `${p.prenom} ${p.nom}`.trim() },
       { libelle: 'Matricule', valeur: p.matricule, mono: true },
       { libelle: 'Date de la visite', valeur: p.datePriseEnCharge ? this.formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) : '' },
@@ -624,14 +709,10 @@ export class SuiviEnregistrementComponent implements OnInit {
       { libelle: 'Dialyse (IRC / IRA)', valeur: p.ircIra || '' },
       { libelle: 'Indication', valeur: p.indicationCbt || '' }
     ]);
-  }
 
-  get cartePatient(): InfoPatient[] {
-    const p = this.patientSelectionne;
-    if (!p) return [];
     const validite = p.dateDebutValiditeCarte || p.dateFinValiditeCarte
       ? `${p.dateDebutValiditeCarte ? this.formatDate(p.dateDebutValiditeCarte) : '…'} au ${p.dateFinValiditeCarte ? this.formatDate(p.dateFinValiditeCarte) : '…'}` : '';
-    return this.infosRenseignees([
+    this.cartePatient = this.infosRenseignees([
       { libelle: 'Vérification', valeur: p.verificationCarte === 'VERIFIEE' ? 'Carte vérifiée en ligne'
         : p.verificationCarte === 'NON_VERIFIEE_PANNE' ? 'Non vérifiée (système en panne)' : '' },
       { libelle: 'Catégorie', valeur: p.categorieCarte || '' },
@@ -681,12 +762,14 @@ export class SuiviEnregistrementComponent implements OnInit {
 
     // Mettre à jour l'affichage en temps réel
     this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+    this.recalculerPatients();
 
     // Mettre à jour le patient sélectionné s'il est affiché sur la page des prestations
     if (this.patientSelectionne) {
       const updated = this.patientsDeLaFacture.find(p => p.id === this.patientSelectionne!.id);
       if (updated) {
         this.patientSelectionne = updated;
+        this.actualiserIdentiteCartePatient();
       }
     }
 
@@ -718,12 +801,14 @@ export class SuiviEnregistrementComponent implements OnInit {
 
     // Recharger la liste en temps réel
     this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+    this.recalculerPatients();
 
     // Mettre à jour le patient sélectionné s'il est affiché
     if (this.patientSelectionne) {
       const updated = this.patientsDeLaFacture.find(p => p.id === this.patientSelectionne!.id);
       if (updated) {
         this.patientSelectionne = updated;
+        this.actualiserIdentiteCartePatient();
       }
     }
 
@@ -790,70 +875,9 @@ export class SuiviEnregistrementComponent implements OnInit {
     return `${p}${n}` || 'SN';
   }
 
-  // ===================== FILTRES & GETTERS DE SYNTHÈSE =====================
-
-  get structuresFiltrees(): StructureEnregistrementRow[] {
-    return this.hopitauxActifs.filter(s => {
-      if (this.filtreStatutSuivi && s.statutSuiviPeriode !== this.filtreStatutSuivi) return false;
-      if (this.searchStructure) {
-        const q = this.searchStructure.toLowerCase();
-        const match = s.nom.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || s.districtNom.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
-    });
-  }
-
-  get hopitauxActifs(): StructureEnregistrementRow[] {
-    return this.structures.filter(s => s.actif && s.type === 'EPS');
-  }
-
-  get districtsFiltres(): DistrictEnregistrementRow[] {
-    return this.districts.filter(d => {
-      if (this.filtreStatutSuivi && d.statutSuiviPeriode !== this.filtreStatutSuivi) return false;
-      if (this.searchStructure) {
-        const q = this.searchStructure.toLowerCase();
-        if (!d.nom.toLowerCase().includes(q) && !d.code.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    }).sort((a, b) => b.nombrePostesSaisisAujourdhui - a.nombrePostesSaisisAujourdhui);
-  }
-
-  get pharmaciesFiltrees(): PharmacieEnregistrementRow[] {
-    return this.pharmacies.filter(p => {
-      if (!p.actif) return false;
-      if (this.filtreStatutSuivi && p.statutSuiviPeriode !== this.filtreStatutSuivi) return false;
-      if (this.searchPharmacie) {
-        const q = this.searchPharmacie.toLowerCase();
-        const match = p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q) || p.ville.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
-    });
-  }
-
-  get totalStructuresAControler(): number {
-    return this.hopitauxActifs.filter(s => !s.factureEnvoyeePeriode).length;
-  }
-
-  get totalPharmaciesAControler(): number {
-    return this.pharmacies.filter(p => p.actif && !p.factureEnvoyeePeriode).length;
-  }
-
-  get totalStructuresActives(): number {
-    return this.hopitauxActifs.length;
-  }
-
-  get totalDistricts(): number {
-    return this.districts.length;
-  }
-
-  get totalPharmaciesActives(): number {
-    return this.pharmacies.filter(p => p.actif).length;
-  }
-
-  get totalPostesAControler(): number {
-    return this.postesPolarisesDuDistrict.filter(p => !p.factureEnvoyeePeriode).length;
+  // ===================== HELPERS DE PERFORMANCE =====================
+  trackById(_index: number, item: any): string {
+    return item?.id || String(_index);
   }
 
   getLibelleSuivi(statut: string): string {

@@ -217,7 +217,7 @@
               <figure *ngIf="p[piece.cle]" class="m-0 flex flex-col gap-1">
                 <button type="button" (click)="ouvrirApercu(p[piece.cle]!)" [attr.aria-label]="'Agrandir : ' + piece.libelle"
                         class="aspect-[4/3] rounded-lg border border-border bg-white overflow-hidden cursor-zoom-in p-0">
-                  <img [src]="p[piece.cle]" [alt]="piece.libelle" class="w-full h-full object-contain">
+                  <img [src]="p[piece.cle]" [alt]="piece.libelle" loading="lazy" class="w-full h-full object-contain">
                 </button>
                 <figcaption class="inline-flex items-center gap-1 text-[12.5px] font-semibold text-text-secondary">
                   <mat-icon class="!text-sm !w-3.5 !h-3.5">{{ piece.icone }}</mat-icon>{{ piece.libelle }}

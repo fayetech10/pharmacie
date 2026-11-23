@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { StatsData, MonthData, MedicamentStat, PharmacieStat, RegionStat } from '../../core/models/stats.model';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { CHARTS_PROVIDER } from '../../core/chart/chart.providers';
 
 /** Périmètre d'analyse du tableau de bord (pilote la source de données). */
 export interface StatsScope {
@@ -43,6 +44,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
   selector: 'app-stats',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatTooltipModule, BaseChartDirective, PageHeaderComponent],
+  providers: [CHARTS_PROVIDER],
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.css']
 })

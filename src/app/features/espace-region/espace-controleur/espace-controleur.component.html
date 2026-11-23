@@ -230,17 +230,17 @@
 
           <!-- Filtres de patients -->
           <div class="inline-flex rounded-lg bg-field p-0.5 text-xs font-medium border border-border">
-            <button type="button" (click)="filtreEtatPatient = 'TOUS'"
+            <button type="button" (click)="filtreEtatPatient = 'TOUS'; onFiltreChange()"
                     [class]="filtreEtatPatient === 'TOUS' ? 'bg-white text-text-primary shadow-xs font-semibold' : 'text-text-secondary hover:text-text-primary'"
                     class="px-2.5 py-1 rounded-md transition cursor-pointer">
               Tous ({{ patients.length }})
             </button>
-            <button type="button" (click)="filtreEtatPatient = 'CONFORMES'"
+            <button type="button" (click)="filtreEtatPatient = 'CONFORMES'; onFiltreChange()"
                     [class]="filtreEtatPatient === 'CONFORMES' ? 'bg-white text-success shadow-xs font-semibold' : 'text-text-secondary hover:text-text-primary'"
                     class="px-2.5 py-1 rounded-md transition cursor-pointer">
               Conformes
             </button>
-            <button type="button" (click)="filtreEtatPatient = 'REJETES'"
+            <button type="button" (click)="filtreEtatPatient = 'REJETES'; onFiltreChange()"
                     [class]="filtreEtatPatient === 'REJETES' ? 'bg-white text-red-700 shadow-xs font-semibold' : 'text-text-secondary hover:text-text-primary'"
                     class="px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1">
               Avec rejets <span *ngIf="nbPatientsAvecRejet > 0" class="px-1.5 py-0.2 rounded-full text-[10px] bg-red-100 text-red-800 font-bold">{{ nbPatientsAvecRejet }}</span>
@@ -296,7 +296,7 @@
         <!-- Barre de recherche -->
         <div class="relative" *ngIf="patients.length > 5 || searchPatient">
           <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-text-muted">search</mat-icon>
-          <input type="search" [(ngModel)]="searchPatient" placeholder="Rechercher un patient (nom, matricule, CNI)…"
+          <input type="search" [(ngModel)]="searchPatient" (ngModelChange)="onFiltreChange()" placeholder="Rechercher un patient (nom, matricule, CNI)…"
                  class="h-10 w-full pl-9 pr-3 rounded-lg border border-border bg-field-bg text-[14px]">
         </div>
 
@@ -304,7 +304,7 @@
         <div class="overflow-x-auto rounded-lg border border-border">
           <table class="w-full text-[13.5px] border-collapse">
             <tbody>
-              <tr *ngFor="let p of patientsFiltres" (click)="ouvrirPatient(p)"
+              <tr *ngFor="let p of patientsFiltres; trackBy: trackById" (click)="ouvrirPatient(p)"
                   class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field"
                   [ngClass]="patientEstRejete(p) ? 'bg-red-50/60' : (patientEstVerifieConforme(p) ? 'bg-success-light' : 'bg-white')">
                 <td class="py-2.5 px-3 align-middle">
@@ -660,7 +660,7 @@
               <div class="min-w-0"><h5 class="truncate text-xs font-semibold text-slate-800">{{ libellePiece(piece) }}</h5><p class="text-[10px] text-slate-500">Pièce enregistrée</p></div>
             </div>
             <div class="flex min-h-24 items-center justify-center bg-slate-50 p-3 text-center text-xs text-slate-500">
-              <img *ngIf="piecesDossier[piece]?.image" [src]="piecesDossier[piece].image" [alt]="libellePiece(piece)" class="max-h-56 max-w-full rounded-md object-contain">
+              <img *ngIf="piecesDossier[piece]?.image" [src]="piecesDossier[piece].image" [alt]="libellePiece(piece)" loading="lazy" class="max-h-56 max-w-full rounded-md object-contain">
               <span *ngIf="piecesDossier[piece]?.chargement" class="inline-flex items-center gap-2"><mat-icon class="!h-4 !w-4 !text-base animate-spin">sync</mat-icon>Chargement de la pièce…</span>
             <span *ngIf="!piecesDossier[piece]?.chargement && !piecesDossier[piece]?.image">{{ piecesDossier[piece].erreur ? 'Aperçu indisponible' : 'Document sans aperçu' }}</span>
             </div>

@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { CHARTS_PROVIDER } from '../../../core/chart/chart.providers';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 import { MontantMensuelSR, SrGestionService, StructureEnregistrementRow, FactureAssigneeResume, StatsRegimeSR } from '../services/sr-gestion.service';
@@ -51,6 +52,7 @@ export interface SparklinePoint {
     MatSnackBarModule,
     BaseChartDirective
   ],
+  providers: [CHARTS_PROVIDER],
   templateUrl: './regional-dashboard.component.html',
   styleUrls: ['./regional-dashboard.component.css']
 })
@@ -334,7 +336,10 @@ export class RegionalDashboardComponent implements OnInit {
   }
 
   chargerDonnees(showLoader = true): void {
-    if (showLoader) this.loading = true;
+    if (showLoader) {
+      this.loading = true;
+      this.loadingStructures = true;
+    }
     this.messageErreur = '';
 
     // ── Un seul appel aux factures, partagé par tous les consommateurs ──
@@ -349,7 +354,12 @@ export class RegionalDashboardComponent implements OnInit {
 
     forkJoin({
       factures: factures$,
-      suivi: this.srService.getSuiviEnregistrement(this.annee, this.mois ?? undefined, this.trimestre ?? undefined)
+      suivi: this.srService.getSuiviEnregistrement(
+        this.annee,
+        this.mois ?? undefined,
+        this.trimestre ?? undefined,
+        factures$
+      )
         .pipe(catchError(() => of({ districts: [], structures: [], pharmacies: [] })))
     }).subscribe({
       next: ({ factures, suivi }) => {
@@ -392,10 +402,12 @@ export class RegionalDashboardComponent implements OnInit {
         this.appliquerFiltres();
 
         this.loading = false;
+        this.loadingStructures = false;
       },
       error: (err) => {
         this.messageErreur = err?.error?.message || 'Les données du tableau de bord sont indisponibles.';
         this.loading = false;
+        this.loadingStructures = false;
       }
     });
   }
@@ -826,6 +838,23 @@ export class RegionalDashboardComponent implements OnInit {
   tauxSencsuFacture(f: FactureAssigneeResume | null): number {
     if (!f || !f.montantTotal) return 80;
     return Math.round((f.montantSencsu / f.montantTotal) * 100);
+  }
+
+  // ── TrackBy optimisés pour éviter les re-renders inutiles du DOM ──
+  trackByRegime(_index: number, item: StatsRegimeSR): string {
+    return item.codeRegime || item.regime;
+  }
+
+  trackByStructure(_index: number, item: StructureEnregistrementRow): string {
+    return item.id;
+  }
+
+  trackByTypeStructure(_index: number, item: SaisieStructureTypeStats): string {
+    return item.type;
+  }
+
+  trackByMiniBar(index: number, item: MiniBarItem): string {
+    return `${item.label}-${index}`;
   }
 
   formatMontant(m: number): string {

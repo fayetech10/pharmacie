@@ -7,7 +7,6 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
-import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { AdaptateurDateFr, FORMATS_DATE_FR } from './core/utils/adaptateur-date-fr';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
@@ -21,12 +20,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor, loadingInterceptor])),
-    // Enregistre tous les contrôleurs Chart.js (barres, doughnut, lignes…) pour ng2-charts.
-    provideCharts(withDefaultRegisterables()),
     { provide: LOCALE_ID, useValue: 'fr' },
 
-    // Application installable et utilisable hors ligne (ngsw-config.json) : l'application
-    // entière est mise en cache à la première visite. Désactivé en développement (ng serve).
+    // Application installable et utilisable hors ligne (ngsw-config.json). Le shell est
+    // préchargé ; les chunks des routes sont mis en cache lors de leur première visite.
+    // Désactivé en développement (ng serve).
     // Exige HTTPS (ou localhost), comme toute application web hors ligne.
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

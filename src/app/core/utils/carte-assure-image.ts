@@ -135,7 +135,7 @@ export async function renderCarteAssureToDataUrl(carte: CarteCsu, _verifieeLe: D
   const px = 34, py = 108, pw = 120, ph = 150;
   const [photo, logo, qrImg] = await Promise.all([
     chargerImage(carte.photo && carte.photo.startsWith('data:image/') ? carte.photo : undefined),
-    chargerImage(assetUrl('assets/logo-csu.png')),
+    chargerImage(assetUrl('assets/logo-csu.webp')),
     chargerImage(await genererQr(carte))
   ]);
   if (photo) {

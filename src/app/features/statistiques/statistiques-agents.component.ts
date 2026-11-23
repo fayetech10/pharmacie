@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
+import { CHARTS_PROVIDER } from '../../core/chart/chart.providers';
 import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AgentDetailModalComponent } from './agent-detail-modal/agent-detail-modal.component';
@@ -19,6 +20,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
   selector: 'app-statistiques-agents',
   standalone: true,
   imports: [PaginationComponent, PaginerPipe, CommonModule, MatCardModule, MatIconModule, MatDialogModule, BaseChartDirective, PageHeaderComponent],
+  providers: [CHARTS_PROVIDER],
   templateUrl: './statistiques-agents.component.html',
   styleUrls: ['./statistiques-agents.component.css']
 })

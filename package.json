@@ -5,9 +5,9 @@
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4200",
     "start:https": "ng serve --host 0.0.0.0 --port 4200 --ssl",
-    "build": "ng build",
-    "build:lan": "ng build --configuration lan",
-    "build:netlify": "node scripts/environnement-netlify.js && ng build --configuration netlify",
+    "build": "ng build && node scripts/partition-service-worker.js dist/pharmacie-csu-frontend/browser",
+    "build:lan": "ng build --configuration lan && node scripts/partition-service-worker.js dist/pharmacie-csu-frontend/browser",
+    "build:netlify": "node scripts/environnement-netlify.js && ng build --configuration netlify && node scripts/partition-service-worker.js dist/pharmacie-csu-frontend/browser",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,

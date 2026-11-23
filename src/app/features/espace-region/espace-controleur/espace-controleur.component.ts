@@ -345,9 +345,20 @@ export class EspaceControleurComponent implements OnInit {
         prestations
       };
     });
+    this.recalculerPatientsFiltres();
   }
 
+  patientsFiltresCache: PatientControleLigne[] = [];
+
   get patientsFiltres(): PatientControleLigne[] {
+    return this.patientsFiltresCache;
+  }
+
+  onFiltreChange(): void {
+    this.recalculerPatientsFiltres();
+  }
+
+  recalculerPatientsFiltres(): void {
     let list = this.patients;
     if (this.filtreEtatPatient === 'CONFORMES') {
       list = list.filter(p => p.statutLigne === 'CONFORME' && !p.prestations.some(pr => pr.statut === 'REJETEE'));
@@ -355,14 +366,21 @@ export class EspaceControleurComponent implements OnInit {
       list = list.filter(p => p.statutLigne === 'REJETEE' || p.prestations.some(pr => pr.statut === 'REJETEE'));
     }
 
-    if (!this.searchPatient) return list;
+    if (!this.searchPatient) {
+      this.patientsFiltresCache = list;
+      return;
+    }
     const q = this.searchPatient.toLowerCase().trim();
-    return list.filter(p =>
+    this.patientsFiltresCache = list.filter(p =>
       p.nom.toLowerCase().includes(q) ||
       p.prenom.toLowerCase().includes(q) ||
       p.matricule.toLowerCase().includes(q) ||
       p.cni.toLowerCase().includes(q)
     );
+  }
+
+  trackById(_index: number, item: any): string {
+    return item?.id || String(_index);
   }
 
   // === SYSTÈME DE CONTRÔLE : MÉTRIQUES FACTURE ===

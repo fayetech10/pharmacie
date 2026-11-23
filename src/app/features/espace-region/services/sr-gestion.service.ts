@@ -633,7 +633,8 @@ export class SrGestionService {
   /**
    * Suivi d'enregistrement réel basé sur les structures et officines du backend
    */
-  getSuiviEnregistrement(annee = new Date().getFullYear(), mois?: number, trimestre?: number): Observable<{
+  getSuiviEnregistrement(annee = new Date().getFullYear(), mois?: number, trimestre?: number,
+    facturesChargees$?: Observable<FactureAssigneeResume[]>): Observable<{
     districts: DistrictEnregistrementRow[];
     structures: StructureEnregistrementRow[];
     pharmacies: PharmacieEnregistrementRow[];
@@ -642,17 +643,48 @@ export class SrGestionService {
       structures: this.structureService.getStructures(),
       pharmacies: this.pharmacieService.getAll(),
       districts: this.districtService.getDistricts(),
-      // Le tableau récapitulatif doit contourner le cache : les factures du jour
-      // peuvent avoir été créées depuis une autre session/poste.
-      factures: this.getToutesFacturesResumes(true, true),
+      factures: facturesChargees$ || this.getToutesFacturesResumes(true, false),
       saisies: this.getSaisiesPourSuivi(annee, mois, trimestre),
       saisiesAujourdhui: this.getSaisiesPourSuivi(new Date().getFullYear(), undefined, undefined, this.dateLocaleDuJour())
     }).pipe(
       map(({ structures, pharmacies, districts, factures, saisies, saisiesAujourdhui }) => {
         const districtMap = new Map<string, District>(districts.map(d => [d.id, d]));
 
-        // La première vue est agrégée par district : seules les structures de type PS
-        // entrent dans le numérateur et le dénominateur des postes ayant commencé.
+        // Indexation O(1) des saisies filtrées par structure
+        const saisiesParStructure = new Map<string, FactureSaisieSuivi[]>();
+        for (const f of (saisies || [])) {
+          if (f.annee === annee &&
+              (mois === undefined || f.mois === mois) &&
+              (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)) {
+            let list = saisiesParStructure.get(f.structureSanitaireId);
+            if (!list) {
+              list = [];
+              saisiesParStructure.set(f.structureSanitaireId, list);
+            }
+            list.push(f);
+          }
+        }
+
+        // Set O(1) des structures ayant saisi aujourd'hui
+        const structuresSaisiesAujourdhui = new Set<string>((saisiesAujourdhui || []).map(f => f.structureSanitaireId));
+
+        // Indexation O(1) des factures de pharmacies par pharmacieId
+        const facturesPharmacieParId = new Map<string, FactureAssigneeResume[]>();
+        for (const f of (factures || [])) {
+          if (f.typeEtablissement === 'PHARMACIE' &&
+              f.annee === annee &&
+              (mois === undefined || f.mois === mois) &&
+              (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)) {
+            let list = facturesPharmacieParId.get(f.etablissementId);
+            if (!list) {
+              list = [];
+              facturesPharmacieParId.set(f.etablissementId, list);
+            }
+            list.push(f);
+          }
+        }
+
+        // Vue agrégée par district
         const districtRows: DistrictEnregistrementRow[] = (districts || []).filter(d => d.actif !== false).map(d => {
           const structuresDuDistrict = structures.filter(s => s.districtId === d.id);
           const idsStructuresDuDistrict = new Set(structuresDuDistrict.map(s => s.id));
@@ -662,13 +694,9 @@ export class SrGestionService {
               (!!s.structureRattachementId && idsStructuresDuDistrict.has(s.structureRattachementId));
             return estPoste && s.actif !== false && rattacheAuDistrict;
           });
-          const saisiesPostes = postes.map(poste => saisies.filter(f =>
-            f.structureSanitaireId === poste.id && f.annee === annee &&
-            (mois === undefined || f.mois === mois) &&
-            (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)
-          ));
+          const saisiesPostes = postes.map(poste => saisiesParStructure.get(poste.id) || []);
           const nombrePostesAvecSaisie = saisiesPostes.filter(fs => fs.length > 0).length;
-          const nombrePostesSaisisAujourdhui = postes.filter(poste => saisiesAujourdhui.some(f => f.structureSanitaireId === poste.id)).length;
+          const nombrePostesSaisisAujourdhui = postes.filter(poste => structuresSaisiesAujourdhui.has(poste.id)).length;
           const facturesPostes = saisiesPostes.flat();
           const contientRejet = facturesPostes.some(f => ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
           const tousEnvoyes = postes.length > 0 && saisiesPostes.every(fs => fs.length > 0 && fs.every(f =>
@@ -694,12 +722,7 @@ export class SrGestionService {
         // 1. Structures réelles
         const structRows: StructureEnregistrementRow[] = (structures || []).map(s => {
           const dist = s.districtId ? districtMap.get(s.districtId) : undefined;
-          const fSiennes = saisies.filter(f =>
-            f.structureSanitaireId === s.id &&
-            f.annee === annee &&
-            (mois === undefined || f.mois === mois) &&
-            (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)
-          );
+          const fSiennes = saisiesParStructure.get(s.id) || [];
           const hasSaisie = fSiennes.length > 0;
           const hasRejet = fSiennes.some(f => ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
           const hasEnvoi = fSiennes.some(f => f.statut !== 'BROUILLON' && !['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
@@ -726,13 +749,7 @@ export class SrGestionService {
 
         // 2. Pharmacies réelles
         const pharmaRows: PharmacieEnregistrementRow[] = (pharmacies || []).map(p => {
-          const fSiennes = factures.filter(f =>
-            f.typeEtablissement === 'PHARMACIE' &&
-            f.etablissementId === p.id &&
-            f.annee === annee &&
-            (mois === undefined || f.mois === mois) &&
-            (trimestre === undefined || Math.ceil(f.mois / 3) === trimestre)
-          );
+          const fSiennes = facturesPharmacieParId.get(p.id) || [];
           const hasSaisie = fSiennes.length > 0;
           const hasRejet = fSiennes.some(f => ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
           const hasEnvoi = fSiennes.some(f => f.statut !== 'BROUILLON' && !['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
@@ -850,12 +867,22 @@ export class SrGestionService {
         // postes fictifs : leurs IDs ne peuvent correspondre à aucune facture backend.
         const definitions = postesSanitaires;
 
+        // Indexation O(1) des saisies par structure
+        const saisiesParStructure = new Map<string, FactureSaisieSuivi[]>();
+        for (const f of (saisies || [])) {
+          if (f.annee === annee && (!mois || f.mois === mois)) {
+            let list = saisiesParStructure.get(f.structureSanitaireId);
+            if (!list) {
+              list = [];
+              saisiesParStructure.set(f.structureSanitaireId, list);
+            }
+            list.push(f);
+          }
+        }
+        const setSaisiesAujourdhui = new Set<string>((saisiesAujourdhui || []).map(f => f.structureSanitaireId));
+
         return definitions.map(def => {
-          const fSiennes = saisies.filter(f =>
-            f.structureSanitaireId === def.id &&
-            f.annee === annee &&
-            (!mois || f.mois === mois)
-          );
+          const fSiennes = saisiesParStructure.get(def.id) || [];
           const hasSaisie = fSiennes.length > 0;
           const hasRejet = fSiennes.some(f => ['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
           const hasEnvoi = fSiennes.some(f => f.statut !== 'BROUILLON' && !['REJETEE_CS', 'REJETEE_SR', 'REJETEE_NC'].includes(f.statut));
@@ -872,7 +899,7 @@ export class SrGestionService {
             type: def.typeStructure || 'PS',
             actif: true,
             saisieActive: hasSaisie,
-            saisieAujourdhui: saisiesAujourdhui.some(f => f.structureSanitaireId === def.id),
+            saisieAujourdhui: setSaisiesAujourdhui.has(def.id),
             factureEnvoyeePeriode: statutSuiviPeriode === 'ENVOYEE',
             statutSuiviPeriode,
             nombreFactures: fSiennes.length,
