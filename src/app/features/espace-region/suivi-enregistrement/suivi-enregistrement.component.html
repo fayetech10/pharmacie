@@ -13,7 +13,6 @@
         </div>
         <div>
           <h2 class="text-base font-bold text-slate-900 leading-tight">Suivi de l'enregistrement des prestataires</h2>
-          <p class="text-xs text-slate-500">Suivez en direct les saisies, corrections et envois des hôpitaux et postes de santé.</p>
         </div>
       </div>
 
@@ -115,6 +114,7 @@
                 <th class="py-3 px-4">Suivi du mois</th>
                 <th class="py-3 px-4">Saisie enregistrée</th>
                 <th class="py-3 px-4">Postes ayant saisi</th>
+                <th class="py-3 px-4">Saisis aujourd'hui</th>
                 <th class="py-3 px-4 text-right">Détail</th>
               </tr>
             </thead>
@@ -142,12 +142,17 @@
                     <div class="h-full rounded-full bg-emerald-500" [style.width.%]="d.nombrePostes ? d.nombrePostesAvecSaisie * 100 / d.nombrePostes : 0"></div>
                   </div>
                 </td>
+                <td class="py-3 px-4">
+                  <span class="font-semibold" [ngClass]="d.nombrePostesSaisisAujourdhui ? 'text-emerald-700' : 'text-slate-500'">
+                    {{ d.nombrePostesSaisisAujourdhui }} / {{ d.nombrePostes }}
+                  </span>
+                </td>
                 <td class="py-3 px-4 text-right">
                   <span class="inline-flex items-center gap-1 font-semibold text-emerald-700">Voir les postes <mat-icon class="!h-4 !w-4 !text-base">arrow_forward</mat-icon></span>
                 </td>
               </tr>
               <tr *ngIf="districtsFiltres.length === 0">
-                <td colspan="5" class="py-10 text-center">
+                <td colspan="6" class="py-10 text-center">
                   <mat-icon class="!h-8 !w-8 !text-3xl text-slate-400">location_searching</mat-icon>
                   <p class="mt-2 text-sm font-semibold text-slate-800">Aucun district pour ces critères</p>
                   <p class="mt-1 text-xs text-slate-500">Changez le statut ou la recherche.</p>
@@ -322,7 +327,7 @@
           <h2 class="text-base font-semibold text-slate-900 tracking-tight">{{ districtSelectionne.nom }}</h2>
         </div>
         <p class="text-xs text-slate-500 mt-1">
-          Postes ayant saisi : <strong class="text-emerald-700">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</strong> · Hôpitaux : <strong class="text-indigo-700">{{ hopitauxDuDistrict.length }}</strong> · Période : <strong class="text-slate-700">{{ moisDisponibles[moisSuivi - 1] }} {{ annee }}</strong>
+          Saisies du mois : <strong class="text-emerald-700">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</strong> · Saisis aujourd'hui ({{ dateSuiviDuJour }}) : <strong class="text-emerald-700">{{ totalPostesSaisisAujourdhui }} / {{ postesPolarisesDuDistrict.length }}</strong> · Hôpitaux : <strong class="text-indigo-700">{{ hopitauxDuDistrict.length }}</strong>
         </p>
       </div>
 
@@ -334,7 +339,7 @@
     </div>
 
     <!-- Synthèse de l'avancement des postes pour le mois sélectionné -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
       <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
         <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes du district</div>
         <div class="text-xl font-bold text-slate-900 mt-0.5">{{ postesPolarisesDuDistrict.length }}</div>
@@ -342,6 +347,10 @@
       <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
         <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes ayant saisi</div>
         <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</div>
+      </div>
+      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
+        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Saisis aujourd'hui · {{ dateSuiviDuJour }}</div>
+        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesSaisisAujourdhui }} / {{ postesPolarisesDuDistrict.length }}</div>
       </div>
       <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
         <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Factures envoyées</div>
@@ -439,6 +448,7 @@
               <tr>
                 <th class="py-3 px-4">Poste de santé polarisé</th>
                 <th class="py-3 px-4">Saisie enregistrée</th>
+                <th class="py-3 px-4">Saisie du jour</th>
                 <th class="py-3 px-4">Suivi du mois</th>
               </tr>
             </thead>
@@ -458,6 +468,13 @@
                   <span class="text-slate-400">·</span> {{ p.nombreBeneficiaires }} bénéficiaire(s)
                 </td>
                 <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                        [ngClass]="p.saisieAujourdhui ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-500'">
+                    <mat-icon class="!h-3.5 !w-3.5 !text-sm">{{ p.saisieAujourdhui ? 'check_circle' : 'schedule' }}</mat-icon>
+                    {{ p.saisieAujourdhui ? 'Saisi aujourd’hui' : 'Pas encore saisi' }}
+                  </span>
+                </td>
+                <td class="py-3 px-4">
                   <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="getClasseSuivi(p.statutSuiviPeriode)">
                     <mat-icon class="!h-4 !w-4 !text-base">{{ getIconeSuivi(p.statutSuiviPeriode) }}</mat-icon>
                     {{ getLibelleSuivi(p.statutSuiviPeriode) }}
@@ -465,7 +482,7 @@
                 </td>
               </tr>
               <tr *ngIf="postesPolarisesFiltres.length === 0">
-                <td colspan="3" class="py-10 text-center">
+                <td colspan="4" class="py-10 text-center">
                   <mat-icon class="!h-8 !w-8 !text-3xl text-emerald-600">task_alt</mat-icon>
                   <p class="mt-2 text-sm font-semibold text-slate-800">Aucune facture de poste pour ces critères</p>
                   <p class="mt-1 text-xs text-slate-500">Activez « Inclure les postes sans saisie » ou modifiez les filtres.</p>
@@ -564,20 +581,38 @@
           <tbody class="divide-y divide-slate-100 font-medium">
             <tr *ngFor="let f of facturesFiltrees"
                 (click)="ouvrirDetailFacture(f)"
-                class="hover:bg-emerald-50/40 cursor-pointer transition-colors group">
+                class="hover:bg-emerald-50/40 transition-colors group"
+                [ngClass]="f.resumeSeul ? 'cursor-pointer bg-amber-50/30' : 'cursor-pointer'">
               <td class="py-3 px-3">
                 <span class="px-2 py-0.5 rounded text-[11px] font-bold" [ngClass]="getRegimeBadgeClass(f.regime)">
                   {{ getRegimeLabel(f.regime) }}
                 </span>
+                <span *ngIf="f.resumeSeul" class="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">Brouillon</span>
               </td>
-              <td class="py-3 px-3 text-slate-700 font-bold">{{ getMoisLibelle(f.mois) }} {{ f.annee }}</td>
+              <td class="py-3 px-3 text-slate-700 font-bold">
+                {{ getMoisLibelle(f.mois) }} {{ f.annee }}
+                <div class="text-[10px] font-normal text-slate-500">{{ f.numero }} · {{ f.nombreBeneficiaires }} bénéficiaire(s)</div>
+              </td>
               <td class="py-3 px-4 text-right font-bold font-mono text-slate-900">{{ formatMontant(f.montantTotal) }}</td>
               <td class="py-3 px-4 text-right font-bold font-mono text-emerald-700">{{ formatMontant(f.montantSencsu) }}</td>
               <td class="py-3 px-3 text-right">
                 <mat-icon class="!text-lg !w-5 !h-5 text-slate-400 group-hover:text-emerald-700 transition-colors">chevron_right</mat-icon>
               </td>
             </tr>
-            <tr *ngIf="facturesFiltrees.length === 0">
+            <tr *ngIf="chargementFacturesPrestataire">
+              <td colspan="5" class="py-8 text-center text-slate-500 text-xs">
+                <span class="inline-flex items-center gap-2">
+                  <mat-icon class="!h-4 !w-4 !text-base animate-spin">sync</mat-icon>
+                  Récupération des factures de {{ prestataireSelectionne.nom }}…
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="!chargementFacturesPrestataire && erreurFacturesPrestataire">
+              <td colspan="5" class="py-8 text-center text-red-700 text-xs">
+                La récupération des factures a échoué. Réessayez en rouvrant ce prestataire.
+              </td>
+            </tr>
+            <tr *ngIf="!chargementFacturesPrestataire && !erreurFacturesPrestataire && facturesFiltrees.length === 0">
               <td colspan="5" class="py-8 text-center text-slate-400 text-xs italic">
                 {{ facturesDuPrestataire.length ? 'Aucune facture ne correspond à ce régime ou filtre de recherche.' : 'Aucune facture enregistrée pour ce prestataire.' }}
               </td>
@@ -607,11 +642,16 @@
         <span [class]="getStatutBadgeClass(factureSelectionnee.statut)" class="px-2 py-0.5 rounded-full text-[11px] font-bold">
           {{ getStatutLibelle(factureSelectionnee.statut) }}
         </span>
-        <button type="button" (click)="ouvrirModalSupprimerFacture(factureSelectionnee)"
+        <span *ngIf="factureSelectionnee.resumeSeul" class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">Consultation seule</span>
+        <button *ngIf="!factureSelectionnee.resumeSeul" type="button" (click)="ouvrirModalSupprimerFacture(factureSelectionnee)"
                 class="btn btn-outline btn-sm text-red-600 hover:bg-red-50 border-red-200">
           <mat-icon class="!text-sm !w-4 !h-4">delete_forever</mat-icon> Supprimer la facture
         </button>
       </div>
+    </div>
+
+    <div *ngIf="chargementDetailFacture" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+      <mat-icon class="mr-1 align-middle animate-spin">sync</mat-icon> Chargement des prestations de la facture…
     </div>
 
     <!-- Synthèse financière (style poste de santé) -->
@@ -678,7 +718,7 @@
                   <mat-icon class="!text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
                 </td>
               </tr>
-              <tr *ngIf="patientsFiltres.length === 0">
+              <tr *ngIf="patientsFiltres.length === 0 && !chargementDetailFacture">
                 <td colspan="4" class="py-8 text-center text-text-muted text-[13.5px]">
                   {{ patientsDeLaFacture.length ? 'Aucun patient ne correspond à cette recherche.' : 'Aucun patient sur cette facture.' }}
                 </td>
@@ -721,11 +761,34 @@
           </div>
         </div>
         <div class="ml-auto flex gap-2 print:hidden">
-          <!-- BOUTON DOSSIER DESSUS -->
+          <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 !px-2"
+                  (click)="afficherIdentitePatient = !afficherIdentitePatient"
+                  [attr.aria-label]="afficherIdentitePatient ? 'Masquer les informations du patient' : 'Afficher les informations du patient'"
+                  [attr.aria-expanded]="afficherIdentitePatient" aria-controls="infos-patient-suivi"
+                  title="Afficher ou masquer les informations du patient">
+            <mat-icon>{{ afficherIdentitePatient ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
           <button type="button" class="btn btn-outline btn-sm" (click)="ouvrirModalDossier()"
                   title="Ouvrir le dossier patient (documents justificatifs)">
             <mat-icon>folder_shared</mat-icon> Dossier
           </button>
+        </div>
+      </div>
+      <div *ngIf="afficherIdentitePatient" id="infos-patient-suivi" class="mt-4 border-t border-border-light pt-4">
+        <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+          <div *ngFor="let i of identitePatient" class="min-w-0">
+            <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+            <dd class="m-0 mt-0.5 break-words text-[14px] text-text-primary" [class.font-mono]="i.mono">{{ i.valeur }}</dd>
+          </div>
+        </dl>
+        <div *ngIf="cartePatient.length" class="mt-4">
+          <h3 class="m-0 mb-2 border-b border-border-light pb-1.5 text-[12px] font-semibold uppercase tracking-wide text-text-muted">Carte CSU</h3>
+          <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+            <div *ngFor="let i of cartePatient" class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+              <dd class="m-0 mt-0.5 break-words text-[14px] text-text-primary">{{ i.valeur }}</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>
@@ -764,11 +827,11 @@
                 <td class="py-2 px-2 text-right tabular-nums">{{ formatMontant(ligne.prixUnitaire) }}</td>
                 <td class="py-2 px-2 text-right font-semibold tabular-nums">{{ formatMontant(ligne.montant) }}</td>
                 <td class="py-1 pl-2 text-right whitespace-nowrap">
-                  <button type="button" class="btn btn-ghost btn-sm" (click)="ouvrirModalModifierPrestation(patientSelectionne, ligne)"
+                  <button *ngIf="!factureSelectionnee.resumeSeul" type="button" class="btn btn-ghost btn-sm" (click)="ouvrirModalModifierPrestation(patientSelectionne, ligne)"
                           title="Modifier la prestation">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50" (click)="ouvrirModalSupprimerPrestation(patientSelectionne, ligne)"
+                  <button *ngIf="!factureSelectionnee.resumeSeul" type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50" (click)="ouvrirModalSupprimerPrestation(patientSelectionne, ligne)"
                           title="Supprimer la prestation">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
@@ -820,94 +883,22 @@
       </div>
 
       <div class="modal-body overflow-y-auto p-4 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- 1. Carte d'assuré -->
-          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
-            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
-              <div class="flex items-center gap-2 min-w-0">
-                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                  <mat-icon class="!text-[16px] !w-4 !h-4">badge</mat-icon>
-                </div>
-                <div class="min-w-0">
-                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Carte d'assuré</div>
-                  <div class="text-[11px] text-text-muted leading-tight truncate">Identification biométrique</div>
-                </div>
-              </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
-            </div>
-            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center">
-              <div class="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm mb-2">
-                {{ getInitiales(patientSelectionne?.prenom, patientSelectionne?.nom) }}
-              </div>
-              <div class="font-bold text-xs text-text-primary">{{ patientSelectionne?.prenom }} {{ patientSelectionne?.nom }}</div>
-              <div class="text-[11px] font-mono text-primary font-semibold mt-0.5">{{ patientSelectionne?.matricule }}</div>
-              <div class="text-[10px] text-text-muted mt-0.5">CNI : {{ patientSelectionne?.cni }}</div>
-              <div class="mt-2 text-[10px] font-semibold text-success bg-white px-2 py-0.5 rounded border border-border">
-                Identité validée SEN-CSU
-              </div>
-            </div>
-            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
-              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
-            </div>
-          </div>
-
-          <!-- 2. Ticket de caisse -->
-          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
-            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
-              <div class="flex items-center gap-2 min-w-0">
-                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                  <mat-icon class="!text-[16px] !w-4 !h-4">receipt_long</mat-icon>
-                </div>
-                <div class="min-w-0">
-                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Ticket de caisse</div>
-                  <div class="text-[11px] text-text-muted leading-tight truncate">Ticket de caisse / quittance</div>
-                </div>
-              </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
-            </div>
-            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center font-mono">
-              <mat-icon class="text-text-muted/60 !text-3xl !w-8 !h-8 mb-1">receipt</mat-icon>
-              <div class="text-[11px] font-bold text-text-primary">Ticket N° TK-{{ patientSelectionne?.id || 101 }}</div>
-              <div class="text-[10px] text-text-muted mt-0.5">Date : {{ formatDate(patientSelectionne?.datePriseEnCharge) }}</div>
-              <div class="mt-2 text-xs font-bold text-text-primary">Ticket payé : {{ formatMontant((patientSelectionne?.montantTotal || 0) * 0.2) }}</div>
-              <div class="text-[10px] text-success font-sans font-semibold mt-1">Part patient acquittée</div>
-            </div>
-            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
-              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
-            </div>
-          </div>
-
-          <!-- 3. Feuille de soin -->
-          <div class="rounded-xl border border-border bg-white overflow-hidden flex flex-col shadow-xs">
-            <div class="p-3 border-b border-border-light flex items-center justify-between bg-field-bg/60">
-              <div class="flex items-center gap-2 min-w-0">
-                <div class="w-7 h-7 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                  <mat-icon class="!text-[16px] !w-4 !h-4">description</mat-icon>
-                </div>
-                <div class="min-w-0">
-                  <div class="text-[13px] font-bold text-text-primary leading-tight truncate">Feuille de soins</div>
-                  <div class="text-[11px] text-text-muted leading-tight truncate">Feuille de soins / ordonnance</div>
-                </div>
-              </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success-light text-success shrink-0">Disponible</span>
-            </div>
-            <div class="p-4 bg-slate-50 flex flex-col items-center justify-center min-h-[170px] text-center">
-              <mat-icon class="text-text-muted/60 !text-3xl !w-8 !h-8 mb-1">assignment_turned_in</mat-icon>
-              <div class="text-[11px] font-bold text-text-primary">Feuille N° FS-{{ patientSelectionne?.id || 202 }}</div>
-              <div class="text-[10px] text-text-muted mt-0.5">Visite du {{ formatDate(patientSelectionne?.datePriseEnCharge) }}</div>
-              <div class="mt-2 text-xs font-bold text-primary font-mono">Total : {{ formatMontant(patientSelectionne?.montantTotal || 0) }}</div>
-              <div class="text-[10px] text-text-muted mt-1 italic">Cachet & signature validés</div>
-            </div>
-            <div class="p-2.5 border-t border-border-light bg-field-bg/30 text-center">
-              <span class="text-[11.5px] text-text-muted">Pièce vérifiée</span>
-            </div>
-          </div>
+        <div *ngIf="chargementDossier" class="flex items-center justify-center gap-2 py-12 text-sm text-slate-600">
+          <mat-icon class="animate-spin">sync</mat-icon> Chargement des photos et du dossier…
         </div>
+        <app-dossier-patient-contenu *ngIf="!chargementDossier && factureDossier && dossierActif"
+          [facture]="factureDossier" [dossier]="dossierActif" [documents]="documentsDossier" [feuilleSoins]="feuilleSoinsDossier">
+        </app-dossier-patient-contenu>
+        <div *ngIf="!chargementDossier && !dossierActif" class="py-10 text-center text-sm text-slate-500">
+          Impossible de charger les pièces de ce dossier.
+        </div>
+
+
       </div>
 
       <div class="modal-footer flex items-center justify-between p-3 border-t border-border bg-field-bg/30">
         <span class="text-[11px] text-text-muted">
-          3 pièces justificatives conformes (Carte d'assuré, Ticket de caisse, Feuille de soins)
+          Photos originales du dossier, feuille de soins et autres pièces disponibles
         </span>
         <button type="button" class="btn btn-outline btn-sm" (click)="fermerModalDossier()">
           Fermer

@@ -5,16 +5,16 @@
     <app-espace-controleur></app-espace-controleur>
   </div>
 
-  <!-- VUE ADMINISTRATEUR SR (7 Onglets de la spécification + Import historique) -->
+  <!-- VUE ADMINISTRATEUR SR -->
   <div *ngIf="!showControleurView">
     <mat-tab-group animationDuration="0ms" [selectedIndex]="selectedTab" (selectedIndexChange)="onTabChange($event)" class="sr-tab-group">
 
-      <!-- 1. TABLEAU DE BORD (Section 4.1) -->
+      <!-- 1. TABLEAU DE BORD (Section 4.1) — DÉPLOYÉ & ACTIF -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="flex items-center gap-1.5 py-1">
-            <mat-icon class="!text-lg !w-[18px] !h-[18px]">insights</mat-icon>
-            <span class="font-medium text-xs md:text-sm">Tableau de bord</span>
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] text-emerald-700">insights</mat-icon>
+            <span class="font-semibold text-xs md:text-sm text-slate-900">Tableau de bord</span>
           </div>
         </ng-template>
         <ng-template matTabContent>
@@ -24,12 +24,12 @@
         </ng-template>
       </mat-tab>
 
-      <!-- 2. SUIVI ENREGISTREMENT DES PRESTATAIRES (Section 4.2) -->
+      <!-- 2. SUIVI ENREGISTREMENT DES PRESTATAIRES (Section 4.2) — DÉPLOYÉ & ACTIF -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="flex items-center gap-1.5 py-1">
-            <mat-icon class="!text-lg !w-[18px] !h-[18px]">app_registration</mat-icon>
-            <span class="font-medium text-xs md:text-sm">Enregistrement prestataires</span>
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] text-emerald-700">app_registration</mat-icon>
+            <span class="font-semibold text-xs md:text-sm text-slate-900">Enregistrement prestataires</span>
           </div>
         </ng-template>
         <ng-template matTabContent>
@@ -39,78 +39,88 @@
         </ng-template>
       </mat-tab>
 
-      <!-- 3. FACTURES STRUCTURES SANITAIRES (Section 4.3) -->
+      <!-- 3. FACTURES STRUCTURES SANITAIRES — EN COURS DE DÉVELOPPEMENT -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="flex items-center gap-1.5 py-1">
+          <div class="flex items-center gap-1.5 py-1 text-slate-500">
             <mat-icon class="!text-lg !w-[18px] !h-[18px]">local_hospital</mat-icon>
             <span class="font-medium text-xs md:text-sm">Factures Structures</span>
-            <span *ngIf="notifStructures > 0" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-amber-50 text-amber-700 border border-amber-200">
-              {{ notifStructures }}
+            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              En cours
             </span>
           </div>
         </ng-template>
         <ng-template matTabContent>
-          <div class="pt-2">
-            <app-factures-structures></app-factures-structures>
-          </div>
+          <ng-container *ngTemplateOutlet="enDeveloppementTemplate; context: {
+            titre: 'Factures des Structures Sanitaires',
+            description: 'Le module de contrôle, vérification des dossiers patients et validation des factures des hôpitaux, centres et postes de santé est actuellement en cours de développement.'
+          }"></ng-container>
         </ng-template>
       </mat-tab>
 
-      <!-- 4. FACTURES PHARMACIES (Section 4.4) -->
+      <!-- 4. FACTURES PHARMACIES — EN COURS DE DÉVELOPPEMENT -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="flex items-center gap-1.5 py-1">
+          <div class="flex items-center gap-1.5 py-1 text-slate-500">
             <mat-icon class="!text-lg !w-[18px] !h-[18px]">local_pharmacy</mat-icon>
             <span class="font-medium text-xs md:text-sm">Factures Pharmacies</span>
-            <span *ngIf="notifPharmacies > 0" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-amber-50 text-amber-700 border border-amber-200">
-              {{ notifPharmacies }}
+            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              En cours
             </span>
           </div>
         </ng-template>
         <ng-template matTabContent>
-          <div class="pt-2">
-            <app-factures-pharmacies></app-factures-pharmacies>
-          </div>
+          <ng-container *ngTemplateOutlet="enDeveloppementTemplate; context: {
+            titre: 'Factures des Officines Pharmaceutiques',
+            description: 'Le module de contrôle et validation des factures des pharmacies d’officine privées et publiques est actuellement en cours de développement.'
+          }"></ng-container>
         </ng-template>
       </mat-tab>
 
-      <!-- 5. SUIVI DU TRAITEMENT (Section 4.5) -->
+      <!-- 5. SUIVI DU TRAITEMENT — EN COURS DE DÉVELOPPEMENT -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="flex items-center gap-1.5 py-1">
+          <div class="flex items-center gap-1.5 py-1 text-slate-500">
             <mat-icon class="!text-lg !w-[18px] !h-[18px]">assignment_ind</mat-icon>
             <span class="font-medium text-xs md:text-sm">Suivi du traitement</span>
+            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              En cours
+            </span>
           </div>
         </ng-template>
         <ng-template matTabContent>
-          <div class="pt-2">
-            <app-suivi-traitement></app-suivi-traitement>
-          </div>
+          <ng-container *ngTemplateOutlet="enDeveloppementTemplate; context: {
+            titre: 'Suivi du Traitement Régional',
+            description: 'Le module de suivi en temps réel de la charge de travail et des assignations des contrôleurs médicaux est actuellement en cours de développement.'
+          }"></ng-container>
         </ng-template>
       </mat-tab>
 
-      <!-- 6. SUIVI BCSU (Section 4.6) -->
+      <!-- 6. SUIVI BCSU — EN COURS DE DÉVELOPPEMENT -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="flex items-center gap-1.5 py-1">
+          <div class="flex items-center gap-1.5 py-1 text-slate-500">
             <mat-icon class="!text-lg !w-[18px] !h-[18px]">account_balance</mat-icon>
             <span class="font-medium text-xs md:text-sm">Suivi BCSU</span>
+            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              En cours
+            </span>
           </div>
         </ng-template>
         <ng-template matTabContent>
-          <div class="pt-2">
-            <app-suivi-bcsu></app-suivi-bcsu>
-          </div>
+          <ng-container *ngTemplateOutlet="enDeveloppementTemplate; context: {
+            titre: 'Suivi des Bureaux CSU (BCSU)',
+            description: 'Le module d’agrégation financière et de consolidation des Bureaux de Couverture Santé Universelle est actuellement en cours de développement.'
+          }"></ng-container>
         </ng-template>
       </mat-tab>
 
-      <!-- 7. PARAMÉTRAGE (Section 4.7) -->
+      <!-- 7. PARAMÉTRAGE SR (Section 4.7) — DÉPLOYÉ & ACTIF -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="flex items-center gap-1.5 py-1">
-            <mat-icon class="!text-lg !w-[18px] !h-[18px]">tune</mat-icon>
-            <span class="font-medium text-xs md:text-sm">Paramétrage</span>
+            <mat-icon class="!text-lg !w-[18px] !h-[18px] text-emerald-700">tune</mat-icon>
+            <span class="font-semibold text-xs md:text-sm text-slate-900">Paramétrage SR</span>
           </div>
         </ng-template>
         <ng-template matTabContent>
@@ -120,21 +130,69 @@
         </ng-template>
       </mat-tab>
 
-      <!-- 8. IMPORT DES FACTURES (Archives / Reprise historique) -->
+      <!-- 8. IMPORT DES FACTURES — EN COURS DE DÉVELOPPEMENT -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="flex items-center gap-1.5 py-1">
+          <div class="flex items-center gap-1.5 py-1 text-slate-500">
             <mat-icon class="!text-lg !w-[18px] !h-[18px]">upload_file</mat-icon>
             <span class="font-medium text-xs md:text-sm">Import historique</span>
+            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              En cours
+            </span>
           </div>
         </ng-template>
         <ng-template matTabContent>
-          <div class="pt-2">
-            <app-import-factures></app-import-factures>
-          </div>
+          <ng-container *ngTemplateOutlet="enDeveloppementTemplate; context: {
+            titre: 'Importation des Archives et Historique',
+            description: 'Le module d’importation et d’intégration des factures d’archives est actuellement en cours de développement.'
+          }"></ng-container>
         </ng-template>
       </mat-tab>
 
     </mat-tab-group>
   </div>
 </div>
+
+<!-- ============================================================
+     TEMPLATE RÉUTILISABLE : ÉCRAN EN COURS DE DÉVELOPPEMENT
+     ============================================================ -->
+<ng-template #enDeveloppementTemplate let-titre="titre" let-description="description">
+  <div class="py-12 sm:py-16 px-4">
+    <div class="rounded-2xl border border-slate-200/90 bg-white p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs">
+      <div class="h-14 w-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200/80 shadow-xs">
+        <mat-icon class="!text-[28px] !w-7 !h-7">construction</mat-icon>
+      </div>
+
+      <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 mb-3">
+        <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+        En cours de développement
+      </span>
+
+      <h2 class="text-[17px] font-bold text-slate-900 mb-2">
+        {{ titre || 'Module en cours de développement' }}
+      </h2>
+
+      <p class="text-[13px] text-slate-500 leading-relaxed mb-6 max-w-sm mx-auto">
+        {{ description || 'Cette fonctionnalité est actuellement en cours de finalisation et sera disponible très prochainement.' }}
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-2.5">
+        <button type="button" (click)="selectedTab = 0; onTabChange(0)"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-emerald-800 transition cursor-pointer">
+          <mat-icon class="!text-[15px] !w-4 !h-4">space_dashboard</mat-icon>
+          Tableau de bord
+        </button>
+        <button type="button" (click)="selectedTab = 1; onTabChange(1)"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition cursor-pointer">
+          <mat-icon class="!text-[15px] !w-4 !h-4">app_registration</mat-icon>
+          Prestataires
+        </button>
+        <button type="button" (click)="selectedTab = 6; onTabChange(6)"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition cursor-pointer">
+          <mat-icon class="!text-[15px] !w-4 !h-4">tune</mat-icon>
+          Paramétrage SR
+        </button>
+      </div>
+    </div>
+  </div>
+</ng-template>

@@ -6,6 +6,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AuthService } from '../../core/services/auth.service';
 import { FactureCountService, StatutCounts, statutsStructure } from '../../core/services/facture-count.service';
@@ -29,6 +30,7 @@ import { ImportFacturesComponent } from '../regional-factures/import-factures/im
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    MatSnackBarModule,
     RegionalDashboardComponent,
     SuiviEnregistrementComponent,
     FacturesStructuresComponent,
@@ -77,8 +79,17 @@ export class EspaceRegionComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     public authService: AuthService,
-    private factureCount: FactureCountService
+    private factureCount: FactureCountService,
+    private snackBar: MatSnackBar
   ) {}
+
+  isTabEnDeveloppement(index: number): boolean {
+    // Modules déployés et actifs :
+    // 0 = Tableau de bord
+    // 1 = Enregistrement prestataires
+    // 6 = Paramétrage SR
+    return index !== 0 && index !== 1 && index !== 6;
+  }
 
   ngOnInit() {
     this.isControleur = this.authService.isControleur();
@@ -89,6 +100,13 @@ export class EspaceRegionComponent implements OnInit {
       .subscribe(params => {
         const tab = +(params.get('tab') ?? 0);
         this.selectedTab = tab >= 0 && tab <= 7 ? tab : 0;
+        if (this.isTabEnDeveloppement(this.selectedTab)) {
+          this.snackBar.open(
+            'Cette fonctionnalité est actuellement en cours de développement.',
+            'Compris',
+            { duration: 4000, horizontalPosition: 'center', verticalPosition: 'bottom' }
+          );
+        }
         if (this.selectedTab === 2) {
           this.factureCount.markSeen(this.statutsNotifiablesStructures);
         }
@@ -111,6 +129,13 @@ export class EspaceRegionComponent implements OnInit {
   }
 
   onTabChange(index: number) {
+    if (this.isTabEnDeveloppement(index)) {
+      this.snackBar.open(
+        'Cette fonctionnalité est actuellement en cours de développement.',
+        'Compris',
+        { duration: 4000, horizontalPosition: 'center', verticalPosition: 'bottom' }
+      );
+    }
     if (index === 2) {
       this.factureCount.markSeen(this.statutsNotifiablesStructures);
     }

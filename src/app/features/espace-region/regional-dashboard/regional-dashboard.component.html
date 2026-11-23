@@ -1,290 +1,535 @@
-<section class="space-y-5 md:space-y-6" aria-labelledby="regional-dashboard-title">
-  <!-- En-tête et filtres -->
-  <header class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+<section class="space-y-5" aria-labelledby="regional-dashboard-title">
+
+  <!-- =========================================================
+       EN-TÊTE : contexte + filtres temporels + actions
+       ========================================================= -->
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+    <!-- Titre & contexte -->
     <div class="min-w-0">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-          <mat-icon>space_dashboard</mat-icon>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Service Régional
         </span>
-        <div>
-          <h1 id="regional-dashboard-title" class="m-0 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Tableau de bord régional</h1>
-          <p class="m-0 mt-0.5 text-sm text-slate-500">Activité des régimes et suivi des parts SEN-CSU</p>
-        </div>
-        <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">Thiès</span>
+        <span class="text-[12px] text-slate-400 font-medium">{{ regionNom }}</span>
       </div>
-      <p class="ml-12 mt-2 text-xs text-slate-500">
-        {{ totalFacturesNombre }} facture(s) · {{ totalBeneficiaires.toLocaleString('fr-FR') }} prise(s) en charge
-      </p>
+      <h1 id="regional-dashboard-title" class="m-0 text-[18px] font-bold tracking-tight text-slate-900">
+        Tableau de bord
+      </h1>
     </div>
 
-    <div class="flex flex-wrap items-end gap-2.5">
-      <label class="flex min-h-11 flex-1 flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 sm:flex-none">
-        <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Année</span>
-        <select [(ngModel)]="annee" (change)="onFiltreChange()" aria-label="Année"
-                class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-slate-800 outline-none sm:min-w-20">
-          <option *ngFor="let a of anneesDispo" [ngValue]="a">{{ a }}</option>
+    <!-- Actions rapides & Filtres temporels -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <!-- Sélecteur d'année -->
+      <div class="relative">
+        <select [(ngModel)]="annee" (change)="chargerDonnees()"
+                class="h-8 rounded-lg border border-slate-200 bg-white pl-3 pr-7 text-[12.5px] font-medium text-slate-700 cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition">
+          <option *ngFor="let a of anneesDispo" [value]="a">{{ a }}</option>
         </select>
-      </label>
-      <label class="flex min-h-11 flex-1 flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 sm:flex-none">
-        <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Trimestre</span>
-        <select [(ngModel)]="trimestre" (change)="mois = null; onFiltreChange()" aria-label="Trimestre"
-                class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-slate-800 outline-none sm:min-w-36">
+        <mat-icon class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 !text-[14px] !w-3.5 !h-3.5 text-slate-400">expand_more</mat-icon>
+      </div>
+
+      <!-- Sélecteur de période -->
+      <div class="relative">
+        <select [(ngModel)]="trimestre" (change)="chargerDonnees()"
+                class="h-8 rounded-lg border border-slate-200 bg-white pl-3 pr-7 text-[12.5px] font-medium text-slate-700 cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition">
           <option *ngFor="let t of trimestres" [ngValue]="t.valeur">{{ t.label }}</option>
         </select>
-      </label>
-      <label class="flex min-h-11 flex-1 flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 sm:flex-none">
-        <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Mois</span>
-        <select [(ngModel)]="mois" (change)="trimestre = null; onFiltreChange()" aria-label="Mois"
-                class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-slate-800 outline-none sm:min-w-32">
-          <option *ngFor="let m of moisListe" [ngValue]="m.num">{{ m.nom }}</option>
-        </select>
-      </label>
-      <button (click)="chargerDonnees()" type="button" [disabled]="loading"
-              class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-        <mat-icon class="!h-4 !w-4 !text-base" [class.animate-spin]="loading">refresh</mat-icon>
-        Actualiser
+        <mat-icon class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 !text-[14px] !w-3.5 !h-3.5 text-slate-400">expand_more</mat-icon>
+      </div>
+
+      <button type="button" (click)="chargerDonnees()" [disabled]="loading"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-40 cursor-pointer"
+              [title]="loading ? 'Actualisation…' : 'Actualiser'">
+        <mat-icon class="!text-[16px] !w-4 !h-4" [class.animate-spin]="loading">refresh</mat-icon>
+      </button>
+
+      <button type="button" (click)="naviguerVersControle()"
+              class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-[12.5px] font-semibold text-white transition hover:bg-emerald-800 cursor-pointer shadow-sm">
+        <mat-icon class="!text-[14px] !w-3.5 !h-3.5">task_alt</mat-icon>
+        Contrôler
       </button>
     </div>
-  </header>
-
-  <div *ngIf="messageErreur" role="alert" class="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-    <mat-icon class="text-rose-600">error_outline</mat-icon>
-    {{ messageErreur }}
-    <button type="button" (click)="chargerDonnees()" class="ml-auto rounded-lg px-3 py-1.5 font-semibold hover:bg-rose-100">Réessayer</button>
   </div>
 
-  <!-- Vue d'ensemble : analyse principale + synthèse latérale -->
-  <div class="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12">
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:col-span-8" aria-labelledby="activite-regimes-title">
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2 text-sm font-semibold text-slate-500">
-            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><mat-icon class="!h-5 !w-5 !text-xl">bar_chart</mat-icon></span>
-            Activité des régimes
-          </div>
-          <h2 id="activite-regimes-title" class="mt-4 mb-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Montant total facturé</h2>
-          <p class="mt-1 mb-0 break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{{ formatMontant(totalFacture) }}</p>
-        </div>
-        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">{{ totalFacturesNombre }} factures · {{ annee }}</span>
-      </div>
-
-      <div *ngIf="regimesAvecActivite" class="mt-6 space-y-4">
-        <div *ngFor="let r of statsRegimes" class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[minmax(90px,1fr)_minmax(90px,2.5fr)_auto] sm:gap-4">
-          <div class="min-w-0">
-            <div class="truncate text-xs font-semibold text-slate-700 sm:text-sm">{{ r.libelle }}</div>
-            <div class="font-mono text-[10px] text-slate-400">{{ r.nombreFactures }} facture(s)</div>
-          </div>
-          <div class="col-span-2 h-2.5 overflow-hidden rounded-full bg-slate-100 sm:col-span-1 sm:col-start-2">
-            <div class="h-full min-w-0 rounded-full transition-[width] duration-300"
-                 [ngClass]="{
-                   'bg-emerald-500': r.couleur === 'emerald',
-                   'bg-blue-500': r.couleur === 'blue',
-                   'bg-amber-500': r.couleur === 'amber',
-                   'bg-violet-500': r.couleur === 'purple',
-                   'bg-rose-500': r.couleur === 'rose'
-                 }"
-                 [style.width.%]="calculerPourcentage(r.montantFacture, totalFacture)"></div>
-          </div>
-          <strong class="col-start-2 row-start-1 text-right font-mono text-[11px] text-slate-700 sm:col-start-3 sm:row-auto sm:text-xs">{{ formatMontant(r.montantFacture) }}</strong>
-        </div>
-      </div>
-
-      <div *ngIf="periodeSansFacture" class="mt-5 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-        Aucune facture enregistrée pour la période sélectionnée.
-      </div>
-
-      <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
-        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Contributif</span>
-        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span> Enfants &lt; 5 ans</span>
-        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Plan Sésame</span>
-        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-violet-500"></span> Maternité</span>
-        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Dialyse</span>
-      </div>
-    </section>
-
-    <aside class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:col-span-4" aria-label="Synthèse SEN-CSU">
-      <div>
-        <h2 class="m-0 text-base font-bold text-slate-900">Synthèse SEN-CSU</h2>
-        <p class="m-0 mt-1 text-xs text-slate-500">Montants de la période sélectionnée</p>
-      </div>
-
-      <article class="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-        <div class="flex items-center gap-2 text-xs font-semibold text-blue-800"><mat-icon class="!h-4 !w-4 !text-base">account_balance</mat-icon> Part SEN-CSU estimée</div>
-        <p class="mt-2 mb-0 break-words text-xl font-bold tracking-tight text-blue-900">{{ formatMontant(totalSencsu) }}</p>
-      </article>
-
-      <article class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
-        <div class="flex items-center justify-between gap-2 text-xs font-semibold text-emerald-800">
-          <span class="inline-flex items-center gap-2"><mat-icon class="!h-4 !w-4 !text-base">task_alt</mat-icon> Part traitée</span>
-          <span class="font-mono">{{ tauxTraitementSencsu }} %</span>
-        </div>
-        <p class="mt-2 mb-0 break-words text-lg font-bold text-emerald-900">{{ formatMontant(totalSencsuTraite) }}</p>
-        <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white">
-          <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300" [style.width.%]="tauxTraitementSencsu"></div>
-        </div>
-      </article>
-
-      <article class="rounded-xl border border-amber-100 bg-amber-50/70 p-4">
-        <div class="flex items-center gap-2 text-xs font-semibold text-amber-800"><mat-icon class="!h-4 !w-4 !text-base">pending_actions</mat-icon> Part encore à traiter</div>
-        <p class="mt-2 mb-0 break-words text-lg font-bold text-amber-900">{{ formatMontant(totalSencsuEnAttente) }}</p>
-      </article>
-
-      <div class="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-        <span>Prises en charge</span>
-        <strong class="font-mono text-slate-800">{{ totalBeneficiaires.toLocaleString('fr-FR') }}</strong>
-      </div>
-    </aside>
+  <!-- Alerte Erreur -->
+  <div *ngIf="messageErreur" role="alert"
+       class="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-800">
+    <mat-icon class="!h-4 !w-4 !text-base text-rose-500 flex-shrink-0">error_outline</mat-icon>
+    <span class="flex-1">{{ messageErreur }}</span>
+    <button type="button" (click)="chargerDonnees()"
+            class="text-[12px] font-semibold underline-offset-2 hover:underline cursor-pointer border-0 bg-transparent text-rose-700">
+      Réessayer
+    </button>
   </div>
 
-  <!-- Régimes -->
-  <section aria-labelledby="regimes-title" class="space-y-3">
-    <div class="flex flex-wrap items-end justify-between gap-2 px-1">
-      <div>
-        <h2 id="regimes-title" class="m-0 text-lg font-bold tracking-tight text-slate-900">Suivi par régime</h2>
-        <p class="m-0 mt-0.5 text-sm text-slate-500">Factures, parts SEN-CSU et prises en charge pour la période sélectionnée</p>
+  <!-- =========================================================
+       SECTION RÉGIMES DE PRISE EN CHARGE (CSU)
+       Cartes allégées, épurées et cliquables
+       ========================================================= -->
+  <div class="space-y-2.5">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h2 class="m-0 text-[13.5px] font-bold text-slate-900 tracking-tight">
+          Régimes de couverture CSU
+        </h2>
+        <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] font-semibold text-slate-600">
+          5 régimes
+        </span>
       </div>
-      <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ statsRegimes.length }} régimes</span>
-    </div>
-
-    <div *ngIf="loading && statsRegimes.length === 0" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-      <div *ngFor="let skeleton of [1,2,3,4,5]" class="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white p-5 motion-reduce:animate-none">
-        <div class="h-5 w-2/3 rounded bg-slate-100"></div><div class="mt-7 h-7 w-3/4 rounded bg-slate-100"></div><div class="mt-5 h-16 rounded bg-slate-50"></div>
-      </div>
-    </div>
-
-    <div *ngIf="periodeSansFacture" class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
-      <mat-icon class="!h-10 !w-10 !text-4xl text-slate-300">insert_chart_outlined</mat-icon>
-      <h3 class="mt-2 mb-0 text-base font-semibold text-slate-800">Aucune facture pour cette période</h3>
-      <p class="mt-1 mb-0 text-sm text-slate-500">Choisissez un autre mois, trimestre ou année pour consulter l’activité.</p>
-    </div>
-
-    <div *ngIf="regimesAvecActivite" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-      <article *ngFor="let r of statsRegimes"
-               class="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none sm:p-5"
-               [ngClass]="{
-                 'border-t-4 border-t-emerald-500': r.couleur === 'emerald',
-                 'border-t-4 border-t-blue-500': r.couleur === 'blue',
-                 'border-t-4 border-t-amber-500': r.couleur === 'amber',
-                 'border-t-4 border-t-violet-500': r.couleur === 'purple',
-                 'border-t-4 border-t-rose-500': r.couleur === 'rose'
-               }">
-        <div class="flex min-h-14 items-start justify-between gap-2">
-          <div class="min-w-0">
-            <h3 class="m-0 text-sm font-bold leading-snug text-slate-900">{{ r.libelle }}</h3>
-            <p class="mt-1 mb-0 font-mono text-[11px] font-medium tracking-wide text-slate-400">{{ r.codeRegime }}</p>
-          </div>
-          <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold"
-                [ngClass]="{
-                  'bg-emerald-50 text-emerald-800': r.couleur === 'emerald',
-                  'bg-blue-50 text-blue-800': r.couleur === 'blue',
-                  'bg-amber-50 text-amber-800': r.couleur === 'amber',
-                  'bg-violet-50 text-violet-800': r.couleur === 'purple',
-                  'bg-rose-50 text-rose-800': r.couleur === 'rose'
-                }">{{ r.nombreFactures }} facture(s)</span>
-        </div>
-
-        <div class="mt-5">
-          <p class="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Montant facturé</p>
-          <p class="mt-1 mb-0 break-words text-xl font-bold tracking-tight text-slate-900">{{ formatMontant(r.montantFacture) }}</p>
-        </div>
-
-        <div class="mt-4 space-y-2.5 border-t border-slate-100 pt-3">
-          <div class="flex items-center justify-between gap-2 text-xs">
-            <span class="text-slate-500">Part SEN-CSU</span>
-            <strong class="text-right font-mono text-blue-800">{{ formatMontant(r.montantSencsuTotal) }}</strong>
-          </div>
-          <div class="flex items-center justify-between gap-2 text-xs">
-            <span class="text-slate-500">Traité</span>
-            <strong class="text-right font-mono text-emerald-700">{{ formatMontant(r.montantSencsuTraite) }}</strong>
-          </div>
-          <div class="flex items-center justify-between gap-2 text-xs">
-            <span class="text-slate-500">À traiter</span>
-            <strong class="text-right font-mono text-amber-700">{{ formatMontant(r.montantSencsuEnAttente) }}</strong>
-          </div>
-        </div>
-
-        <div class="mt-auto pt-4">
-          <div class="mb-1.5 flex items-center justify-between text-[11px]">
-            <span class="font-medium text-slate-500">Avancement</span>
-            <strong class="font-mono text-slate-700">{{ calculerPourcentage(r.montantSencsuTraite, r.montantSencsuTotal) }} %</strong>
-          </div>
-          <div class="h-1.5 overflow-hidden rounded-full bg-slate-100">
-            <div class="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
-                 [style.width.%]="calculerPourcentage(r.montantSencsuTraite, r.montantSencsuTotal)"></div>
-          </div>
-          <p class="mt-3 mb-0 text-xs text-slate-500">{{ r.nombreBeneficiaires.toLocaleString('fr-FR') }} prise(s) en charge</p>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- Graphiques d'activité des structures -->
-  <section aria-labelledby="saisie-structures-title" class="space-y-3">
-    <div class="flex flex-wrap items-end justify-between gap-2 px-1">
-      <div>
-        <h2 id="saisie-structures-title" class="m-0 text-lg font-bold tracking-tight text-slate-900">Structures ayant saisi</h2>
-        <p class="m-0 mt-0.5 text-sm text-slate-500">Postes, centres et hôpitaux avec une facture sur la période</p>
-      </div>
-      <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-        {{ totalStructuresAvecSaisie }} structure(s) avec saisie
+      <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">
+        Cliquez sur un régime pour afficher ses factures
       </span>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <article *ngFor="let type of saisiesParTypeStructure" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-3">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                  [ngClass]="{
-                    'bg-blue-50 text-blue-700': type.type === 'PS',
-                    'bg-emerald-50 text-emerald-700': type.type === 'CS',
-                    'bg-violet-50 text-violet-700': type.type === 'EPS'
-                  }">
-              <mat-icon>{{ type.icone }}</mat-icon>
-            </span>
-            <div class="min-w-0">
-              <h3 class="m-0 truncate text-sm font-bold text-slate-900">{{ type.libelle }}</h3>
-              <p class="m-0 mt-0.5 text-xs text-slate-500">{{ type.nombreActif }} structure(s) active(s)</p>
+    <!-- Grille des 5 cartes de régime allégées & cliquables -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3" [class.animate-pulse]="loading">
+      <article *ngFor="let reg of statsRegimes"
+               (click)="naviguerVersRegime(reg.codeRegime || reg.regime)"
+               [title]="'Ouvrir les factures du régime ' + getRegimeInfo(reg.codeRegime || reg.regime).labelCourt"
+               class="regime-card group relative flex flex-col justify-between rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-emerald-500 hover:shadow-md cursor-pointer transition-all duration-200">
+
+        <!-- En-tête : icône + noms + flèche -->
+        <div>
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border text-base transition-transform group-hover:scale-105"
+                    [ngClass]="getRegimeInfo(reg.codeRegime || reg.regime).bgClass">
+                <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">
+                  {{ getRegimeInfo(reg.codeRegime || reg.regime).icone }}
+                </mat-icon>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13px] font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate leading-tight">
+                  {{ getRegimeInfo(reg.codeRegime || reg.regime).labelCourt }}
+                </div>
+                <div class="text-[10.5px] text-slate-400 truncate mt-0.5">
+                  {{ getRegimeInfo(reg.codeRegime || reg.regime).description }}
+                </div>
+              </div>
+            </div>
+            <mat-icon class="!text-[16px] !w-4 !h-4 text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all flex-shrink-0">
+              chevron_right
+            </mat-icon>
+          </div>
+
+          <!-- Montant facturé (valeur principale claire) -->
+          <div class="my-2">
+            <div class="text-[10.5px] text-slate-400 font-medium">Montant facturé</div>
+            <div class="text-[16px] font-bold text-slate-900 tabular-nums tracking-tight">
+              {{ formatMontant(reg.montantFacture) }}
             </div>
           </div>
-          <span class="shrink-0 font-mono text-sm font-bold text-slate-700">{{ type.tauxSaisie }}%</span>
         </div>
 
-        <div class="mt-5 flex items-end justify-between gap-2">
-          <div>
-            <p class="m-0 text-xs font-medium text-slate-500">Avec saisie</p>
-            <p class="m-0 mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              {{ type.nombreAvecSaisie }}<span class="ml-1 text-sm font-semibold text-slate-400">/ {{ type.nombreActif }}</span>
-            </p>
+        <!-- Pied de carte épuré : Part SEN-CSU + Nb factures -->
+        <div class="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
+          <div class="flex items-center gap-1 text-slate-500 truncate">
+            <span class="font-medium text-[10.5px]">SEN-CSU:</span>
+            <span class="font-bold text-slate-700 tabular-nums text-[11.5px]">{{ formatMontant(reg.montantSencsuTotal) }}</span>
           </div>
-          <div class="text-right">
-            <p class="m-0 text-xs font-medium text-slate-500">Montant saisi</p>
-            <p class="m-0 mt-1 break-words font-mono text-sm font-bold text-slate-800">{{ formatMontant(type.montantSaisi) }}</p>
-          </div>
+          <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums border flex-shrink-0"
+                [ngClass]="getRegimeInfo(reg.codeRegime || reg.regime).bgClass">
+            {{ reg.nombreFactures }} fact.
+          </span>
         </div>
 
-        <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar"
-             [attr.aria-valuenow]="type.tauxSaisie" aria-valuemin="0" aria-valuemax="100"
-             [attr.aria-label]="type.libelle + ' ayant saisi une facture'">
-          <div class="h-full rounded-full transition-[width] duration-300"
-               [ngClass]="{
-                 'bg-blue-500': type.type === 'PS',
-                 'bg-emerald-500': type.type === 'CS',
-                 'bg-violet-500': type.type === 'EPS'
-               }"
-               [style.width.%]="type.tauxSaisie"></div>
-        </div>
-
-        <p class="mt-2 mb-0 flex justify-between text-[11px] text-slate-500">
-          <span>{{ type.nombreActif - type.nombreAvecSaisie }} sans saisie</span>
-          <span>{{ type.tauxSaisie }}% de participation</span>
-        </p>
       </article>
     </div>
-  </section>
+  </div>
 
-  <p class="m-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
-    <mat-icon class="mr-1 inline-block !h-4 !w-4 !text-base align-middle text-slate-400">info</mat-icon>
-    Une prise en charge correspond à une ligne patient dans une facture ; un même bénéficiaire peut donc compter plusieurs fois sur la période.
-  </p>
+  <!-- =========================================================
+       SECTION ANALYTIQUE : Évolution mensuelle + Diagramme Statut
+       ========================================================= -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
+
+    <!-- Graphique évolution mensuelle (3/5) -->
+    <div class="dashboard-card lg:col-span-3">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Évolution mensuelle des facturations</h2>
+          <p class="dashboard-card__subtitle">Montant total facturé par mois — {{ annee }}</p>
+        </div>
+        <button type="button" (click)="naviguerVersControle()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Voir factures
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+      <div class="h-56 relative">
+        <div *ngIf="loading" class="absolute inset-0 flex items-center justify-center">
+          <div class="h-full w-full animate-pulse rounded-lg bg-slate-50"></div>
+        </div>
+        <canvas *ngIf="!loading && (montantMensuelChartData?.datasets?.length || 0) > 0"
+                baseChart
+                [data]="montantMensuelChartData"
+                [options]="montantMensuelChartOptions"
+                type="line"
+                class="w-full h-full">
+        </canvas>
+        <div *ngIf="!loading && !(montantMensuelChartData?.datasets?.length || 0)"
+             class="flex h-full items-center justify-center text-[13px] text-slate-400">
+          Aucune donnée disponible
+        </div>
+      </div>
+    </div>
+
+    <!-- Carte Diagramme Statut des factures (2/5) — Entièrement cliquable -->
+    <div class="dashboard-card lg:col-span-2">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Statut des factures</h2>
+          <p class="dashboard-card__subtitle">Répartition cliquable par état de contrôle</p>
+        </div>
+        <button type="button" (click)="naviguerVersControle()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Contrôler
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+
+      <!-- Corps : Doughnut Chart + Rangées de statuts cliquables -->
+      <div class="flex flex-col gap-3">
+        <!-- Visualisation Doughnut avec total au centre -->
+        <div (click)="naviguerVersControle()"
+             class="relative flex items-center justify-center h-36 w-36 mx-auto cursor-pointer group"
+             title="Cliquez pour ouvrir la liste des factures">
+          <canvas baseChart
+                  [data]="statutsFacturesChartData"
+                  [options]="statutsFacturesChartOptions"
+                  type="doughnut"
+                  class="w-full h-full group-hover:scale-105 transition-transform">
+          </canvas>
+          <!-- Compteur central -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+            <span class="text-[19px] font-bold text-slate-900 tabular-nums leading-none">
+              {{ totalFacturesPeriodeCount }}
+            </span>
+            <span class="text-[10.5px] font-medium text-slate-500 mt-1">
+              {{ totalFacturesPeriodeCount > 1 ? 'factures' : 'facture' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Détail par statut : chaque ligne est un lien cliquable vers son écran -->
+        <div class="space-y-1.5 border-t border-slate-100 pt-2.5">
+
+          <!-- 1. Payées / Validées -->
+          <div (click)="naviguerVersStatut('VALIDEE')"
+               class="group flex items-center justify-between gap-2 rounded-lg p-1.5 hover:bg-emerald-50/60 cursor-pointer transition-colors"
+               title="Filtrer les factures payées et validées">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-600 flex-shrink-0 group-hover:scale-110 transition-transform"></span>
+              <span class="text-slate-700 font-medium text-[12px] truncate group-hover:text-emerald-800">Payées & Validées</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 text-right">
+              <span class="text-slate-400 tabular-nums text-[11px]">{{ nbFacturesPayees }} ({{ pctFacturesPayees }}%)</span>
+              <span class="font-bold text-emerald-700 tabular-nums text-[12px] min-w-[70px] text-right">{{ formatMontant(montantFacturesPayees) }}</span>
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-emerald-600 transition-colors">chevron_right</mat-icon>
+            </div>
+          </div>
+
+          <!-- 2. En cours de contrôle -->
+          <div (click)="naviguerVersStatut('EN_COURS')"
+               class="group flex items-center justify-between gap-2 rounded-lg p-1.5 hover:bg-blue-50/60 cursor-pointer transition-colors"
+               title="Filtrer les factures en cours de contrôle">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="h-2.5 w-2.5 rounded-full bg-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform"></span>
+              <span class="text-slate-700 font-medium text-[12px] truncate group-hover:text-blue-800">En cours de contrôle</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 text-right">
+              <span class="text-slate-400 tabular-nums text-[11px]">{{ nbFacturesEnCours }} ({{ pctFacturesEnCours }}%)</span>
+              <span class="font-bold text-blue-700 tabular-nums text-[12px] min-w-[70px] text-right">{{ formatMontant(montantFacturesEnCours) }}</span>
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-blue-600 transition-colors">chevron_right</mat-icon>
+            </div>
+          </div>
+
+          <!-- 3. En attente (À traiter) -->
+          <div (click)="naviguerVersStatut('A_TRAITER')"
+               class="group flex items-center justify-between gap-2 rounded-lg p-1.5 hover:bg-amber-50/60 cursor-pointer transition-colors"
+               title="Traiter les dossiers en attente">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform"></span>
+              <span class="text-slate-700 font-medium text-[12px] truncate group-hover:text-amber-800">En attente (À traiter)</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 text-right">
+              <span class="text-slate-400 tabular-nums text-[11px]">{{ nbFacturesEnAttente }} ({{ pctFacturesEnAttente }}%)</span>
+              <span class="font-bold text-amber-700 tabular-nums text-[12px] min-w-[70px] text-right">{{ formatMontant(montantFacturesEnAttente) }}</span>
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-amber-600 transition-colors">chevron_right</mat-icon>
+            </div>
+          </div>
+
+          <!-- 4. Rejetées -->
+          <div (click)="naviguerVersStatut('REJETEE')"
+               class="group flex items-center justify-between gap-2 rounded-lg p-1.5 hover:bg-rose-50/60 cursor-pointer transition-colors"
+               title="Consulter les factures rejetées">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="h-2.5 w-2.5 rounded-full bg-rose-500 flex-shrink-0 group-hover:scale-110 transition-transform"></span>
+              <span class="text-slate-700 font-medium text-[12px] truncate group-hover:text-rose-800">Rejetées</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 text-right">
+              <span class="text-slate-400 tabular-nums text-[11px]">{{ nbFacturesRejetees }} ({{ pctFacturesRejetees }}%)</span>
+              <span class="font-bold text-rose-700 tabular-nums text-[12px] min-w-[70px] text-right">{{ formatMontant(montantFacturesRejetees) }}</span>
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-rose-600 transition-colors">chevron_right</mat-icon>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PARTICIPATION PAR TYPE + RESTE EN ATTENTE PAR NIVEAU
+       ========================================================= -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+    <!-- Participation par type de structure — cliquable vers prestataires (Tab 1) -->
+    <div class="dashboard-card">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Participation des structures</h2>
+          <p class="dashboard-card__subtitle">Taux de saisie par catégorie d'établissement</p>
+        </div>
+        <button type="button" (click)="naviguerVersPrestataires()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Prestataires
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="space-y-3">
+        <div *ngFor="let i of [1,2,3]" class="h-10 animate-pulse rounded-lg bg-slate-50"></div>
+      </div>
+
+      <div *ngIf="!loading" class="space-y-2.5">
+        <div *ngFor="let ligne of saisiesParTypeStructure"
+             (click)="naviguerVersPrestataires(ligne.type)"
+             class="group flex items-center gap-3 rounded-lg p-2.5 hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
+             [title]="'Voir les prestataires de type ' + ligne.libelle">
+          <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+            <mat-icon class="!text-[16px] !w-4 !h-4">{{ ligne.icone }}</mat-icon>
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-[12.5px] font-medium text-slate-700 group-hover:text-emerald-800">{{ ligne.libelle }}</span>
+              <span class="text-[11px] font-semibold text-slate-500 tabular-nums">
+                {{ ligne.nombreAvecSaisie }}/{{ ligne.nombreActif }}
+              </span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                   [style.width.%]="ligne.tauxSaisie"></div>
+            </div>
+          </div>
+          <span class="flex-shrink-0 text-[11.5px] font-bold tabular-nums"
+                [class.text-emerald-700]="ligne.tauxSaisie >= 70"
+                [class.text-amber-600]="ligne.tauxSaisie >= 40 && ligne.tauxSaisie < 70"
+                [class.text-red-500]="ligne.tauxSaisie < 40">
+            {{ arrondir(ligne.tauxSaisie) }}%
+          </span>
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-emerald-600 transition-colors">chevron_right</mat-icon>
+        </div>
+
+        <div *ngIf="saisiesParTypeStructure.length === 0"
+             class="py-6 text-center text-[13px] text-slate-400">
+          Aucune structure suivie
+        </div>
+      </div>
+    </div>
+
+    <!-- Reste en attente par niveau — cliquable vers factures (Tab 2) -->
+    <div class="dashboard-card">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Reste à valider</h2>
+          <p class="dashboard-card__subtitle">Répartition cliquable par niveau de soins</p>
+        </div>
+        <button type="button" (click)="naviguerVersControle()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Tout traiter
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="space-y-3">
+        <div *ngFor="let i of [1,2,3]" class="h-16 animate-pulse rounded-lg bg-slate-50"></div>
+      </div>
+
+      <div *ngIf="!loading" class="space-y-2">
+        <!-- Hôpitaux EPS -->
+        <div (click)="naviguerVersFactures('EPS')"
+             class="group flex items-center justify-between gap-3 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 px-3.5 py-3 cursor-pointer transition-all"
+             title="Traiter les factures des Hôpitaux (EPS)">
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600 group-hover:scale-105 transition-transform">
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5">domain</mat-icon>
+            </span>
+            <div>
+              <div class="text-[12px] font-semibold text-slate-700 group-hover:text-violet-800">Hôpitaux (EPS)</div>
+              <div class="text-[11px] text-slate-400">Niveau régional & référence</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-bold text-slate-800 tabular-nums">{{ formatMontant(attenteEps) }}</span>
+            <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-violet-600 transition-colors">chevron_right</mat-icon>
+          </div>
+        </div>
+
+        <!-- Centres de santé CS -->
+        <div (click)="naviguerVersFactures('CS')"
+             class="group flex items-center justify-between gap-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 px-3.5 py-3 cursor-pointer transition-all"
+             title="Traiter les factures des Centres de santé (CS)">
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5">local_hospital</mat-icon>
+            </span>
+            <div>
+              <div class="text-[12px] font-semibold text-slate-700 group-hover:text-blue-800">Centres de santé (CS)</div>
+              <div class="text-[11px] text-slate-400">Niveau district</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-bold text-slate-800 tabular-nums">{{ formatMontant(attenteCs) }}</span>
+            <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-blue-600 transition-colors">chevron_right</mat-icon>
+          </div>
+        </div>
+
+        <!-- Postes de santé PS -->
+        <div (click)="naviguerVersFactures('PS')"
+             class="group flex items-center justify-between gap-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 px-3.5 py-3 cursor-pointer transition-all"
+             title="Traiter les factures des Postes de santé (PS)">
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 group-hover:scale-105 transition-transform">
+              <mat-icon class="!text-[14px] !w-3.5 !h-3.5">healing</mat-icon>
+            </span>
+            <div>
+              <div class="text-[12px] font-semibold text-slate-700 group-hover:text-teal-800">Postes de santé (PS)</div>
+              <div class="text-[11px] text-slate-400">Niveau poste sanitaire</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-bold text-slate-800 tabular-nums">{{ formatMontant(attentePs) }}</span>
+            <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-slate-300 group-hover:text-teal-600 transition-colors">chevron_right</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       CLASSEMENT DES STRUCTURES — tableau compact et cliquable
+       ========================================================= -->
+  <div class="dashboard-card">
+    <div class="dashboard-card__head">
+      <div>
+        <h2 class="dashboard-card__title">Structures actives</h2>
+        <p class="dashboard-card__subtitle">Top structures par volume facturé — Cliquez pour ouvrir la structure</p>
+      </div>
+      <button type="button" (click)="naviguerVersPrestataires()"
+              class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+        Voir tout
+        <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+      </button>
+    </div>
+
+    <!-- Skeleton loading -->
+    <div *ngIf="loadingStructures" class="space-y-2">
+      <div *ngFor="let i of [1,2,3,4,5]" class="h-11 animate-pulse rounded-lg bg-slate-50"></div>
+    </div>
+
+    <!-- État vide -->
+    <div *ngIf="!loadingStructures && structuresSuivies.length === 0"
+         class="py-10 text-center">
+      <mat-icon class="!text-[36px] !w-9 !h-9 text-slate-200 mb-2">inbox</mat-icon>
+      <p class="m-0 text-[13px] text-slate-400">Aucune structure n'a saisi de facture</p>
+    </div>
+
+    <!-- Table desktop -->
+    <div *ngIf="!loadingStructures && structuresSuivies.length > 0" class="hidden lg:block -mx-5 -mb-5">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-t border-slate-100 bg-slate-50/60">
+            <th class="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Structure</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">District</th>
+            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-400">Factures</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Statut</th>
+            <th class="px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-400">Montant</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <tr *ngFor="let s of structuresSuivies.slice(0, 7)"
+              (click)="naviguerVersStructure(s)"
+              class="group transition-colors hover:bg-emerald-50/40 cursor-pointer"
+              [title]="'Ouvrir les factures de ' + s.nom">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2.5">
+                <span class="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
+                      [ngClass]="{
+                        'bg-violet-50 text-violet-700': s.type === 'EPS',
+                        'bg-blue-50 text-blue-700': s.type === 'CS',
+                        'bg-teal-50 text-teal-700': s.type === 'PS',
+                        'bg-emerald-50 text-emerald-700': s.type === 'PHARMACIE',
+                        'bg-slate-100 text-slate-600': !s.type || (s.type !== 'EPS' && s.type !== 'CS' && s.type !== 'PS' && s.type !== 'PHARMACIE')
+                      }">
+                  {{ s.type || '?' }}
+                </span>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-semibold text-slate-900 group-hover:text-emerald-800 transition-colors truncate max-w-[200px]">{{ s.nom }}</div>
+                  <div class="text-[11px] text-slate-400">{{ s.code }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-[12.5px] text-slate-500">{{ s.districtNom }}</td>
+            <td class="px-4 py-3 text-right text-[12.5px] font-medium text-slate-700 tabular-nums">{{ s.nombreFactures }}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    [ngClass]="{
+                      'bg-slate-100 text-slate-600': s.statutSuiviPeriode === 'A_SAISIR',
+                      'bg-blue-50 text-blue-700': s.statutSuiviPeriode === 'EN_COURS',
+                      'bg-amber-50 text-amber-700': s.statutSuiviPeriode === 'A_CORRIGER',
+                      'bg-emerald-50 text-emerald-700': s.statutSuiviPeriode === 'ENVOYEE'
+                    }">
+                {{ s.statutSuiviPeriode === 'ENVOYEE' ? 'Envoyée' :
+                   s.statutSuiviPeriode === 'EN_COURS' ? 'En cours' :
+                   s.statutSuiviPeriode === 'A_CORRIGER' ? 'À corriger' : 'À saisir' }}
+              </span>
+            </td>
+            <td class="px-5 py-3 text-right text-[13px] font-bold text-slate-900 tabular-nums">
+              {{ formatMontant(s.montantTotal) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cartes mobiles -->
+    <div *ngIf="!loadingStructures && structuresSuivies.length > 0" class="lg:hidden -mx-1 space-y-1">
+      <div *ngFor="let s of structuresSuivies.slice(0, 5)"
+           (click)="naviguerVersStructure(s)"
+           class="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-emerald-50/40 cursor-pointer transition-colors"
+           [title]="'Ouvrir ' + s.nom">
+        <span class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
+          {{ s.type || '?' }}
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px] font-semibold text-slate-800 truncate">{{ s.nom }}</div>
+          <div class="text-[11px] text-slate-400">{{ s.districtNom }} · {{ s.nombreFactures }} facture(s)</div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <div class="text-[13px] font-bold text-slate-900 tabular-nums">{{ formatMontant(s.montantTotal) }}</div>
+          <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold mt-0.5"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700': s.statutSuiviPeriode === 'ENVOYEE',
+                  'bg-blue-50 text-blue-700': s.statutSuiviPeriode === 'EN_COURS',
+                  'bg-slate-100 text-slate-600': s.statutSuiviPeriode !== 'ENVOYEE' && s.statutSuiviPeriode !== 'EN_COURS'
+                }">
+            {{ s.statutSuiviPeriode === 'ENVOYEE' ? 'Envoyée' : s.statutSuiviPeriode === 'EN_COURS' ? 'En cours' : 'À saisir' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </section>

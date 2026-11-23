@@ -48,6 +48,16 @@
   /* accent & success harmonisés */
   --accent: #0D9488;
   --accent-light: #F0FDFA;
+  /* Accents complémentaires pour distinguer information et attention. */
+  --info: #1D4ED8;
+  --info-light: #EFF6FF;
+  --info-border: #BFDBFE;
+  --violet: #6D28D9;
+  --violet-light: #F5F3FF;
+  --violet-border: #DDD6FE;
+  --warning: #B45309;
+  --warning-light: #FFFBEB;
+  --warning-border: #FDE68A;
   --warn: #DC2626;
   --warn-light: #FEF2F2;
   --success: #059669;
@@ -66,7 +76,7 @@
   --gold-light: var(--primary-light);
 
   /* Surfaces & texte : clarté, respiration et crédibilité institutionnelle */
-  --bg: #F8FAFC;
+  --bg: #F4F8FC;
   --card-bg: #FFFFFF;
   --text-primary: #0F172A;
   --text-secondary: #475467;
@@ -74,13 +84,13 @@
   /* Filet des encadrés : délimitation neutre, subtile et précise */
   --border-cadre: #E2E8F0;
   --border: var(--border-cadre);
-  --border-light: #F1F5F9;
+  --border-light: #EAF0F7;
   /* Filet appuyé : sépare l'en-tête d'un tableau de son corps */
   --border-strong: #CBD5E1;
   --field-bg: #F8FAFC;
   /* Fond « rempli » doux des champs de formulaire */
-  --field-fill: #F1F5F9;
-  --field-fill-hover: #E2E8F0;
+  --field-fill: #F0F5F8;
+  --field-fill-hover: #E5EEF3;
 
   /* Élévation — volontairement quasi nulle.
      Une carte posée dans la page se délimite au filet ; seuls les éléments qui
@@ -126,6 +136,7 @@ html {
   /* Pas de zoom au double appui (deux appuis rapprochés sur un bouton zoomaient la page).
      Le zoom au pincement, lui, reste permis (accessibilité). */
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Un mot trop long (n° de facture, e-mail, nom de fichier) passe à la ligne au lieu
@@ -156,8 +167,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
-  /* 15px depuis le 19/10/2026 (14px avant) : textes agrandis d'un cran, voir « LISIBILITÉ ». */
-  font-size: 15px;
+  /* Base de lecture confortable ; les petits libellés sont harmonisés plus bas. */
+  font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -290,7 +301,7 @@ input[readonly], textarea[readonly] {
   margin-bottom: var(--sp-6);
 }
 .page-head h1 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   margin: 0 0 2px;
   color: var(--text-primary);
@@ -298,7 +309,7 @@ input[readonly], textarea[readonly] {
 .page-head p {
   color: var(--text-secondary);
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 .page-head-actions {
   display: flex;
@@ -309,8 +320,8 @@ input[readonly], textarea[readonly] {
 
 /* Compat : anciens en-têtes encore utilisés */
 .page-header { margin-bottom: var(--sp-6); }
-.page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 2px; color: var(--text-primary); }
-.page-header p { color: var(--text-secondary); margin: 0; font-size: 15px; }
+.page-header h1 { font-size: 26px; font-weight: 700; margin: 0 0 2px; color: var(--text-primary); }
+.page-header p { color: var(--text-secondary); margin: 0; font-size: 16px; }
 
 /* ============================================================
    CARTES / SECTIONS
@@ -337,7 +348,7 @@ input[readonly], textarea[readonly] {
   color: #fff !important;
 }
 
-/* En-tête de section épuré et sobre */
+/* En-tête de section : léger dégradé frais, sans réduire le contraste du texte. */
 .section-header {
   display: flex;
   align-items: center;
@@ -346,7 +357,7 @@ input[readonly], textarea[readonly] {
   padding: var(--sp-4) var(--sp-5);
   border-bottom: 1px solid var(--border-light);
   flex-wrap: wrap;
-  background: var(--card-bg);
+  background: linear-gradient(105deg, #F0FDF8 0%, #F2F8FF 100%);
 }
 .section-title-group { display: flex; align-items: center; gap: var(--sp-3); }
 .section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
@@ -468,10 +479,10 @@ input[readonly], textarea[readonly] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 4px 11px;
   border-radius: var(--radius-full);
   border: 1px solid transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -483,7 +494,7 @@ input[readonly], textarea[readonly] {
   background: currentColor;
 }
 .status-BROUILLON  { background: #F1F5F9; color: #64748B; border-color: #DBE3EC; }
-.status-SOUMISE_CS { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+.status-SOUMISE_CS { background: var(--info-light); color: var(--info); border-color: var(--info-border); }
 .status-REJETEE_CS { background: #FDF2F8; color: #DB2777; border-color: #FBCFE8; }
 .status-ENVOYEE    { background: #E6F4EA; color: #137333; border-color: #CEEAD6; }
 .status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); border-color: var(--primary-200); }
@@ -886,53 +897,97 @@ mat-icon.inline-ic {
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   .m-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 0 !important;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    padding: 0 !important;
   }
   .m-card {
-    border: none !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    display: block !important;
+    position: relative !important;
+    background: var(--card-bg, #ffffff) !important;
+    border: 1px solid var(--border-cadre, #E2E8F0) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 1px 3px 0 rgba(16, 24, 40, 0.05), 0 1px 2px -1px rgba(16, 24, 40, 0.05) !important;
+    padding: 14px 16px !important;
     margin-bottom: 0 !important;
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease !important;
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
   }
-  .m-card:last-child {
-    border-bottom: none !important;
+  .m-card.clickable, a.m-card {
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m-card.clickable:active, a.m-card:active {
+    transform: scale(0.985) !important;
+    background-color: var(--field-bg, #F8FAFC) !important;
+    box-shadow: 0 0 0 1px var(--primary-200, #A7F3D0) !important;
+  }
+  .m-more-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #64748B);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .m-more-btn:active, .m-more-btn:hover {
+    background: var(--primary-light, #ECFDF5);
+    color: var(--primary, #047857);
   }
   /* Liste des factures : pas de pagination sur mobile (toutes les cartes sont affichées). */
   .list-page mat-paginator { display: none !important; }
-  .page-head { margin-bottom: var(--sp-4); }
-  .page-head h1 { font-size: 21px; }
-  .page-head p { font-size: 14.5px; }
+  .page-head { margin-bottom: var(--sp-3); }
+  .page-head h1 { font-size: 20px !important; letter-spacing: -0.02em; line-height: 1.25; }
+  .page-head p,
+  .section-header p,
+  .section-title-group p {
+    display: none !important;
+  }
+  .section-icon { display: none !important; }
   .page-head-actions { width: 100%; }
-  /* Boutons d'en-tête sur mobile : flex-basis = largeur du contenu (auto) pour
-     qu'ils PASSENT À LA LIGNE au lieu de s'écraser (labels longs + nowrap → les
-     boutons se chevauchaient). flex-grow:1 = ils remplissent leur ligne, donc un
-     en-tête à 1 ou 2 boutons reste en pleine largeur comme avant. */
   .page-head-actions .btn { flex: 1 1 auto; }
   .filter-strip { gap: var(--sp-2); margin-bottom: var(--sp-3); }
   .filter-field { flex: 1; min-width: calc(50% - var(--sp-2)); }
   .search-box { min-width: 100%; }
   .search-box input { height: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  .btn {
+    min-height: 44px;
+  }
 
-  /* ----------------------------------------------------------
-     DENSITÉ MOBILE (mobile-first, « chaque pixel compte ») :
-     les cartes occupent toute la largeur, marges latérales gérées
-     par le conteneur (px-3 = 12px). On supprime les doubles marges
-     et on resserre le rythme vertical sans sacrifier la lisibilité.
-     ---------------------------------------------------------- */
+  /* Éviter tout débordement horizontal */
+  html, body, .app-layout, .main-content-wrapper {
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+
   .card, .section-card { margin-bottom: var(--sp-3); border-radius: var(--radius); }
   .section-header { padding: var(--sp-3) var(--sp-4); }
   .section-body { padding: var(--sp-4); }
-  .m-card { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); }
   .summary-strip { margin-bottom: var(--sp-3); }
   .kpi-grid { margin-bottom: var(--sp-3); }
+}
+
+.menu-item-danger {
+  color: #DC2626 !important;
+}
+.menu-item-danger mat-icon {
+  color: #DC2626 !important;
 }
 
 /* ============================================================
@@ -1012,13 +1067,15 @@ mat-icon.inline-ic {
   .mat-mdc-paginator-range-label { margin-right: var(--sp-2) !important; font-size: 12.5px; }
 }
 
-/* Sidebar = navigation UNIQUE sur desktop : les barres d'onglets in-page des
-   espaces (désormais répliquées dans la sidebar avec ?tab=N) sont masquées
-   ≥768px. Elles restent visibles sur mobile, où la bottom nav + « Plus »
-   partagent la navigation. Le contenu des onglets, lui, reste piloté par le
-   query param (les composants s'abonnent à queryParamMap). */
+/* Espace Région : navigation assurée par la sidebar (desktop) et la bottom-nav (mobile).
+   L'en-tête d'onglets in-page avec flèches de pagination est masqué en permanence. */
+app-espace-region .mat-mdc-tab-header,
+.sr-tab-group > .mat-mdc-tab-header {
+  display: none !important;
+}
+
+/* Sidebar = navigation UNIQUE sur desktop pour les autres espaces (masqués ≥768px) */
 @media (min-width: 768px) {
-  app-espace-region .mat-mdc-tab-header,
   app-espace-central .mat-mdc-tab-header,
   app-espace-bcsu .custom-tabs-nav,
   app-espace-structure .custom-tabs-nav {
@@ -1263,14 +1320,14 @@ button, a { transition: all var(--transition); }
 /* En-tête teinté vert clair, texte vert foncé (19/10/2026, application plus colorée),
    détaché du corps par le filet vert foncé. */
 .premium-table thead tr {
-  background: var(--border-light) !important;
+  background: linear-gradient(90deg, #E9F8F1 0%, #EEF6FF 62%, #F4F0FF 100%) !important;
   border-bottom: 1px solid var(--border) !important;
 }
 
 .premium-table th.mat-header-cell {
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 12px 20px;
@@ -1292,7 +1349,7 @@ button, a { transition: all var(--transition); }
 :where(.premium-table > thead > tr > th:not(.mat-header-cell)) {
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 12px 20px;
@@ -1384,26 +1441,535 @@ button, a { transition: all var(--transition); }
 }
 
 /* ============================================================
-   LISIBILITÉ (19/10/2026) — textes agrandis d'un cran
-   Les écrans écrivent leurs tailles en dur (text-[13px]… plusieurs centaines de fois).
-   Plutôt que de retoucher chaque gabarit, les PETITES tailles sont relevées ici d'environ
-   1px : les titres (16px et plus) ne bougent pas, la mise en page du téléphone en mode
-   vertical non plus (les lignes passent à la ligne, les tableaux défilent déjà). Les
-   variantes « !text-[…] » des icônes (taille fixée avec leur boîte) et « md:text-[…] »
-   (grands écrans) ne sont pas concernées. Placé en fin de fichier, hors @layer : passe
-   après les utilitaires Tailwind à spécificité égale.
+   LISIBILITÉ — petites écritures relevées d'un cran supplémentaire.
+   Les titres déjà grands gardent leur hiérarchie. Les tableaux conservent leur
+   défilement horizontal interne et les cartes mobiles peuvent s'étirer. Les variantes
+   « !text-[…] » des icônes et « md:text-[…] » ne sont pas concernées.
    ============================================================ */
-.text-\[9px\]    { font-size: 10px; }
-.text-\[10px\]   { font-size: 11px; }
-.text-\[10\.5px\] { font-size: 11.5px; }
-.text-\[11px\]   { font-size: 12px; }
-.text-\[11\.5px\] { font-size: 12.5px; }
-.text-\[12px\]   { font-size: 13px; }
-.text-\[12\.5px\] { font-size: 13.5px; }
-.text-\[13px\]   { font-size: 14px; }
-.text-\[13\.5px\] { font-size: 14.5px; }
-.text-\[14px\]   { font-size: 15px; }
-.text-\[14\.5px\] { font-size: 15.5px; }
-.text-\[15px\]   { font-size: 16px; }
-.text-xs { font-size: 13px; }
-.text-sm { font-size: 15px; }
+/* Placé hors @layer : passe après les utilitaires Tailwind à spécificité égale.
+   ============================================================ */
+.text-\[9px\]    { font-size: 11px; }
+.text-\[10px\]   { font-size: 12px; }
+.text-\[10\.5px\] { font-size: 12.5px; }
+.text-\[11px\]   { font-size: 13px; }
+.text-\[11\.5px\] { font-size: 13.5px; }
+.text-\[12px\]   { font-size: 14px; }
+.text-\[12\.5px\] { font-size: 14.5px; }
+.text-\[13px\]   { font-size: 15px; }
+.text-\[13\.5px\] { font-size: 15.5px; }
+.text-\[14px\]   { font-size: 16px; }
+.text-\[14\.5px\] { font-size: 16.5px; }
+.text-\[15px\]   { font-size: 17px; }
+.text-xs { font-size: 14px; }
+.text-sm { font-size: 16px; }
+
+/* En téléphone portrait, les boutons s'étirent plutôt que de couper leur libellé. */
+@media (max-width: 480px) {
+  .btn { min-height: 44px; height: auto; white-space: normal; line-height: 1.3; }
+}
+
+/* ============================================================
+   LISTES MOBILE — les lignes de tableau deviennent des cartes.
+   La directive partagée conserve les vrais contrôles Angular et
+   fournit un libellé à chaque cellule depuis l'en-tête de colonne.
+   ============================================================ */
+.mobile-table-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: transparent;
+}
+
+.mobile-table-action-menu {
+  position: absolute;
+  width: min(240px, calc(100vw - 24px));
+  max-height: min(60dvh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--border-cadre);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-table-action-item {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mobile-table-action-item mat-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--text-secondary);
+  font-size: 20px;
+}
+
+.mobile-table-action-item.is-destructive,
+.mobile-table-action-item.is-destructive mat-icon { color: #B42318; }
+
+.mobile-table-action-item:active { background: var(--field-fill); }
+
+@media (max-width: 767.98px) {
+  .app-layout { min-height: 100dvh; }
+
+  .main-content-wrapper.has-bottom-nav > main {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .main-content-wrapper:not(.has-bottom-nav) > main {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .overflow-x-auto:has(> table.mobile-card-table),
+  .overflow-x-auto:has(table.mobile-card-table) {
+    overflow-x: visible !important;
+    overflow-y: visible;
+  }
+
+  table.mobile-card-table {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0;
+    table-layout: auto !important;
+  }
+
+  table.mobile-card-table > caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  table.mobile-card-table > thead {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  table.mobile-card-table > tbody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+
+  table.mobile-card-table > tbody > tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    padding: 42px 12px 8px;
+    border: 1px solid var(--border-cadre) !important;
+    border-radius: 14px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  table.mobile-card-table > tbody > tr[data-mobile-card-clickable='true'] { cursor: pointer; }
+  table.mobile-card-table > tbody > tr[data-mobile-card-clickable='true']:active {
+    border-color: var(--primary-200) !important;
+    background: var(--primary-light);
+  }
+  table.mobile-card-table > tbody > tr[data-mobile-card-clickable='true']:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  table.mobile-card-table > tbody > tr > td,
+  table.mobile-card-table > tbody > tr > th {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px 6px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--text-primary);
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: left;
+    vertical-align: top;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  table.mobile-card-table > tbody > tr > td::before,
+  table.mobile-card-table > tbody > tr > th::before {
+    content: attr(data-mobile-label);
+    display: block;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  table.mobile-card-table > tbody > tr > td:first-child,
+  table.mobile-card-table > tbody > tr > th:first-child {
+    grid-column: 1 / -1;
+    min-height: 52px;
+    padding-right: 46px !important;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 650;
+  }
+
+  table.mobile-card-table > tbody > tr > td:only-child,
+  table.mobile-card-table > tbody > tr > th:only-child,
+  table.mobile-card-table > tbody > tr > td[colspan],
+  table.mobile-card-table > tbody > tr > th[colspan] { grid-column: 1 / -1; }
+
+  table.mobile-card-table > tbody > tr > td.mobile-card-action-source { display: none !important; }
+
+  table.mobile-card-table > tbody > tr > td[data-mobile-card-trigger-cell] {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 2;
+    display: block;
+    width: 44px;
+    min-height: 44px;
+    padding: 0 !important;
+  }
+
+  table.mobile-card-table > tbody > tr > td[data-mobile-card-trigger-cell]::before { content: none; }
+
+  .mobile-card-more {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .mobile-card-more:active { background: var(--field-fill); }
+  .mobile-card-more mat-icon { width: 22px; height: 22px; font-size: 22px; }
+
+  .m-actions.mobile-card-action-group {
+    position: absolute !important;
+    top: 6px;
+    right: 6px;
+    z-index: 3;
+    display: flex !important;
+    gap: 0 !important;
+    margin: 0 !important;
+  }
+  .m-card:has(.mobile-card-action-group) .m-card-top { padding-right: 42px; }
+  .m-actions.mobile-card-action-group > :not([data-mobile-card-trigger]) { display: none !important; }
+
+  table.mobile-card-table tfoot,
+  table.mobile-card-table tfoot tr { display: block; width: 100%; }
+  table.mobile-card-table tfoot td { display: flex; justify-content: space-between; flex-wrap: wrap; }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 140;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border-cadre);
+    background: var(--card-bg);
+    box-shadow: 0 -2px 10px rgba(16, 24, 40, 0.06);
+  }
+
+  .mobile-bottom-nav-item {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 2px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .mobile-bottom-nav-item > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-bottom-nav-item.active { color: var(--primary); background: var(--primary-light); }
+  .mobile-bottom-nav-item:active { background: var(--field-fill); }
+  .mobile-bottom-nav-icon { position: relative; display: inline-flex; }
+  .mobile-bottom-nav-icon mat-icon { width: 21px; height: 21px; font-size: 21px; }
+  .mobile-bottom-nav-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border: 2px solid white;
+    border-radius: 999px;
+    background: var(--warn);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 12px;
+  }
+}
+
+@media (max-width: 359px) {
+  table.mobile-card-table > tbody > tr { grid-template-columns: minmax(0, 1fr); }
+  table.mobile-card-table > tbody > tr > td,
+  table.mobile-card-table > tbody > tr > th { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  table.mobile-card-table > tbody > tr,
+  .mobile-table-action-item,
+  .mobile-card-more,
+  .mobile-bottom-nav-item { transition: none !important; }
+}
+
+
+/* ============================================================
+   DASHBOARD REFONTE v5 — Composants partagés
+   KPI Cards Admin, Action Items, utilitaires dashboard.
+   ============================================================ */
+
+/* ── Admin KPI Cards ──────────────────────────────────────── */
+.admin-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border-cadre);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  font: inherit;
+  appearance: none;
+  text-decoration: none;
+  width: 100%;
+}
+
+.admin-kpi-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.admin-kpi-card:active {
+  transform: translateY(0);
+}
+
+.admin-kpi-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.admin-kpi-card__value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+.admin-kpi-card__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.admin-kpi-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: auto;
+}
+
+/* ── Admin Action Items ───────────────────────────────────── */
+.admin-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-cadre);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.admin-action-item:hover {
+  background: var(--field-bg);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-action-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.admin-action-item__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.admin-action-item__desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ── Utilitaires page dashboard ───────────────────────────── */
+
+/* Réduction du padding top des pages espace */
+.espace-page-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* État vide générique dashboard */
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-kpi-card,
+  .admin-action-item {
+    transition: none;
+  }
+
+  .admin-kpi-card:hover,
+  .admin-action-item:hover {
+    transform: none;
+  }
+}
+
+
+/* ============================================================
+   ESPACE POSTE DE SANTÉ — Accueil
+   ============================================================ */
+
+.poste-action-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-cadre);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+  text-decoration: none;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.15s ease;
+  width: 100%;
+}
+
+.poste-action-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.poste-action-card--primary:hover {
+  border-color: var(--primary-200);
+  background: var(--primary-light);
+}
+
+.poste-action-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}

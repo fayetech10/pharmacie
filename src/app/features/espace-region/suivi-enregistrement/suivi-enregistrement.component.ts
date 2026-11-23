@@ -17,6 +17,8 @@ import {
   FactureAssigneeResume
 } from '../services/sr-gestion.service';
 import { FactureEventsService } from '../../../core/services/facture-events.service';
+import { DossierPatient, DocumentComplementaire, FactureStructure, TypePiece } from '../../../core/models/structure.model';
+import { DossierPatientContenuComponent } from '../../espace-poste/dossier-patient-dialog/dossier-patient-contenu.component';
 
 export interface PrestationLigne {
   id: string;
@@ -41,6 +43,21 @@ export interface PatientLigne {
   sexe: string;
   dateNaissance: string;
   datePriseEnCharge?: string;
+  telephone?: string;
+  adresse?: string;
+  numeroRegistre?: string;
+  lettreNumero?: string;
+  service?: string;
+  ircIra?: string;
+  indicationCbt?: string;
+  verificationCarte?: string;
+  categorieCarte?: string;
+  etatCarte?: string;
+  dateDebutValiditeCarte?: string;
+  dateFinValiditeCarte?: string;
+  mutuelle?: string;
+  typeAdhesion?: string;
+  tauxCouverture?: number;
   statutDossier: string;
   montantTotal: number;
   statutLigne: string;
@@ -48,10 +65,16 @@ export interface PatientLigne {
   pieces?: string[];
 }
 
+interface InfoPatient {
+  libelle: string;
+  valeur: string;
+  mono?: boolean;
+}
+
 @Component({
   selector: 'app-suivi-enregistrement',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTabsModule, MatTooltipModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTabsModule, MatTooltipModule, MatSnackBarModule, DossierPatientContenuComponent],
   templateUrl: './suivi-enregistrement.component.html'
 })
 export class SuiviEnregistrementComponent implements OnInit {
@@ -63,6 +86,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
   derniereMiseAJour = new Date();
+  dateSuiviDuJour = this.formaterDateDuJour();
   actualisationEnCours = false;
   erreurChargement = false;
   filtreStatutSuivi = '';
@@ -109,7 +133,13 @@ export class SuiviEnregistrementComponent implements OnInit {
   // Prestataire sélectionné
   prestataireSelectionne: (StructureEnregistrementRow | PharmacieEnregistrementRow | PostePolariseRow) | null = null;
   facturesDuPrestataire: FactureAssigneeResume[] = [];
+  chargementFacturesPrestataire = false;
+  erreurFacturesPrestataire = false;
+  chargementDetailFacture = false;
   searchFacture = '';
+  private requeteFacturesPrestataire = 0;
+  private cibleFacturesPrestataire = '';
+  private requeteDetailFacture = 0;
 
   // Facture sélectionnée pour affichage des bénéficiaires
   factureSelectionnee: FactureAssigneeResume | null = null;
@@ -121,6 +151,12 @@ export class SuiviEnregistrementComponent implements OnInit {
 
   // ===================== MODAL : VISUALISATION DU DOSSIER (3 PIÈCES) =====================
   afficherModalDossier = false;
+  chargementDossier = false;
+  factureDossier: FactureStructure | null = null;
+  dossierActif: DossierPatient | null = null;
+  documentsDossier: DocumentComplementaire[] = [];
+  feuilleSoinsDossier?: { id: string; numero: string };
+  afficherIdentitePatient = false;
   ongletDossierActif: 'TOUT' | 'CARTE' | 'TICKET' | 'FEUILLE' = 'TOUT';
 
   // ===================== MODAL : MODIFIER PRESTATION =====================
@@ -172,6 +208,10 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.actualiserVues(false);
   }
 
+  private formaterDateDuJour(): string {
+    return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Dakar' }).format(new Date());
+  }
+
   chargerDonnees(showLoader = true): void {
     if (showLoader) this.loading = true;
     this.actualisationEnCours = true;
@@ -181,6 +221,7 @@ export class SuiviEnregistrementComponent implements OnInit {
         this.structures = res.structures;
         this.pharmacies = res.pharmacies;
         this.derniereMiseAJour = new Date();
+        this.dateSuiviDuJour = this.formaterDateDuJour();
         this.erreurChargement = false;
         this.actualisationEnCours = false;
         this.loading = false;
@@ -281,8 +322,26 @@ export class SuiviEnregistrementComponent implements OnInit {
   }
 
   private rafraichirFacturesPrestataire(prestataireId: string): void {
-    this.srService.getFacturesParPrestataire(prestataireId, this.annee).subscribe(list => {
-      this.facturesDuPrestataire = list;
+    const annee = this.annee;
+    const cible = `${prestataireId}:${annee}`;
+    const requete = ++this.requeteFacturesPrestataire;
+    if (this.cibleFacturesPrestataire !== cible) this.facturesDuPrestataire = [];
+    this.cibleFacturesPrestataire = cible;
+    this.chargementFacturesPrestataire = true;
+    this.erreurFacturesPrestataire = false;
+
+    this.srService.getFacturesParPrestataire(prestataireId, annee).subscribe({
+      next: list => {
+        if (requete !== this.requeteFacturesPrestataire || this.prestataireSelectionne?.id !== prestataireId || this.annee !== annee) return;
+        this.facturesDuPrestataire = list;
+        this.chargementFacturesPrestataire = false;
+      },
+      error: () => {
+        if (requete !== this.requeteFacturesPrestataire) return;
+        this.chargementFacturesPrestataire = false;
+        this.erreurFacturesPrestataire = true;
+        this.snackBar.open('Impossible de récupérer les factures de ce prestataire.', 'Fermer', { duration: 4500 });
+      }
     });
   }
 
@@ -341,6 +400,10 @@ export class SuiviEnregistrementComponent implements OnInit {
     return this.postesPolarisesDuDistrict.filter(p => p.factureEnvoyeePeriode).length;
   }
 
+  get totalPostesSaisisAujourdhui(): number {
+    return this.postesPolarisesDuDistrict.filter(p => p.saisieAujourdhui).length;
+  }
+
   get totalPostesAvecSaisie(): number {
     return this.postesPolarisesDuDistrict.filter(p => p.nombreFactures > 0).length;
   }
@@ -389,14 +452,43 @@ export class SuiviEnregistrementComponent implements OnInit {
   // ===================== DÉTAIL FACTURE & BÉNÉFICIAIRES =====================
 
   ouvrirDetailFacture(f: FactureAssigneeResume): void {
+    this.chargementDetailFacture = false;
     this.factureSelectionnee = f;
     this.vueMode = 'PATIENTS';
     this.patientSelectionne = null;
     this.searchPatient = '';
+    if (f.resumeSeul) {
+      const requete = ++this.requeteDetailFacture;
+      this.chargementDetailFacture = true;
+      this.patientsDeLaFacture = [];
+      this.srService.getFactureStructure(f.id).subscribe({
+        next: facture => {
+          if (requete !== this.requeteDetailFacture || this.factureSelectionnee?.id !== f.id) return;
+          this.factureSelectionnee = {
+            ...f,
+            montantTotal: facture.montantTotal ?? f.montantTotal,
+            montantSencsu: facture.montantTotalSencsu ?? f.montantSencsu,
+            factureOrigine: facture
+          };
+          this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+          this.chargementDetailFacture = false;
+        },
+        error: () => {
+          if (requete !== this.requeteDetailFacture) return;
+          this.chargementDetailFacture = false;
+          this.vueMode = 'FACTURES';
+          this.factureSelectionnee = null;
+          this.snackBar.open('Impossible de charger le détail de cette facture.', 'Fermer', { duration: 4500 });
+        }
+      });
+      return;
+    }
     this.patientsDeLaFacture = this.srService.getPatientsPourFacture(f);
   }
 
   fermerDetailFacture(): void {
+    this.requeteDetailFacture++;
+    this.chargementDetailFacture = false;
     this.vueMode = 'FACTURES';
     this.factureSelectionnee = null;
     this.patientSelectionne = null;
@@ -409,6 +501,7 @@ export class SuiviEnregistrementComponent implements OnInit {
 
   ouvrirPrestationsPatient(patient: PatientLigne): void {
     this.patientSelectionne = patient;
+    this.afficherIdentitePatient = false;
     this.vueMode = 'PRESTATIONS';
   }
 
@@ -425,10 +518,77 @@ export class SuiviEnregistrementComponent implements OnInit {
   ouvrirModalDossier(onglet: 'TOUT' | 'CARTE' | 'TICKET' | 'FEUILLE' = 'TOUT'): void {
     this.ongletDossierActif = onglet;
     this.afficherModalDossier = true;
+    this.chargementDossier = true;
+    this.factureDossier = null;
+    this.dossierActif = null;
+    this.documentsDossier = [];
+    this.feuilleSoinsDossier = undefined;
+    const patient = this.patientSelectionne;
+    const factureId = this.factureSelectionnee?.id;
+    if (!patient || !factureId || this.factureSelectionnee?.typeEtablissement !== 'STRUCTURE') {
+      this.chargementDossier = false;
+      return;
+    }
+    this.srService.getFactureStructure(factureId).subscribe({
+      next: facture => {
+        if (this.patientSelectionne?.id !== patient.id || this.factureSelectionnee?.id !== factureId) return;
+        this.factureDossier = facture;
+        const dossier = (facture.dossiers || []).find(d =>
+          d.id === patient.id || (!!patient.matricule && d.matricule === patient.matricule) ||
+          (!!patient.lettreNumero && d.lettreGarantieNumero === patient.lettreNumero) ||
+          (!!patient.nom && !!patient.prenom && d.nom?.toLowerCase() === patient.nom.toLowerCase() && d.prenom?.toLowerCase() === patient.prenom.toLowerCase() && (!patient.dateNaissance || d.dateNaissance === patient.dateNaissance))
+        );
+        const lignes = facture.lignes || [];
+        const lignesPatient = dossier
+          ? lignes.filter(l => l.dossierId === dossier.id ||
+              (!!dossier.matricule && l.patientMatricule === dossier.matricule) ||
+              (!!dossier.lettreGarantieNumero && l.lettreGarantieNumero === dossier.lettreGarantieNumero))
+          : lignes.filter(l =>
+              (!!patient.matricule && l.patientMatricule === patient.matricule) ||
+              (!!patient.lettreNumero && l.lettreGarantieNumero === patient.lettreNumero) ||
+              (!!patient.id && l.patientId === patient.id) ||
+              (!!patient.nom && !!patient.prenom && l.patientNom?.toLowerCase() === patient.nom.toLowerCase() && l.patientPrenom?.toLowerCase() === patient.prenom.toLowerCase() && (!patient.dateNaissance || l.patientDateNaissance === patient.dateNaissance))
+            );
+        this.dossierActif = dossier || {
+          id: lignesPatient[0]?.dossierId || patient.id,
+          statut: patient.statutDossier === 'A_COMPLETER' ? 'A_COMPLETER' : 'COMPLET',
+          nom: patient.nom, prenom: patient.prenom, sexe: patient.sexe, dateNaissance: patient.dateNaissance,
+          telephone: patient.telephone, adresse: patient.adresse, matricule: patient.matricule,
+          numeroCni: patient.cni, numeroRegistre: patient.numeroRegistre, identiteVerrouillee: false,
+          verificationCarte: patient.verificationCarte, categorieCarte: patient.categorieCarte, etatCarte: patient.etatCarte,
+          tauxCouverture: patient.tauxCouverture, dateDebutValidite: patient.dateDebutValiditeCarte,
+          dateFinValidite: patient.dateFinValiditeCarte, mutuelle: patient.mutuelle, typeAdhesion: patient.typeAdhesion,
+          lettreGarantieNumero: patient.lettreNumero, datePriseEnCharge: patient.datePriseEnCharge,
+          pieces: (patient.pieces || []).filter((piece): piece is TypePiece =>
+            ['TICKET_CAISSE', 'CNI_RECTO', 'CNI_VERSO', 'EXTRAIT_NAISSANCE', 'CARTE_ASSURE', 'PHOTO_ASSURE'].includes(piece)
+          )
+        };
+        const lettreNumero = this.dossierActif.lettreGarantieNumero || patient.lettreNumero;
+        this.documentsDossier = (facture.documentsComplementaires || []).filter(doc =>
+          (!!patient.matricule && doc.patientMatricule === patient.matricule) ||
+          (!!lettreNumero && doc.lettreGarantieNumero === lettreNumero)
+        );
+        const feuille = lignesPatient.find(l => l.feuilleSoinsId);
+        this.feuilleSoinsDossier = feuille?.feuilleSoinsId
+          ? { id: feuille.feuilleSoinsId, numero: feuille.feuilleSoinsNumero || feuille.feuilleSoinsId }
+          : undefined;
+        this.chargementDossier = false;
+      },
+      error: () => {
+        if (this.patientSelectionne?.id !== patient.id) return;
+        this.chargementDossier = false;
+        this.snackBar.open('Impossible de charger les pièces du dossier patient.', 'Fermer', { duration: 4500 });
+      }
+    });
   }
 
   fermerModalDossier(): void {
     this.afficherModalDossier = false;
+    this.chargementDossier = false;
+    this.factureDossier = null;
+    this.dossierActif = null;
+    this.documentsDossier = [];
+    this.feuilleSoinsDossier = undefined;
   }
 
   get patientsFiltres(): PatientLigne[] {
@@ -442,6 +602,47 @@ export class SuiviEnregistrementComponent implements OnInit {
       (p.datePriseEnCharge && p.datePriseEnCharge.includes(q)) ||
       p.prestations.some(pr => pr.designation.toLowerCase().includes(q) || pr.codeActe.toLowerCase().includes(q))
     );
+  }
+
+  get identitePatient(): InfoPatient[] {
+    const p = this.patientSelectionne;
+    if (!p) return [];
+    return this.infosRenseignees([
+      { libelle: 'Nom complet', valeur: `${p.prenom} ${p.nom}`.trim() },
+      { libelle: 'Matricule', valeur: p.matricule, mono: true },
+      { libelle: 'Date de la visite', valeur: p.datePriseEnCharge ? this.formatDate(p.datePriseEnCharge) : '' },
+      { libelle: 'Date de naissance', valeur: p.dateNaissance ? this.formatDate(p.dateNaissance) : '' },
+      { libelle: 'Sexe', valeur: p.sexe === 'M' ? 'Masculin' : p.sexe === 'F' ? 'Féminin' : p.sexe },
+      { libelle: 'Téléphone', valeur: p.telephone || '' },
+      { libelle: 'Adresse', valeur: p.adresse || '' },
+      { libelle: 'N° de CNI', valeur: p.cni, mono: true },
+      { libelle: 'N° de registre', valeur: p.numeroRegistre || '', mono: true },
+      { libelle: 'Lettre de garantie', valeur: p.lettreNumero || '', mono: true },
+      { libelle: 'Service', valeur: p.service || '' },
+      { libelle: 'Dialyse (IRC / IRA)', valeur: p.ircIra || '' },
+      { libelle: 'Indication', valeur: p.indicationCbt || '' }
+    ]);
+  }
+
+  get cartePatient(): InfoPatient[] {
+    const p = this.patientSelectionne;
+    if (!p) return [];
+    const validite = p.dateDebutValiditeCarte || p.dateFinValiditeCarte
+      ? `${p.dateDebutValiditeCarte ? this.formatDate(p.dateDebutValiditeCarte) : '…'} au ${p.dateFinValiditeCarte ? this.formatDate(p.dateFinValiditeCarte) : '…'}` : '';
+    return this.infosRenseignees([
+      { libelle: 'Vérification', valeur: p.verificationCarte === 'VERIFIEE' ? 'Carte vérifiée en ligne'
+        : p.verificationCarte === 'NON_VERIFIEE_PANNE' ? 'Non vérifiée (système en panne)' : '' },
+      { libelle: 'Catégorie', valeur: p.categorieCarte || '' },
+      { libelle: 'État', valeur: p.etatCarte || '' },
+      { libelle: 'Validité', valeur: validite },
+      { libelle: 'Mutuelle', valeur: p.mutuelle || '' },
+      { libelle: "Type d'adhésion", valeur: p.typeAdhesion || '' },
+      { libelle: 'Taux de couverture', valeur: p.tauxCouverture != null ? `${p.tauxCouverture} %` : '' }
+    ]);
+  }
+
+  private infosRenseignees(infos: InfoPatient[]): InfoPatient[] {
+    return infos.filter(info => !!info.valeur && info.valeur.trim() !== '');
   }
 
   // ===================== MODIFIER UNE PRESTATION =====================

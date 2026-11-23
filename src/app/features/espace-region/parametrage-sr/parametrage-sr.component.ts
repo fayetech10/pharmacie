@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SrGestionService, ControleurSR } from '../services/sr-gestion.service';
@@ -15,10 +18,16 @@ import { Pharmacie } from '../../../core/models/pharmacie.model';
 import { District } from '../../../core/models/referentiel.model';
 import { User, Role } from '../../../core/models/user.model';
 
+const SANS_DISTRICT = '__sans_district__';
+
+function normaliserTexte(texte: string | null | undefined): string {
+  return (texte || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
 @Component({
   selector: 'app-parametrage-sr',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatMenuModule, MatTooltipModule, MatSnackBarModule],
   templateUrl: './parametrage-sr.component.html'
 })
 export class ParametrageSrComponent implements OnInit {
@@ -30,6 +39,8 @@ export class ParametrageSrComponent implements OnInit {
   agentsBcsu: User[] = [];
   controleurs: ControleurSR[] = [];
   districts: District[] = [];
+  rechercheStructures = '';
+  filtreDistrictStructures = '';
 
   // Modals de création
   afficherModalStructure = false;
@@ -37,14 +48,15 @@ export class ParametrageSrComponent implements OnInit {
   afficherModalBcsu = false;
   afficherModalControleur = false;
   afficherModalAcces = false;
-  afficherModalModificationPoste = false;
-  posteEnModification: StructureSanitaire | null = null;
-  enregistrementPosteEnCours = false;
-  modificationPoste = {
+  afficherModalModificationStructure = false;
+  structureEnModification: StructureSanitaire | null = null;
+  enregistrementStructureEnCours = false;
+  modificationStructure = {
     nom: '',
     adresse: '',
     telephone: '',
     email: '',
+    typeStructure: 'CS',
     structureRattachementId: '',
     districtId: ''
   };
@@ -94,6 +106,12 @@ export class ParametrageSrComponent implements OnInit {
   };
 
   loading = false;
+  importStructuresEnCours = false;
+  modeleStructuresEnCours = false;
+  exportIdentifiantsEnCours = false;
+  resultatImportStructures: { importes: number; echecs: number; erreurs: string[] } | null = null;
+
+  private destroyRef = inject(DestroyRef);
 
   constructor(
     public srService: SrGestionService,
@@ -102,11 +120,73 @@ export class ParametrageSrComponent implements OnInit {
     private pharmacieService: PharmacieService,
     private districtService: DistrictService,
     private authService: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const sub = params.get('sub');
+        if (sub !== null && ['0', '1', '2', '3'].includes(sub)) {
+          this.activeSubTab = +sub as 0 | 1 | 2 | 3;
+        }
+      });
     this.chargerTousLesParametres();
+  }
+
+  changerSousOnglet(index: 0 | 1 | 2 | 3): void {
+    this.activeSubTab = index;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { sub: index },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  get structuresFiltrees(): StructureSanitaire[] {
+    const mots = normaliserTexte(this.rechercheStructures).trim().split(/\s+/).filter(Boolean);
+    return this.structures.filter(structure => {
+      if (this.filtreDistrictStructures === SANS_DISTRICT) {
+        if (structure.districtId) return false;
+      } else if (this.filtreDistrictStructures && structure.districtId !== this.filtreDistrictStructures) {
+        return false;
+      }
+
+      if (!mots.length) return true;
+      const nomDistrict = this.districts.find(d => d.id === structure.districtId)?.nom || '';
+      const texte = normaliserTexte([
+        structure.nom,
+        structure.code,
+        structure.adresse,
+        structure.telephone,
+        structure.email,
+        nomDistrict
+      ].join(' '));
+      return mots.every(mot => texte.includes(mot));
+    });
+  }
+
+  get districtsPourStructures(): District[] {
+    const regionId = this.authService.getCurrentUser()?.regionId;
+    return this.districts
+      .filter(district => !regionId || !district.regionId || district.regionId === regionId)
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  }
+
+  get nombreStructuresSansDistrict(): number {
+    return this.structures.filter(structure => !structure.districtId).length;
+  }
+
+  get filtresStructuresActifs(): boolean {
+    return !!(this.rechercheStructures.trim() || this.filtreDistrictStructures);
+  }
+
+  effacerFiltresStructures(): void {
+    this.rechercheStructures = '';
+    this.filtreDistrictStructures = '';
   }
 
   chargerTousLesParametres(): void {
@@ -205,6 +285,75 @@ export class ParametrageSrComponent implements OnInit {
 
   // ===================== STRUCTURES =====================
 
+  importerStructures(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fichier = input.files?.[0];
+    if (!fichier) return;
+
+    this.importStructuresEnCours = true;
+    this.resultatImportStructures = null;
+    this.structureService.importPostes(fichier).subscribe({
+      next: (resultat) => {
+        this.importStructuresEnCours = false;
+        this.resultatImportStructures = resultat;
+        this.chargerTousLesParametres();
+        this.snackBar.open(`${resultat.importes} structure(s) importée(s), ${resultat.echecs} échec(s).`, 'Fermer', { duration: 5000 });
+      },
+      error: (err) => {
+        this.importStructuresEnCours = false;
+        this.snackBar.open('Erreur lors de l’import : ' + (err?.error?.message || err.message), 'Fermer', { duration: 6000 });
+      }
+    });
+    input.value = '';
+  }
+
+  telechargerModeleStructures(): void {
+    this.modeleStructuresEnCours = true;
+    this.structureService.downloadModeleImportPostes().subscribe({
+      next: (blob) => {
+        this.modeleStructuresEnCours = false;
+        this.telechargerBlob(blob, 'modele_import_structures_sanitaires.xlsx');
+      },
+      error: (err) => {
+        this.modeleStructuresEnCours = false;
+        this.snackBar.open('Erreur lors du téléchargement : ' + (err?.error?.message || err.message), 'Fermer', { duration: 5000 });
+      }
+    });
+  }
+
+  exporterIdentifiantsStructures(): void {
+    if (!this.structures.length) {
+      this.snackBar.open('Aucune structure sanitaire à exporter.', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    this.exportIdentifiantsEnCours = true;
+    this.structureService.exportIdentifiantsPdf(this.structures.map(s => s.id)).subscribe({
+      next: (blob) => {
+        this.exportIdentifiantsEnCours = false;
+        this.telechargerBlob(blob, 'identifiants_structures_sanitaires.pdf');
+        this.snackBar.open(`Identifiants exportés pour ${this.structures.length} structure(s).`, 'Fermer', { duration: 3500 });
+      },
+      error: (err) => {
+        this.exportIdentifiantsEnCours = false;
+        this.snackBar.open('Erreur lors de l’export : ' + (err?.error?.message || err.message), 'Fermer', { duration: 5000 });
+      }
+    });
+  }
+
+  fermerResultatImportStructures(): void {
+    this.resultatImportStructures = null;
+  }
+
+  private telechargerBlob(blob: Blob, nomFichier: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = nomFichier;
+    lien.click();
+    window.URL.revokeObjectURL(url);
+  }
+
   creerStructure(): void {
     if (!this.nouvelleStructure.nom.trim()) {
       this.snackBar.open('Le nom de l\'établissement est obligatoire', 'Fermer', { duration: 3000 });
@@ -287,88 +436,94 @@ export class ParametrageSrComponent implements OnInit {
   }
 
   get centresRattachementPoste(): StructureSanitaire[] {
-    return this.structures.filter(s => typeEffectifStructure(s) !== 'PS');
+    return this.structures.filter(s => typeEffectifStructure(s) !== 'PS' && s.id !== this.structureEnModification?.id);
   }
 
-  get districtsDuPoste(): District[] {
-    const centre = this.centresRattachementPoste.find(s => s.id === this.modificationPoste.structureRattachementId);
-    const regionId = centre?.regionId || this.posteEnModification?.regionId;
+  get districtsPourModification(): District[] {
+    const regionId = this.structureEnModification?.regionId || this.authService.getCurrentUser()?.regionId;
     return this.districts.filter(d => !regionId || !d.regionId || d.regionId === regionId);
   }
 
   get centreRattachementSelectionne(): StructureSanitaire | undefined {
-    return this.centresRattachementPoste.find(s => s.id === this.modificationPoste.structureRattachementId);
+    return this.centresRattachementPoste.find(s => s.id === this.modificationStructure.structureRattachementId);
   }
 
   selectionnerCentrePoste(): void {
     const centre = this.centreRattachementSelectionne;
-    if (centre?.districtId) this.modificationPoste.districtId = centre.districtId;
-    else this.modificationPoste.districtId = '';
+    if (centre?.districtId) this.modificationStructure.districtId = centre.districtId;
   }
 
-  ouvrirModificationPoste(poste: StructureSanitaire): void {
-    this.posteEnModification = poste;
-    this.modificationPoste = {
-      nom: poste.nom || '',
-      adresse: poste.adresse || '',
-      telephone: poste.telephone || '',
-      email: poste.email || '',
-      structureRattachementId: poste.structureRattachementId || '',
-      districtId: poste.districtId || ''
+  ouvrirModificationStructure(structure: StructureSanitaire): void {
+    this.structureEnModification = structure;
+    this.modificationStructure = {
+      nom: structure.nom || '',
+      adresse: structure.adresse || '',
+      telephone: structure.telephone || '',
+      email: structure.email || '',
+      typeStructure: structure.typeStructure || typeEffectifStructure(structure) || 'CS',
+      structureRattachementId: structure.structureRattachementId || '',
+      districtId: structure.districtId || ''
     };
-    this.afficherModalModificationPoste = true;
+    this.afficherModalModificationStructure = true;
   }
 
-  fermerModificationPoste(): void {
-    if (this.enregistrementPosteEnCours) return;
-    this.afficherModalModificationPoste = false;
-    this.posteEnModification = null;
+  fermerModificationStructure(): void {
+    if (this.enregistrementStructureEnCours) return;
+    this.afficherModalModificationStructure = false;
+    this.structureEnModification = null;
   }
 
-  enregistrerModificationPoste(): void {
-    const poste = this.posteEnModification;
-    const nom = this.modificationPoste.nom.trim();
-    if (!poste || !nom) {
-      this.snackBar.open('Le nom du poste est obligatoire.', 'Fermer', { duration: 3500 });
+  enregistrerModificationStructure(): void {
+    const structure = this.structureEnModification;
+    const nom = this.modificationStructure.nom.trim();
+    if (!structure || !nom) {
+      this.snackBar.open('Le nom de l’établissement est obligatoire.', 'Fermer', { duration: 3500 });
       return;
     }
 
-    const centre = this.centresRattachementPoste.find(s => s.id === this.modificationPoste.structureRattachementId);
-    if (!centre) {
-      this.snackBar.open('Choisissez le centre de santé ou l’hôpital de rattachement.', 'Fermer', { duration: 4500 });
-      return;
-    }
-    const districtId = centre.districtId || this.modificationPoste.districtId;
-    if (!districtId) {
-      this.snackBar.open('Le poste doit être rattaché à un district sanitaire.', 'Fermer', { duration: 4500 });
-      return;
+    const typeStr = this.modificationStructure.typeStructure || 'CS';
+    let districtId = this.modificationStructure.districtId;
+    let structureRattachementId: string | undefined = undefined;
+
+    if (typeStr === 'PS') {
+      const centre = this.centresRattachementPoste.find(s => s.id === this.modificationStructure.structureRattachementId);
+      if (!centre) {
+        this.snackBar.open('Choisissez le centre de santé ou l’hôpital de rattachement du poste.', 'Fermer', { duration: 4500 });
+        return;
+      }
+      structureRattachementId = centre.id;
+      districtId = centre.districtId || districtId;
+      if (!districtId) {
+        this.snackBar.open('Le poste doit être rattaché à un district sanitaire.', 'Fermer', { duration: 4500 });
+        return;
+      }
     }
 
     const requete: StructureSanitaireRequest = {
-      code: poste.code,
-      typeStructure: 'PS',
+      code: structure.code,
+      typeStructure: typeStr,
       nom,
-      adresse: this.modificationPoste.adresse.trim() || undefined,
-      telephone: this.modificationPoste.telephone.trim() || undefined,
-      email: this.modificationPoste.email.trim() || undefined,
-      regionId: centre.regionId || poste.regionId,
-      districtId,
-      siegeDistrict: false,
-      bcsuId: poste.bcsuId,
-      structureRattachementId: centre.id
+      adresse: this.modificationStructure.adresse.trim() || undefined,
+      telephone: this.modificationStructure.telephone.trim() || undefined,
+      email: this.modificationStructure.email.trim() || undefined,
+      regionId: structure.regionId || this.authService.getCurrentUser()?.regionId || '',
+      districtId: districtId || undefined,
+      siegeDistrict: structure.siegeDistrict,
+      bcsuId: structure.bcsuId,
+      structureRattachementId
     };
 
-    this.enregistrementPosteEnCours = true;
-    this.structureService.updateStructure(poste.id, requete).subscribe({
+    this.enregistrementStructureEnCours = true;
+    this.structureService.updateStructure(structure.id, requete).subscribe({
       next: (misAJour) => {
         this.structures = this.structures.map(s => s.id === misAJour.id ? misAJour : s);
-        this.enregistrementPosteEnCours = false;
-        this.afficherModalModificationPoste = false;
-        this.posteEnModification = null;
-        this.snackBar.open('Poste de santé modifié avec succès.', 'OK', { duration: 3500 });
+        this.enregistrementStructureEnCours = false;
+        this.afficherModalModificationStructure = false;
+        this.structureEnModification = null;
+        this.snackBar.open('Structure sanitaire modifiée avec succès.', 'OK', { duration: 3500 });
       },
       error: (err) => {
-        this.enregistrementPosteEnCours = false;
+        this.enregistrementStructureEnCours = false;
         this.snackBar.open('Erreur de modification : ' + (err?.error?.message || err.message), 'Fermer', { duration: 5500 });
       }
     });
