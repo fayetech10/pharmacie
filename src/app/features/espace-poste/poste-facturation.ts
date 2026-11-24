@@ -444,7 +444,7 @@ export function lignesPatients(visites: VisiteFacture[], cheminFacture: any[],
     return {
       cle: v.cle,
       nom: v.nomComplet,
-      date: dateFr(v.date),
+      date: dateHeureVisite(v),
       matricule: v.matricule,
       lien: [...cheminFacture, 'patients', v.cle],
       pastilles,

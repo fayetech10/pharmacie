@@ -445,6 +445,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.piecesModifiees.clear();
     this.repriseCni.oublier();
     this.lignes = [this.ligneVide()];
+    this.heureSoins = this.heureActuelle();
     this.resultat = null;
     this.saisieHorsLigne = null;
     this.cleSaisie = '';
@@ -620,7 +621,7 @@ export class FacturationCsuPosteComponent implements OnInit, OnDestroy {
     this.categorie = categorieDe(brouillon.regime) || null;
     this.patient = { ...PATIENT_VIDE, ...brouillon.patient };
     this.dateSoins = brouillon.dateSoins;
-    this.heureSoins = brouillon.heureSoins || '';
+    this.heureSoins = brouillon.heureSoins || this.heureActuelle();
     this.codeImmatriculation = brouillon.codeImmatriculation;
     this.carte = brouillon.carte;
     this.verification = brouillon.verification;
