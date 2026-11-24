@@ -51,13 +51,21 @@ export interface PositionListe {
   template: `
     <div *ngIf="lignes.length === 0" class="py-8 text-center text-text-muted text-[13.5px]">{{ vide }}</div>
 
-    <div *ngIf="lignes.length" class="overflow-x-auto rounded-lg border border-border">
-      <table class="w-full text-[13.5px] border-collapse">
+    <div *ngIf="lignes.length" class="overflow-x-auto">
+      <table data-mobile-card-skip class="w-full text-[13.5px] border-collapse">
+        <thead class="hidden sm:table-header-group">
+          <tr class="border-b border-border text-left text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+            <th class="py-2.5 px-3">Patient</th>
+            <th class="py-2.5 px-2">Date et heure</th>
+            <th class="py-2.5 pl-2 pr-1 text-right">Matricule</th>
+            <th class="w-8"></th>
+          </tr>
+        </thead>
         <tbody>
           <tr *ngFor="let l of lignes | paginer: pg.page : pg.taille; trackBy: parCle" (click)="ouvrir(l)"
-              class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field"
+              class="cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-field"
               [ngClass]="l.teinte === 'vert' ? 'bg-success-light' : (l.teinte === 'ambre' ? 'bg-amber-50' : 'bg-white')">
-            <td class="py-2.5 px-3 align-middle">
+            <td class="py-3 px-3 align-middle">
               <!-- Lien pour le clavier et l'ouverture dans un nouvel onglet ; la ligne entière ouvre aussi. -->
               <a [routerLink]="l.lien" [queryParams]="queryParams" [state]="etatOuverture" (click)="$event.stopPropagation(); signaler()"
                  class="font-semibold text-text-primary text-[14px] no-underline hover:underline">{{ l.nom }}</a>
@@ -72,11 +80,11 @@ export interface PositionListe {
                 {{ l.date }}<span *ngIf="l.matricule"> · <span class="font-mono">{{ l.matricule }}</span></span>
               </div>
             </td>
-            <td class="hidden sm:table-cell py-2.5 px-2 align-middle whitespace-nowrap text-text-secondary">{{ l.date }}</td>
-            <td class="hidden sm:table-cell py-2.5 pl-2 pr-1 align-middle text-right whitespace-nowrap font-mono text-[13px] text-text-primary">
+            <td class="hidden sm:table-cell py-3 px-2 align-middle whitespace-nowrap text-text-secondary">{{ l.date }}</td>
+            <td class="hidden sm:table-cell py-3 pl-2 pr-1 align-middle text-right whitespace-nowrap font-mono text-[13px] text-text-primary">
               {{ l.matricule || '—' }}
             </td>
-            <td class="py-2.5 pl-1 pr-3 align-middle text-right" [class.w-8]="!l.action">
+            <td class="py-3 pl-1 pr-3 align-middle text-right" [class.w-8]="!l.action">
               <button *ngIf="l.action" type="button" (click)="$event.stopPropagation(); ouvrir(l)"
                       class="btn btn-primary btn-sm whitespace-nowrap">
                 <mat-icon>edit_note</mat-icon> {{ l.action }}

@@ -612,7 +612,7 @@
       </div>
 
       <!-- Tableau des patients (Desktop) -->
-      <div class="overflow-x-auto desktop-only">
+      <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <tbody class="divide-y divide-slate-100 font-medium">
             <tr *ngFor="let p of patientsFiltres"
@@ -658,35 +658,6 @@
         </table>
       </div>
 
-      <!-- Cartes mobiles Niveau 4 : Patients -->
-      <div class="m-cards md:hidden p-3" *ngIf="patientsFiltres.length > 0">
-        <div class="m-card clickable" *ngFor="let p of patientsFiltres" (click)="ouvrirPrestationsPatient(p)"
-             role="button" tabindex="0" (keydown.enter)="ouvrirPrestationsPatient(p)"
-             [attr.aria-label]="'Ouvrir les prestations de ' + p.prenom + ' ' + p.nom">
-          <div class="m-card-top">
-            <div class="min-w-0">
-              <div class="m-title">{{ p.prenom }} {{ p.nom }}</div>
-              <div class="m-sub font-mono">{{ p.matricule }}<span *ngIf="p.cni"> · CNI {{ p.cni }}</span></div>
-            </div>
-            <span *ngIf="p.statutLigne === 'REJETEE'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-              Rejeté
-            </span>
-            <span *ngIf="p.statutLigne !== 'REJETEE'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-              3 pièces
-            </span>
-          </div>
-          <div class="m-row">
-            <span><mat-icon class="inline-ic">event</mat-icon>{{ formatDateHeure(p.datePriseEnCharge, p.heurePriseEnCharge) }}</span>
-          </div>
-          <div class="m-foot">
-            <span class="m-amount">{{ formatMontant(p.montantTotal) }}</span>
-            <mat-icon class="m-chevron !text-xl !w-5 !h-5 text-text-muted">chevron_right</mat-icon>
-          </div>
-        </div>
-      </div>
-      <div *ngIf="patientsFiltres.length === 0" class="md:hidden p-6 text-center text-slate-400 text-xs italic">
-        Aucun patient ne correspond à la recherche.
-      </div>
     </div>
   </div>
 
@@ -784,7 +755,7 @@
       </div>
 
       <div class="p-4">
-        <div class="overflow-x-auto desktop-only">
+        <div class="overflow-x-auto">
           <table class="w-full text-xs">
             <thead>
               <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
@@ -844,41 +815,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Cartes mobiles Niveau 5 : Prestations -->
-        <div class="m-cards md:hidden">
-          <div class="m-card" *ngFor="let ligne of patientSelectionne.prestations; let lIdx = index">
-            <div class="m-card-top">
-              <div class="min-w-0">
-                <div class="m-title">{{ ligne.designation }}</div>
-                <div class="m-sub font-mono" *ngIf="ligne.codeActe">{{ ligne.codeActe }}</div>
-              </div>
-              <div class="flex items-center gap-1">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
-                      [ngClass]="ligne.statutLigne === 'REJETEE' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'">
-                  {{ ligne.statutLigne === 'REJETEE' ? 'Rejetée' : 'Conforme' }}
-                </span>
-                <button type="button" class="m-more-btn"
-                        [matMenuTriggerFor]="menuPrest"
-                        [matMenuTriggerData]="{ l: ligne, idx: lIdx }"
-                        (click)="$event.stopPropagation()"
-                        aria-label="Actions de la prestation">
-                  <mat-icon class="!text-[20px] !w-5 !h-5 text-text-secondary">more_vert</mat-icon>
-                </button>
-              </div>
-            </div>
-            <div class="m-row">
-              <span>Qté : <strong>{{ ligne.quantite }}</strong></span>
-              <span>PU : {{ formatMontant(ligne.prixUnitaire) }}</span>
-            </div>
-            <div class="m-foot">
-              <span class="m-amount">{{ formatMontant(ligne.montant) }}</span>
-            </div>
-          </div>
-          <div *ngIf="patientSelectionne.prestations.length === 0" class="p-4 text-center text-slate-400 text-xs italic">
-            Aucune prestation enregistrée pour ce patient.
-          </div>
         </div>
 
         <mat-menu #menuPrest="matMenu" xPosition="before">

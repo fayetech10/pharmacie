@@ -254,7 +254,7 @@ export class PatientFactureDetailComponent implements OnInit, OnDestroy {
     if (!v) return [];
     return this.renseignees([
       { libelle: 'Matricule', valeur: v.matricule || '', mono: true },
-      { libelle: 'Date de la visite', valeur: dateFr(v.date) },
+      { libelle: 'Date et heure de la visite', valeur: dateHeureVisite(v) },
       { libelle: 'Date de naissance', valeur: dateFr(v.dateNaissance) },
       { libelle: 'Sexe', valeur: v.sexe === 'M' ? 'Masculin' : v.sexe === 'F' ? 'Féminin' : '' },
       { libelle: 'Téléphone', valeur: v.telephone || '' },

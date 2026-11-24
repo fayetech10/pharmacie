@@ -98,14 +98,37 @@
          visites du mois, que le formulaire reprend déjà. -->
     <ng-container *ngIf="!edition">
 
-    <!-- =========== Espace PS : de la carte du patient ne reste que « Dossier » ===========
-         (demande du 19/10/2026) — ni nom, ni badges, ni Informations, ni Fiche. -->
+    <!-- =========== Espace PS : accès aux informations et au dossier patient =========== -->
     <div *ngIf="contexte === 'espace-ps' && dossierAffiche" class="card mb-4 print:hidden">
-      <div class="section-body">
+      <div class="section-body flex flex-col gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" class="btn btn-ghost btn-sm" (click)="afficherIdentite = !afficherIdentite"
+                  [attr.aria-expanded]="afficherIdentite" aria-controls="infos-patient-ps"
+                  [attr.title]="afficherIdentite ? 'Masquer les informations du patient' : 'Afficher les informations du patient'">
+            <mat-icon>{{ afficherIdentite ? 'visibility_off' : 'visibility' }}</mat-icon> Informations
+          </button>
         <button type="button" class="btn btn-outline btn-sm" (click)="afficherDossier = true"
                 title="Ouvrir le dossier patient (documents justificatifs)">
           <mat-icon>folder_shared</mat-icon> Dossier
         </button>
+        </div>
+        <div *ngIf="afficherIdentite" id="infos-patient-ps" class="flex flex-col gap-4">
+          <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+            <div *ngFor="let i of identite" class="min-w-0">
+              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+              <dd class="m-0 mt-0.5 text-[14px] text-text-primary break-words" [class.font-mono]="i.mono">{{ i.valeur }}</dd>
+            </div>
+          </dl>
+          <div *ngIf="carte.length">
+            <h3 class="m-0 mb-2 pb-1.5 border-b border-border-light text-[12px] font-semibold uppercase tracking-wide text-text-muted">Carte CSU</h3>
+            <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+              <div *ngFor="let i of carte" class="min-w-0">
+                <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
+                <dd class="m-0 mt-0.5 text-[14px] text-text-primary break-words">{{ i.valeur }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -209,7 +232,7 @@
         </div>
         <div class="section-body">
           <div class="overflow-x-auto">
-            <table class="w-full text-[13px] border-collapse">
+            <table data-mobile-card-skip class="w-full text-[13px] border-collapse">
               <thead>
                 <!-- Ni date (déjà sur la ligne de la facture, et dans le titre) ni parts SEN-CSU /
                      patient (demande du 19/10/2026) : prestation, quantité, prix, montant. -->
@@ -290,18 +313,18 @@
               </div>
             </div>
           </div>
-          <div class="section-body flex flex-col gap-1.5">
+          <div class="section-body py-0">
             <ng-container *ngFor="let autre of visitesDuPatient">
               <div *ngIf="autre === v"
-                   class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-light text-primary text-[13px] font-semibold">
-                <mat-icon class="!text-base !w-4 !h-4">event</mat-icon>
+                   class="flex items-center gap-3 px-4 py-3 border-b border-border-light bg-primary-light text-primary text-[13px] font-semibold">
+                <mat-icon class="!text-base !w-4 !h-4 shrink-0">event</mat-icon>
                 <span class="flex-1">Visite du {{ dateHeure(autre) }}</span>
-                <span class="text-[12px]">affichée</span>
+                <span class="text-[12px] whitespace-nowrap">Affichée</span>
               </div>
               <a *ngIf="autre !== v" [routerLink]="lienVisite(autre)"
                  [replaceUrl]="true" [state]="etatNavigation"
-                 class="flex items-center gap-2 px-3 py-2 rounded-lg bg-field hover:bg-border-light text-[13px] text-text-primary no-underline">
-                <mat-icon class="!text-base !w-4 !h-4 text-text-secondary">event</mat-icon>
+                 class="flex items-center gap-3 px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-field text-[13px] text-text-primary no-underline">
+                <mat-icon class="!text-base !w-4 !h-4 shrink-0 text-text-secondary">event</mat-icon>
                 <span class="flex-1 font-semibold">Visite du {{ dateHeure(autre) }}</span>
                 <app-status-badge *ngIf="autre.dossier?.statut === 'A_COMPLETER'" statut="A_COMPLETER" famille="dossier"
                                   [sansIcone]="true"></app-status-badge>
