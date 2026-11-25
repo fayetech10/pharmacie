@@ -118,6 +118,7 @@ export class FacturesStructuresComponent implements OnInit {
 
   // Postes polarisés du district sanitaire
   postesDuDistrict: PostePolariseRow[] = [];
+  facturesDuDistrict: FactureAssigneeResume[] = [];
   posteSelectionne: PostePolariseRow | null = null;
   searchPoste = '';
   filtreStatutFacture = '';
@@ -347,7 +348,7 @@ export class FacturesStructuresComponent implements OnInit {
       // Si district sanitaire -> Niveau 15 (Postes de santé polarisés)
       this.niveauEntonnoir = 15;
       this.searchPoste = '';
-      this.filtreStatutFacture = '';
+      this.filtreStatutFacture = 'ENVOYEE';
       this.chargerPostesDuDistrict(s.id);
     } else {
       // Si hôpital (EPS) -> Niveau 2 (Régimes)
@@ -360,8 +361,17 @@ export class FacturesStructuresComponent implements OnInit {
 
   chargerPostesDuDistrict(districtId: string): void {
     this.loading = true;
-    this.srService.getPostesPolarises(districtId, this.annee, this.moisFiltre || undefined).subscribe(list => {
-      this.postesDuDistrict = list;
+    forkJoin({
+      postes: this.srService.getPostesPolarises(districtId, this.annee, this.moisFiltre || undefined),
+      factures: this.srService.getToutesFacturesResumes()
+    }).subscribe(({ postes, factures }) => {
+      const idsPostes = new Set(postes.map(poste => poste.id));
+      this.facturesDuDistrict = factures.filter(f =>
+        f.typeEtablissement === 'STRUCTURE' &&
+        this.factureDansPeriode(f) &&
+        (idsPostes.has(f.etablissementId) || f.districtId === districtId)
+      );
+      this.postesDuDistrict = postes;
       this.loading = false;
     });
   }
@@ -377,16 +387,28 @@ export class FacturesStructuresComponent implements OnInit {
 
   get postesFiltres(): PostePolariseRow[] {
     const q = this.searchPoste.toLowerCase().trim();
-    return this.postesDuDistrict.filter(p =>
-      (!q || p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)) &&
-      this.posteCorrespondAuFiltreStatut(p)
+    return this.postesSelonStatut.filter(p =>
+      !q || p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
     );
   }
 
-  private posteCorrespondAuFiltreStatut(poste: PostePolariseRow): boolean {
-    return !this.filtreStatutFacture || poste.statutsFactures.some(statut =>
-      this.statutCorrespondAuFiltre(statut, this.filtreStatutFacture)
-    );
+  private get postesSelonStatut(): PostePolariseRow[] {
+    return this.postesDuDistrict.map(poste => {
+      const facturesPoste = this.facturesDuDistrict.filter(f =>
+        (f.posteId === poste.id || f.etablissementId === poste.id) &&
+        (!this.filtreStatutFacture || this.statutCorrespondAuFiltre(f.statut, this.filtreStatutFacture))
+      );
+      return {
+        ...poste,
+        factureEnvoyeePeriode: facturesPoste.some(f => this.statutCorrespondAuFiltre(f.statut, 'ENVOYEE')),
+        statutSuiviPeriode: facturesPoste.length ? 'ENVOYEE' as const : 'A_SAISIR' as const,
+        nombreFactures: facturesPoste.length,
+        montantTotal: facturesPoste.reduce((total, f) => total + f.montantTotal, 0),
+        montantSencsu: facturesPoste.reduce((total, f) => total + f.montantSencsu, 0),
+        nombreBeneficiaires: facturesPoste.reduce((total, f) => total + f.nombreBeneficiaires, 0),
+        statutsFactures: Array.from(new Set(facturesPoste.map(f => f.statut)))
+      };
+    }).filter(poste => poste.nombreFactures > 0);
   }
 
   private statutCorrespondAuFiltre(statut: string, filtre: string): boolean {
@@ -415,15 +437,15 @@ export class FacturesStructuresComponent implements OnInit {
   }
 
   get totalMontantPostes(): number {
-    return this.postesDuDistrict.reduce((sum, p) => sum + p.montantTotal, 0);
+    return this.postesSelonStatut.reduce((sum, p) => sum + p.montantTotal, 0);
   }
 
   get totalSencsuPostes(): number {
-    return this.postesDuDistrict.reduce((sum, p) => sum + p.montantSencsu, 0);
+    return this.postesSelonStatut.reduce((sum, p) => sum + p.montantSencsu, 0);
   }
 
   get totalFacturesPostes(): number {
-    return this.postesDuDistrict.reduce((sum, p) => sum + p.nombreFactures, 0);
+    return this.postesSelonStatut.reduce((sum, p) => sum + p.nombreFactures, 0);
   }
 
   // ===================== NIVEAU 2 : RÉGIMES DE LA STRUCTURE OU DU POSTE =====================
