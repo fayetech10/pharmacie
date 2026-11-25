@@ -98,9 +98,7 @@
           <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
             <tr>
               <th class="py-3 px-4">Structure / District</th>
-              <th class="py-3 px-3">Catégorie</th>
               <th class="py-3 px-4 text-right">Factures émises</th>
-              <th class="py-3 px-4">Statut</th>
               <th class="py-3 px-4 text-right">Montant total facturé</th>
             </tr>
           </thead>
@@ -125,31 +123,12 @@
                   <div class="text-[11px] font-normal text-slate-400 font-mono">{{ s.code }}</div>
                 </div>
               </td>
-              <td class="py-3.5 px-3">
-                <span class="px-2 py-0.5 rounded text-[11px] font-bold"
-                      [ngClass]="s.type === 'EPS' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'">
-                  {{ s.type === 'EPS' ? 'Hôpital (EPS)' : 'District Sanitaire' }}
-                </span>
-              </td>
               <td class="py-3.5 px-4 text-right font-bold text-slate-800">{{ s.nombreFactures }}</td>
-              <td class="py-3.5 px-4">
-                <div *ngIf="s.statutsFactures.length > 0" class="flex flex-wrap gap-1">
-                  <span *ngFor="let statut of s.statutsFactures"
-                        class="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
-                        [ngClass]="classeStatut(statut)">
-                    {{ libelleStatut(statut) }}
-                  </span>
-                </div>
-                <span *ngIf="s.statutsFactures.length === 0"
-                      class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 whitespace-nowrap">
-                  Aucune facture envoyée
-                </span>
-              </td>
               <td class="py-3.5 px-4 text-right font-bold text-emerald-700">{{ formatMontant(s.montantTotal) }}</td>
             </tr>
             <tr *ngIf="structures.length === 0">
-              <td colspan="5" class="py-8 text-center text-slate-400 text-xs italic">
-                Aucune facture transmise pour la période sélectionnée.
+              <td colspan="3" class="py-8 text-center text-slate-400 text-xs italic">
+                Aucune facture envoyée ou à traiter pour la période sélectionnée.
               </td>
             </tr>
           </tbody>
@@ -169,17 +148,10 @@
                 </mat-icon>
                 <span class="truncate">{{ s.nom }}</span>
               </div>
-              <div class="m-sub">{{ s.type === 'EPS' ? 'Hôpital (EPS)' : 'District Sanitaire' }} <span *ngIf="s.code" class="font-mono">· {{ s.code }}</span></div>
+              <div class="m-sub"><span *ngIf="s.code" class="font-mono">{{ s.code }}</span></div>
             </div>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-light text-primary">
               {{ s.nombreFactures }} fact.
-            </span>
-          </div>
-          <div class="m-row" *ngIf="s.statutsFactures.length > 0">
-            <span *ngFor="let statut of s.statutsFactures"
-                  class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                  [ngClass]="classeStatut(statut)">
-              {{ libelleStatut(statut) }}
             </span>
           </div>
           <div class="m-foot">
@@ -189,7 +161,7 @@
         </div>
       </div>
       <div *ngIf="structures.length === 0" class="md:hidden p-6 text-center text-slate-400 text-xs italic">
-        Aucune facture transmise pour la période sélectionnée.
+        Aucune facture envoyée ou à traiter pour la période sélectionnée.
       </div>
     </div>
   </div>

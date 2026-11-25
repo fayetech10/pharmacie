@@ -68,7 +68,7 @@
   --ink-deep: #071310;
   --ink-soft: #12332A;      /* surface active sur fond sombre */
   --ink-text: #9DB4AB;      /* texte secondaire sur fond sombre */
-  --ink-gradient: linear-gradient(180deg, #0E211B 0%, #0A1713 100%);
+  --ink-gradient: var(--ink);
 
   /* Accent secondaire (pagination) — aligné sur la marque */
   --gold: var(--primary);
@@ -80,7 +80,8 @@
   --card-bg: #FFFFFF;
   --text-primary: #0F172A;
   --text-secondary: #475467;
-  --text-muted: #94A3B8;
+  /* Texte atténué mais encore lisible sur fond clair (contraste AA). */
+  --text-muted: #667085;
   /* Filet des encadrés : délimitation neutre, subtile et précise */
   --border-cadre: #E2E8F0;
   --border: var(--border-cadre);
@@ -107,7 +108,7 @@
   /* Rayons & rythme — resserrés : un rayon plus court lit « précis » */
   --radius-sm: 6px;
   --radius: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 12px;
   --radius-full: 999px;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -331,7 +332,7 @@ input[readonly], textarea[readonly] {
 .section-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: var(--sp-5);
 }
@@ -348,7 +349,7 @@ input[readonly], textarea[readonly] {
   color: #fff !important;
 }
 
-/* En-tête de section : léger dégradé frais, sans réduire le contraste du texte. */
+/* En-tête de section : une surface neutre garde l'attention sur les données. */
 .section-header {
   display: flex;
   align-items: center;
@@ -357,7 +358,7 @@ input[readonly], textarea[readonly] {
   padding: var(--sp-4) var(--sp-5);
   border-bottom: 1px solid var(--border-light);
   flex-wrap: wrap;
-  background: linear-gradient(105deg, #F0FDF8 0%, #F2F8FF 100%);
+  background: var(--field-bg);
 }
 .section-title-group { display: flex; align-items: center; gap: var(--sp-3); }
 .section-title-group h2 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
@@ -403,8 +404,7 @@ input[readonly], textarea[readonly] {
   .btn-primary { @apply bg-primary text-white; }
   .btn-primary:hover:not(:disabled) {
     @apply bg-primary-hover;
-    /* Halo émeraude au survol : l'action principale se signale sans bouger. */
-    box-shadow: 0 6px 16px -6px rgba(4, 120, 87, 0.55);
+    box-shadow: 0 0 0 2px var(--primary-200);
   }
 
   .btn-outline { @apply bg-white text-primary-dark border-border; }
@@ -493,15 +493,15 @@ input[readonly], textarea[readonly] {
   border-radius: 50%;
   background: currentColor;
 }
-.status-BROUILLON  { background: #F1F5F9; color: #64748B; border-color: #DBE3EC; }
+.status-BROUILLON  { background: var(--field-bg); color: var(--text-secondary); border-color: var(--border-strong); }
 .status-SOUMISE_CS { background: var(--info-light); color: var(--info); border-color: var(--info-border); }
-.status-REJETEE_CS { background: #FDF2F8; color: #DB2777; border-color: #FBCFE8; }
-.status-ENVOYEE    { background: #E6F4EA; color: #137333; border-color: #CEEAD6; }
+.status-REJETEE_CS { background: var(--warn-light); color: var(--warn); border-color: #FECACA; }
+.status-ENVOYEE    { background: var(--success-light); color: var(--primary-dark); border-color: var(--primary-200); }
 .status-VALIDEE_SR { background: var(--primary-light); color: var(--primary); border-color: var(--primary-200); }
-.status-REJETEE_SR { background: #FFF7ED; color: #EA580C; border-color: #FED7AA; }
+.status-REJETEE_SR { background: var(--warning-light); color: var(--warning); border-color: var(--warning-border); }
 .status-VALIDEE_NC { background: var(--primary-100); color: var(--primary-hover); border-color: var(--primary-200); }
-.status-REJETEE_NC { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
-.status-PAYEE      { background: #FEFCE8; color: #A16207; border-color: #FDE68A; }
+.status-REJETEE_NC { background: var(--warn-light); color: var(--warn); border-color: #FECACA; }
+.status-PAYEE      { background: var(--info-light); color: var(--info); border-color: var(--info-border); }
 
 /* ============================================================
    KPI (cartes indicateurs)
@@ -542,10 +542,10 @@ input[readonly], textarea[readonly] {
   border: 1px solid var(--border);
 }
 .kpi-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
-.kpi-icon.blue  { color: #2563EB; background: #EFF6FF; border-color: #DBEAFE; }
+.kpi-icon.blue  { color: var(--info); background: var(--info-light); border-color: var(--info-border); }
 .kpi-icon.green { color: var(--primary); background: var(--primary-light); border-color: var(--primary-200); }
-.kpi-icon.amber { color: #D97706; background: #FFFBEB; border-color: #FEF3C7; }
-.kpi-icon.red   { color: #DC2626; background: #FEF2F2; border-color: #FEE2E2; }
+.kpi-icon.amber { color: var(--warning); background: var(--warning-light); border-color: var(--warning-border); }
+.kpi-icon.red   { color: var(--warn); background: var(--warn-light); border-color: #FECACA; }
 .kpi-body { display: flex; flex-direction: column; min-width: 0; }
 .kpi-value {
   font-size: 24px;
@@ -652,7 +652,7 @@ input[readonly], textarea[readonly] {
 .entity-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
 .entity-icon.region { background: var(--primary-light); color: var(--primary); }
 .entity-icon.pharma { background: var(--accent-light); color: var(--accent); }
-.entity-icon.month  { background: #FEF3C7; color: #D97706; }
+.entity-icon.month  { background: var(--warning-light); color: var(--warning); }
 .entity-name { display: block; font-weight: 600; color: var(--text-primary); }
 .entity-sub { display: block; font-size: 13px; color: var(--text-muted); }
 
@@ -702,7 +702,6 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -729,8 +728,7 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
    coupé). C'est le corps qui défile, pas la carte. */
 .modal-card form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .modal-header {
-  /* Même en-tête teinté que les cartes (19/10/2026). */
-  background: linear-gradient(90deg, var(--primary-light) 0%, #F7FCF9 100%);
+  background: var(--field-bg);
   padding: 18px var(--sp-6);
   display: flex;
   justify-content: space-between;
@@ -748,8 +746,8 @@ button.crumb:hover { background: var(--border-light); color: var(--text-primary)
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   transition: all var(--transition);
 }
 .close-btn:hover { background: var(--border-light); color: var(--text-primary); }
@@ -867,8 +865,8 @@ a.m-card:active, .m-card.clickable:active { transform: scale(0.99); background: 
 }
 .m-chip.danger { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
 .m-chip.neutral { background: var(--border-light); color: var(--text-secondary); border-color: var(--border); }
-.m-chip.warning { background: #FEF6E7; color: #B45309; border-color: #FDE2B3; }
-.m-chip.info { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+.m-chip.warning { background: var(--warning-light); color: var(--warning); border-color: var(--warning-border); }
+.m-chip.info { background: var(--info-light); color: var(--info); border-color: var(--info-border); }
 
 /* Ligne d'icône + texte dans les cartes mobiles (partagé) */
 .m-row span { display: inline-flex; align-items: center; gap: 4px; }
@@ -1165,9 +1163,9 @@ app-espace-region .mat-mdc-tab-header,
 }
 
 /* Page : montée en fondu. */
-.fade-in { animation: entreePage 360ms var(--ease-out) backwards; }
+.fade-in { animation: entreePage 240ms var(--ease-out) backwards; }
 @keyframes entreePage {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
 }
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -1181,8 +1179,8 @@ app-espace-region .mat-mdc-tab-header,
 app-indicateur,
 app-tuile-activite {
   --rang: 0;
-  animation: entreeElement 420ms var(--ease-out) backwards;
-  animation-delay: calc(var(--rang) * 45ms);
+  animation: entreeElement 240ms var(--ease-out) backwards;
+  animation-delay: calc(var(--rang) * 25ms);
 }
 :is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(2) { --rang: 1; }
 :is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(3) { --rang: 2; }
@@ -1193,7 +1191,7 @@ app-tuile-activite {
 :is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(8) { --rang: 7; }
 :is(:is(.kpi-grid, .summary-strip, .m-cards, .anim-cascade) > *, app-indicateur, app-tuile-activite):nth-child(n+9) { --rang: 8; }
 @keyframes entreeElement {
-  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  from { opacity: 0; transform: translateY(4px); }
 }
 
 /* Écran resservi depuis le cache (voir AttentePageComponent) : il s'affiche d'un coup. Rejouer
@@ -1233,11 +1231,18 @@ app-tuile-activite {
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-button, a { transition: all var(--transition); }
+button, a { transition: color var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition); }
 
 /* Anneau de focus accessible (boutons, liens…). Les champs de saisie en sont exclus :
    ils ne doivent jamais afficher de contour vert, même au clic (voir plus haut). */
 :focus-visible:not(input):not(select):not(textarea) { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Sur écran tactile, garder des zones d'appui confortables sans modifier la densité desktop. */
+@media (pointer: coarse), (max-width: 767.98px) {
+  .btn { min-height: 44px; }
+  .action-btn { width: 44px; height: 44px; }
+  .close-btn { width: 44px; height: 44px; }
+}
 
 /* Bandeau de synthèse réutilisable (listes : factures, pharmacies, utilisateurs, médicaments) */
 .summary-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -1249,10 +1254,10 @@ button, a { transition: all var(--transition); }
 }
 .sum-ic { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sum-ic mat-icon { font-size: 20px; width: 20px; height: 20px; }
-.sum-ic.blue   { color: #2563EB; }
+.sum-ic.blue   { color: var(--info); }
 .sum-ic.green  { color: var(--primary); }
-.sum-ic.violet { color: #7C3AED; }
-.sum-ic.amber  { color: #D97706; }
+.sum-ic.violet { color: var(--violet); }
+.sum-ic.amber  { color: var(--warning); }
 .sum-ic.red    { color: var(--warn); }
 .sum-body { display: flex; flex-direction: column; min-width: 0; }
 .sum-val { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -1300,7 +1305,7 @@ button, a { transition: all var(--transition); }
 .glass-table-container {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   overflow: hidden;
   margin-top: var(--sp-4);
 }
@@ -1320,7 +1325,7 @@ button, a { transition: all var(--transition); }
 /* En-tête teinté vert clair, texte vert foncé (19/10/2026, application plus colorée),
    détaché du corps par le filet vert foncé. */
 .premium-table thead tr {
-  background: linear-gradient(90deg, #E9F8F1 0%, #EEF6FF 62%, #F4F0FF 100%) !important;
+  background: var(--field-bg) !important;
   border-bottom: 1px solid var(--border) !important;
 }
 

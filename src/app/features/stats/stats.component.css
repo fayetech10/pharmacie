@@ -29,13 +29,19 @@
   @apply relative overflow-hidden;
 
 }.kpi-icon.blue {
- color: #2563EB; 
+  color: var(--info);
+  background: var(--info-light);
+  border-color: var(--info-border);
 }.kpi-icon.green {
   @apply text-primary;
 }.kpi-icon.violet {
- color: #7C3AED; 
+  color: var(--violet);
+  background: var(--violet-light);
+  border-color: var(--violet-border);
 }.kpi-icon.amber {
- color: #D97706; 
+  color: var(--warning);
+  background: var(--warning-light);
+  border-color: var(--warning-border);
 }.kpi-foot {
   @apply text-[11px] text-text-muted mt-0.5;
 
@@ -93,7 +99,7 @@
 }.perf-card.ok   .perf-bar span {
  background: var(--primary); 
 }.perf-card.warn .perf-bar span {
- background: #D97706; 
+ background: var(--warning);
 }.perf-card.bad  .perf-bar span {
  background: var(--warn); 
 }.perf-card.ok   .perf-value {
@@ -107,7 +113,7 @@
 }.perf-card.ok   .perf-status {
  background: var(--primary-100); color: var(--primary-hover); 
 }.perf-card.warn .perf-status {
- background: #FEF3C7; color: #B45309; 
+ background: var(--warning-light); color: var(--warning);
 }.perf-card.bad  .perf-status {
  background: var(--warn-light); color: var(--warn); 
 }/* Grilles graphiques */
@@ -221,7 +227,7 @@
   @apply shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-border-light text-text-secondary text-[13px] font-bold;
 
 }.rank-pos.gold {
- background: #FEF3C7; color: #B45309; 
+ background: var(--warning-light); color: var(--warning);
 }.rank-info {
   @apply flex-1 min-w-0;
 
@@ -239,7 +245,7 @@
 
 }.rank-bar span {
   @apply block h-full rounded-full transition-[width] duration-500;
-  background: linear-gradient(90deg, var(--primary-200), var(--primary));
+  background: var(--primary);
 }.rank-sub {
   @apply text-xs text-text-muted;
 

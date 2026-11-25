@@ -23,9 +23,7 @@
 
 .sidebar-desktop {
   width: 240px;
-  background:
-    radial-gradient(ellipse at 0% 0%, rgba(16, 185, 129, 0.12), transparent 38%),
-    linear-gradient(180deg, #10251F 0%, #0B1915 100%);
+  background: var(--ink);
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   position: fixed;
@@ -167,7 +165,7 @@
 
 /* Actif : surface émeraude douce, filet latéral et icône teintée. */
 .sidebar-nav-link.active {
-  background: linear-gradient(100deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.1));
+  background: var(--ink-soft);
   border-color: rgba(110, 231, 183, 0.16);
   color: #FFFFFF;
   font-weight: 600;
@@ -231,9 +229,9 @@
 }
 
 .sidebar-user-btn > span:first-child {
-  background: linear-gradient(145deg, #D1FAE5, #A7F3D0);
-  color: #064E3B;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  background: var(--primary-100);
+  color: var(--primary-dark);
+  box-shadow: none;
 }
 
 .nav-badge {

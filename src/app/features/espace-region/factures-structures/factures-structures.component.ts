@@ -215,7 +215,10 @@ export class FacturesStructuresComponent implements OnInit {
     }).pipe(
       map(({ factures, structures, districts }) => {
         const facturesAnnee = factures.filter(f => this.factureDansPeriode(f));
-        this.facturesCourantes = facturesAnnee.filter(f => f.typeEtablissement === 'STRUCTURE');
+        const facturesEnvoyeesATraiter = facturesAnnee.filter(f =>
+          this.statutCorrespondAuFiltre(f.statut, 'ENVOYEE')
+        );
+        this.facturesCourantes = facturesEnvoyeesATraiter.filter(f => f.typeEtablissement === 'STRUCTURE');
         const structuresParDistrict = new Map<string, StructureSanitaire[]>();
         for (const structure of structures) {
           if (!structure.districtId) continue;
@@ -227,7 +230,7 @@ export class FacturesStructuresComponent implements OnInit {
         const eps: StructureEntonnoir[] = structures
           .filter(s => typeEffectifStructure(s) === 'EPS')
           .map(s => {
-            const facturesEps = facturesAnnee.filter(f => f.etablissementId === s.id);
+            const facturesEps = facturesEnvoyeesATraiter.filter(f => f.etablissementId === s.id);
             return {
               id: s.id,
               code: s.code,
@@ -246,7 +249,7 @@ export class FacturesStructuresComponent implements OnInit {
         const districtsListe: StructureEntonnoir[] = districtsRegion.map(d => {
           const structuresDistrict = structuresParDistrict.get(d.id) || [];
           const idsStructures = new Set(structuresDistrict.map(s => s.id));
-          const facturesDistrict = facturesAnnee.filter(f =>
+          const facturesDistrict = facturesEnvoyeesATraiter.filter(f =>
             f.districtId === d.id || idsStructures.has(f.etablissementId)
           );
           return {
@@ -265,19 +268,15 @@ export class FacturesStructuresComponent implements OnInit {
           };
         });
 
-        // Garder tous les établissements : ceux ayant des factures apparaissent d'abord.
+        // N'afficher que les structures qui ont au moins une facture envoyée ou à traiter.
         const comparerDistricts = (a: StructureEntonnoir, b: StructureEntonnoir) =>
           b.nombreFactures - a.nombreFactures || a.nom.localeCompare(b.nom, 'fr');
         const districtsAvecFactures = districtsListe
           .filter(d => d.nombreFactures > 0)
           .sort(comparerDistricts);
-        const districtsSansFacture = districtsListe
-          .filter(d => d.nombreFactures === 0)
-          .sort(comparerDistricts);
         const epsAvecFactures = eps.filter(s => s.nombreFactures > 0).sort(comparerDistricts);
-        const epsSansFacture = eps.filter(s => s.nombreFactures === 0).sort(comparerDistricts);
         // Conserver les vrais identifiants backend (UUID) pour le chargement des détails.
-        return [...districtsAvecFactures, ...epsAvecFactures, ...districtsSansFacture, ...epsSansFacture];
+        return [...districtsAvecFactures, ...epsAvecFactures];
       })
     ).subscribe({
       next: list => {
@@ -295,7 +294,9 @@ export class FacturesStructuresComponent implements OnInit {
   private rafraichirFacturesCourantes(): void {
     this.srService.getToutesFacturesResumes().subscribe(factures => {
       this.facturesCourantes = factures.filter(f =>
-        f.typeEtablissement === 'STRUCTURE' && this.factureDansPeriode(f)
+        f.typeEtablissement === 'STRUCTURE' &&
+        this.factureDansPeriode(f) &&
+        this.statutCorrespondAuFiltre(f.statut, 'ENVOYEE')
       );
     });
   }

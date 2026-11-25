@@ -3,19 +3,16 @@
     
     <!-- Left Side: Visual/Branding Panel -->
     <aside class="login-sidebar">
-      <div class="sidebar-pattern"></div>
+      <!-- Le panneau de marque reste volontairement sobre et statique. -->
       <!-- Halos lumineux qui dérivent lentement derrière les logos (décor animé) -->
-      <div class="sidebar-glow" aria-hidden="true"></div>
 
       
 
 
       <!-- Main Showcase content -->
       <div class="sidebar-showcase">
-        <!-- Orbiting logos -->
+        <!-- Logos institutionnels -->
         <div class="logos-orbit">
-          <!-- Orbit track -->
-          <div class="orbit-track"></div>
           <!-- Logo MSAS -->
           <div class="orbit-arm orbit-arm-1">
             <div class="logo-node">
@@ -38,7 +35,8 @@
             </div>
           </div>
         </div>
-        <h2 class="showcase-title">Gestion des prestations</h2>
+        <h2 class="showcase-title">Gestion de la couverture sanitaire universelle</h2>
+        <p class="showcase-description">Prestations, factures et suivi des bénéficiaires.</p>
       </div>
 
 
@@ -80,11 +78,13 @@
                 type="text"
                 placeholder="Ex: pharmacien@csu.sn ou dk.ph001"
                 autocomplete="username"
+                [attr.aria-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'true' : null"
+                [attr.aria-describedby]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'login-email-error' : null"
                 (focus)="emailFocused=true"
                 (blur)="emailFocused=false"
               />
             </div>
-            <span class="field-error" *ngIf="loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched">
+            <span id="login-email-error" class="field-error" *ngIf="loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched">
               L'identifiant est requis
             </span>
           </div>
@@ -100,20 +100,22 @@
                 [type]="hidePassword ? 'password' : 'text'" 
                 placeholder="••••••••" 
                 autocomplete="current-password"
+                [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'true' : null"
+                [attr.aria-describedby]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'login-password-error' : null"
                 (focus)="passwordFocused=true" 
                 (blur)="passwordFocused=false" 
               />
-              <button type="button" class="toggle-password" (click)="hidePassword = !hidePassword" [attr.aria-label]="hidePassword ? 'Afficher' : 'Masquer'">
+              <button type="button" class="toggle-password" (click)="hidePassword = !hidePassword" [attr.aria-label]="hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe'">
                 <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
             </div>
-            <span class="field-error" *ngIf="loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched">
+            <span id="login-password-error" class="field-error" *ngIf="loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched">
               Le mot de passe est requis
             </span>
           </div>
 
           <!-- Error Feedback -->
-          <div class="form-error-banner" *ngIf="errorMessage">
+          <div class="form-error-banner" *ngIf="errorMessage" role="alert" aria-live="assertive">
             <mat-icon>error_outline</mat-icon>
             <span>{{ errorMessage }}</span>
           </div>
