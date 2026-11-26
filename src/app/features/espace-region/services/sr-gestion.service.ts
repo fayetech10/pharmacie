@@ -953,7 +953,7 @@ export class SrGestionService {
 
       // Cas A : dossiers patients existants dans la facture backend
       if (fs.dossiers && fs.dossiers.length > 0) {
-        return fs.dossiers.map(d => {
+        const patients = fs.dossiers.map(d => {
           const matchingLines = (fs.lignes || []).filter(l =>
             (l.dossierId && l.dossierId === d.id) ||
             (l.patientMatricule && d.matricule && l.patientMatricule === d.matricule) ||
@@ -991,6 +991,7 @@ export class SrGestionService {
             dateNaissance: d.dateNaissance || '',
             datePriseEnCharge: d.datePriseEnCharge || prestations[0]?.datePriseEnCharge || '',
             heurePriseEnCharge: d.heurePriseEnCharge || prestations[0]?.heurePriseEnCharge || '',
+            createdAt: d.createdAt || '',
             telephone: d.telephone || matchingLines[0]?.patientTelephone || '',
             adresse: d.adresse || matchingLines[0]?.patientAdresse || '',
             numeroRegistre: d.numeroRegistre || matchingLines[0]?.numeroRegistre || '',
@@ -1014,6 +1015,9 @@ export class SrGestionService {
             documents: []
           };
         });
+        return patients.reverse().sort((a, b) =>
+          (b.createdAt || b.datePriseEnCharge || '').localeCompare(a.createdAt || a.datePriseEnCharge || '')
+        );
       }
 
       // Cas B : reconstituer les patients depuis les lignes réelles
@@ -1025,7 +1029,7 @@ export class SrGestionService {
           groups[key].push(l);
         });
 
-        return Object.entries(groups).map(([key, lines]) => {
+        const patients = Object.entries(groups).map(([key, lines]) => {
           const first = lines[0];
           const prestations = lines.map((l, lIdx) => ({
             id: l.prestationId || `${key}-l${lIdx}`,
@@ -1074,6 +1078,9 @@ export class SrGestionService {
             documents: []
           };
         });
+        return patients.reverse().sort((a, b) =>
+          (b.datePriseEnCharge || '').localeCompare(a.datePriseEnCharge || '')
+        );
       }
     }
 
@@ -1136,7 +1143,7 @@ export class SrGestionService {
             pieces,
             documents
           };
-        });
+        }).reverse();
       }
     }
 
