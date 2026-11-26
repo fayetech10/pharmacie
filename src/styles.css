@@ -68,7 +68,7 @@
   --ink-deep: #071310;
   --ink-soft: #12332A;      /* surface active sur fond sombre */
   --ink-text: #9DB4AB;      /* texte secondaire sur fond sombre */
-  --ink-gradient: var(--ink);
+  --ink-gradient: linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%);
 
   /* Accent secondaire (pagination) — aligné sur la marque */
   --gold: var(--primary);

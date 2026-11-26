@@ -21,7 +21,7 @@ export class FactureEventsService {
   readonly changed$ = this.changedSubject.asObservable();
 
   private readonly factureEnvoyeeSubject = new Subject<FactureEnvoyeeEvent>();
-  /** Émis dès qu'une facture est envoyée ou resoumise au Service Régional (pour assignation automatique). */
+  /** Émis après envoi au Service Régional ; l'affectation automatique est réalisée côté serveur. */
   readonly factureEnvoyee$: Observable<FactureEnvoyeeEvent> = this.factureEnvoyeeSubject.asObservable();
 
   /** À appeler après une opération qui modifie les factures. */
@@ -29,7 +29,7 @@ export class FactureEventsService {
     this.changedSubject.next();
   }
 
-  /** Notifie l'envoi / la transmission d'une facture au SR pour déclencher l'assignation automatique immédiate. */
+  /** Notifie l'envoi / la transmission d'une facture au SR puis rafraîchit les vues abonnées. */
   notifyFactureEnvoyee(id: string, type: 'STRUCTURE' | 'PHARMACIE' = 'STRUCTURE'): void {
     this.factureEnvoyeeSubject.next({ id, type });
     this.notifyChanged();

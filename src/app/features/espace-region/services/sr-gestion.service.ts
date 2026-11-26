@@ -8,7 +8,7 @@ import { DistrictService } from '../../../core/services/district.service';
 import { PharmacieService } from '../../../core/services/pharmacie.service';
 import { FactureService } from '../../../core/services/facture.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { FactureEventsService, FactureEnvoyeeEvent } from '../../../core/services/facture-events.service';
+import { FactureEventsService } from '../../../core/services/facture-events.service';
 import { User, Role } from '../../../core/models/user.model';
 import { FactureStructure, DossierPatient, LigneFactureStructure, StructureSanitaire, typeEffectifStructure } from '../../../core/models/structure.model';
 import { Facture, LigneFacture, StatutFacture } from '../../../core/models/facture.model';
@@ -37,6 +37,7 @@ export interface FactureAssigneeResume {
   etablissementId: string;
   etablissementCode?: string;
   etablissementNom: string;
+  regionId?: string;
   typeStructure?: string; // EPS, CS, PS, PHARMACIE
   districtId?: string;
   districtNom?: string;
@@ -206,9 +207,6 @@ export class SrGestionService {
     private factureEvents: FactureEventsService
   ) {
     this.initialiserControleurs();
-    this.factureEvents.factureEnvoyee$.subscribe((event: FactureEnvoyeeEvent) => {
-      this.assignerAutomatiquement(event.id, event.type);
-    });
   }
 
   // =========================================================================
@@ -217,13 +215,12 @@ export class SrGestionService {
 
   private initialiserControleurs(): void {
     const list: ControleurSR[] = [];
-    const curUser = this.auth.getCurrentUser();
     this.controleurs$.next(list);
     this.userService.getAll().pipe(
       catchError(() => of([]))
     ).subscribe((users: User[]) => {
       const mapped: ControleurSR[] = (users || []).filter((u): u is User & { id: string } =>
-        !!u.id && (u.role === Role.CONTROLEUR || u.role === Role.SERVICE_REGIONAL)
+        !!u.id && u.role === Role.CONTROLEUR
       ).map(u => ({
         id: u.id,
         nom: u.nom,
@@ -235,18 +232,6 @@ export class SrGestionService {
         role: u.role,
         dateCreation: (u as any).createdAt ? String((u as any).createdAt).substring(0, 10) : ''
       }));
-      if (curUser && (curUser.role === Role.CONTROLEUR || curUser.role === Role.SERVICE_REGIONAL) && !mapped.some(c => c.id === curUser.userId)) {
-        mapped.unshift({
-          id: curUser.userId,
-          nom: curUser.nom || '',
-          prenom: curUser.prenom || '',
-          email: curUser.email || '',
-          username: curUser.username || curUser.email?.split('@')[0] || '',
-          actif: true,
-          role: curUser.role,
-          dateCreation: ''
-        });
-      }
       this.controleurs$.next(mapped);
     });
   }
@@ -359,18 +344,6 @@ export class SrGestionService {
     localStorage.setItem(this.STORAGE_FACTURES_STATE_KEY, JSON.stringify(state));
   }
 
-  assignerAutomatiquement(factureId: string, type: 'STRUCTURE' | 'PHARMACIE'): void {
-    const options = {
-      next: () => this.factureEvents.notifyChanged(),
-      error: (erreur: unknown) => console.error('Échec de l’assignation automatique côté backend.', erreur)
-    };
-    if (type === 'PHARMACIE') {
-      this.factureService.assignerAutomatiquement(factureId).subscribe(options);
-    } else {
-      this.structureService.assignerFactureAutomatiquement(factureId).subscribe(options);
-    }
-  }
-
   reassignerFacture(factureId: string, controleurId: string): void {
     const state = this.getFacturesState();
     const ctrl = this.getControleurs().find(c => c.id === controleurId);
@@ -470,11 +443,16 @@ export class SrGestionService {
   /**
    * Récupère toutes les factures réelles depuis le backend (/api/factures-structure et /api/factures).
    */
-  getToutesFacturesResumes(inclureBrouillons = false, rechargerFactures = false): Observable<FactureAssigneeResume[]> {
+  getToutesFacturesResumes(
+    inclureBrouillons = false,
+    rechargerFactures = false,
+    propagerErreurFacturesStructure = false
+  ): Observable<FactureAssigneeResume[]> {
     const facturesStructures$ = this.structureService.getFactures();
     const facturesPharmacies$ = this.factureService.getAll();
     return forkJoin({
-      facturesStructures: rechargerFactures ? facturesStructures$ : facturesStructures$.pipe(catchError(() => of([]))),
+      facturesStructures: rechargerFactures || propagerErreurFacturesStructure
+        ? facturesStructures$ : facturesStructures$.pipe(catchError(() => of([]))),
       facturesPharmacies: rechargerFactures ? facturesPharmacies$ : facturesPharmacies$.pipe(catchError(() => of([]))),
       structures: this.structureService.getStructures().pipe(catchError(() => of([]))),
       pharmacies: this.pharmacieService.getAll().pipe(catchError(() => of([]))),
@@ -506,6 +484,7 @@ export class SrGestionService {
             etablissementId: fs.structureSanitaireId || struct?.id || '',
             etablissementCode: struct?.code || fs.structureSanitaireId,
             etablissementNom: fs.structureNom || struct?.nom || '',
+            regionId: fs.regionId || struct?.regionId,
             typeStructure: fs.typeStructure || struct?.typeStructure || '',
             districtId: fsAny.districtId || struct?.districtId,
             districtNom: fsAny.districtNom || dist?.nom || '',
@@ -542,6 +521,7 @@ export class SrGestionService {
             etablissementId: fp.pharmacieId || pharma?.id || '',
             etablissementCode: pharma?.code || fp.pharmacieId,
             etablissementNom: fp.pharmacieNom || pharma?.nom || '',
+            regionId: fp.regionId || pharma?.regionId,
             typeStructure: 'PHARMACIE',
             districtNom: pharma?.adresse || '',
             regime: 'CONTRIBUTIF',
@@ -982,6 +962,7 @@ export class SrGestionService {
 
           const prestations = matchingLines.map((l, lIdx) => ({
             id: l.prestationId || `${d.id}-l${lIdx}`,
+            ligneIndex: fs.lignes?.indexOf(l) ?? -1,
             dossierId: d.id,
             designation: l.designation,
             codeActe: l.codeActe || '',
@@ -992,7 +973,10 @@ export class SrGestionService {
             montant: l.montant || ((l.quantite || 1) * (l.prixUnitaire || 0)),
             montantSencsu: l.montantSencsu || Math.round((l.montant || 0) * 0.8),
             montantBeneficiaire: l.montantBeneficiaire || Math.round((l.montant || 0) * 0.2),
-            statutLigne: l.statutLigne || 'CONFORME'
+            statutLigne: l.statutLigne || 'EN_ATTENTE',
+            motifRejet: l.motifRejet,
+            controleRegionLe: l.controleRegionLe,
+            controleRegionPar: l.controleRegionPar
           }));
 
           const mntTotal = prestations.reduce((sum, p) => sum + p.montant, 0);
@@ -1045,6 +1029,7 @@ export class SrGestionService {
           const first = lines[0];
           const prestations = lines.map((l, lIdx) => ({
             id: l.prestationId || `${key}-l${lIdx}`,
+            ligneIndex: fs.lignes?.indexOf(l) ?? -1,
             dossierId: key,
             designation: l.designation,
             codeActe: l.codeActe || '',
@@ -1055,7 +1040,10 @@ export class SrGestionService {
             montant: l.montant || ((l.quantite || 1) * (l.prixUnitaire || 0)),
             montantSencsu: l.montantSencsu || Math.round((l.montant || 0) * 0.8),
             montantBeneficiaire: l.montantBeneficiaire || Math.round((l.montant || 0) * 0.2),
-            statutLigne: l.statutLigne || 'CONFORME'
+            statutLigne: l.statutLigne || 'EN_ATTENTE',
+            motifRejet: l.motifRejet,
+            controleRegionLe: l.controleRegionLe,
+            controleRegionPar: l.controleRegionPar
           }));
 
           const mntTotal = prestations.reduce((sum, p) => sum + p.montant, 0);
@@ -1105,6 +1093,7 @@ export class SrGestionService {
           const nomPrenom = (first.patientNomPrenom || '').split(' ');
           const prestations = lines.map((l, lIdx) => ({
             id: `${key}-l${lIdx}`,
+            ligneIndex: fp.lignes?.indexOf(l) ?? -1,
             dossierId: key,
             designation: l.medicament || '',
             codeActe: l.codeProduit || `MED-${lIdx + 1}`,
@@ -1114,7 +1103,8 @@ export class SrGestionService {
             montant: l.montant || ((l.quantite || 1) * (l.prixUnitaire || 0)),
             montantSencsu: Math.round((l.montant || 0) * 0.8),
             montantBeneficiaire: Math.round((l.montant || 0) * 0.2),
-            statutLigne: String(l.statutLigne || 'CONFORME')
+            statutLigne: String(l.statutLigne || 'EN_ATTENTE'),
+            motifRejet: l.motifRejet
           }));
 
           const mntTotal = prestations.reduce((sum, p) => sum + p.montant, 0);

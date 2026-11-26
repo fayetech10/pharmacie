@@ -375,13 +375,13 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <label class="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-field-bg px-2.5 py-1.5 text-xs font-semibold text-text-muted">
-          <input type="checkbox" [(ngModel)]="inclurePostesSansSaisie" class="accent-emerald-700">
+        <label class="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-field-bg px-2.5 py-1.5 text-xs font-semibold text-text-muted cursor-pointer">
+          <input type="checkbox" [(ngModel)]="inclurePostesSansSaisie" (ngModelChange)="onFiltreChange()" class="accent-emerald-700">
           Inclure les postes sans saisie
         </label>
         <label class="flex items-center gap-2 rounded-lg border border-border bg-field-bg px-2.5 py-1.5 text-xs font-semibold text-text-muted">
           Statut
-          <select [(ngModel)]="filtreStatutSuivi" class="bg-transparent font-bold text-slate-800 outline-none">
+          <select [(ngModel)]="filtreStatutSuivi" (ngModelChange)="onFiltreChange()" class="bg-transparent font-bold text-slate-800 outline-none cursor-pointer">
             <option value="">Tous</option><option value="A_SAISIR">À commencer</option><option value="EN_COURS">En cours</option><option value="A_CORRIGER">À corriger</option><option value="ENVOYEE">Envoyées</option>
           </select>
         </label>

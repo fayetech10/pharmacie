@@ -1,49 +1,26 @@
 <div class="fade-in space-y-4">
 
-  <!-- ========================================== -->
-  <!-- 1. EN-TÊTE CONTRÔLEUR                      -->
-  <!-- ========================================== -->
-  <div class="bg-white rounded-lg px-5 py-3 border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
-    <div>
-      <div class="flex items-center gap-2">
-        <h2 class="text-base font-semibold text-slate-900 tracking-tight">Poste de Contrôle — {{ controleurAffiche.nom }}</h2>
-        <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">Contrôleur actif</span>
-      </div>
-      <p class="text-xs text-slate-500 mt-0.5">
-        Vérification réglementaire de conformité, rejets motivés (facture, patient, prestation) et validation régionale
-      </p>
-    </div>
-
-    <!-- Sélecteur de contrôleur pour l'administrateur / superviseur SR -->
-    <div *ngIf="auth.isAdminSR()" class="flex items-center gap-2">
-      <label class="text-xs font-semibold text-slate-600">Vue contrôleur :</label>
-      <select [(ngModel)]="controleurFiltreId" (ngModelChange)="chargerFacturesAssignees()"
-              class="text-xs px-2.5 py-1.5 rounded-md border border-slate-300 bg-white font-medium text-slate-700 cursor-pointer focus:border-emerald-600 focus:outline-none">
-        <option value="">Mon profil ({{ controleurNomActuel }})</option>
-        <option *ngFor="let c of controleursDisponibles" [value]="c.id">
-          {{ c.prenom }} {{ c.nom }}
-        </option>
-      </select>
-    </div>
-
-    <!-- Bouton retour si en mode contrôle -->
-    <div *ngIf="mode === 'CONTROLE'">
-      <button (click)="retourListe()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition cursor-pointer">
-        <mat-icon class="!text-sm !w-4 !h-4 text-slate-500">arrow_back</mat-icon>
-        Retour à mes factures assignées
-      </button>
-    </div>
+  <!-- Sélecteur de contrôleur pour l'administrateur / superviseur SR uniquement -->
+  <div *ngIf="mode === 'FACTURES' && auth.isAdminSR()" class="flex items-center justify-end gap-2">
+    <label class="text-xs font-semibold text-slate-600">Vue contrôleur :</label>
+    <select [(ngModel)]="controleurFiltreId" (ngModelChange)="chargerFacturesAssignees()"
+            class="text-xs px-2.5 py-1.5 rounded-md border border-slate-300 bg-white font-medium text-slate-700 cursor-pointer focus:border-emerald-600 focus:outline-none">
+      <option value="">Mon profil ({{ controleurNomActuel }})</option>
+      <option *ngFor="let c of controleursDisponibles" [value]="c.id">
+        {{ c.prenom }} {{ c.nom }}
+      </option>
+    </select>
   </div>
 
   <!-- ========================================== -->
-  <!-- 2. MODE LISTE : FACTURES ASSIGNÉES        -->
+  <!-- NIVEAU 1 : LISTE DES FACTURES AFFECTÉES    -->
   <!-- ========================================== -->
-  <div *ngIf="mode === 'LISTE'" class="space-y-4">
+  <div *ngIf="mode === 'FACTURES'" class="space-y-4 fade-in">
 
     <!-- Cartes résumé épurées -->
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
       <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-slate-300 transition" (click)="filtreStatut = ''">
-        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Assignées</div>
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Affectées</div>
         <div class="text-xl font-semibold font-mono tabular-nums text-slate-900 mt-1">{{ facturesAssignees.length }}</div>
         <div class="text-[10px] text-slate-400 mt-0.5">Toutes les factures</div>
       </div>
@@ -57,7 +34,7 @@
       <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-blue-300 transition" (click)="filtreStatut = 'EN_COURS_SR'">
         <div class="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">En cours SR</div>
         <div class="text-xl font-semibold font-mono tabular-nums text-blue-700 mt-1">{{ countParStatut('EN_COURS_SR') }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Contrôle démarré</div>
+        <div class="text-[10px] text-slate-400 mt-0.5">Vérification démarrée</div>
       </div>
 
       <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-emerald-300 transition" (click)="filtreStatut = 'VALIDEE_SR'">
@@ -75,133 +52,131 @@
 
     <!-- Filtres par boutons segmentés -->
     <div class="flex flex-wrap items-center gap-2">
-      <button (click)="filtreStatut = ''"
+      <button type="button" (click)="filtreStatut = ''"
               [class]="filtreStatut === '' ? 'bg-primary-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         Toutes ({{ facturesAssignees.length }})
       </button>
-      <button (click)="filtreStatut = 'A_TRAITER'"
+      <button type="button" (click)="filtreStatut = 'A_TRAITER'"
               [class]="filtreStatut === 'A_TRAITER' ? 'bg-amber-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         À traiter ({{ countParStatut('A_TRAITER') }})
       </button>
-      <button (click)="filtreStatut = 'EN_COURS_SR'"
+      <button type="button" (click)="filtreStatut = 'EN_COURS_SR'"
               [class]="filtreStatut === 'EN_COURS_SR' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         En cours SR ({{ countParStatut('EN_COURS_SR') }})
       </button>
-      <button (click)="filtreStatut = 'VALIDEE_SR'"
+      <button type="button" (click)="filtreStatut = 'VALIDEE_SR'"
               [class]="filtreStatut === 'VALIDEE_SR' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         Validées SR ({{ countParStatut('VALIDEE_SR') }})
       </button>
-      <button (click)="filtreStatut = 'REJETEE_SR'"
+      <button type="button" (click)="filtreStatut = 'REJETEE_SR'"
               [class]="filtreStatut === 'REJETEE_SR' ? 'bg-rose-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         Rejetées SR ({{ countParStatut('REJETEE_SR') }})
       </button>
     </div>
 
-    <!-- Parcours hiérarchique : district, poste / hôpital, puis factures attribuées -->
+    <!-- Barre de recherche & Total factures affectées -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+      <div class="relative w-full sm:w-96">
+        <mat-icon class="absolute left-3 top-2.5 !text-lg !w-5 !h-5 text-slate-400">search</mat-icon>
+        <input type="search" [(ngModel)]="searchFacture" placeholder="Rechercher par numéro, poste, district, régime, mois..."
+               class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-emerald-600 bg-white">
+      </div>
+      <div class="text-xs text-slate-500 font-medium">
+        {{ facturesAffectees.length }} facture(s) affectée(s)
+      </div>
+    </div>
+
+    <!-- États chargement / vide -->
     <div *ngIf="loading" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-      Chargement des établissements attribués…
+      Chargement des factures affectées…
     </div>
-    <div *ngIf="!loading && groupesAttribues.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center">
-      <mat-icon class="!w-10 !h-10 !text-[40px] text-slate-300">domain</mat-icon>
-      <h3 class="mt-2 text-sm font-semibold text-slate-800">Aucun district ou établissement attribué</h3>
-      <p class="mt-1 text-xs text-slate-500">Les factures qui vous seront assignées apparaîtront ici.</p>
+    <div *ngIf="!loading && facturesAffectees.length === 0" class="rounded-xl border border-slate-200 bg-white p-10 text-center">
+      <mat-icon class="!w-10 !h-10 !text-[40px] text-slate-300">receipt_long</mat-icon>
+      <h3 class="mt-2 text-sm font-semibold text-slate-800">Aucune facture affectée trouvée</h3>
+      <p class="mt-1 text-xs text-slate-500">Les factures qui vous seront affectées apparaîtront directement ici.</p>
     </div>
 
-    <section *ngFor="let groupe of groupesAttribues" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <button type="button"
-              class="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-slate-50 md:px-5"
-              [attr.aria-expanded]="groupeOuvertId === groupe.id"
-              (click)="basculerGroupe(groupe.id)">
-        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
-          <mat-icon>{{ groupe.id === 'pharmacies-assignees' ? 'local_pharmacy' : 'account_tree' }}</mat-icon>
-        </span>
-        <span class="min-w-0 flex-1">
-          <span class="block truncate text-sm font-bold text-slate-900">{{ groupe.nom }}</span>
-          <span class="mt-0.5 block text-xs text-slate-500">
-            {{ groupe.etablissements.length }} établissement(s) · {{ groupe.nombreFactures }} facture(s) attribuée(s)
-          </span>
-        </span>
-        <mat-icon class="text-slate-400">{{ groupeOuvertId === groupe.id ? 'expand_less' : 'expand_more' }}</mat-icon>
-      </button>
+    <!-- Liste directe des factures affectées : un clic ouvre la vérification -->
+    <div *ngIf="!loading && facturesAffectees.length > 0" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="divide-y divide-slate-100">
+        <div *ngFor="let f of facturesAffectees; trackBy: trackById"
+             (click)="ouvrirFacture(f)"
+             (keydown.enter)="ouvrirFacture(f)"
+             (keydown.space)="$event.preventDefault(); ouvrirFacture(f)"
+             tabindex="0"
+             role="button"
+             [attr.aria-label]="'Vérifier la facture ' + f.numero + ' de ' + f.etablissementNom"
+             class="group flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-emerald-50/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
 
-      <div *ngIf="groupeOuvertId === groupe.id" class="space-y-3 border-t border-slate-100 bg-slate-50/60 p-3 md:p-4">
-        <article *ngFor="let etablissement of groupe.etablissements" class="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-3 md:px-4">
-            <div class="flex min-w-0 items-center gap-2.5">
-              <mat-icon class="shrink-0 text-slate-400">{{ etablissement.type === 'Poste de santé' ? 'medical_services' : etablissement.type === 'Pharmacie' ? 'local_pharmacy' : 'local_hospital' }}</mat-icon>
-              <div class="min-w-0">
-                <h3 class="truncate text-sm font-semibold text-slate-800">{{ etablissement.nom }}</h3>
-                <p class="text-[11px] text-slate-500">{{ etablissement.type }}<span *ngIf="etablissement.code"> · {{ etablissement.code }}</span></p>
+          <div class="flex items-center gap-3 min-w-[240px] flex-1">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition">
+              <mat-icon class="!text-xl !w-5 !h-5">receipt_long</mat-icon>
+            </span>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-mono text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition">{{ f.numero }}</span>
+                <span *ngIf="f.regime" [class]="getRegimeBadgeClass(f.regime)" class="rounded-full px-2 py-0.5 text-[10px] font-bold">
+                  {{ getRegimeLabel(f.regime) }}
+                </span>
+              </div>
+              <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+                <span class="font-semibold text-slate-800 truncate">{{ f.etablissementNom }}</span>
+                <span class="text-slate-400">·</span>
+                <span>{{ libelleTypeEtablissement(f) }}</span>
+                <ng-container *ngIf="f.districtNom">
+                  <span class="text-slate-400">·</span>
+                  <span class="text-slate-500">{{ f.districtNom }}</span>
+                </ng-container>
+                <span class="text-slate-400">·</span>
+                <span class="font-medium text-slate-700">{{ getMoisLibelle(f.mois) }} {{ f.annee }}</span>
               </div>
             </div>
-            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-              {{ etablissement.factures.length }} facture(s)
-            </span>
           </div>
 
-          <div class="divide-y divide-slate-100">
-            <button *ngFor="let f of etablissement.factures" type="button"
-                    class="group flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 text-left transition hover:bg-emerald-50/60 md:px-4"
-                    (click)="ouvrirFacture(f)">
-              <span class="min-w-[150px] flex-1">
-                <span class="block font-mono text-xs font-bold text-slate-800 group-hover:text-emerald-800">{{ f.numero }}</span>
-                <span class="mt-0.5 block text-[11px] text-slate-500">{{ f.regime }} · {{ getMoisLibelle(f.mois) }} {{ f.annee }}</span>
-              </span>
-              <span class="text-xs font-semibold text-slate-700">{{ formatMontant(f.montantTotal) }}</span>
-              <span class="text-[11px] text-slate-500">{{ f.nombreBeneficiaires }} patient(s)</span>
-              <span [class]="getStatutBadgeClass(f.statut)" class="rounded-full border px-2.5 py-1 text-[10px] font-bold">
+          <div class="flex flex-wrap items-center gap-4 md:gap-6 text-xs">
+            <div>
+              <span class="text-slate-400 block text-[10px]">Patients</span>
+              <span class="font-semibold text-slate-700">{{ f.nombreBeneficiaires }} patient(s)</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Montant Total</span>
+              <span class="font-bold text-slate-800 font-mono">{{ formatMontant(f.montantTotal) }}</span>
+            </div>
+            <div>
+              <span class="text-emerald-600 block text-[10px] font-medium">Part SEN-CSU</span>
+              <span class="font-bold text-emerald-700 font-mono">{{ formatMontant(f.montantSencsu) }}</span>
+            </div>
+            <div>
+              <span [class]="getStatutBadgeClass(f.statut)" class="rounded-full border px-2.5 py-1 text-[11px] font-bold">
                 {{ getStatutLibelle(f.statut) }}
               </span>
-              <mat-icon class="!h-5 !w-5 !text-xl text-slate-400 group-hover:text-emerald-700">chevron_right</mat-icon>
+            </div>
+          </div>
+
+          <div>
+            <button type="button"
+                    (click)="$event.stopPropagation(); ouvrirFacture(f)"
+                    [disabled]="factureDetailEnChargementId === f.id"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 text-xs font-semibold text-emerald-800 bg-white group-hover:bg-emerald-600 group-hover:text-white transition shadow-sm cursor-pointer">
+              <mat-icon class="!text-base !w-4 !h-4">{{ factureDetailEnChargementId === f.id ? 'sync' : 'fact_check' }}</mat-icon>
+              <span>{{ factureDetailEnChargementId === f.id ? 'Chargement…' : 'Vérifier' }}</span>
             </button>
           </div>
-        </article>
+
+        </div>
       </div>
-    </section>
+    </div>
   </div>
 
   <!-- ========================================== -->
-  <!-- 3. MODE CONTRÔLE : ÉCRAN DE TRAITEMENT    -->
+  <!-- 3. MODE CONTRÔLE : ÉCRAN DE VÉRIFICATION   -->
   <!-- ========================================== -->
   <div *ngIf="mode === 'CONTROLE' && factureEnControle" class="fade-in">
-
-    <!-- En-tête : retour aux factures & badges de statut -->
-    <div class="flex items-center justify-between gap-2 mb-3 print:hidden">
-      <button type="button" (click)="retourListe()"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer">
-        <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Mes factures
-      </button>
-
-      <div class="flex items-center gap-2 min-w-0">
-        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold" [ngClass]="getStatutBadgeClass(factureEnControle.statut)">
-          {{ getStatutLibelle(factureEnControle.statut) }}
-        </span>
-        <span *ngIf="factureEnControle.regime" class="px-2.5 py-0.5 rounded-full text-xs font-bold" [ngClass]="getRegimeBadgeClass(factureEnControle.regime)">
-          {{ getRegimeLabel(factureEnControle.regime) }}
-        </span>
-      </div>
-    </div>
-
-    <!-- Synthèse financière : 3 cartes (identique à espace-ps) -->
-    <div class="flex flex-wrap gap-3 mb-4">
-      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Prix total</div>
-        <div class="text-[18px] font-bold text-text-primary">{{ formatMontant(factureEnControle.montantTotal || 0) }}</div>
-      </div>
-      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Part SEN-CSU (80%)</div>
-        <div class="text-[18px] font-bold text-primary">{{ formatMontant(factureEnControle.montantSencsu || 0) }}</div>
-      </div>
-      <div class="flex-1 min-w-[130px] rounded-lg border border-border bg-field px-4 py-2.5">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Patients</div>
-        <div class="text-[18px] font-bold text-text-primary">{{ patients.length }}</div>
-      </div>
-    </div>
 
     <!-- Motif du rejet de la facture si présent -->
     <div *ngIf="factureEnControle.commentaireRejet"
@@ -261,6 +236,12 @@
     <div class="card" *ngIf="!patientSelectionne">
       <div class="section-header">
         <div class="section-title-group">
+          <button type="button" (click)="retourAuxFactures()"
+                  title="Retour aux factures affectées"
+                  aria-label="Retour aux factures affectées"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition cursor-pointer print:hidden">
+            <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon>
+          </button>
           <div class="section-icon"><mat-icon>groups</mat-icon></div>
           <div>
             <h2>Patients</h2>
@@ -280,14 +261,12 @@
           <button (click)="telechargerExcel()" type="button" class="btn btn-outline btn-sm">
             <mat-icon>table_view</mat-icon> Facture excel
           </button>
-          <button (click)="ouvrirModalRejetFacture()" type="button" class="btn btn-outline btn-sm !text-red-700 !border-red-300 hover:!bg-red-50">
+          <button (click)="ouvrirModalRejetFacture()" type="button" [disabled]="!peutControlerFacture || actionControleEnCours" class="btn btn-outline btn-sm !text-red-700 !border-red-300 hover:!bg-red-50">
             <mat-icon>cancel</mat-icon> Rejeter
           </button>
-          <button (click)="validerFacture()" type="button" class="btn btn-primary btn-sm">
-            <mat-icon>task_alt</mat-icon> Valider (SR)
-          </button>
-          <button *ngIf="factureEnControle.statut === 'VALIDEE_SR'" (click)="envoyerAuNiveauCentral()" type="button" class="btn btn-primary btn-sm">
-            <mat-icon>send</mat-icon> Envoyer au NC
+          <button (click)="validerFacture()" type="button" [disabled]="!peutControlerFacture || !toutesPrestationsDecidees || actionControleEnCours" [title]="toutesPrestationsDecidees ? 'Valider la facture après le contrôle de chaque prestation' : 'Décidez chaque prestation avant la validation finale'" class="btn btn-primary btn-sm">
+            <mat-icon>{{ actionControleEnCours ? 'sync' : 'task_alt' }}</mat-icon>
+            {{ actionControleEnCours ? 'Enregistrement…' : 'Valider après contrôle' }}
           </button>
         </div>
       </div>
@@ -378,12 +357,14 @@
         <div class="ml-auto flex flex-wrap items-center gap-1.5">
           <!-- Pointage du contrôle pour le patient entier -->
           <button type="button" class="btn btn-sm" (click)="validerToutesPrestationsPatient(patient)"
+                  [disabled]="!peutControlerFacture || actionControleEnCours"
                   [ngClass]="patientEstVerifieConforme(patient) ? 'bg-success text-white border-success' : 'btn-outline'"
                   [attr.title]="patientEstVerifieConforme(patient) ? 'Patient vérifié et conforme' : 'Marquer toutes les prestations de ce patient comme vérifiées et conformes'">
             <mat-icon>{{ patientEstVerifieConforme(patient) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
             {{ patientEstVerifieConforme(patient) ? 'Vérifié' : 'Vérifier' }}
           </button>
           <button type="button" class="btn btn-sm" (click)="ouvrirModalRejetPatient(patient)"
+                  [disabled]="!peutControlerFacture || actionControleEnCours"
                   [ngClass]="patientEstRejete(patient) ? '!bg-red-600 !text-white !border-red-600' : 'btn-outline !text-red-700 !border-red-300'"
                   [attr.title]="patientEstRejete(patient) ? 'Patient rejeté' : 'Rejeter ce patient (motif requis)'">
             <mat-icon>{{ patientEstRejete(patient) ? 'cancel' : 'block' }}</mat-icon>
@@ -530,18 +511,21 @@
                   <td class="py-3 px-4 text-right whitespace-nowrap">
                     <div class="inline-flex items-center gap-1.5">
                       <button type="button" (click)="validerPrestation(patient, pr)"
+                              [disabled]="!peutControlerFacture || actionControleEnCours"
                               [class]="pr.statut === 'ACCEPTEE' && pr.verifiee ? 'bg-success text-white border-success' : 'btn-outline'"
                               class="btn btn-sm !py-1 !px-2.5 text-[11px] inline-flex items-center gap-1"
                               title="Marquer cette prestation conforme">
                         <mat-icon class="!text-xs !w-3.5 !h-3.5">check</mat-icon> Conforme
                       </button>
                       <button *ngIf="pr.statut !== 'REJETEE'" type="button"
+                              [disabled]="!peutControlerFacture || actionControleEnCours"
                               (click)="ouvrirModalRejetPrestation(patient, pr)"
                               class="btn btn-outline btn-sm !py-1 !px-2.5 text-[11px] !text-red-700 !border-red-300 hover:!bg-red-50 inline-flex items-center gap-1"
                               title="Rejeter cette prestation avec motif">
                         <mat-icon class="!text-xs !w-3.5 !h-3.5">block</mat-icon> Rejeter
                       </button>
                       <button *ngIf="pr.statut === 'REJETEE'" type="button"
+                              [disabled]="!peutControlerFacture || actionControleEnCours"
                               (click)="annulerRejetPrestation(patient, pr)"
                               class="btn btn-outline btn-sm !py-1 !px-2.5 text-[11px] inline-flex items-center gap-1"
                               title="Rétablir cette prestation">
@@ -613,11 +597,11 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-        <button (click)="afficherModalRejet = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer">
+        <button (click)="afficherModalRejet = false" [disabled]="actionControleEnCours" class="min-h-11 px-3.5 py-1.5 rounded-md border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-60">
           Annuler
         </button>
-        <button (click)="validerRejet()" class="px-4 py-1.5 rounded-md text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white shadow-2xs transition cursor-pointer">
-          Confirmer le rejet motivé
+        <button (click)="validerRejet()" [disabled]="actionControleEnCours" class="min-h-11 px-4 py-1.5 rounded-md text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white shadow-2xs transition cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+          {{ actionControleEnCours ? 'Enregistrement…' : 'Confirmer le rejet motivé' }}
         </button>
       </div>
     </div>

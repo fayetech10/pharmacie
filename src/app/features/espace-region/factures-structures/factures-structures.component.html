@@ -103,8 +103,12 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium">
-            <tr *ngFor="let s of structures"
+            <tr *ngFor="let s of structures; trackBy: trackById"
                 (click)="selectionnerStructure(s)"
+                (keydown.enter)="selectionnerStructure(s)"
+                (keydown.space)="$event.preventDefault(); selectionnerStructure(s)"
+                tabindex="0"
+                [attr.aria-label]="'Ouvrir les factures de ' + s.nom"
                 class="hover:bg-emerald-50/50 cursor-pointer transition-colors group">
               <td class="py-3.5 px-4 font-bold text-slate-900 group-hover:text-emerald-700 flex items-center gap-2">
                 <mat-icon class="!text-slate-400 group-hover:!text-emerald-600">
@@ -112,7 +116,12 @@
                 </mat-icon>
                 <div>
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <span>{{ s.nom }}</span>
+                    <button type="button"
+                            (click)="$event.stopPropagation(); selectionnerStructure(s)"
+                            class="inline-flex items-center gap-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 rounded-sm">
+                      <span>{{ s.nom }}</span>
+                      <mat-icon aria-hidden="true" class="!h-4 !w-4 !text-base text-slate-400 group-hover:text-emerald-700">chevron_right</mat-icon>
+                    </button>
                     <span *ngIf="nouvellesFacturesStructure(s) > 0"
                           class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse motion-reduce:animate-none"
                           [matTooltip]="nouvellesFacturesStructure(s) + ' nouvelle(s) facture(s) à consulter'">
@@ -226,6 +235,7 @@
             <option *ngFor="let nomMois of MOIS_NOMS.slice(1); let index = index" [ngValue]="index + 1">{{ nomMois }}</option>
           </select>
           <select [(ngModel)]="filtreStatutFacture"
+                  (ngModelChange)="recalculerPostesFiltres()"
                   aria-label="Filtrer les postes par statut de facture"
                   class="h-9 min-w-40 px-3 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-600 focus:bg-white">
             <option value="">Tous les statuts</option>
@@ -238,7 +248,7 @@
 
           <div class="relative w-full sm:w-72">
           <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] text-slate-400">search</mat-icon>
-          <input type="search" [(ngModel)]="searchPoste" placeholder="Rechercher un poste..."
+          <input type="search" [(ngModel)]="searchPoste" (ngModelChange)="recalculerPostesFiltres()" placeholder="Rechercher un poste..."
                  class="h-9 w-full pl-9 pr-3 rounded-lg border border-slate-200 bg-slate-50 text-xs outline-none focus:border-emerald-600 focus:bg-white transition">
           </div>
         </div>
@@ -256,13 +266,22 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium">
-            <tr *ngFor="let p of postesFiltres"
+            <tr *ngFor="let p of postesFiltres; trackBy: trackById"
                 (click)="selectionnerPoste(p)"
-                class="cursor-pointer transition-colors hover:bg-emerald-50/40">
+                (keydown.enter)="selectionnerPoste(p)"
+                (keydown.space)="$event.preventDefault(); selectionnerPoste(p)"
+                tabindex="0"
+                [attr.aria-label]="'Ouvrir les factures de ' + p.nom"
+                class="cursor-pointer transition-colors hover:bg-emerald-50/40 group">
               <td class="py-3 px-4 font-bold text-slate-900">
                 <div class="text-[13px] text-emerald-950 flex items-center gap-1.5">
                   <mat-icon class="!text-sm !w-4 !h-4 text-emerald-700">local_hospital</mat-icon>
-                  {{ p.nom }}
+                  <button type="button"
+                          (click)="$event.stopPropagation(); selectionnerPoste(p)"
+                          class="inline-flex items-center gap-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 rounded-sm">
+                    <span>{{ p.nom }}</span>
+                    <mat-icon aria-hidden="true" class="!h-4 !w-4 !text-base text-slate-400 group-hover:text-emerald-700">chevron_right</mat-icon>
+                  </button>
                   <span *ngIf="nouvellesFacturesPoste(p) > 0"
                         class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse motion-reduce:animate-none"
                         [matTooltip]="nouvellesFacturesPoste(p) + ' nouvelle(s) facture(s) à consulter'">
@@ -300,8 +319,9 @@
 
       <!-- Cartes mobiles Niveau 1.5 : Postes polarisés -->
       <div class="m-cards md:hidden p-3" *ngIf="postesFiltres.length > 0">
-        <div class="m-card clickable" *ngFor="let p of postesFiltres" (click)="selectionnerPoste(p)"
+        <div class="m-card clickable" *ngFor="let p of postesFiltres; trackBy: trackById" (click)="selectionnerPoste(p)"
              role="button" tabindex="0" (keydown.enter)="selectionnerPoste(p)"
+             (keydown.space)="$event.preventDefault(); selectionnerPoste(p)"
              [attr.aria-label]="'Ouvrir les factures du poste ' + p.nom">
           <div class="m-card-top">
             <div class="min-w-0">
@@ -351,11 +371,14 @@
     </div>
 
     <!-- Grille des régimes ayant au moins une facture transmise -->
-    <div *ngIf="regimes.length === 0" class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-      Aucune facture transmise pour cette structure sur l’année sélectionnée.
+    <div *ngIf="chargementRegimes" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500" role="status" aria-live="polite">
+      Chargement des factures du poste…
     </div>
-    <div *ngIf="regimes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div *ngFor="let r of regimes"
+    <div *ngIf="!chargementRegimes && regimes.length === 0" class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+      Aucune facture envoyée ou à traiter pour ce poste sur l’année sélectionnée.
+    </div>
+    <div *ngIf="!chargementRegimes && regimes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngFor="let r of regimes; trackBy: trackById"
            (click)="selectionnerRegime(r)"
            class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group">
         <div class="flex items-start justify-between mb-3">
@@ -419,7 +442,7 @@
       Aucune facture transmise ne correspond à ce statut.
     </div>
     <div *ngIf="moisFiltres.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <div *ngFor="let m of moisFiltres"
+      <div *ngFor="let m of moisFiltres; trackBy: trackById"
            (click)="selectionnerMois(m)"
            [ngClass]="m.facturee ? 'border-2 border-emerald-500 bg-emerald-50/40 hover:bg-emerald-100/40 cursor-pointer shadow-xs' : 'border border-slate-200 bg-slate-50/60 opacity-60 cursor-not-allowed'"
            class="rounded-xl p-4 transition-all flex flex-col justify-between">
@@ -450,7 +473,7 @@
           <div class="flex items-center justify-between">
             <span class="text-[10px] text-slate-500">Statut :</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="classeStatut(m.statut)">
-              {{ libelleStatut(m.statut) }}
+              {{ libelleStatut(m.statut) }}<ng-container *ngIf="m.statut === 'VALIDEE_SR' && m.controleurNom"> · {{ m.controleurNom }}</ng-container>
             </span>
           </div>
           <div class="text-[10px] text-emerald-700 font-bold mt-1 text-right flex items-center justify-end gap-0.5">
@@ -465,89 +488,67 @@
     </div>
   </div>
 
-  <!-- ================= NIVEAU 4 : FACTURE DU MOIS (BÉNÉFICIAIRES STYLE POSTE DE SANTÉ) ================= -->
+  <!-- ================= NIVEAU 4 : FACTURE DU MOIS (AFFICHAGE ÉPURÉ) ================= -->
   <div *ngIf="niveauEntonnoir === 4 && factureActiveResume" class="space-y-4">
 
-    <!-- En-tête Facture avec Statut & Boutons essentiels -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2.5">
-            <span class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Détail de facture</span>
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
-                  [ngClass]="{
-                    'bg-blue-50 text-blue-700 border border-blue-200': factureActiveResume.statut === 'A_TRAITER',
-                    'bg-amber-50 text-amber-700 border border-amber-200': factureActiveResume.statut === 'EN_COURS_SR',
-                    'bg-emerald-50 text-emerald-700 border border-emerald-200': factureActiveResume.statut === 'VALIDEE_SR',
-                    'bg-rose-50 text-rose-700 border border-rose-200': factureActiveResume.statut === 'REJETEE_SR',
-                    'bg-indigo-50 text-indigo-700 border border-indigo-200': factureActiveResume.statut === 'ENVOYEE_NC'
-                  }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}</span>
-          </div>
-          <h3 class="mt-1 text-xl md:text-2xl font-bold tracking-tight text-slate-900">
-              Facture {{ factureActiveResume.numero }} — {{ moisSelectionne?.nomMois }} {{ annee }}
-          </h3>
-          <div class="mt-3 flex flex-wrap gap-2 text-sm">
-            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Établissement</span> · <strong class="text-slate-800">{{ posteSelectionne?.nom || structureSelectionnee?.nom }}</strong></span>
-            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Régime</span> · <strong class="text-slate-800">{{ regimeSelectionne?.libelle }}</strong></span>
-            <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600"><span class="text-slate-400">Contrôleur</span> · <strong class="text-slate-800">{{ factureActiveResume.controleurNom || 'Non assigné' }}</strong></span>
-          </div>
-        </div>
-
-        <div class="flex shrink-0 flex-wrap items-center gap-2">
-          <button (click)="allerAuNiveau(3)" class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon> Retour aux mois
+    <!-- Barre d'actions épurée de la facture -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <button (click)="allerAuNiveau(3)" type="button"
+                  title="Retour aux mois"
+                  aria-label="Retour aux mois"
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon>
           </button>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-base font-bold text-slate-900 m-0 truncate">
+                Facture {{ factureActiveResume.numero }}
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                    [ngClass]="{
+                      'bg-blue-50 text-blue-700 border border-blue-200': factureActiveResume.statut === 'A_TRAITER',
+                      'bg-amber-50 text-amber-700 border border-amber-200': factureActiveResume.statut === 'EN_COURS_SR',
+                      'bg-emerald-50 text-emerald-700 border border-emerald-200': factureActiveResume.statut === 'VALIDEE_SR',
+                      'bg-rose-50 text-rose-700 border border-rose-200': factureActiveResume.statut === 'REJETEE_SR',
+                      'bg-indigo-50 text-indigo-700 border border-indigo-200': factureActiveResume.statut === 'ENVOYEE_NC'
+                    }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}<ng-container *ngIf="factureActiveResume.statut === 'VALIDEE_SR' && factureActiveResume.controleurNom"> · {{ factureActiveResume.controleurNom }}</ng-container></span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 truncate">
+              {{ posteSelectionne?.nom || structureSelectionnee?.nom }} · {{ regimeSelectionne?.libelle }} · {{ moisSelectionne?.nomMois }} {{ annee }}
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-          <div class="text-xs font-semibold text-slate-500">Montant total</div>
-          <div class="mt-1 text-lg font-bold font-mono text-slate-900">{{ formatMontant(factureActiveResume.montantTotal || 0) }}</div>
-        </div>
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
-          <div class="text-xs font-semibold text-emerald-800">Part SEN-CSU <span class="font-normal text-emerald-700">(80 %)</span></div>
-          <div class="mt-1 text-lg font-bold font-mono text-emerald-800">{{ formatMontant(factureActiveResume.montantSencsu || 0) }}</div>
-        </div>
-        <div class="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3">
-          <div class="text-xs font-semibold text-violet-800">Bénéficiaires</div>
-          <div class="mt-1 text-lg font-bold text-violet-900">{{ patients.length }} <span class="text-sm font-medium">patients</span></div>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex flex-wrap items-center gap-2">
           <button (click)="telechargerDossiersGlobaux()" [disabled]="telechargementEnCours" type="button"
-                  class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-700 px-3.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
+                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">folder_zip</mat-icon> Dossiers ZIP
           </button>
           <button (click)="telechargerExcel()" type="button"
-                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">table_view</mat-icon> Export Excel
+                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">table_view</mat-icon> Excel
           </button>
           <button (click)="telechargerPdf()" [disabled]="exportPdfEnCours" type="button"
-                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 text-sm font-semibold text-blue-800 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
+                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-800 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">{{ exportPdfEnCours ? 'hourglass_top' : 'picture_as_pdf' }}</mat-icon>
-            {{ exportPdfEnCours ? 'Préparation…' : (pdfListeEtFacture ? 'Liste + Facture PDF' : 'Facture PDF') }}
+            {{ exportPdfEnCours ? 'Préparation…' : 'PDF' }}
           </button>
           <button (click)="ouvrirModalSupprimerFacture(factureActiveResume)" type="button"
-                  class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 cursor-pointer">
+                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">delete_outline</mat-icon> Supprimer
           </button>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-          <span class="mr-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Décision SR</span>
           <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="ouvrirModalRejetFacture()"
-                  type="button" class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 cursor-pointer">
+                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">close</mat-icon> Rejeter
           </button>
           <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="validerFacture()"
-                  type="button" class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">task_alt</mat-icon> Valider la facture
+                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">task_alt</mat-icon> Valider
           </button>
           <button *ngIf="factureActiveResume.statut === 'VALIDEE_SR'" (click)="envoyerAuNiveauCentral()"
-                  type="button" class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 cursor-pointer">
+                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-blue-700 px-3.5 text-xs font-semibold text-white transition hover:bg-blue-800 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">send</mat-icon> Transmettre au central
           </button>
         </div>
@@ -555,23 +556,20 @@
 
       <!-- Motif de rejet si rejetée -->
       <div *ngIf="factureActiveResume.statut === 'REJETEE_SR' && factureActiveResume.commentaireRejet"
-           class="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-900 flex items-start gap-2.5">
-        <mat-icon class="!text-rose-600 !w-5 !h-5 mt-0.5">error_outline</mat-icon>
+           class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900 flex items-start gap-2">
+        <mat-icon class="!text-rose-600 !w-4 !h-4 mt-0.5">error_outline</mat-icon>
         <div><span class="font-bold">Motif du rejet :</span> {{ factureActiveResume.commentaireRejet }}</div>
       </div>
     </div>
 
-    <!-- SECTION PATIENTS / BÉNÉFICIAIRES (STYLE POSTE DE SANTÉ) -->
+    <!-- SECTION PATIENTS / BÉNÉFICIAIRES -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60">
-        <div class="flex items-center gap-3">
+      <div class="p-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60">
+        <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
             <mat-icon class="!text-lg !w-5 !h-5">groups</mat-icon>
           </div>
-          <div>
-            <h4 class="text-sm font-bold text-slate-900">Patients & Bénéficiaires</h4>
-            <p class="text-[11px] text-slate-500">Facture N° {{ factureActiveResume.numero }} – Cliquez sur un patient pour accéder à ses prestations et son dossier</p>
-          </div>
+          <h4 class="text-sm font-bold text-slate-900 m-0">Patients ({{ patients.length }})</h4>
         </div>
 
         <div class="relative w-full sm:w-72">
@@ -587,7 +585,7 @@
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <tbody class="divide-y divide-slate-100 font-medium">
-            <tr *ngFor="let p of patientsFiltres"
+            <tr *ngFor="let p of patientsFiltres; trackBy: trackById"
                 (click)="ouvrirPrestationsPatient(p)"
                 class="cursor-pointer border-b border-slate-100 transition-colors hover:bg-emerald-50/40 bg-white">
               <td class="py-3 px-4 align-middle">

@@ -11,6 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { SrGestionService, FactureAssigneeResume, PostePolariseRow } from '../services/sr-gestion.service';
 import { DossiersGlobauxService } from '../services/dossiers-globaux.service';
 import { FactureStructure, DossierPatient, DocumentComplementaire, LigneFactureStructure, StructureSanitaire, TypePiece, typeEffectifStructure } from '../../../core/models/structure.model';
+import { REGIME_LABELS, Regime } from '../../../core/models/bcsu.model';
 import { StructureService } from '../../../core/services/structure.service';
 import { DistrictService } from '../../../core/services/district.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -119,11 +120,17 @@ export class FacturesStructuresComponent implements OnInit {
   // Postes polarisés du district sanitaire
   postesDuDistrict: PostePolariseRow[] = [];
   facturesDuDistrict: FactureAssigneeResume[] = [];
+  facturesDuPosteSelectionne: FactureAssigneeResume[] = [];
+  postesFiltres: PostePolariseRow[] = [];
+  totalMontantPostes = 0;
+  totalSencsuPostes = 0;
+  totalFacturesPostes = 0;
   posteSelectionne: PostePolariseRow | null = null;
   searchPoste = '';
   filtreStatutFacture = '';
 
   regimes: RegimeEntonnoir[] = [];
+  chargementRegimes = false;
   regimeSelectionne: RegimeEntonnoir | null = null;
 
   annee = new Date().getFullYear();
@@ -219,7 +226,7 @@ export class FacturesStructuresComponent implements OnInit {
         const facturesEnvoyeesATraiter = facturesAnnee.filter(f =>
           this.statutCorrespondAuFiltre(f.statut, 'ENVOYEE')
         );
-        this.facturesCourantes = facturesEnvoyeesATraiter.filter(f => f.typeEtablissement === 'STRUCTURE');
+        this.facturesCourantes = facturesAnnee.filter(f => f.typeEtablissement === 'STRUCTURE');
         const structuresParDistrict = new Map<string, StructureSanitaire[]>();
         for (const structure of structures) {
           if (!structure.districtId) continue;
@@ -296,8 +303,7 @@ export class FacturesStructuresComponent implements OnInit {
     this.srService.getToutesFacturesResumes().subscribe(factures => {
       this.facturesCourantes = factures.filter(f =>
         f.typeEtablissement === 'STRUCTURE' &&
-        this.factureDansPeriode(f) &&
-        this.statutCorrespondAuFiltre(f.statut, 'ENVOYEE')
+        this.factureDansPeriode(f)
       );
     });
   }
@@ -315,9 +321,17 @@ export class FacturesStructuresComponent implements OnInit {
   nouvellesFacturesPoste(poste: PostePolariseRow): number {
     return this.facturesCourantes.filter(f =>
       f.typeEtablissement === 'STRUCTURE' &&
-      (f.posteId === poste.id || f.etablissementId === poste.id) &&
+      this.factureAppartientA(f, poste.id) &&
       this.factureCount.isNewStructureInvoice(f.id)
     ).length;
+  }
+
+  /** Même clé de structure pour les factures récentes et les anciennes factures importées. */
+  private factureAppartientA(facture: FactureAssigneeResume, structureId: string): boolean {
+    const origine = facture.factureOrigine as FactureStructure | undefined;
+    return facture.posteId === structureId
+      || facture.etablissementId === structureId
+      || origine?.structureSanitaireId === structureId;
   }
 
   estDistrict(s: any): boolean {
@@ -348,7 +362,7 @@ export class FacturesStructuresComponent implements OnInit {
       // Si district sanitaire -> Niveau 15 (Postes de santé polarisés)
       this.niveauEntonnoir = 15;
       this.searchPoste = '';
-      this.filtreStatutFacture = 'ENVOYEE';
+      this.filtreStatutFacture = '';
       this.chargerPostesDuDistrict(s.id);
     } else {
       // Si hôpital (EPS) -> Niveau 2 (Régimes)
@@ -361,18 +375,28 @@ export class FacturesStructuresComponent implements OnInit {
 
   chargerPostesDuDistrict(districtId: string): void {
     this.loading = true;
+    this.postesDuDistrict = [];
+    this.facturesDuDistrict = [];
+    this.recalculerPostesFiltres();
     forkJoin({
       postes: this.srService.getPostesPolarises(districtId, this.annee, this.moisFiltre || undefined),
-      factures: this.srService.getToutesFacturesResumes()
+      factures: this.srService.getToutesFacturesResumes(false, false, true)
     }).subscribe(({ postes, factures }) => {
       const idsPostes = new Set(postes.map(poste => poste.id));
       this.facturesDuDistrict = factures.filter(f =>
         f.typeEtablissement === 'STRUCTURE' &&
         this.factureDansPeriode(f) &&
-        (idsPostes.has(f.etablissementId) || f.districtId === districtId)
+        (f.districtId === districtId || Array.from(idsPostes).some(id => this.factureAppartientA(f, id)))
       );
       this.postesDuDistrict = postes;
+      this.recalculerPostesFiltres();
       this.loading = false;
+    }, () => {
+      this.postesDuDistrict = [];
+      this.facturesDuDistrict = [];
+      this.recalculerPostesFiltres();
+      this.loading = false;
+      this.snackBar.open('Impossible de charger les factures envoyées de ce district.', 'Fermer', { duration: 5000 });
     });
   }
 
@@ -381,21 +405,19 @@ export class FacturesStructuresComponent implements OnInit {
     this.regimeSelectionne = null;
     this.moisSelectionne = null;
     this.patientSelectionne = null;
+    this.moisListe = [];
+    this.regimes = [];
+    this.facturesDuPosteSelectionne = [];
     this.niveauEntonnoir = 2;
     this.chargerRegimesDuPoste(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  get postesFiltres(): PostePolariseRow[] {
+  recalculerPostesFiltres(): void {
     const q = this.searchPoste.toLowerCase().trim();
-    return this.postesSelonStatut.filter(p =>
-      !q || p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
-    );
-  }
-
-  private get postesSelonStatut(): PostePolariseRow[] {
-    return this.postesDuDistrict.map(poste => {
+    const postesSelonStatut = this.postesDuDistrict.map(poste => {
       const facturesPoste = this.facturesDuDistrict.filter(f =>
-        (f.posteId === poste.id || f.etablissementId === poste.id) &&
+        this.factureAppartientA(f, poste.id) &&
         (!this.filtreStatutFacture || this.statutCorrespondAuFiltre(f.statut, this.filtreStatutFacture))
       );
       return {
@@ -409,6 +431,17 @@ export class FacturesStructuresComponent implements OnInit {
         statutsFactures: Array.from(new Set(facturesPoste.map(f => f.statut)))
       };
     }).filter(poste => poste.nombreFactures > 0);
+
+    this.totalMontantPostes = postesSelonStatut.reduce((sum, p) => sum + p.montantTotal, 0);
+    this.totalSencsuPostes = postesSelonStatut.reduce((sum, p) => sum + p.montantSencsu, 0);
+    this.totalFacturesPostes = postesSelonStatut.reduce((sum, p) => sum + p.nombreFactures, 0);
+    this.postesFiltres = postesSelonStatut.filter(p =>
+      !q || p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+    );
+  }
+
+  trackById(_index: number, item: { id?: string; code?: string; mois?: number }): string | number {
+    return item.id ?? item.code ?? item.mois ?? _index;
   }
 
   private statutCorrespondAuFiltre(statut: string, filtre: string): boolean {
@@ -436,58 +469,91 @@ export class FacturesStructuresComponent implements OnInit {
     return apparenceStatut(statut).classe;
   }
 
-  get totalMontantPostes(): number {
-    return this.postesSelonStatut.reduce((sum, p) => sum + p.montantTotal, 0);
-  }
-
-  get totalSencsuPostes(): number {
-    return this.postesSelonStatut.reduce((sum, p) => sum + p.montantSencsu, 0);
-  }
-
-  get totalFacturesPostes(): number {
-    return this.postesSelonStatut.reduce((sum, p) => sum + p.nombreFactures, 0);
-  }
-
   // ===================== NIVEAU 2 : RÉGIMES DE LA STRUCTURE OU DU POSTE =====================
 
   chargerRegimesDeLaStructure(s: StructureEntonnoir): void {
-    this.srService.getToutesFacturesResumes().subscribe(all => {
-      const fSiennes = all.filter(f => f.etablissementId === s.id && this.factureDansPeriode(f));
-
-      this.regimes = this.srService.REGIMES_LIST.map(r => {
-        const fDuRegime = fSiennes.filter(f => f.regime === r.code);
-        const moisDistincts = new Set(fDuRegime.map(f => f.mois));
-
-        return {
-          code: r.code,
-          libelle: r.libelle,
-          couleur: r.couleur,
-          montantTotal: fDuRegime.reduce((sum, f) => sum + f.montantTotal, 0),
-          nombreMoisFactures: moisDistincts.size,
-          nombreBeneficiaires: fDuRegime.reduce((sum, f) => sum + f.nombreBeneficiaires, 0)
-        };
-      }).filter(r => r.nombreMoisFactures > 0);
-    });
+    const fSiennes = this.facturesCourantes.filter(f =>
+      this.factureAppartientA(f, s.id) && this.factureDansPeriode(f));
+    this.regimes = this.regimesPourFactures(fSiennes);
   }
 
   chargerRegimesDuPoste(p: PostePolariseRow): void {
-    this.srService.getToutesFacturesResumes().subscribe(all => {
-      const fSiennes = all.filter(f => (f.posteId === p.id || f.etablissementId === p.id) && this.factureDansPeriode(f));
+    // Si les factures du district contiennent déjà les factures de ce poste, afficher immédiatement.
+    const facturesLocales = this.facturesDuDistrict.filter(f =>
+      f.typeEtablissement === 'STRUCTURE'
+      && this.factureAppartientA(f, p.id)
+      && this.factureDansPeriode(f));
+    if (facturesLocales.length > 0) {
+      this.facturesDuPosteSelectionne = facturesLocales;
+      this.regimes = this.regimesPourFactures(facturesLocales);
+      this.chargementRegimes = false;
+    } else {
+      this.chargementRegimes = true;
+    }
 
-      this.regimes = this.srService.REGIMES_LIST.map(r => {
-        const fDuRegime = fSiennes.filter(f => f.regime === r.code);
-        const moisDistincts = new Set(fDuRegime.map(f => f.mois));
-
-        return {
-          code: r.code,
-          libelle: r.libelle,
-          couleur: r.couleur,
-          montantTotal: fDuRegime.reduce((sum, f) => sum + f.montantTotal, 0),
-          nombreMoisFactures: moisDistincts.size,
-          nombreBeneficiaires: fDuRegime.reduce((sum, f) => sum + f.nombreBeneficiaires, 0)
-        };
-      }).filter(r => r.nombreMoisFactures > 0);
+    this.srService.getToutesFacturesResumes(false, false, true).subscribe({
+      next: factures => {
+        if (this.posteSelectionne?.id !== p.id) return;
+        // Ne PAS filtrer par statut 'ENVOYEE' uniquement : les factures validées,
+        // rejetées ou en cours doivent aussi apparaître (cohérent avec les hôpitaux).
+        const facturesDuPoste = factures.filter(f =>
+          f.typeEtablissement === 'STRUCTURE'
+          && this.factureAppartientA(f, p.id)
+          && this.factureDansPeriode(f));
+        if (facturesDuPoste.length > 0 || facturesLocales.length === 0) {
+          this.facturesDuPosteSelectionne = facturesDuPoste;
+          this.regimes = this.regimesPourFactures(facturesDuPoste);
+        }
+        this.chargementRegimes = false;
+      },
+      error: () => {
+        if (this.posteSelectionne?.id !== p.id) return;
+        if (!this.facturesDuPosteSelectionne.length) {
+          this.regimes = [];
+          this.snackBar.open('Impossible de charger les factures de ce poste.', 'Fermer', { duration: 5000 });
+        }
+        this.chargementRegimes = false;
+      }
     });
+  }
+
+  private codeRegimeEffectif(regime?: string): string {
+    return regime && regime.trim() ? regime.trim() : 'NON_PRECISE';
+  }
+
+  private libelleRegimePourListe(code: string): string {
+    if (code === 'NON_PRECISE') return 'Régime non précisé';
+    const connu = REGIME_LABELS[code as Regime];
+    if (connu) return connu;
+    return code.replace(/_/g, ' ').toLocaleLowerCase('fr-FR').replace(/^./, lettre => lettre.toLocaleUpperCase('fr-FR'));
+  }
+
+  private regimesPourFactures(factures: FactureAssigneeResume[]): RegimeEntonnoir[] {
+    const regimesConnus = this.srService.REGIMES_LIST.map(regime => {
+      const facturesDuRegime = factures.filter(f => this.codeRegimeEffectif(f.regime) === regime.code);
+      return {
+        code: regime.code,
+        libelle: regime.libelle,
+        couleur: regime.couleur,
+        montantTotal: facturesDuRegime.reduce((total, facture) => total + facture.montantTotal, 0),
+        nombreMoisFactures: new Set(facturesDuRegime.map(facture => facture.mois)).size,
+        nombreBeneficiaires: facturesDuRegime.reduce((total, facture) => total + facture.nombreBeneficiaires, 0)
+      };
+    });
+    const codesConnus = new Set(regimesConnus.map(regime => regime.code));
+    const regimesInconnus = Array.from(new Set(factures.map(f => this.codeRegimeEffectif(f.regime)).filter(code => !codesConnus.has(code))))
+      .map(code => {
+        const facturesDuRegime = factures.filter(f => this.codeRegimeEffectif(f.regime) === code);
+        return {
+          code,
+          libelle: this.libelleRegimePourListe(code),
+          couleur: 'slate',
+          montantTotal: facturesDuRegime.reduce((total, facture) => total + facture.montantTotal, 0),
+          nombreMoisFactures: new Set(facturesDuRegime.map(facture => facture.mois)).size,
+          nombreBeneficiaires: facturesDuRegime.reduce((total, facture) => total + facture.nombreBeneficiaires, 0)
+        };
+      });
+    return [...regimesConnus, ...regimesInconnus].filter(regime => regime.nombreMoisFactures > 0);
   }
 
   selectionnerRegime(r: RegimeEntonnoir): void {
@@ -506,12 +572,14 @@ export class FacturesStructuresComponent implements OnInit {
 
     const cibleId = this.posteSelectionne ? this.posteSelectionne.id : this.structureSelectionnee!.id;
 
-    this.srService.getToutesFacturesResumes().subscribe(all => {
-      const fDuMois = all.filter(f =>
-        (f.etablissementId === cibleId || f.posteId === cibleId) &&
-        f.regime === this.regimeSelectionne!.code &&
-        this.factureDansPeriode(f)
-      );
+    const source = this.posteSelectionne
+      ? this.facturesDuPosteSelectionne
+      : this.facturesCourantes;
+    const fDuMois = source.filter(f =>
+      this.factureAppartientA(f, cibleId) &&
+      this.codeRegimeEffectif(f.regime) === this.regimeSelectionne!.code &&
+      this.factureDansPeriode(f)
+    );
 
       const fMap = new Map<number, FactureAssigneeResume>();
       fDuMois.forEach(f => fMap.set(f.mois, f));
@@ -535,7 +603,6 @@ export class FacturesStructuresComponent implements OnInit {
       }
 
       this.moisListe = moisRes;
-    });
   }
 
   get moisFiltres(): MoisEntonnoir[] {
@@ -548,6 +615,8 @@ export class FacturesStructuresComponent implements OnInit {
     if (!m.facturee) return; // Seuls les mois facturés peuvent s'ouvrir
     this.factureCount.markStructureInvoiceSeen(m.factureId);
     this.moisSelectionne = m;
+    this.factureActiveResume = null;
+    this.patients = [];
     this.patientSelectionne = null;
     this.niveauEntonnoir = 4;
     this.chargerFactureDuMois(m);
@@ -556,34 +625,92 @@ export class FacturesStructuresComponent implements OnInit {
   // ===================== NIVEAU 4 : LA FACTURE DU MOIS (PATIENTS PAR LIGNE) =====================
 
   chargerFactureDuMois(m: MoisEntonnoir): void {
-    this.loading = true;
-    this.srService.getToutesFacturesResumes().subscribe({
-      next: all => {
-      const facResume = all.find(f => f.id === m.factureId);
-      if (!facResume) {
+    if (!m.factureId) {
+      this.snackBar.open('Cette facture est introuvable. Actualisez la liste.', 'Fermer', { duration: 4000 });
+      return;
+    }
+
+    const locale = [...this.facturesDuPosteSelectionne, ...this.facturesDuDistrict, ...this.facturesCourantes]
+      .find(f => f.id === m.factureId);
+
+    if (locale) {
+      this.appliquerFactureActive(locale, m);
+    } else {
+      this.loading = true;
+    }
+
+    const factureId = m.factureId;
+    this.structureService.getFacture(factureId, { fresh: true }).subscribe({
+      next: detail => {
+        if (this.moisSelectionne?.factureId !== factureId) return;
+        const base: FactureAssigneeResume = locale || {
+          id: detail.id,
+          numero: detail.numero || m.numeroFacture || `FAC-${m.mois}${this.annee}`,
+          typeEtablissement: 'STRUCTURE',
+          etablissementId: detail.structureSanitaireId || this.posteSelectionne?.id || this.structureSelectionnee?.id || '',
+          etablissementNom: detail.structureNom || this.posteSelectionne?.nom || this.structureSelectionnee?.nom || '',
+          typeStructure: detail.typeStructure || this.posteSelectionne?.type || '',
+          regime: String(detail.regime || this.regimeSelectionne?.code || ''),
+          mois: detail.mois || m.mois,
+          annee: detail.annee || this.annee,
+          montantTotal: detail.montantTotal || 0,
+          montantSencsu: detail.montantTotalSencsu || 0,
+          nombreBeneficiaires: detail.nombreBeneficiaires || 0,
+          statut: detail.statut === 'ENVOYEE' ? 'A_TRAITER' : String(detail.statut || ''),
+          controleurId: detail.controleurId,
+          controleurNom: detail.controleurNom,
+          commentaireRejet: detail.commentaireRejet
+        };
+        const statutNormalise = detail.statut === 'ENVOYEE' ? 'A_TRAITER' : String(detail.statut || base.statut);
+        const maj: FactureAssigneeResume = {
+          ...base,
+          montantTotal: detail.montantTotal ?? base.montantTotal,
+          montantSencsu: detail.montantTotalSencsu ?? base.montantSencsu,
+          statut: statutNormalise,
+          controleurId: detail.controleurId ?? base.controleurId,
+          controleurNom: detail.controleurNom ?? base.controleurNom,
+          commentaireRejet: detail.commentaireRejet ?? base.commentaireRejet,
+          factureOrigine: detail
+        };
+        this.appliquerFactureActive(maj, m);
         this.loading = false;
-        this.snackBar.open('Cette facture est introuvable dans le backend. Actualisez la liste.', 'Fermer', { duration: 4000 });
-        return;
-      }
-
-      this.factureActiveResume = facResume;
-
-      // Si le statut est À traiter et ouvert en contrôle, le passer à En cours SR
-      if (facResume.statut === 'A_TRAITER') {
-        this.srService.changerStatutFacture(facResume.id, 'EN_COURS_SR');
-        facResume.statut = 'EN_COURS_SR';
-        m.statut = 'EN_COURS_SR';
-      }
-
-      // Générer des données patient riches et réalistes pour ce mois
-      this.genererPatientsFacture(facResume);
-      this.loading = false;
       },
       error: () => {
-        this.loading = false;
-        this.snackBar.open('Impossible de charger la facture depuis le backend.', 'Fermer', { duration: 4000 });
+        if (this.moisSelectionne?.factureId !== factureId) return;
+        if (locale) {
+          this.loading = false;
+          return;
+        }
+        this.srService.getToutesFacturesResumes(false, false, true).subscribe({
+          next: all => {
+            if (this.moisSelectionne?.factureId !== factureId) return;
+            const facResume = all.find(f => f.id === factureId);
+            if (!facResume) {
+              this.loading = false;
+              this.snackBar.open('Cette facture est introuvable dans le backend. Actualisez la liste.', 'Fermer', { duration: 4000 });
+              return;
+            }
+            this.appliquerFactureActive(facResume, m);
+            this.loading = false;
+          },
+          error: () => {
+            if (this.moisSelectionne?.factureId !== factureId) return;
+            this.loading = false;
+            this.snackBar.open('Impossible de charger la facture depuis le backend.', 'Fermer', { duration: 4000 });
+          }
+        });
       }
     });
+  }
+
+  private appliquerFactureActive(facResume: FactureAssigneeResume, m: MoisEntonnoir): void {
+    this.factureActiveResume = facResume;
+    if (facResume.statut === 'A_TRAITER') {
+      this.srService.changerStatutFacture(facResume.id, 'EN_COURS_SR');
+      facResume.statut = 'EN_COURS_SR';
+      m.statut = 'EN_COURS_SR';
+    }
+    this.genererPatientsFacture(facResume);
   }
 
   private genererPatientsFacture(fac: FactureAssigneeResume): void {
@@ -1060,6 +1187,9 @@ export class FacturesStructuresComponent implements OnInit {
 
   getRegimeLabel(code?: string): string {
     if (!code) return '';
+    if (code === 'NON_PRECISE') return 'Régime non précisé';
+    const connu = REGIME_LABELS[code as Regime];
+    if (connu) return connu;
     switch (code) {
       case 'ENFANTS_MOINS_5_ANS': return 'Gratuité < 5 ans';
       case 'PLAN_SESAME': return 'Plan Sésame (60+)';
@@ -1073,11 +1203,20 @@ export class FacturesStructuresComponent implements OnInit {
   getRegimeBadgeClass(code?: string): string {
     if (!code) return 'bg-slate-100 text-slate-800';
     switch (code) {
+      case 'ZERO_CINQ_ANS':
       case 'ENFANTS_MOINS_5_ANS': return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'SESAME':
       case 'PLAN_SESAME': return 'bg-amber-100 text-amber-800 border border-amber-200';
-      case 'CONTRIBUTIF': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+      case 'CONTRIBUTIF':
+      case 'NDONGO_DARA':
+      case 'ELEVES': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
       case 'CESARIENNE': return 'bg-purple-100 text-purple-800 border border-purple-200';
-      case 'DIALYSE': return 'bg-rose-100 text-rose-800 border border-rose-200';
+      case 'BSF':
+      case 'CEC':
+      case 'BSF_CEC': return 'bg-teal-100 text-teal-800 border border-teal-200';
+      case 'DIALYSE':
+      case 'DIALYSE_PERITONEALE':
+      case 'HEMODIALYSE': return 'bg-rose-100 text-rose-800 border border-rose-200';
       default: return 'bg-slate-100 text-slate-800 border border-slate-200';
     }
   }

@@ -79,6 +79,8 @@ export interface LigneFactureStructure {
   dossierId?: string;
   statutLigne?: string;
   motifRejet?: string;
+  controleRegionLe?: string;
+  controleRegionPar?: string;
   /**
    * « IMPORT » : apportée par l'import de fin de mois (centre / EPS), remplacée au prochain import.
    * À renvoyer tel quel quand la ligne est modifiée à l'écran.

@@ -4,12 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { combineLatest, from } from 'rxjs';
+import { combineLatest, forkJoin, from } from 'rxjs';
 import { concatMap, take, toArray } from 'rxjs/operators';
 import { SrGestionService, ControleurSR, FactureAssigneeResume } from '../services/sr-gestion.service';
 import { PatientLigne, PrestationLigne } from '../suivi-enregistrement/suivi-enregistrement.component';
 import { StructureService } from '../../../core/services/structure.service';
 import { FactureService } from '../../../core/services/facture.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { Role } from '../../../core/models/user.model';
+import { UserService } from '../../../core/services/user.service';
 
 export interface ControleurSuiviRow {
   controleur: ControleurSR;
@@ -56,6 +59,8 @@ export class SuiviTraitementComponent implements OnInit {
     public srService: SrGestionService,
     private structureService: StructureService,
     private factureService: FactureService,
+    private auth: AuthService,
+    private userService: UserService,
     private snackBar: MatSnackBar
   ) {}
 
@@ -190,12 +195,34 @@ export class SuiviTraitementComponent implements OnInit {
   }
 
   repartirEquitablement(): void {
-    this.srService.getToutesFacturesResumes().pipe(take(1)).subscribe(all => {
-      const aAssigner = all.filter(f =>
-        (f.statut === 'ENVOYEE' || f.statut === 'A_TRAITER') && !f.controleurId
+    forkJoin({
+      factures: this.srService.getToutesFacturesResumes().pipe(take(1)),
+      utilisateurs: this.userService.getAll().pipe(take(1))
+    }).subscribe(({ factures, utilisateurs }) => {
+      const session = this.auth.getCurrentUser();
+      const utilisateurBackend = utilisateurs.find(u => u.id === session?.userId);
+      const utilisateur = {
+        role: utilisateurBackend?.role ?? session?.role,
+        regionId: utilisateurBackend?.regionId ?? session?.regionId
+      };
+      if (utilisateur?.role === Role.SERVICE_REGIONAL && !utilisateur.regionId) {
+        this.snackBar.open('Aucune région n’est associée à ce compte. Contactez un administrateur.', 'Fermer', { duration: 5000 });
+        return;
+      }
+      const estControleurValide = (facture: FactureAssigneeResume): boolean =>
+        !!facture.controleurId && utilisateurs.some(c =>
+          c.id === facture.controleurId &&
+          c.role === Role.CONTROLEUR &&
+          c.actif !== false &&
+          (!facture.regionId || c.regionId === facture.regionId)
+        );
+      const aAssigner = factures.filter(f =>
+        (f.statut === 'ENVOYEE' || f.statut === 'A_TRAITER') &&
+        !estControleurValide(f) &&
+        (utilisateur?.role !== Role.SERVICE_REGIONAL || f.regionId === utilisateur.regionId)
       );
       if (aAssigner.length === 0) {
-        this.snackBar.open('Aucune facture en attente sans contrôleur.', 'OK', { duration: 3500 });
+        this.snackBar.open('Aucune facture en attente à répartir.', 'OK', { duration: 3500 });
         return;
       }
 
@@ -218,9 +245,13 @@ export class SuiviTraitementComponent implements OnInit {
           );
           this.chargerDonnees();
         },
-        error: () => this.snackBar.open('Impossible d’enregistrer la répartition des factures.', 'Fermer', { duration: 5000 })
+        error: (erreur: any) => this.snackBar.open(
+          erreur?.error?.message || 'Impossible d’enregistrer la répartition des factures.',
+          'Fermer',
+          { duration: 7000 }
+        )
       });
-    });
+    }, () => this.snackBar.open('Impossible de charger les factures et les contrôleurs.', 'Fermer', { duration: 5000 }));
   }
 
   // ===================== FORMATTERS & BADGES =====================

@@ -4,12 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { SrGestionService, FactureAssigneeResume, StatutTraitementSR } from '../services/sr-gestion.service';
+import { SrGestionService, FactureAssigneeResume } from '../services/sr-gestion.service';
 import { DossiersGlobauxService } from '../services/dossiers-globaux.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { StructureService } from '../../../core/services/structure.service';
 import { FactureService } from '../../../core/services/facture.service';
+import { Facture } from '../../../core/models/facture.model';
+import { REGIME_LABELS, Regime } from '../../../core/models/bcsu.model';
 import { FactureStructure, TypePiece } from '../../../core/models/structure.model';
+import { from, Observable, throwError } from 'rxjs';
+import { concatMap, toArray } from 'rxjs/operators';
 
 export interface PatientControleLigne {
   id: string;
@@ -28,6 +32,7 @@ export interface PatientControleLigne {
   documents: { type: string; image?: string }[];
   prestations: {
     id: string;
+      ligneIndex: number;
     designation: string;
     codeActe: string;
     date: string;
@@ -40,20 +45,7 @@ export interface PatientControleLigne {
   }[];
 }
 
-interface EtablissementControle {
-  id: string;
-  nom: string;
-  code?: string;
-  type: string;
-  factures: FactureAssigneeResume[];
-}
-
-interface GroupeControle {
-  id: string;
-  nom: string;
-  etablissements: EtablissementControle[];
-  nombreFactures: number;
-}
+export type ModeControleur = 'FACTURES' | 'CONTROLE';
 
 @Component({
   selector: 'app-espace-controleur',
@@ -62,15 +54,20 @@ interface GroupeControle {
   templateUrl: './espace-controleur.component.html'
 })
 export class EspaceControleurComponent implements OnInit {
-  // Mode d'affichage : 'LISTE' des factures assignées, ou 'CONTROLE' d'une facture spécifique
-  mode: 'LISTE' | 'CONTROLE' = 'LISTE';
+  // Parcours direct :
+  // - FACTURES : Liste des factures affectées au contrôleur
+  // - CONTROLE : Écran de vérification approfondie de la facture
+  mode: ModeControleur = 'FACTURES';
 
-  // Filtre de statut
-  filtreStatut: string = ''; // '' = Toutes, 'A_TRAITER', 'EN_COURS_SR', 'VALIDEE_SR', 'REJETEE_SR'
+  factureEnControle: FactureAssigneeResume | null = null;
+
+  // Recherche dans les factures affectées
+  searchFacture = '';
+
+  // Filtre de statut global (Toutes, A_TRAITER, EN_COURS_SR, VALIDEE_SR, REJETEE_SR)
+  filtreStatut: string = '';
 
   facturesAssignees: FactureAssigneeResume[] = [];
-  factureEnControle: FactureAssigneeResume | null = null;
-  groupeOuvertId: string | null = null;
   patients: PatientControleLigne[] = [];
   patientSelectionne: PatientControleLigne | null = null;
   afficherIdentitePatient = false;
@@ -99,6 +96,8 @@ export class EspaceControleurComponent implements OnInit {
   piecesDossier: Record<string, { image?: string; chargement: boolean; erreur: boolean }> = {};
 
   loading = false;
+  factureDetailEnChargementId: string | null = null;
+  actionControleEnCours = false;
   telechargementEnCours = false;
 
   constructor(
@@ -142,7 +141,9 @@ export class EspaceControleurComponent implements OnInit {
 
   chargerFacturesAssignees(): void {
     this.loading = true;
-    this.srService.getToutesFacturesResumes().subscribe({
+    // Ne pas convertir une erreur de lecture API en liste vide : pour le compte
+    // contrôleur, la liste vient directement des factures qui lui sont assignées.
+    this.srService.getToutesFacturesResumes(false, false, true).subscribe({
       next: all => {
         const monId = this.controleurAffiche.id;
         const monNom = this.controleurAffiche.nom.trim().toLowerCase();
@@ -180,13 +181,15 @@ export class EspaceControleurComponent implements OnInit {
           }
         }
 
-        this.groupeOuvertId = null;
+        if (this.mode !== 'CONTROLE') {
+          this.mode = 'FACTURES';
+        }
         this.loading = false;
       },
       error: () => {
         this.facturesAssignees = [];
         this.loading = false;
-        this.snackBar.open('Impossible de charger les établissements et factures attribués.', 'Fermer', { duration: 5000 });
+        this.snackBar.open('Impossible de charger les factures affectées.', 'Fermer', { duration: 5000 });
       }
     });
   }
@@ -196,55 +199,26 @@ export class EspaceControleurComponent implements OnInit {
     return this.facturesAssignees.filter(f => f.statut === this.filtreStatut);
   }
 
-  /** Factures assignées regroupées par district, puis par établissement. */
-  get groupesAttribues(): GroupeControle[] {
-    const groupes = new Map<string, { nom: string; etablissements: Map<string, EtablissementControle> }>();
-    for (const facture of this.facturesFiltrees) {
-      const estPharmacie = facture.typeEtablissement === 'PHARMACIE';
-      const groupeId = estPharmacie
-        ? 'pharmacies-assignees'
-        : facture.districtId || `district:${facture.districtNom || 'sans-district'}`;
-      const groupeNom = estPharmacie
-        ? 'Pharmacies attribuées'
-        : facture.districtNom || (facture.districtId ? 'District attribué' : 'Structures sans district');
-      let groupe = groupes.get(groupeId);
-      if (!groupe) {
-        groupe = { nom: groupeNom, etablissements: new Map<string, EtablissementControle>() };
-        groupes.set(groupeId, groupe);
-      }
-
-      const etablissementId = `${facture.typeEtablissement}:${facture.etablissementId}`;
-      let etablissement = groupe.etablissements.get(etablissementId);
-      if (!etablissement) {
-        etablissement = {
-          id: etablissementId,
-          nom: facture.etablissementNom,
-          code: facture.etablissementCode,
-          type: this.libelleTypeEtablissement(facture),
-          factures: []
-        };
-        groupe.etablissements.set(etablissementId, etablissement);
-      }
-      etablissement.factures.push(facture);
-    }
-
-    return Array.from(groupes, ([id, groupe]) => {
-      const etablissements = Array.from(groupe.etablissements.values())
-        .map(etablissement => ({
-          ...etablissement,
-          factures: [...etablissement.factures].sort((a, b) => b.annee - a.annee || b.mois - a.mois)
-        }))
-        .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
-      return {
-        id,
-        nom: groupe.nom,
-        etablissements,
-        nombreFactures: etablissements.reduce((total, e) => total + e.factures.length, 0)
-      };
-    }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  get facturesAffectees(): FactureAssigneeResume[] {
+    let list = [...this.facturesFiltrees].sort((a, b) =>
+      (b.annee - a.annee)
+      || (b.mois - a.mois)
+      || (a.etablissementNom || '').localeCompare(b.etablissementNom || '', 'fr')
+    );
+    const term = this.searchFacture.toLowerCase().trim();
+    if (!term) return list;
+    return list.filter(f =>
+      (f.numero && f.numero.toLowerCase().includes(term)) ||
+      (f.etablissementNom && f.etablissementNom.toLowerCase().includes(term)) ||
+      (f.etablissementCode && f.etablissementCode.toLowerCase().includes(term)) ||
+      (f.districtNom && f.districtNom.toLowerCase().includes(term)) ||
+      (f.regime && f.regime.toLowerCase().includes(term)) ||
+      this.getRegimeLabel(f.regime).toLowerCase().includes(term) ||
+      this.getMoisLibelle(f.mois).toLowerCase().includes(term)
+    );
   }
 
-  private libelleTypeEtablissement(facture: FactureAssigneeResume): string {
+  libelleTypeEtablissement(facture: FactureAssigneeResume): string {
     if (facture.typeEtablissement === 'PHARMACIE') return 'Pharmacie';
     switch ((facture.typeStructure || '').toUpperCase()) {
       case 'PS': return 'Poste de santé';
@@ -254,8 +228,14 @@ export class EspaceControleurComponent implements OnInit {
     }
   }
 
-  basculerGroupe(groupeId: string): void {
-    this.groupeOuvertId = this.groupeOuvertId === groupeId ? null : groupeId;
+  // ===================== NAVIGATION =====================
+
+  retourAuxFactures(): void {
+    this.mode = 'FACTURES';
+    this.factureEnControle = null;
+    this.patientSelectionne = null;
+    this.factureDetailEnChargementId = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Métriques d'avancement
@@ -271,23 +251,11 @@ export class EspaceControleurComponent implements OnInit {
     this.mode = 'CONTROLE';
     this.patientSelectionne = null;
     this.searchPatient = '';
-
-    // Règle Section 3 : Facture ouverte pour contrôle passe automatiquement à "En cours SR"
-    if (fac.statut === 'A_TRAITER') {
-      this.srService.changerStatutFacture(fac.id, 'EN_COURS_SR', {
-        agentNom: this.controleurNomActuel
-      });
-      fac.statut = 'EN_COURS_SR';
-    }
-
     this.chargerPatientsFacture(fac);
   }
 
   retourListe(): void {
-    this.mode = 'LISTE';
-    this.factureEnControle = null;
-    this.patientSelectionne = null;
-    this.chargerFacturesAssignees();
+    this.retourAuxFactures();
   }
 
   retourAuxPatients(): void {
@@ -323,7 +291,8 @@ export class EspaceControleurComponent implements OnInit {
           montant: Number(prestation.montant) || 0,
           statut: estRejet ? 'REJETEE' : 'ACCEPTEE',
           motifRejet: motifLigne || motifPatient,
-          verifiee: estRejet || fac.statut === 'VALIDEE_SR'
+          verifiee: estRejet || prestation.statutLigne === 'ACCEPTEE' || !!prestation.controleRegionLe || fac.statut === 'VALIDEE_SR',
+          ligneIndex: Number.isInteger(prestation.ligneIndex) ? prestation.ligneIndex : -1
         };
       });
       const estRejete = !!motifPatient || patient.statutLigne === 'REJETEE' || prestations.some((pr: any) => pr.statut === 'REJETEE');
@@ -471,74 +440,91 @@ export class EspaceControleurComponent implements OnInit {
 
   // === CONTRÔLE PAR LIGNE DE PRESTATION ===
   validerPrestation(p: PatientControleLigne, pr: any): void {
-    pr.statut = 'ACCEPTEE';
-    pr.motifRejet = undefined;
-    pr.verifiee = true;
-
-    if (this.factureEnControle) {
-      this.srService.changerStatutFacture(this.factureEnControle.id, this.determinerStatutFactureApresControle(), {
-        annulerRejetLigne: pr.id,
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: this.factureEnControle.typeEtablissement
-      });
-      this.factureEnControle.statut = this.determinerStatutFactureApresControle();
-    }
-
-    if (!p.prestations.some(pre => pre.statut === 'REJETEE') && !p.motifRejet) {
-      p.statutLigne = 'CONFORME';
-    }
-
-    this.snackBar.open(`Prestation « ${pr.designation} » validée conforme.`, 'OK', { duration: 2500 });
+    this.enregistrerDecisionPrestation(p, pr, true);
   }
 
   annulerRejetPrestation(p: PatientControleLigne, pr: any): void {
-    pr.statut = 'ACCEPTEE';
-    pr.motifRejet = undefined;
-    pr.verifiee = true;
-
-    if (this.factureEnControle) {
-      this.srService.changerStatutFacture(this.factureEnControle.id, this.determinerStatutFactureApresControle(), {
-        annulerRejetLigne: pr.id,
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: this.factureEnControle.typeEtablissement
-      });
-      this.factureEnControle.statut = this.determinerStatutFactureApresControle();
-    }
-
-    if (!p.prestations.some(pre => pre.statut === 'REJETEE') && !p.motifRejet) {
-      p.statutLigne = 'CONFORME';
-    }
-
-    this.snackBar.open(`Rejet annulé pour « ${pr.designation} ».`, 'OK', { duration: 2500 });
+    this.enregistrerDecisionPrestation(p, pr, true);
   }
 
   validerToutesPrestationsPatient(p: PatientControleLigne): void {
-    p.prestations.forEach(pr => {
-      pr.statut = 'ACCEPTEE';
-      pr.motifRejet = undefined;
-      pr.verifiee = true;
-      if (this.factureEnControle) {
-        this.srService.changerStatutFacture(this.factureEnControle.id, 'EN_COURS_SR', {
-          annulerRejetLigne: pr.id,
-          agentNom: this.controleurNomActuel,
-          typeEtablissement: this.factureEnControle.typeEtablissement
-        });
+    if (!this.peutControlerFacture || this.actionControleEnCours) return;
+    if (!p.prestations.length) return;
+    if (p.prestations.some(pr => !Number.isInteger(pr.ligneIndex) || pr.ligneIndex < 0)) {
+      this.snackBar.open('Une prestation ne peut pas être identifiée dans la facture.', 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.actionControleEnCours = true;
+    from(p.prestations).pipe(
+      concatMap(pr => this.requeteDecisionPrestation(pr, true)),
+      toArray()
+    ).subscribe({
+      next: () => {
+        p.prestations.forEach(pr => this.appliquerDecisionLocale(p, pr, true));
+        this.actionControleEnCours = false;
+        this.snackBar.open(`Prestations de ${p.prenom} ${p.nom} marquées conformes.`, 'OK', { duration: 3000 });
+      },
+      error: () => {
+        this.actionControleEnCours = false;
+        this.snackBar.open('Impossible d’enregistrer toutes les décisions. Réessayez.', 'Fermer', { duration: 5000 });
       }
     });
-    p.statutLigne = 'CONFORME';
-    p.motifRejet = undefined;
+  }
 
-    if (this.factureEnControle) {
-      const nouveauStatut = this.determinerStatutFactureApresControle();
-      this.srService.changerStatutFacture(this.factureEnControle.id, nouveauStatut, {
-        annulerRejetPatient: p.id,
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: this.factureEnControle.typeEtablissement
-      });
-      this.factureEnControle.statut = nouveauStatut;
+  private enregistrerDecisionPrestation(p: PatientControleLigne, pr: any, accepter: boolean, motif?: string): void {
+    if (!this.factureEnControle || this.actionControleEnCours) return;
+    if (!this.peutControlerFacture) {
+      this.snackBar.open('Cette facture n’est plus en cours de contrôle.', 'Fermer', { duration: 3500 });
+      return;
     }
+    if (!Number.isInteger(pr.ligneIndex) || pr.ligneIndex < 0) {
+      this.snackBar.open('Cette prestation ne peut pas être identifiée dans la facture.', 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.actionControleEnCours = true;
+    this.requeteDecisionPrestation(pr, accepter, motif).subscribe({
+      next: () => {
+        this.appliquerDecisionLocale(p, pr, accepter, motif);
+        this.actionControleEnCours = false;
+        if (!accepter) this.afficherModalRejet = false;
+        this.snackBar.open(accepter
+          ? `Prestation « ${pr.designation} » validée conforme.`
+          : `Prestation « ${pr.designation} » rejetée avec motif.`, 'OK', { duration: 3000 });
+      },
+      error: () => {
+        this.actionControleEnCours = false;
+        this.snackBar.open('La décision n’a pas été enregistrée. Vérifiez votre connexion puis réessayez.', 'Fermer', { duration: 5000 });
+      }
+    });
+  }
 
-    this.snackBar.open(`Toutes les prestations de ${p.prenom} ${p.nom} sont validées conformes.`, 'OK', { duration: 3000 });
+  private requeteDecisionPrestation(pr: any, accepter: boolean, motif?: string): Observable<unknown> {
+    const facture = this.factureEnControle;
+    if (!facture || !Number.isInteger(pr.ligneIndex) || pr.ligneIndex < 0) {
+      return throwError(() => new Error('Index de prestation invalide'));
+    }
+    return facture.typeEtablissement === 'PHARMACIE'
+      ? this.factureService.deciderLigne(facture.id, pr.ligneIndex, { accepter, motif })
+      : this.structureService.deciderLigne(facture.id, pr.ligneIndex, accepter, motif);
+  }
+
+  private appliquerDecisionLocale(p: PatientControleLigne, pr: any, accepter: boolean, motif?: string): void {
+    pr.statut = accepter ? 'ACCEPTEE' : 'REJETEE';
+    pr.motifRejet = accepter ? undefined : motif;
+    pr.verifiee = true;
+    if (!p.prestations.some(pre => pre.statut === 'REJETEE')) {
+      p.statutLigne = 'CONFORME';
+      p.motifRejet = undefined;
+    }
+  }
+
+  get peutControlerFacture(): boolean {
+    return !!this.factureEnControle && ['A_TRAITER', 'EN_COURS_SR'].includes(this.factureEnControle.statut);
+  }
+
+  get toutesPrestationsDecidees(): boolean {
+    return this.patients.length > 0 && this.patients.every(p => p.prestations.length > 0
+      && p.prestations.every(pr => pr.verifiee && (pr.statut === 'ACCEPTEE' || pr.statut === 'REJETEE')));
   }
 
   patientEstRejete(p: PatientControleLigne): boolean {
@@ -547,14 +533,6 @@ export class EspaceControleurComponent implements OnInit {
 
   patientEstVerifieConforme(p: PatientControleLigne): boolean {
     return p.prestations.length > 0 && p.prestations.every(pr => pr.statut === 'ACCEPTEE' && pr.verifiee);
-  }
-
-  determinerStatutFactureApresControle(): StatutTraitementSR {
-    const aDesRejets = this.patients.some(p => p.statutLigne === 'REJETEE' || p.prestations.some(pr => pr.statut === 'REJETEE'));
-    if (aDesRejets) return 'REJETEE_SR';
-    const toutesVerifiees = this.patients.every(p => p.prestations.every(pr => pr.statut === 'ACCEPTEE' && pr.verifiee));
-    if (toutesVerifiees) return 'VALIDEE_SR';
-    return 'EN_COURS_SR';
   }
 
   // ===================== TÉLÉCHARGEMENTS (EXCEL & DOSSIERS GLOBAUX ZIP) =====================
@@ -645,79 +623,85 @@ export class EspaceControleurComponent implements OnInit {
       this.snackBar.open('L\'explication de la non-conformité est obligatoire !', 'OK', { duration: 3000 });
       return;
     }
-
-    const facId = this.factureEnControle!.id;
+    if (!this.factureEnControle || !this.peutControlerFacture || this.actionControleEnCours) return;
+    const facture = this.factureEnControle;
     const motif = this.motifRejetInput.trim();
-    const typeEtab = this.factureEnControle!.typeEtablissement;
 
     if (this.typeRejetActuel === 'FACTURE') {
-      this.srService.changerStatutFacture(facId, 'REJETEE_SR', {
-        motif,
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: typeEtab
+      this.actionControleEnCours = true;
+      const rejet$: Observable<unknown> = facture.typeEtablissement === 'PHARMACIE'
+        ? this.factureService.rejeter(facture.id, { commentaire: motif })
+        : this.structureService.rejeterFacture(facture.id, motif);
+      rejet$.subscribe({
+        next: () => {
+          facture.statut = 'REJETEE_SR';
+          facture.commentaireRejet = motif;
+          this.actionControleEnCours = false;
+          this.afficherModalRejet = false;
+          this.snackBar.open('Facture rejetée et renvoyée à la structure pour correction.', 'Fermer', { duration: 4500 });
+          this.retourListe();
+        },
+        error: () => {
+          this.actionControleEnCours = false;
+          this.snackBar.open('Le rejet n’a pas été enregistré. La facture reste à traiter.', 'Fermer', { duration: 5000 });
+        }
       });
-      this.factureEnControle!.statut = 'REJETEE_SR';
-      this.factureEnControle!.commentaireRejet = motif;
     } else if (this.typeRejetActuel === 'PATIENT') {
-      this.srService.changerStatutFacture(facId, 'REJETEE_SR', {
-        motif: `Rejet patient : ${motif}`,
-        rejetPatient: { patientKey: this.cibleRejetId, motif },
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: typeEtab
-      });
-      this.factureEnControle!.statut = 'REJETEE_SR';
       const pat = this.patients.find(p => p.id === this.cibleRejetId);
-      if (pat) {
-        pat.statutLigne = 'REJETEE';
-        pat.motifRejet = motif;
-        pat.prestations.forEach(pr => {
-          pr.statut = 'REJETEE';
-          pr.motifRejet = motif;
-          pr.verifiee = true;
-        });
+      if (!pat || !pat.prestations.length) return;
+      if (pat.prestations.some(pr => !Number.isInteger(pr.ligneIndex) || pr.ligneIndex < 0)) {
+        this.snackBar.open('Impossible d’identifier toutes les prestations de ce patient.', 'Fermer', { duration: 4000 });
+        return;
       }
+      this.actionControleEnCours = true;
+      from(pat.prestations).pipe(
+        concatMap(pr => this.requeteDecisionPrestation(pr, false, motif)),
+        toArray()
+      ).subscribe({
+        next: () => {
+          pat.prestations.forEach(pr => this.appliquerDecisionLocale(pat, pr, false, motif));
+          pat.motifRejet = motif;
+          this.actionControleEnCours = false;
+          this.afficherModalRejet = false;
+          this.snackBar.open('Prestations du patient rejetées avec motif.', 'Fermer', { duration: 3500 });
+        },
+        error: () => {
+          this.actionControleEnCours = false;
+          this.snackBar.open('Le rejet du patient n’a pas été enregistré.', 'Fermer', { duration: 4500 });
+        }
+      });
     } else if (this.typeRejetActuel === 'PRESTATION') {
-      this.srService.changerStatutFacture(facId, 'REJETEE_SR', {
-        motif: `Rejet prestation : ${motif}`,
-        rejetLigne: { ligneKey: this.cibleRejetId, motif },
-        agentNom: this.controleurNomActuel,
-        typeEtablissement: typeEtab
-      });
-      this.factureEnControle!.statut = 'REJETEE_SR';
-      this.patients.forEach(pat => {
-        pat.prestations.forEach((pr: any) => {
-          if (pr.id === this.cibleRejetId) {
-            pr.statut = 'REJETEE';
-            pr.motifRejet = motif;
-            pr.verifiee = true;
-            pat.statutLigne = 'REJETEE';
-          }
-        });
-      });
+      const patient = this.patients.find(p => p.prestations.some(pr => pr.id === this.cibleRejetId));
+      const prestation = patient?.prestations.find(pr => pr.id === this.cibleRejetId);
+      if (!patient || !prestation) return;
+      this.enregistrerDecisionPrestation(patient, prestation, false, motif);
     }
-
-    this.afficherModalRejet = false;
-    this.snackBar.open('Rejet motivé enregistré. La structure peut le consulter pour correction.', 'OK', { duration: 4000 });
   }
 
   validerFacture(): void {
     if (!this.factureEnControle) return;
-    this.srService.changerStatutFacture(this.factureEnControle.id, 'VALIDEE_SR', {
-      agentNom: this.controleurNomActuel
+    if (!this.peutControlerFacture) return;
+    if (!this.toutesPrestationsDecidees) {
+      this.snackBar.open('Décidez chaque prestation avant de valider la facture.', 'Fermer', { duration: 4000 });
+      return;
+    }
+    this.actionControleEnCours = true;
+    const facture = this.factureEnControle;
+    const validation$: Observable<unknown> = facture.typeEtablissement === 'PHARMACIE'
+      ? this.factureService.valider(facture.id, { commentaire: 'Contrôle des prestations terminé' })
+      : this.structureService.validerFacture(facture.id, 'Contrôle des prestations terminé');
+    validation$.subscribe({
+      next: () => {
+        facture.statut = 'VALIDEE_SR';
+        this.actionControleEnCours = false;
+        this.snackBar.open('Facture validée après contrôle des prestations.', 'Fermer', { duration: 4000 });
+        this.retourListe();
+      },
+      error: () => {
+        this.actionControleEnCours = false;
+        this.snackBar.open('La validation de la facture a échoué. Vérifiez qu’elle est toujours à traiter.', 'Fermer', { duration: 5000 });
+      }
     });
-    this.factureEnControle.statut = 'VALIDEE_SR';
-    this.snackBar.open('Facture validée conforme par le Service Régional !', 'OK', { duration: 4000 });
-  }
-
-  envoyerAuNiveauCentral(): void {
-    if (!this.factureEnControle) return;
-
-    // Règle Section 3 : Une facture Envoyée au NC disparaît de l'espace du contrôleur
-    this.srService.changerStatutFacture(this.factureEnControle.id, 'ENVOYEE_NC', {
-      agentNom: this.controleurNomActuel
-    });
-    this.snackBar.open('Facture transmise au Niveau Central (NC). Elle est archivée de votre espace de contrôle.', 'OK', { duration: 5000 });
-    this.retourListe();
   }
 
   voirDossier(p: PatientControleLigne): void {
@@ -770,7 +754,40 @@ export class EspaceControleurComponent implements OnInit {
   }
 
   ouvrirFacture(f: FactureAssigneeResume): void {
+    if (this.factureDetailEnChargementId === f.id && this.mode === 'CONTROLE') return;
+
+    // Ouvrir immédiatement la vérification avec les données de la liste. Le chargement
+    // du détail complète ensuite les pièces ; une réponse lente/indisponible ne doit
+    // pas rendre la facture assignée non cliquable.
     this.ouvrirControle(f);
+    this.factureDetailEnChargementId = f.id;
+    const detail$: Observable<FactureStructure | Facture> = f.typeEtablissement === 'PHARMACIE'
+      ? this.factureService.getById(f.id)
+      : this.structureService.getFacture(f.id, { fresh: true });
+
+    detail$.subscribe({
+      next: detail => {
+        if (this.factureDetailEnChargementId === f.id) {
+          this.factureDetailEnChargementId = null;
+        }
+        if (this.factureEnControle?.id !== f.id) return;
+        f.factureOrigine = detail;
+        const statut = String(detail.statut || '');
+        if (statut) f.statut = statut === 'ENVOYEE' ? 'A_TRAITER' : statut;
+        this.chargerPatientsFacture(f);
+        if (!this.patients.some(patient => patient.prestations.length > 0)) {
+          this.snackBar.open('Cette facture ne contient aucune prestation à vérifier.', 'Fermer', { duration: 4500 });
+        }
+      },
+      error: () => {
+        if (this.factureDetailEnChargementId === f.id) {
+          this.factureDetailEnChargementId = null;
+        }
+        if (this.factureEnControle?.id === f.id) {
+          this.snackBar.open('Facture ouverte. Le détail complémentaire est indisponible ; les données de la liste restent affichées.', 'Fermer', { duration: 5000 });
+        }
+      }
+    });
   }
 
   getMoisLibelle(mois: number): string {
@@ -820,25 +837,36 @@ export class EspaceControleurComponent implements OnInit {
   }
 
   getRegimeLabel(code?: string): string {
-    if (!code) return '';
+    if (!code) return 'Régime non précisé';
+    const connu = REGIME_LABELS[code as Regime];
+    if (connu) return connu;
     switch (code) {
       case 'ENFANTS_MOINS_5_ANS': return 'Gratuité < 5 ans';
       case 'PLAN_SESAME': return 'Plan Sésame (60+)';
       case 'CONTRIBUTIF': return 'Contributif (Mutuelles/BSF)';
       case 'CESARIENNE': return 'Maternité / Césarienne';
       case 'DIALYSE': return 'Dialyse';
-      default: return code;
+      default: return code.replace(/_/g, ' ');
     }
   }
 
   getRegimeBadgeClass(code?: string): string {
     if (!code) return 'bg-slate-100 text-slate-800';
     switch (code) {
+      case 'ZERO_CINQ_ANS':
       case 'ENFANTS_MOINS_5_ANS': return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'SESAME':
       case 'PLAN_SESAME': return 'bg-amber-100 text-amber-800 border border-amber-200';
-      case 'CONTRIBUTIF': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+      case 'CONTRIBUTIF':
+      case 'NDONGO_DARA':
+      case 'ELEVES': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
       case 'CESARIENNE': return 'bg-purple-100 text-purple-800 border border-purple-200';
-      case 'DIALYSE': return 'bg-rose-100 text-rose-800 border border-rose-200';
+      case 'BSF':
+      case 'CEC':
+      case 'BSF_CEC': return 'bg-teal-100 text-teal-800 border border-teal-200';
+      case 'DIALYSE':
+      case 'DIALYSE_PERITONEALE':
+      case 'HEMODIALYSE': return 'bg-rose-100 text-rose-800 border border-rose-200';
       default: return 'bg-slate-100 text-slate-800 border border-slate-200';
     }
   }

@@ -237,7 +237,7 @@
                     'bg-red-100 text-red-800': m.statut === 'REJETEE_SR',
                     'bg-blue-200 text-blue-900': m.statut === 'ENVOYEE_NC'
                   }">
-              {{ m.statut === 'A_TRAITER' ? 'À traiter' : m.statut === 'EN_COURS_SR' ? 'En cours SR' : m.statut === 'VALIDEE_SR' ? 'Validée SR' : m.statut === 'REJETEE_SR' ? 'Rejetée SR' : m.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : m.statut }}
+              {{ m.statut === 'A_TRAITER' ? 'À traiter' : m.statut === 'EN_COURS_SR' ? 'En cours SR' : m.statut === 'VALIDEE_SR' ? 'Validée SR' : m.statut === 'REJETEE_SR' ? 'Rejetée SR' : m.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : m.statut }}<ng-container *ngIf="m.statut === 'VALIDEE_SR' && m.controleurNom"> · {{ m.controleurNom }}</ng-container>
             </span>
           </div>
           <div class="text-[10px] text-emerald-700 font-bold mt-1 text-right flex items-center justify-end gap-0.5">
@@ -268,7 +268,7 @@
                     'bg-emerald-50 text-emerald-700 border border-emerald-200': factureActiveResume.statut === 'VALIDEE_SR',
                     'bg-rose-50 text-rose-700 border border-rose-200': factureActiveResume.statut === 'REJETEE_SR',
                     'bg-indigo-50 text-indigo-700 border border-indigo-200': factureActiveResume.statut === 'ENVOYEE_NC'
-                  }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}</span>
+                  }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}<ng-container *ngIf="factureActiveResume.statut === 'VALIDEE_SR' && factureActiveResume.controleurNom"> · {{ factureActiveResume.controleurNom }}</ng-container></span>
           </div>
           <h3 class="mt-1 text-xl md:text-2xl font-bold tracking-tight text-slate-900">
               Facture Officine {{ factureActiveResume.numero }} — {{ moisSelectionne?.nomMois }} {{ annee }}

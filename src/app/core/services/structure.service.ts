@@ -230,6 +230,12 @@ export class StructureService {
     return this.api.post<FactureStructure>(`/factures-structure/${factureId}/rejet-lignes`, { dossierIds, motif, rejete });
   }
 
+  /** Décision persistée sur une prestation précise d'une facture de structure. */
+  deciderLigne(factureId: string, ligneIndex: number, accepter: boolean, motif?: string): Observable<FactureStructure> {
+    return this.api.post<FactureStructure>(`/factures-structure/${factureId}/lignes/${ligneIndex}/decider`, { accepter, motif })
+      .pipe(tap(() => this.factureEvents.notifyChanged()));
+  }
+
   validerFacturePoste(id: string, commentaire?: string): Observable<FactureStructure> {
     return this.api.post<FactureStructure>(`/factures-structure/${id}/valider-poste`, { commentaire }).pipe(tap(() => this.factureEvents.notifyFactureEnvoyee(id, 'STRUCTURE')));
   }
