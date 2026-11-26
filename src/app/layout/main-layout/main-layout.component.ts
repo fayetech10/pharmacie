@@ -66,6 +66,11 @@ export class MainLayoutComponent implements OnInit {
   counts: StatutCounts = {};
   regionName: string | null = null;
   sidebarCollapsed = false;
+  mobileDrawerOpen = false;
+
+  get showMobileDrawerButton(): boolean {
+    return this.topNav.length > 1 && !this.showMobileBottomNav && !this.authService.isPosteDeSante();
+  }
 
   toggleSidebar(): void {
     this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -371,6 +376,7 @@ export class MainLayoutComponent implements OnInit {
       )
       .subscribe(e => {
         this.currentUrl = e.urlAfterRedirects;
+        this.mobileDrawerOpen = false;
         // Rafraîchit les compteurs au changement de page (pas sur un simple changement d'onglet).
         const path = this.currentUrl.split('?')[0];
         if (path !== lastPath) {

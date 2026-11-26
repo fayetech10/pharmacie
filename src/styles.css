@@ -981,6 +981,18 @@ mat-icon.inline-ic {
   .kpi-grid { margin-bottom: var(--sp-3); }
 }
 
+@media (max-width: 400px) {
+  .kpi-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767.98px) {
+  .modal-card, .modal-pointage {
+    max-height: 90dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .menu-item-danger {
   color: #DC2626 !important;
 }

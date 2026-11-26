@@ -13,7 +13,7 @@
     </div>
 
     <!-- Actions rapides & Filtres temporels -->
-    <div class="flex items-center gap-2 flex-shrink-0">
+    <div class="flex flex-wrap items-center gap-2">
       <!-- Sélecteur d'année -->
       <div class="relative">
         <select [(ngModel)]="annee" (change)="chargerDonnees()"
@@ -60,7 +60,7 @@
   <!-- =========================================================
        KPI GLOBAUX + ALERTES OPÉRATIONNELLES
        ========================================================= -->
-  <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
     <div class="kpi-card">
       <div class="kpi-card__header">
         <span class="kpi-card__icon-wrap kpi-icon--emerald"><mat-icon class="!text-[17px] !w-4 !h-4">payments</mat-icon></span>

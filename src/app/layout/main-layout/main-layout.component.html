@@ -89,12 +89,20 @@
      ============================================================ -->
 <header class="md:hidden sticky top-0 z-[150] bg-ink shadow-[0_2px_10px_rgba(6,78,59,0.25)] pt-[env(safe-area-inset-top,0px)]">
   <div class="h-[54px] px-3 flex items-center justify-between gap-3">
-    <a routerLink="/dashboard" class="flex items-center gap-2 no-underline min-w-0">
-      <span class="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
-        <img [src]="brandLogo" alt="Logo CSU" class="w-[26px] h-[26px] object-contain block" />
-      </span>
-      <span class="text-[15px] text-white whitespace-nowrap overflow-hidden text-ellipsis">CSU <strong class="font-extrabold">Sénégal</strong></span>
-    </a>
+    <div class="flex items-center gap-2 min-w-0">
+      <button *ngIf="showMobileDrawerButton" type="button"
+              (click)="mobileDrawerOpen = true"
+              aria-label="Ouvrir le menu"
+              class="w-9 h-9 rounded-lg bg-white/10 text-white flex items-center justify-center border-0 cursor-pointer shrink-0 active:bg-white/20">
+        <mat-icon class="!text-[22px] !w-[22px] !h-[22px]">menu</mat-icon>
+      </button>
+      <a routerLink="/dashboard" class="flex items-center gap-2 no-underline min-w-0">
+        <span class="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
+          <img [src]="brandLogo" alt="Logo CSU" class="w-[26px] h-[26px] object-contain block" />
+        </span>
+        <span class="text-[15px] text-white whitespace-nowrap overflow-hidden text-ellipsis">CSU <strong class="font-extrabold">Sénégal</strong></span>
+      </a>
+    </div>
     <button type="button"
             class="w-9 h-9 rounded-full bg-white text-ink flex items-center justify-center text-xs font-extrabold tracking-[0.02em] shrink-0 border-2 border-white/40 cursor-pointer"
             [matMenuTriggerFor]="userMenuMobile"
@@ -117,6 +125,49 @@
     </mat-menu>
   </div>
 </header>
+
+<!-- Drawer navigation mobile pour les rôles multi-pages sans bottom-nav -->
+<div *ngIf="mobileDrawerOpen && showMobileDrawerButton"
+     class="fixed inset-0 z-[220] md:hidden flex"
+     (click)="mobileDrawerOpen = false">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-[1px]" aria-hidden="true"></div>
+  <aside class="relative z-10 w-[270px] max-w-[82vw] h-full bg-ink flex flex-col shadow-2xl pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+         (click)="$event.stopPropagation()"
+         aria-label="Menu mobile">
+    <div class="h-[56px] px-4 flex items-center justify-between border-b border-white/10">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shrink-0">
+          <img [src]="brandLogo" alt="Logo CSU" class="w-5 h-5 object-contain block" />
+        </span>
+        <span class="text-[15px] text-white whitespace-nowrap">CSU <strong class="font-extrabold">Sénégal</strong></span>
+      </div>
+      <button type="button" (click)="mobileDrawerOpen = false" aria-label="Fermer le menu"
+              class="w-9 h-9 rounded-lg bg-white/10 text-white flex items-center justify-center border-0 cursor-pointer">
+        <mat-icon class="!text-[20px] !w-5 !h-5">close</mat-icon>
+      </button>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+      <ng-container *ngFor="let group of topNavGroups">
+        <div class="px-2.5 pt-3 pb-1 text-[10.5px] font-bold uppercase tracking-wider text-[#91AAA0]" *ngIf="group.name !== 'Général'">
+          {{ group.name }}
+        </div>
+        <a *ngFor="let item of group.items"
+           [routerLink]="item.link"
+           [queryParams]="item.tab !== undefined ? { tab: item.tab } : null"
+           (click)="mobileDrawerOpen = false"
+           [class.active]="isNavActive(item)"
+           class="sidebar-nav-link">
+          <span class="relative flex items-center justify-center shrink-0">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span class="nav-badge absolute -top-1.5 -right-2 box-border min-w-[16px] h-[16px] px-1 rounded-full bg-warn text-white text-[9px] font-bold leading-[16px] text-center"
+                  *ngIf="navBadge(item) > 0">{{ navBadge(item) }}</span>
+          </span>
+          <span class="sidebar-nav-label">{{ item.label }}</span>
+        </a>
+      </ng-container>
+    </nav>
+  </aside>
+</div>
 
 <!-- Mode hors ligne (postes et centres de santé) : installation, réseau, saisies en attente -->
 <app-bandeau-hors-ligne *ngIf="horsLigneActif"></app-bandeau-hors-ligne>
