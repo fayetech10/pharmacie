@@ -19,75 +19,87 @@
 
     <!-- Cartes résumé épurées -->
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-slate-300 transition" (click)="filtreStatut = ''">
+      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-slate-300 transition" (click)="setFiltreStatut('')">
         <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Affectées</div>
-        <div class="text-xl font-semibold font-mono tabular-nums text-slate-900 mt-1">{{ facturesAssignees.length }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Toutes les factures</div>
+        <div class="text-xl font-semibold font-mono tabular-nums text-slate-900 mt-1">{{ totalFacturesFiltreesParRegime }}</div>
       </div>
 
-      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-amber-300 transition" (click)="filtreStatut = 'A_TRAITER'">
-        <div class="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">À traiter</div>
+      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-amber-300 transition" (click)="setFiltreStatut('A_TRAITER')">
+        <div class="flex items-center justify-between gap-1">
+          <div class="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">À traiter</div>
+          <span *ngIf="nbNouvellesFactures > 0"
+                class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse motion-reduce:animate-none"
+                title="Nouvelles factures non ouvertes">
+            <mat-icon class="!h-3.5 !w-3.5 !text-sm">fiber_new</mat-icon>
+            {{ nbNouvellesFactures }}
+          </span>
+        </div>
         <div class="text-xl font-semibold font-mono tabular-nums text-amber-700 mt-1">{{ countParStatut('A_TRAITER') }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Non ouvertes</div>
       </div>
 
-      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-blue-300 transition" (click)="filtreStatut = 'EN_COURS_SR'">
+      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-blue-300 transition" (click)="setFiltreStatut('EN_COURS_SR')">
         <div class="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">En cours SR</div>
         <div class="text-xl font-semibold font-mono tabular-nums text-blue-700 mt-1">{{ countParStatut('EN_COURS_SR') }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Vérification démarrée</div>
       </div>
 
-      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-emerald-300 transition" (click)="filtreStatut = 'VALIDEE_SR'">
+      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-emerald-300 transition" (click)="setFiltreStatut('VALIDEE_SR')">
         <div class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Validées SR</div>
         <div class="text-xl font-semibold font-mono tabular-nums text-emerald-700 mt-1">{{ countParStatut('VALIDEE_SR') }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Conformes</div>
       </div>
 
-      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-rose-300 transition" (click)="filtreStatut = 'REJETEE_SR'">
+      <div class="bg-white p-3.5 rounded-lg border border-slate-200/80 cursor-pointer hover:border-rose-300 transition" (click)="setFiltreStatut('REJETEE_SR')">
         <div class="text-[11px] font-semibold text-rose-700 uppercase tracking-wider">Rejetées SR</div>
         <div class="text-xl font-semibold font-mono tabular-nums text-rose-700 mt-1">{{ countParStatut('REJETEE_SR') }}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">Rejets motivés</div>
       </div>
     </div>
 
-    <!-- Filtres par boutons segmentés -->
+    <!-- Filtres par boutons segmentés + filtre régime -->
     <div class="flex flex-wrap items-center gap-2">
-      <button type="button" (click)="filtreStatut = ''"
+      <button type="button" (click)="setFiltreStatut('')"
               [class]="filtreStatut === '' ? 'bg-primary-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
               class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
-        Toutes ({{ facturesAssignees.length }})
+        Toutes ({{ totalFacturesFiltreesParRegime }})
       </button>
-      <button type="button" (click)="filtreStatut = 'A_TRAITER'"
+      <button type="button" (click)="setFiltreStatut('A_TRAITER')"
               [class]="filtreStatut === 'A_TRAITER' ? 'bg-amber-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
-        À traiter ({{ countParStatut('A_TRAITER') }})
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
+        <span>À traiter ({{ countParStatut('A_TRAITER') }})</span>
+        <mat-icon *ngIf="nbNouvellesFactures > 0" class="!h-4 !w-4 !text-base" [ngClass]="filtreStatut === 'A_TRAITER' ? 'text-white' : 'text-amber-600'">fiber_new</mat-icon>
       </button>
-      <button type="button" (click)="filtreStatut = 'EN_COURS_SR'"
+      <button type="button" (click)="setFiltreStatut('EN_COURS_SR')"
               [class]="filtreStatut === 'EN_COURS_SR' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
               class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         En cours SR ({{ countParStatut('EN_COURS_SR') }})
       </button>
-      <button type="button" (click)="filtreStatut = 'VALIDEE_SR'"
+      <button type="button" (click)="setFiltreStatut('VALIDEE_SR')"
               [class]="filtreStatut === 'VALIDEE_SR' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
               class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         Validées SR ({{ countParStatut('VALIDEE_SR') }})
       </button>
-      <button type="button" (click)="filtreStatut = 'REJETEE_SR'"
+      <button type="button" (click)="setFiltreStatut('REJETEE_SR')"
               [class]="filtreStatut === 'REJETEE_SR' ? 'bg-rose-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
               class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer">
         Rejetées SR ({{ countParStatut('REJETEE_SR') }})
       </button>
     </div>
 
-    <!-- Barre de recherche & Total factures affectées -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-      <div class="relative w-full sm:w-96">
-        <mat-icon class="absolute left-3 top-2.5 !text-lg !w-5 !h-5 text-slate-400">search</mat-icon>
-        <input type="search" [(ngModel)]="searchFacture" placeholder="Rechercher par numéro, poste, district, régime, mois..."
-               class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-emerald-600 bg-white">
+    <!-- Barre de recherche & Filtre régime -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+        <div class="relative w-full sm:w-80">
+          <mat-icon class="absolute left-3 top-2.5 !text-lg !w-5 !h-5 text-slate-400">search</mat-icon>
+          <input type="search" [(ngModel)]="searchFacture" (ngModelChange)="onFiltreFacturesChange()" placeholder="Rechercher par numéro, poste, district, régime, mois..."
+                 class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-emerald-600 bg-white">
+        </div>
+        <select [(ngModel)]="filtreRegime" (ngModelChange)="onFiltreFacturesChange()"
+                aria-label="Filtrer par régime"
+                class="h-[34px] px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 cursor-pointer focus:border-emerald-600 focus:outline-none">
+          <option value="">Tous les régimes ({{ facturesAssignees.length }})</option>
+          <option *ngFor="let r of regimesDisponibles" [value]="r.code">{{ r.label }} ({{ r.count }})</option>
+        </select>
       </div>
       <div class="text-xs text-slate-500 font-medium">
-        {{ facturesAffectees.length }} facture(s) affectée(s)
+        {{ facturesAffectees.length }} facture(s)
       </div>
     </div>
 
@@ -110,7 +122,7 @@
              (keydown.space)="$event.preventDefault(); ouvrirFacture(f)"
              tabindex="0"
              role="button"
-             [attr.aria-label]="'Vérifier la facture ' + f.numero + ' de ' + f.etablissementNom"
+             [attr.aria-label]="'Vérifier la facture de ' + f.etablissementNom"
              class="group flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-emerald-50/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
 
           <div class="flex items-center gap-3 min-w-[240px] flex-1">
@@ -119,21 +131,27 @@
             </span>
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition">{{ f.numero }}</span>
-                <span *ngIf="f.regime" [class]="getRegimeBadgeClass(f.regime)" class="rounded-full px-2 py-0.5 text-[10px] font-bold">
-                  {{ getRegimeLabel(f.regime) }}
+                <span class="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition truncate">{{ f.etablissementNom }}</span>
+                <span *ngIf="estNouvelleFacture(f)"
+                      class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse motion-reduce:animate-none"
+                      matTooltip="Nouvelle facture à consulter">
+                  <mat-icon class="!h-3.5 !w-3.5 !text-sm">fiber_new</mat-icon>
+                  Nouveau
+                </span>
+                <span *ngIf="getRegimeCodeEffectif(f) as regCode" [class]="getRegimeBadgeClass(regCode)" class="rounded-full px-2 py-0.5 text-[10px] font-bold">
+                  {{ getRegimeLabel(regCode) }}
+                </span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                  <mat-icon class="!h-3 !w-3 !text-xs text-slate-500">calendar_month</mat-icon>
+                  {{ getMoisLibelle(f.mois) }} {{ f.annee }}
                 </span>
               </div>
-              <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
-                <span class="font-semibold text-slate-800 truncate">{{ f.etablissementNom }}</span>
-                <span class="text-slate-400">·</span>
+              <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                 <span>{{ libelleTypeEtablissement(f) }}</span>
                 <ng-container *ngIf="f.districtNom">
                   <span class="text-slate-400">·</span>
-                  <span class="text-slate-500">{{ f.districtNom }}</span>
+                  <span>{{ f.districtNom }}</span>
                 </ng-container>
-                <span class="text-slate-400">·</span>
-                <span class="font-medium text-slate-700">{{ getMoisLibelle(f.mois) }} {{ f.annee }}</span>
               </div>
             </div>
           </div>
@@ -177,6 +195,29 @@
   <!-- 3. MODE CONTRÔLE : ÉCRAN DE VÉRIFICATION   -->
   <!-- ========================================== -->
   <div *ngIf="mode === 'CONTROLE' && factureEnControle" class="fade-in">
+
+    <!-- Bandeau compact d'identification de la facture en cours de vérification -->
+    <div *ngIf="!patientSelectionne" class="bg-white rounded-xl border border-slate-200 px-4 py-2.5 mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2 min-w-0">
+        <button type="button" (click)="retourAuxFactures()"
+                title="Retour aux factures affectées"
+                aria-label="Retour aux factures affectées"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition cursor-pointer shrink-0">
+          <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon>
+        </button>
+        <span class="text-sm font-bold text-slate-900 truncate">{{ factureEnControle.etablissementNom }}</span>
+        <span *ngIf="getRegimeCodeEffectif(factureEnControle) as regCode" [class]="getRegimeBadgeClass(regCode)" class="rounded-full px-2 py-0.5 text-[10px] font-bold">
+          {{ getRegimeLabel(regCode) }}
+        </span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+          <mat-icon class="!h-3.5 !w-3.5 !text-xs text-slate-500">calendar_month</mat-icon>
+          {{ getMoisLibelle(factureEnControle.mois) }} {{ factureEnControle.annee }}
+        </span>
+      </div>
+      <span [class]="getStatutBadgeClass(factureEnControle.statut)" class="rounded-full border px-2.5 py-0.5 text-[11px] font-bold">
+        {{ getStatutLibelle(factureEnControle.statut) }}
+      </span>
+    </div>
 
     <!-- Motif du rejet de la facture si présent -->
     <div *ngIf="factureEnControle.commentaireRejet"
@@ -236,12 +277,6 @@
     <div class="card" *ngIf="!patientSelectionne">
       <div class="section-header">
         <div class="section-title-group">
-          <button type="button" (click)="retourAuxFactures()"
-                  title="Retour aux factures affectées"
-                  aria-label="Retour aux factures affectées"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition cursor-pointer print:hidden">
-            <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon>
-          </button>
           <div class="section-icon"><mat-icon>groups</mat-icon></div>
           <div>
             <h2>Patients</h2>

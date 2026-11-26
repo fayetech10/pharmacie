@@ -315,63 +315,15 @@
   <!-- 1.5 VUE POSTES POLARISÉS DU DISTRICT SANITAIRE                           -->
   <!-- ========================================================================= -->
   <div *ngIf="vueMode === 'POSTES' && districtSelectionne" class="fade-in space-y-4">
-    <!-- En-tête District Sanitaire -->
-    <div class="bg-white rounded-lg border border-slate-200/80 px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 uppercase">
-            {{ districtSelectionne.code }}
-          </span>
-          <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-            District Sanitaire
-          </span>
-          <h2 class="text-base font-semibold text-slate-900 tracking-tight">{{ districtSelectionne.nom }}</h2>
-        </div>
-        <p class="text-xs text-slate-500 mt-1">
-          Saisies du mois : <strong class="text-emerald-700">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</strong> · Saisis aujourd'hui ({{ dateSuiviDuJour }}) : <strong class="text-emerald-700">{{ totalPostesSaisisAujourdhui }} / {{ postesPolarisesDuDistrict.length }}</strong> · Hôpitaux : <strong class="text-indigo-700">{{ hopitauxDuDistrict.length }}</strong>
-        </p>
-      </div>
-
-      <button (click)="fermerVuePostes()"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer">
-        <mat-icon class="!text-sm !w-4 !h-4 text-slate-500">arrow_back</mat-icon>
-        Retour aux districts
-      </button>
-    </div>
-
-    <!-- Synthèse de l'avancement des postes pour le mois sélectionné -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes du district</div>
-        <div class="text-xl font-bold text-slate-900 mt-0.5">{{ postesPolarisesDuDistrict.length }}</div>
-      </div>
-      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes ayant saisi</div>
-        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesAvecSaisie }} / {{ postesPolarisesDuDistrict.length }}</div>
-      </div>
-      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Saisis aujourd'hui · {{ dateSuiviDuJour }}</div>
-        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesSaisisAujourdhui }} / {{ postesPolarisesDuDistrict.length }}</div>
-      </div>
-      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Factures envoyées</div>
-        <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ totalPostesAvecFacture }}</div>
-      </div>
-      <div class="rounded-lg border border-border bg-white px-4 py-3 shadow-xs">
-        <div class="text-[11px] uppercase tracking-wide text-text-muted font-semibold">Postes sans saisie</div>
-        <div class="text-xl font-bold text-amber-700 mt-0.5">{{ postesPolarisesDuDistrict.length - totalPostesAvecSaisie }}</div>
-      </div>
-    </div>
-
     <!-- Les hôpitaux du district sont toujours présentés avant les postes polarisés. -->
     <div class="card">
       <div class="section-header flex flex-wrap items-center justify-between gap-3">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>domain</mat-icon></div>
-          <div>
-            <h2>Hôpitaux et postes du district</h2>
-            <p>Les hôpitaux du district apparaissent en premier, au-dessus des postes polarisés.</p>
-          </div>
+        <div class="flex items-center gap-2.5">
+          <button (click)="fermerVuePostes()" type="button" title="Retour aux districts" aria-label="Retour aux districts"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 cursor-pointer shrink-0">
+            <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon>
+          </button>
+          <h2 class="m-0 text-base font-bold text-slate-900">{{ districtSelectionne.nom }}</h2>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">

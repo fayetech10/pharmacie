@@ -26,7 +26,6 @@
     <div class="flex items-center justify-between gap-4">
       <div class="min-w-0">
         <h1 class="m-0 text-[18px] font-bold text-slate-900 truncate">{{ currentUser?.structureNom || 'Espace agent BCSU' }}</h1>
-        <p class="m-0 mt-0.5 text-[12px] text-slate-400">Bureau de la CSU</p>
       </div>
       <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[12.5px] font-semibold text-white transition hover:bg-primary-hover cursor-pointer shadow-sm" (click)="ouvrirRegistre()">
         <mat-icon class="!text-[14px] !w-3.5 !h-3.5">picture_as_pdf</mat-icon>
@@ -36,7 +35,7 @@
 
     <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
       <app-tuile-activite *ngFor="let a of activites" [icone]="a.icone" [teinte]="a.teinte" [titre]="a.titre"
-                          [description]="a.description" (click)="changerOnglet(a.tab)"></app-tuile-activite>
+                          (click)="changerOnglet(a.tab)"></app-tuile-activite>
     </div>
   </div>
 

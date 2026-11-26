@@ -1,82 +1,9 @@
 <div class="space-y-5">
 
-  <!-- ================= FIL D'ARIANE DE NAVIGATION EN ENTONNOIR ================= -->
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <!-- Échelon 1 -->
-      <button (click)="allerAuNiveau(1)"
-              [ngClass]="niveauEntonnoir === 1 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
-              class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
-        <mat-icon class="!text-sm !w-4 !h-4">domain</mat-icon>
-        Structures sanitaires (4 Hôpitaux & 9 Districts)
-      </button>
-
-      <!-- Échelon 1.5 (District et ses postes polarisés) -->
-      <ng-container *ngIf="structureSelectionnee && estDistrict(structureSelectionnee) && niveauEntonnoir >= 15">
-        <span class="text-slate-400 font-bold">/</span>
-        <button (click)="allerAuNiveau(15)"
-                [ngClass]="niveauEntonnoir === 15 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
-                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
-          <mat-icon class="!text-sm !w-4 !h-4">hub</mat-icon>
-          {{ structureSelectionnee.nom }} (Postes polarisés)
-        </button>
-      </ng-container>
-
-      <!-- Échelon 2 (Poste polarisé ou Hôpital) -->
-      <ng-container *ngIf="niveauEntonnoir >= 2">
-        <span class="text-slate-400 font-bold">/</span>
-        <button (click)="allerAuNiveau(2)"
-                [ngClass]="niveauEntonnoir === 2 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
-                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
-          <mat-icon class="!text-sm !w-4 !h-4">medical_services</mat-icon>
-          {{ posteSelectionne?.nom || structureSelectionnee?.nom }}
-        </button>
-      </ng-container>
-
-      <!-- Échelon 3 (Régime) -->
-      <ng-container *ngIf="niveauEntonnoir >= 3">
-        <span class="text-slate-400 font-bold">/</span>
-        <button (click)="allerAuNiveau(3)"
-                [ngClass]="niveauEntonnoir === 3 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
-                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
-          <mat-icon class="!text-sm !w-4 !h-4">folder_shared</mat-icon>
-          {{ regimeSelectionne?.libelle }}
-        </button>
-      </ng-container>
-
-      <!-- Échelon 4 (Facture du mois) -->
-      <ng-container *ngIf="niveauEntonnoir >= 4">
-        <span class="text-slate-400 font-bold">/</span>
-        <button (click)="allerAuNiveau(4)"
-                [ngClass]="niveauEntonnoir === 4 ? 'font-bold text-emerald-800' : 'text-slate-500 hover:text-emerald-700'"
-                class="inline-flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-100 transition cursor-pointer">
-          <mat-icon class="!text-sm !w-4 !h-4">receipt</mat-icon>
-          Facture {{ moisSelectionne?.nomMois }} {{ annee }}
-        </button>
-      </ng-container>
-
-      <!-- Échelon 5 (Patient sélectionné) -->
-      <ng-container *ngIf="niveauEntonnoir === 5 && patientSelectionne">
-        <span class="text-slate-400 font-bold">/</span>
-        <span class="font-bold text-emerald-800 py-1 px-2 bg-emerald-50 rounded">
-          Patient {{ patientSelectionne.prenom }} {{ patientSelectionne.nom }}
-        </span>
-      </ng-container>
-    </div>
-
-    <!-- Badge Étape entonnoir -->
-    <div class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-      Étape {{ niveauEntonnoir === 15 ? '1.5' : niveauEntonnoir }}/5
-    </div>
-  </div>
-
-  <!-- ================= NIVEAU 1 : LISTE DES STRUCTURES (4 HÔPITAUX & 9 DISTRICTS) ================= -->
+  <!-- ================= NIVEAU 1 : LISTE DES STRUCTURES ================= -->
   <div *ngIf="niveauEntonnoir === 1" class="space-y-4">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h3 class="text-sm font-bold text-slate-900">Établissements sanitaires de référence de Thiès</h3>
-        <p class="text-xs text-slate-500">Sélectionnez un hôpital ou un district sanitaire pour explorer ses factures par poste et régime</p>
-      </div>
+      <h3 class="text-sm font-bold text-slate-900 m-0">Structures sanitaires</h3>
 
       <div class="flex items-center gap-2">
         <span class="text-xs font-semibold text-slate-500">Année :</span>
@@ -177,30 +104,6 @@
 
   <!-- ================= NIVEAU 1.5 : POSTES POLARISÉS DU DISTRICT SANITAIRE ================= -->
   <div *ngIf="niveauEntonnoir === 15 && structureSelectionnee" class="space-y-4">
-    <!-- En-tête District Sanitaire -->
-    <div class="bg-white rounded-lg border border-slate-200/80 px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 uppercase">
-            {{ structureSelectionnee.code }}
-          </span>
-          <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-            District Sanitaire
-          </span>
-          <h2 class="text-base font-semibold text-slate-900 tracking-tight">{{ structureSelectionnee.nom }}</h2>
-        </div>
-        <p class="text-xs text-slate-500 mt-1">
-          Postes de santé polarisés : <strong class="text-slate-700">{{ postesDuDistrict.length }}</strong> · Factures consolidées : <strong class="text-slate-700">{{ totalFacturesPostes }}</strong> · Part SEN-CSU : <strong class="text-emerald-700 font-mono">{{ formatMontant(totalSencsuPostes) }}</strong>
-        </p>
-      </div>
-
-      <button (click)="allerAuNiveau(1)"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer">
-        <mat-icon class="!text-sm !w-4 !h-4 text-slate-500">arrow_back</mat-icon>
-        Retour aux structures
-      </button>
-    </div>
-
     <!-- Synthèse financière des postes polarisés -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs">
@@ -220,11 +123,14 @@
     <!-- Tableau des Postes de Santé polarisés -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <mat-icon class="text-emerald-700">hub</mat-icon> Postes de santé polarisés du district
+        <div class="flex items-center gap-2.5">
+          <button (click)="allerAuNiveau(1)" type="button" title="Retour aux structures" aria-label="Retour aux structures"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 cursor-pointer shrink-0">
+            <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon>
+          </button>
+          <h3 class="text-sm font-bold text-slate-900 m-0">
+            {{ structureSelectionnee.nom }} — Postes polarisés
           </h3>
-          <p class="text-xs text-slate-500">Sélectionnez un poste pour consulter ses factures selon leur régime</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -357,12 +263,9 @@
   <!-- ================= NIVEAU 2 : RÉGIMES DE LA STRUCTURE OU DU POSTE ================= -->
   <div *ngIf="niveauEntonnoir === 2" class="space-y-4">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h3 class="text-sm font-bold text-slate-900">
-          Régimes de prise en charge — {{ posteSelectionne?.nom || structureSelectionnee?.nom }}
-        </h3>
-        <p class="text-xs text-slate-500">Sélectionnez un régime pour voir les mois facturés</p>
-      </div>
+      <h3 class="text-sm font-bold text-slate-900 m-0">
+        Régimes — {{ posteSelectionne?.nom || structureSelectionnee?.nom }}
+      </h3>
       <button (click)="estDistrict(structureSelectionnee) ? allerAuNiveau(15) : allerAuNiveau(1)"
               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition cursor-pointer">
         <mat-icon class="!text-sm !w-4 !h-4">arrow_back</mat-icon>
@@ -411,14 +314,9 @@
   <!-- ================= NIVEAU 3 : LES MOIS (MOIS FACTURÉS EN VERT) ================= -->
   <div *ngIf="niveauEntonnoir === 3" class="space-y-4">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h3 class="text-sm font-bold text-slate-900">
-          Suivi mensuel des factures — {{ regimeSelectionne?.libelle }}
-        </h3>
-        <p class="text-xs text-slate-500">
-          Structure : <strong>{{ posteSelectionne?.nom || structureSelectionnee?.nom }}</strong> · Les mois facturés apparaissent en <span class="text-emerald-700 font-bold">VERT</span>
-        </p>
-      </div>
+      <h3 class="text-sm font-bold text-slate-900 m-0">
+        {{ posteSelectionne?.nom || structureSelectionnee?.nom }} · {{ regimeSelectionne?.libelle }}
+      </h3>
 
       <div class="flex items-center gap-2">
         <select [(ngModel)]="filtreStatutMois"
@@ -491,22 +389,22 @@
   <!-- ================= NIVEAU 4 : FACTURE DU MOIS (AFFICHAGE ÉPURÉ) ================= -->
   <div *ngIf="niveauEntonnoir === 4 && factureActiveResume" class="space-y-4">
 
-    <!-- Barre d'actions épurée de la facture -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 space-y-3">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5 min-w-0">
+    <!-- Barre d'en-tête & actions de la facture -->
+    <div class="bg-white rounded-xl border border-slate-200 px-4 py-3.5 space-y-3">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-start sm:items-center gap-3 min-w-0">
           <button (click)="allerAuNiveau(3)" type="button"
                   title="Retour aux mois"
                   aria-label="Retour aux mois"
-                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 cursor-pointer">
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer">
             <mat-icon class="!text-base !w-4 !h-4">arrow_back</mat-icon>
           </button>
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-base font-bold text-slate-900 m-0 truncate">
-                Facture {{ factureActiveResume.numero }}
+              <h3 class="text-[15px] font-bold font-mono text-slate-900 m-0 tracking-tight">
+                {{ factureActiveResume.numero }}
               </h3>
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
                     [ngClass]="{
                       'bg-blue-50 text-blue-700 border border-blue-200': factureActiveResume.statut === 'A_TRAITER',
                       'bg-amber-50 text-amber-700 border border-amber-200': factureActiveResume.statut === 'EN_COURS_SR',
@@ -515,42 +413,65 @@
                       'bg-indigo-50 text-indigo-700 border border-indigo-200': factureActiveResume.statut === 'ENVOYEE_NC'
                     }">{{ factureActiveResume.statut === 'A_TRAITER' ? 'À traiter' : factureActiveResume.statut === 'EN_COURS_SR' ? 'En cours SR' : factureActiveResume.statut === 'VALIDEE_SR' ? 'Validée SR' : factureActiveResume.statut === 'REJETEE_SR' ? 'Rejetée SR' : factureActiveResume.statut === 'ENVOYEE_NC' ? 'Envoyée au NC' : factureActiveResume.statut }}<ng-container *ngIf="factureActiveResume.statut === 'VALIDEE_SR' && factureActiveResume.controleurNom"> · {{ factureActiveResume.controleurNom }}</ng-container></span>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5 truncate">
-              {{ posteSelectionne?.nom || structureSelectionnee?.nom }} · {{ regimeSelectionne?.libelle }} · {{ moisSelectionne?.nomMois }} {{ annee }}
-            </p>
+            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+              <span class="font-medium text-slate-700">{{ posteSelectionne?.nom || structureSelectionnee?.nom }}</span>
+              <span class="text-slate-300">·</span>
+              <span>{{ regimeSelectionne?.libelle }}</span>
+              <span class="text-slate-300">·</span>
+              <span>{{ moisSelectionne?.nomMois }} {{ annee }}</span>
+              <span class="text-slate-300">·</span>
+              <span class="font-mono font-semibold text-slate-800">{{ formatMontant(factureActiveResume.montantTotal || 0) }}</span>
+              <span class="font-mono font-semibold text-emerald-700">(CSU {{ formatMontant(factureActiveResume.montantSencsu || 0) }})</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button (click)="telechargerDossiersGlobaux()" [disabled]="telechargementEnCours" type="button"
-                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">folder_zip</mat-icon> Dossiers ZIP
-          </button>
-          <button (click)="telechargerExcel()" type="button"
-                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">table_view</mat-icon> Excel
-          </button>
-          <button (click)="telechargerPdf()" [disabled]="exportPdfEnCours" type="button"
-                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-800 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">{{ exportPdfEnCours ? 'hourglass_top' : 'picture_as_pdf' }}</mat-icon>
-            {{ exportPdfEnCours ? 'Préparation…' : 'PDF' }}
-          </button>
-          <button (click)="ouvrirModalSupprimerFacture(factureActiveResume)" type="button"
-                  class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">delete_outline</mat-icon> Supprimer
-          </button>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <!-- Groupe exports sobre -->
+          <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/70 divide-x divide-slate-200 overflow-hidden">
+            <button (click)="telechargerDossiersGlobaux()" [disabled]="telechargementEnCours" type="button"
+                    title="Télécharger les dossiers (ZIP)"
+                    class="inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium text-slate-700 hover:bg-white hover:text-slate-900 disabled:cursor-wait disabled:opacity-50 transition cursor-pointer">
+              <mat-icon class="!text-[15px] !w-4 !h-4 text-slate-500">folder_zip</mat-icon> ZIP
+            </button>
+            <button (click)="telechargerExcel()" type="button"
+                    title="Exporter en Excel"
+                    class="inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium text-slate-700 hover:bg-white hover:text-slate-900 transition cursor-pointer">
+              <mat-icon class="!text-[15px] !w-4 !h-4 text-slate-500">table_view</mat-icon> Excel
+            </button>
+            <button (click)="telechargerPdf()" [disabled]="exportPdfEnCours" type="button"
+                    title="Exporter en PDF"
+                    class="inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium text-slate-700 hover:bg-white hover:text-slate-900 disabled:cursor-wait disabled:opacity-50 transition cursor-pointer">
+              <mat-icon class="!text-[15px] !w-4 !h-4 text-slate-500">{{ exportPdfEnCours ? 'hourglass_top' : 'picture_as_pdf' }}</mat-icon>
+              {{ exportPdfEnCours ? '…' : 'PDF' }}
+            </button>
+          </div>
+
+          <!-- Décisions workflow -->
           <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="ouvrirModalRejetFacture()"
-                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">close</mat-icon> Rejeter
+                  type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 cursor-pointer">
+            <mat-icon class="!text-[15px] !w-4 !h-4">close</mat-icon> Rejeter
           </button>
           <button *ngIf="factureActiveResume.statut === 'A_TRAITER' || factureActiveResume.statut === 'EN_COURS_SR'" (click)="validerFacture()"
-                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">task_alt</mat-icon> Valider
+                  type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
+            <mat-icon class="!text-[15px] !w-4 !h-4">task_alt</mat-icon> Valider
           </button>
           <button *ngIf="factureActiveResume.statut === 'VALIDEE_SR'" (click)="envoyerAuNiveauCentral()"
-                  type="button" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-blue-700 px-3.5 text-xs font-semibold text-white transition hover:bg-blue-800 cursor-pointer">
-            <mat-icon class="!text-base !w-4 !h-4">send</mat-icon> Transmettre au central
+                  type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white transition hover:bg-emerald-800 cursor-pointer">
+            <mat-icon class="!text-[15px] !w-4 !h-4">send</mat-icon> Transmettre au central
           </button>
+
+          <!-- Menu secondaire (action destructive isolée) -->
+          <button type="button" [matMenuTriggerFor]="factureMoreMenu" aria-label="Plus d'actions" title="Plus d'actions"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer">
+            <mat-icon class="!text-base !w-4 !h-4">more_vert</mat-icon>
+          </button>
+          <mat-menu #factureMoreMenu="matMenu" xPosition="before">
+            <button mat-menu-item (click)="ouvrirModalSupprimerFacture(factureActiveResume)">
+              <mat-icon class="!text-rose-600">delete_outline</mat-icon>
+              <span class="text-rose-700">Supprimer la facture</span>
+            </button>
+          </mat-menu>
         </div>
       </div>
 

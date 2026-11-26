@@ -9,6 +9,7 @@ import { DossiersGlobauxService } from '../services/dossiers-globaux.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { StructureService } from '../../../core/services/structure.service';
 import { FactureService } from '../../../core/services/facture.service';
+import { FactureCountService } from '../../../core/services/facture-count.service';
 import { Facture } from '../../../core/models/facture.model';
 import { REGIME_LABELS, Regime } from '../../../core/models/bcsu.model';
 import { FactureStructure, TypePiece } from '../../../core/models/structure.model';
@@ -64,10 +65,16 @@ export class EspaceControleurComponent implements OnInit {
   // Recherche dans les factures affectées
   searchFacture = '';
 
-  // Filtre de statut global (Toutes, A_TRAITER, EN_COURS_SR, VALIDEE_SR, REJETEE_SR)
-  filtreStatut: string = '';
+  // Filtre de statut global (Toutes, A_TRAITER, EN_COURS_SR, VALIDEE_SR, REJETEE_SR) — par défaut « À traiter »
+  filtreStatut: string = 'A_TRAITER';
+
+  // Filtre par régime
+  filtreRegime: string = '';
 
   facturesAssignees: FactureAssigneeResume[] = [];
+  regimesDisponibles: { code: string; label: string; count: number }[] = [];
+  facturesAffecteesCache: FactureAssigneeResume[] = [];
+  private facturesConsultees = new Set<string>();
   patients: PatientControleLigne[] = [];
   patientSelectionne: PatientControleLigne | null = null;
   afficherIdentitePatient = false;
@@ -102,6 +109,7 @@ export class EspaceControleurComponent implements OnInit {
 
   constructor(
     public auth: AuthService,
+    public factureCount: FactureCountService,
     private srService: SrGestionService,
     private dossiersGlobaux: DossiersGlobauxService,
     private structureService: StructureService,
@@ -110,7 +118,51 @@ export class EspaceControleurComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.chargerFacturesConsultees();
     this.chargerFacturesAssignees();
+  }
+
+  private get storageKeyConsultees(): string {
+    return `csu_controleur_seen_${this.controleurAffiche.id || 'default'}`;
+  }
+
+  private chargerFacturesConsultees(): void {
+    this.facturesConsultees.clear();
+    try {
+      const raw = localStorage.getItem(this.storageKeyConsultees);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(id => this.facturesConsultees.add(String(id)));
+        }
+      }
+    } catch { /* stockage indisponible */ }
+  }
+
+  private marquerFactureConsultee(id: string): void {
+    if (!id) return;
+    if (!this.facturesConsultees.has(id)) {
+      this.facturesConsultees.add(id);
+      try {
+        localStorage.setItem(this.storageKeyConsultees, JSON.stringify([...this.facturesConsultees]));
+      } catch { /* stockage indisponible */ }
+    }
+    this.factureCount.markStructureInvoiceSeen(id);
+  }
+
+  estNouvelleFacture(f: FactureAssigneeResume): boolean {
+    if (!f?.id) return false;
+    return this.factureCount.isNewStructureInvoice(f.id)
+      || (f.statut === 'A_TRAITER' && !this.facturesConsultees.has(f.id));
+  }
+
+  get nbNouvellesFactures(): number {
+    return this.facturesAssignees.filter(f => this.estNouvelleFacture(f)).length;
+  }
+
+  getRegimeCodeEffectif(f?: FactureAssigneeResume | null): string {
+    if (!f) return '';
+    return (f.regime || (f.typeEtablissement === 'PHARMACIE' ? 'CONTRIBUTIF' : '') || '').trim();
   }
 
   controleurFiltreId = '';
@@ -140,6 +192,7 @@ export class EspaceControleurComponent implements OnInit {
   }
 
   chargerFacturesAssignees(): void {
+    this.chargerFacturesConsultees();
     this.loading = true;
     // Ne pas convertir une erreur de lecture API en liste vide : pour le compte
     // contrôleur, la liste vient directement des factures qui lui sont assignées.
@@ -181,6 +234,8 @@ export class EspaceControleurComponent implements OnInit {
           }
         }
 
+        this.recalculerRegimesDisponibles();
+        this.recalculerFacturesAffectees();
         if (this.mode !== 'CONTROLE') {
           this.mode = 'FACTURES';
         }
@@ -188,34 +243,71 @@ export class EspaceControleurComponent implements OnInit {
       },
       error: () => {
         this.facturesAssignees = [];
+        this.regimesDisponibles = [];
+        this.facturesAffecteesCache = [];
         this.loading = false;
         this.snackBar.open('Impossible de charger les factures affectées.', 'Fermer', { duration: 5000 });
       }
     });
   }
 
-  get facturesFiltrees(): FactureAssigneeResume[] {
-    if (!this.filtreStatut) return this.facturesAssignees;
-    return this.facturesAssignees.filter(f => f.statut === this.filtreStatut);
+  private recalculerRegimesDisponibles(): void {
+    const map = new Map<string, number>();
+    for (const f of this.facturesAssignees) {
+      const code = this.getRegimeCodeEffectif(f);
+      if (!code) continue;
+      map.set(code, (map.get(code) || 0) + 1);
+    }
+    this.regimesDisponibles = [...map.entries()]
+      .map(([code, count]) => ({ code, label: this.getRegimeLabel(code), count }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    if (this.filtreRegime && !map.has(this.filtreRegime)) {
+      this.filtreRegime = '';
+    }
   }
 
-  get facturesAffectees(): FactureAssigneeResume[] {
-    let list = [...this.facturesFiltrees].sort((a, b) =>
-      (b.annee - a.annee)
+  setFiltreStatut(statut: string): void {
+    this.filtreStatut = statut;
+    this.recalculerFacturesAffectees();
+  }
+
+  onFiltreFacturesChange(): void {
+    this.recalculerFacturesAffectees();
+  }
+
+  get facturesFiltrees(): FactureAssigneeResume[] {
+    return this.facturesAssignees.filter(f => {
+      if (this.filtreStatut && f.statut !== this.filtreStatut) return false;
+      if (this.filtreRegime && this.getRegimeCodeEffectif(f) !== this.filtreRegime) return false;
+      return true;
+    });
+  }
+
+  recalculerFacturesAffectees(): void {
+    const list = [...this.facturesFiltrees].sort((a, b) =>
+      ((a.statut === 'A_TRAITER' ? 0 : 1) - (b.statut === 'A_TRAITER' ? 0 : 1))
+      || (b.annee - a.annee)
       || (b.mois - a.mois)
       || (a.etablissementNom || '').localeCompare(b.etablissementNom || '', 'fr')
     );
     const term = this.searchFacture.toLowerCase().trim();
-    if (!term) return list;
-    return list.filter(f =>
+    if (!term) {
+      this.facturesAffecteesCache = list;
+      return;
+    }
+    this.facturesAffecteesCache = list.filter(f =>
       (f.numero && f.numero.toLowerCase().includes(term)) ||
       (f.etablissementNom && f.etablissementNom.toLowerCase().includes(term)) ||
       (f.etablissementCode && f.etablissementCode.toLowerCase().includes(term)) ||
       (f.districtNom && f.districtNom.toLowerCase().includes(term)) ||
       (f.regime && f.regime.toLowerCase().includes(term)) ||
-      this.getRegimeLabel(f.regime).toLowerCase().includes(term) ||
+      this.getRegimeLabel(this.getRegimeCodeEffectif(f)).toLowerCase().includes(term) ||
       this.getMoisLibelle(f.mois).toLowerCase().includes(term)
     );
+  }
+
+  get facturesAffectees(): FactureAssigneeResume[] {
+    return this.facturesAffecteesCache;
   }
 
   libelleTypeEtablissement(facture: FactureAssigneeResume): string {
@@ -235,6 +327,7 @@ export class EspaceControleurComponent implements OnInit {
     this.factureEnControle = null;
     this.patientSelectionne = null;
     this.factureDetailEnChargementId = null;
+    this.recalculerFacturesAffectees();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -750,10 +843,18 @@ export class EspaceControleurComponent implements OnInit {
   }
 
   countParStatut(statut: string): number {
-    return this.facturesAssignees.filter(f => f.statut === statut).length;
+    return this.facturesAssignees.filter(f =>
+      f.statut === statut && (!this.filtreRegime || this.getRegimeCodeEffectif(f) === this.filtreRegime)
+    ).length;
+  }
+
+  get totalFacturesFiltreesParRegime(): number {
+    if (!this.filtreRegime) return this.facturesAssignees.length;
+    return this.facturesAssignees.filter(f => this.getRegimeCodeEffectif(f) === this.filtreRegime).length;
   }
 
   ouvrirFacture(f: FactureAssigneeResume): void {
+    this.marquerFactureConsultee(f.id);
     if (this.factureDetailEnChargementId === f.id && this.mode === 'CONTROLE') return;
 
     // Ouvrir immédiatement la vérification avec les données de la liste. Le chargement

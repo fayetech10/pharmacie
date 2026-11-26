@@ -12,13 +12,24 @@ import { BaseChartDirective } from 'ng2-charts';
 import { CHARTS_PROVIDER } from '../../../core/chart/chart.providers';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
-import { MontantMensuelSR, SrGestionService, StructureEnregistrementRow, FactureAssigneeResume, StatsRegimeSR } from '../services/sr-gestion.service';
+import {
+  ControleurSR,
+  DistrictEnregistrementRow,
+  FactureAssigneeResume,
+  MontantMensuelSR,
+  PharmacieEnregistrementRow,
+  SrGestionService,
+  StatsRegimeSR,
+  StructureEnregistrementRow,
+  SuiviBcsuRow
+} from '../services/sr-gestion.service';
 import { FactureEventsService } from '../../../core/services/facture-events.service';
+import { FactureCountService } from '../../../core/services/facture-count.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { RegionService } from '../../../core/services/region.service';
 
 interface SaisieStructureTypeStats {
-  type: 'PS' | 'CS' | 'EPS';
+  type: 'PS' | 'CS' | 'EPS' | 'PHARMACIE';
   libelle: string;
   icone: string;
   nombreActif: number;
@@ -61,6 +72,7 @@ export class RegionalDashboardComponent implements OnInit {
   private router = inject(Router);
   private srService = inject(SrGestionService);
   private factureEvents = inject(FactureEventsService);
+  private factureCount = inject(FactureCountService);
   private auth = inject(AuthService);
   private regionService = inject(RegionService);
   private snackBar = inject(MatSnackBar);
@@ -103,6 +115,10 @@ export class RegionalDashboardComponent implements OnInit {
 
   // Données
   structuresSuivies: StructureEnregistrementRow[] = [];
+  pharmaciesSuivies: PharmacieEnregistrementRow[] = [];
+  districtsSuivis: DistrictEnregistrementRow[] = [];
+  bcsuRows: SuiviBcsuRow[] = [];
+  controleursList: ControleurSR[] = [];
   toutesFactures: FactureAssigneeResume[] = [];
   facturesFiltrees: FactureAssigneeResume[] = [];
   selectedFacture: FactureAssigneeResume | null = null;
@@ -113,7 +129,7 @@ export class RegionalDashboardComponent implements OnInit {
   loadingStructures = false;
   messageErreur = '';
 
-  // Totaux globaux
+  // Totaux globaux & indicateurs complémentaires
   totalFacture = 0;
   totalSencsu = 0;
   totalSencsuTraite = 0;
@@ -121,6 +137,16 @@ export class RegionalDashboardComponent implements OnInit {
   totalBeneficiaires = 0;
   nombreFactures = 0;
   tauxTraitementSencsu = 0;
+  deltaMontantAnneePct: number | null = null;
+
+  nbNouvellesFactures = 0;
+  nbFacturesPretsNC = 0;
+  nbFacturesNonAssignees = 0;
+
+  bcsuTotalFacture = 0;
+  bcsuTotalPaye = 0;
+  bcsuTotalReste = 0;
+  bcsuTauxRegle = 0;
 
   // Régimes et paiements
   statsRegimes: StatsRegimeSR[] = [];
@@ -174,6 +200,43 @@ export class RegionalDashboardComponent implements OnInit {
   montantMensuelChartData: ChartConfiguration<'line'>['data'] = { labels: [], datasets: [] };
   participationChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
   regimeChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
+  controleursChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
+
+  readonly controleursChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'start',
+        labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle', color: '#475569', font: { size: 11 } }
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: context => ` ${context.dataset.label} : ${context.parsed.x ?? 0} facture(s)`
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        beginAtZero: true,
+        border: { display: false },
+        grid: { color: '#edf0f2' },
+        ticks: { color: '#64748b', precision: 0, stepSize: 1 }
+      },
+      y: {
+        stacked: true,
+        border: { display: false },
+        grid: { display: false },
+        ticks: { color: '#334155', font: { size: 11.5, weight: 600 } }
+      }
+    }
+  };
 
   // Diagramme Statut des factures (Doughnut)
   statutsFacturesChartData: ChartConfiguration<'doughnut'>['data'] = {
@@ -288,7 +351,7 @@ export class RegionalDashboardComponent implements OnInit {
       { type: 'EPS', libelle: 'Hôpitaux (EPS)', icone: 'domain' }
     ];
 
-    this.saisiesParTypeStructureCache = types.map(type => {
+    const statsStructures = types.map(type => {
       const structures = (this.structuresSuivies || []).filter(s => s?.actif && (s?.type || '').toUpperCase() === type.type);
       const saisissantes = structures.filter(s => s.saisieActive);
       return {
@@ -299,6 +362,20 @@ export class RegionalDashboardComponent implements OnInit {
         tauxSaisie: this.calculerPourcentage(saisissantes.length, structures.length)
       };
     });
+
+    const pharmaciesActives = (this.pharmaciesSuivies || []).filter(p => p?.actif !== false);
+    const pharmaciesSaisissantes = pharmaciesActives.filter(p => p.saisieActive);
+    const statsPharmacies: SaisieStructureTypeStats = {
+      type: 'PHARMACIE',
+      libelle: "Pharmacies d'officine",
+      icone: 'local_pharmacy',
+      nombreActif: pharmaciesActives.length,
+      nombreAvecSaisie: pharmaciesSaisissantes.length,
+      montantSaisi: pharmaciesSaisissantes.reduce((total, p) => total + (p.montantTotal || 0), 0),
+      tauxSaisie: this.calculerPourcentage(pharmaciesSaisissantes.length, pharmaciesActives.length)
+    };
+
+    this.saisiesParTypeStructureCache = [...statsStructures, statsPharmacies];
   }
 
   get totalStructuresAvecSaisie(): number {
@@ -329,6 +406,13 @@ export class RegionalDashboardComponent implements OnInit {
       });
     }
 
+    this.srService.controleursObservable
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(controleurs => {
+        this.controleursList = controleurs || [];
+        this.mettreAJourGraphiqueControleurs();
+      });
+
     this.chargerDonnees();
     this.factureEvents.changed$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -342,11 +426,6 @@ export class RegionalDashboardComponent implements OnInit {
     }
     this.messageErreur = '';
 
-    // ── Un seul appel aux factures, partagé par tous les consommateurs ──
-    // Avant, 3 branches indépendantes appelaient chacune getToutesFacturesResumes(),
-    // ce qui déclenchait ~15 requêtes HTTP (structures, pharmacies, districts…)
-    // au lieu de ~5. On récupère les factures une seule fois et on les passe
-    // aux calculs côté client.
     const factures$ = this.srService.getToutesFacturesResumes(true, false).pipe(
       catchError(() => of([] as FactureAssigneeResume[])),
       shareReplay(1)
@@ -359,10 +438,14 @@ export class RegionalDashboardComponent implements OnInit {
         this.mois ?? undefined,
         this.trimestre ?? undefined,
         factures$
-      )
-        .pipe(catchError(() => of({ districts: [], structures: [], pharmacies: [] })))
+      ).pipe(catchError(() => of({ districts: [], structures: [], pharmacies: [] }))),
+      bcsu: this.srService.getSuiviBcsu({
+        annee: this.annee,
+        trimestre: this.trimestre ?? undefined,
+        mois: this.mois ?? undefined
+      }).pipe(catchError(() => of([] as SuiviBcsuRow[])))
     }).subscribe({
-      next: ({ factures, suivi }) => {
+      next: ({ factures, suivi, bcsu }) => {
         // ── 1. Calculer le tableau de bord à partir des factures déjà chargées ──
         const dashboard = this.calculerTableauDeBordLocal(factures);
 
@@ -387,18 +470,41 @@ export class RegionalDashboardComponent implements OnInit {
         this.nombreFactures = stats.reduce((s, r) => s + r.nombreFactures, 0);
         this.tauxTraitementSencsu = this.totalSencsu > 0 ? Math.round((this.totalSencsuTraite / this.totalSencsu) * 100) : 0;
 
+        // Comparaison N vs N-1 sur la même période
+        const facturesN1 = this.filtrerFacturesPeriode(factures, this.annee - 1, this.trimestre ?? undefined, this.mois ?? undefined);
+        const totalN1 = facturesN1.reduce((s, f) => s + (f.montantTotal || 0), 0);
+        this.deltaMontantAnneePct = totalN1 > 0 ? Math.round(((this.totalFacture - totalN1) / totalN1) * 100) : null;
+
         const montants = dashboard.montantsMensuels || [];
         this.mettreAJourGraphiqueMensuel(montants);
         this.genererSparklines(montants);
 
-        // ── 2. Structures suivies ──
+        // ── 2. Structures, pharmacies et districts suivis ──
         this.structuresSuivies = suivi.structures || [];
+        this.pharmaciesSuivies = suivi.pharmacies || [];
+        this.districtsSuivis = [...(suivi.districts || [])].sort((a, b) =>
+          (b.nombrePostes ? b.nombrePostesAvecSaisie / b.nombrePostes : 0) - (a.nombrePostes ? a.nombrePostesAvecSaisie / a.nombrePostes : 0)
+          || a.nom.localeCompare(b.nom, 'fr')
+        );
         this.mettreAJourGraphiquesStructures();
 
-        // ── 3. Factures et calculs par statut ──
+        // ── 3. Synthèse BCSU ──
+        this.bcsuRows = bcsu || [];
+        this.bcsuTotalFacture = this.bcsuRows.reduce((s, r) => s + (r.montantFacture || 0), 0);
+        this.bcsuTotalPaye = this.bcsuRows.reduce((s, r) => s + (r.montantPaye || 0), 0);
+        this.bcsuTotalReste = this.bcsuRows.reduce((s, r) => s + (r.resteAPayer || 0), 0);
+        this.bcsuTauxRegle = this.bcsuTotalFacture > 0 ? Math.round((this.bcsuTotalPaye / this.bcsuTotalFacture) * 100) : 0;
+
+        // ── 4. Factures, statuts, alertes et graphique contrôleurs ──
         this.toutesFactures = factures;
-        this.calculerAttenteParNiveau(this.toutesFactures);
-        this.calculerStatutsFactures(this.toutesFactures);
+        const facturesPeriode = this.filtrerFacturesPeriode(factures, this.annee, this.trimestre ?? undefined, this.mois ?? undefined);
+        this.nbNouvellesFactures = facturesPeriode.filter(f => this.factureCount.isNewStructureInvoice(f.id)).length;
+        this.nbFacturesPretsNC = facturesPeriode.filter(f => f.statut === 'VALIDEE_SR').length;
+        this.nbFacturesNonAssignees = facturesPeriode.filter(f => (f.statut === 'A_TRAITER' || f.statut === 'ENVOYEE') && !f.controleurId).length;
+
+        this.calculerAttenteParNiveau(facturesPeriode);
+        this.calculerStatutsFactures(factures);
+        this.mettreAJourGraphiqueControleurs();
         this.appliquerFiltres();
 
         this.loading = false;
@@ -409,6 +515,52 @@ export class RegionalDashboardComponent implements OnInit {
         this.loading = false;
         this.loadingStructures = false;
       }
+    });
+  }
+
+  private normaliserCodeRegimeDashboard(code?: string): string {
+    const c = (code || '').trim().toUpperCase();
+    switch (c) {
+      case 'ZERO_CINQ_ANS':
+      case 'ENFANTS_MOINS_5_ANS':
+        return 'ENFANTS_MOINS_5_ANS';
+      case 'SESAME':
+      case 'PLAN_SESAME':
+        return 'PLAN_SESAME';
+      case 'CESARIENNE':
+        return 'CESARIENNE';
+      case 'DIALYSE':
+      case 'DIALYSE_PERITONEALE':
+      case 'HEMODIALYSE':
+        return 'DIALYSE';
+      case 'CONTRIBUTIF':
+      case 'BSF':
+      case 'CEC':
+      case 'BSF_CEC':
+      case 'NDONGO_DARA':
+      case 'ELEVES':
+      default:
+        return 'CONTRIBUTIF';
+    }
+  }
+
+  private filtrerFacturesPeriode(
+    factures: FactureAssigneeResume[],
+    annee: number,
+    trimestre?: number,
+    mois?: number
+  ): FactureAssigneeResume[] {
+    return (factures || []).filter(f => {
+      if (f.annee !== annee) return false;
+      if (mois && f.mois !== mois) return false;
+      if (trimestre) {
+        const m = f.mois;
+        if (trimestre === 1 && (m < 1 || m > 3)) return false;
+        if (trimestre === 2 && (m < 4 || m > 6)) return false;
+        if (trimestre === 3 && (m < 7 || m > 9)) return false;
+        if (trimestre === 4 && (m < 10 || m > 12)) return false;
+      }
+      return true;
     });
   }
 
@@ -426,19 +578,7 @@ export class RegionalDashboardComponent implements OnInit {
       mois: this.mois ?? undefined
     };
 
-    const filtrees = factures.filter(f => {
-      if (f.annee !== filtres.annee) return false;
-      if (filtres.mois && f.mois !== filtres.mois) return false;
-      if (filtres.trimestre) {
-        const m = f.mois;
-        const t = filtres.trimestre;
-        if (t === 1 && (m < 1 || m > 3)) return false;
-        if (t === 2 && (m < 4 || m > 6)) return false;
-        if (t === 3 && (m < 7 || m > 9)) return false;
-        if (t === 4 && (m < 10 || m > 12)) return false;
-      }
-      return true;
-    });
+    const filtrees = this.filtrerFacturesPeriode(factures, filtres.annee, filtres.trimestre, filtres.mois);
 
     const REGIMES_LIST = [
       { code: 'CONTRIBUTIF', libelle: 'Classique / Contributif (BSF, Mutuelles)', couleur: 'emerald' },
@@ -449,11 +589,11 @@ export class RegionalDashboardComponent implements OnInit {
     ];
 
     const statsRegimes = REGIMES_LIST.map(r => {
-      const fDuRegime = filtrees.filter(f => f.regime === r.code);
+      const fDuRegime = filtrees.filter(f => this.normaliserCodeRegimeDashboard(f.regime) === r.code);
       const montantFacture = fDuRegime.reduce((s, f) => s + f.montantTotal, 0);
       const montantSencsuTotal = fDuRegime.reduce((s, f) => s + f.montantSencsu, 0);
       const montantSencsuTraite = fDuRegime
-        .filter(f => f.statut === 'VALIDEE_SR' || f.statut === 'ENVOYEE_NC' || f.statut === 'PAYEE')
+        .filter(f => f.statut === 'VALIDEE_SR' || f.statut === 'VALIDEE_NC' || f.statut === 'ENVOYEE_NC' || f.statut === 'PAYEE')
         .reduce((s, f) => s + f.montantSencsu, 0);
       const nombreBeneficiaires = fDuRegime.reduce((s, f) => s + f.nombreBeneficiaires, 0);
 
@@ -793,46 +933,58 @@ export class RegionalDashboardComponent implements OnInit {
     this.chargerDonnees();
   }
 
-  afficherMessageEnDeveloppement(nom?: string): void {
-    const msg = nom
-      ? `La fonctionnalité « ${nom} » est actuellement en cours de développement.`
-      : 'Cette fonctionnalité est actuellement en cours de développement.';
-    this.snackBar.open(msg, 'Compris', {
-      duration: 3500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-  }
-
   naviguerVersControle(): void {
-    this.afficherMessageEnDeveloppement('Contrôle et validation des factures');
+    this.router.navigate(['/dashboard/espace-region/suivi-traitement']);
   }
 
-  naviguerVersRegime(regimeCode: string): void {
-    const info = this.getRegimeInfo(regimeCode);
-    this.afficherMessageEnDeveloppement('Facturation du régime ' + info.labelCourt);
+  naviguerVersRegime(_regimeCode: string): void {
+    this.router.navigate(['/dashboard/espace-region/factures-structures']);
   }
 
-  naviguerVersStatut(statut: string): void {
-    this.afficherMessageEnDeveloppement('Filtrage des factures par statut');
+  naviguerVersStatut(_statut: string): void {
+    this.router.navigate(['/dashboard/espace-region/factures-structures']);
   }
 
   naviguerVersPrestataires(type?: string): void {
+    if (type === 'PHARMACIE') {
+      this.router.navigate(['/dashboard/espace-region/factures-pharmacies']);
+      return;
+    }
     this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires'], {
       queryParams: type ? { type } : undefined
     });
   }
 
   naviguerVersFactures(typeStructure?: string): void {
-    this.afficherMessageEnDeveloppement('Validation des factures ' + (typeStructure || ''));
+    if (typeStructure === 'PHARMACIE') {
+      this.router.navigate(['/dashboard/espace-region/factures-pharmacies']);
+      return;
+    }
+    this.router.navigate(['/dashboard/espace-region/factures-structures']);
   }
 
   naviguerVersStructure(s: StructureEnregistrementRow): void {
-    this.afficherMessageEnDeveloppement('Factures de ' + s.nom);
+    if (s.type === 'PHARMACIE') {
+      this.router.navigate(['/dashboard/espace-region/factures-pharmacies']);
+      return;
+    }
+    this.router.navigate(['/dashboard/espace-region/factures-structures']);
+  }
+
+  naviguerVersBcsu(): void {
+    this.router.navigate(['/dashboard/espace-region/suivi-bcsu']);
+  }
+
+  trackByDistrict(_index: number, item: DistrictEnregistrementRow): string {
+    return item.id;
   }
 
   ouvrirFacture(f: FactureAssigneeResume | null): void {
-    this.afficherMessageEnDeveloppement('Détail de la facture');
+    if (f?.typeEtablissement === 'PHARMACIE') {
+      this.router.navigate(['/dashboard/espace-region/factures-pharmacies']);
+      return;
+    }
+    this.router.navigate(['/dashboard/espace-region/factures-structures']);
   }
 
   tauxSencsuFacture(f: FactureAssigneeResume | null): number {
@@ -1004,6 +1156,50 @@ export class RegionalDashboardComponent implements OnInit {
           borderRadius: 4,
           barThickness: 18
         }
+      ]
+    };
+  }
+
+  private mettreAJourGraphiqueControleurs(): void {
+    const facturesPeriode = this.filtrerFacturesPeriode(
+      this.toutesFactures,
+      this.annee,
+      this.trimestre ?? undefined,
+      this.mois ?? undefined
+    );
+    const controleurs = this.controleursList || [];
+    if (controleurs.length === 0) {
+      this.controleursChartData = { labels: [], datasets: [] };
+      return;
+    }
+
+    const lignes = controleurs
+      .map(c => {
+        const nom = `${c.prenom} ${c.nom}`.trim();
+        const nomLower = nom.toLowerCase();
+        const fSiennes = facturesPeriode.filter(f =>
+          f.controleurId === c.id || (!!f.controleurNom && f.controleurNom.trim().toLowerCase() === nomLower)
+        );
+        return {
+          nom,
+          aTraiter: fSiennes.filter(f => f.statut === 'A_TRAITER' || f.statut === 'ENVOYEE').length,
+          enCours: fSiennes.filter(f => f.statut === 'EN_COURS_SR' || f.statut === 'EN_COURS').length,
+          validees: fSiennes.filter(f => f.statut === 'VALIDEE_SR').length,
+          rejetees: fSiennes.filter(f => f.statut === 'REJETEE_SR').length,
+          envoyeesNc: fSiennes.filter(f => f.statut === 'ENVOYEE_NC' || f.statut === 'VALIDEE_NC' || f.statut === 'PAYEE').length,
+          total: fSiennes.length
+        };
+      })
+      .sort((a, b) => b.total - a.total || a.nom.localeCompare(b.nom, 'fr'));
+
+    this.controleursChartData = {
+      labels: lignes.map(l => l.nom),
+      datasets: [
+        { label: 'À traiter', data: lignes.map(l => l.aTraiter), backgroundColor: '#f59e0b', borderRadius: 3, barThickness: 16 },
+        { label: 'En cours SR', data: lignes.map(l => l.enCours), backgroundColor: '#3b82f6', borderRadius: 3, barThickness: 16 },
+        { label: 'Validées SR', data: lignes.map(l => l.validees), backgroundColor: '#047857', borderRadius: 3, barThickness: 16 },
+        { label: 'Rejetées SR', data: lignes.map(l => l.rejetees), backgroundColor: '#ef4444', borderRadius: 3, barThickness: 16 },
+        { label: 'Envoyées NC', data: lignes.map(l => l.envoyeesNc), backgroundColor: '#6366f1', borderRadius: 3, barThickness: 16 }
       ]
     };
   }

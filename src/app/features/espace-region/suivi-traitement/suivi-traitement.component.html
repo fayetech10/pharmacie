@@ -104,12 +104,9 @@
     <!-- ================= FACTURES ASSIGNÉES AU CONTRÔLEUR SÉLECTIONNÉ ================= -->
     <div *ngIf="controleurSelectionne" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <div>
           <h3 class="text-sm font-bold text-slate-900">
             Factures assignées à {{ controleurSelectionne.controleur.prenom }} {{ controleurSelectionne.controleur.nom }}
           </h3>
-          <p class="text-xs text-slate-500">Cliquez sur une facture pour consulter ses bénéficiaires, prestations et dossier</p>
-        </div>
 
         <!-- FILTRE PAR STATUT -->
         <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold flex-wrap">

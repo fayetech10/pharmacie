@@ -7,15 +7,8 @@
 
     <!-- Titre & contexte -->
     <div class="min-w-0">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          Service Régional
-        </span>
-        <span class="text-[12px] text-slate-400 font-medium">{{ regionNom }}</span>
-      </div>
       <h1 id="regional-dashboard-title" class="m-0 text-[18px] font-bold tracking-tight text-slate-900">
-        Tableau de bord
+        Tableau de bord <span *ngIf="regionNom" class="text-[13px] font-medium text-slate-400">· {{ regionNom }}</span>
       </h1>
     </div>
 
@@ -65,22 +58,102 @@
   </div>
 
   <!-- =========================================================
+       KPI GLOBAUX + ALERTES OPÉRATIONNELLES
+       ========================================================= -->
+  <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <span class="kpi-card__icon-wrap kpi-icon--emerald"><mat-icon class="!text-[17px] !w-4 !h-4">payments</mat-icon></span>
+        <span class="kpi-card__label">Montant total facturé</span>
+      </div>
+      <div class="kpi-card__value">{{ formatMontant(totalFacture) }}</div>
+      <div class="kpi-card__sub flex items-center justify-between gap-2">
+        <span class="kpi-pill kpi-pill--neutral">{{ nombreFactures }} facture{{ nombreFactures > 1 ? 's' : '' }}</span>
+        <span *ngIf="deltaMontantAnneePct !== null"
+              class="kpi-pill"
+              [ngClass]="deltaMontantAnneePct >= 0 ? 'kpi-pill--emerald' : 'bg-rose-50 text-rose-700'">
+          {{ deltaMontantAnneePct >= 0 ? '+' : '' }}{{ deltaMontantAnneePct }}% vs {{ annee - 1 }}
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <span class="kpi-card__icon-wrap kpi-icon--blue"><mat-icon class="!text-[17px] !w-4 !h-4">verified_user</mat-icon></span>
+        <span class="kpi-card__label">Part SEN-CSU</span>
+      </div>
+      <div class="kpi-card__value text-emerald-700">{{ formatMontant(totalSencsu) }}</div>
+      <div class="kpi-card__sub flex items-center justify-between gap-2">
+        <span class="kpi-pill kpi-pill--emerald">{{ tauxTraitementSencsu }}% traité</span>
+        <span class="text-[11px] text-slate-500 tabular-nums truncate">{{ formatMontant(totalSencsuEnAttente) }} en attente</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <span class="kpi-card__icon-wrap kpi-icon--amber"><mat-icon class="!text-[17px] !w-4 !h-4">groups</mat-icon></span>
+        <span class="kpi-card__label">Bénéficiaires</span>
+      </div>
+      <div class="kpi-card__value">{{ totalBeneficiaires | number:'1.0-0':'fr' }}</div>
+      <div class="kpi-card__sub">
+        <span class="kpi-pill kpi-pill--neutral">{{ totalStructuresAvecSaisie }}/{{ nombreStructuresActives }} structures actives</span>
+      </div>
+    </div>
+
+    <div (click)="naviguerVersBcsu()"
+         class="kpi-card cursor-pointer hover:border-emerald-400 transition"
+         title="Ouvrir le suivi BCSU">
+      <div class="kpi-card__header">
+        <span class="kpi-card__icon-wrap kpi-icon--emerald"><mat-icon class="!text-[17px] !w-4 !h-4">account_balance</mat-icon></span>
+        <span class="kpi-card__label">BCSU · Réglé</span>
+      </div>
+      <div class="kpi-card__value text-emerald-700">{{ formatMontant(bcsuTotalPaye) }}</div>
+      <div class="kpi-card__sub flex items-center justify-between gap-2">
+        <span class="kpi-pill kpi-pill--blue">{{ bcsuTauxRegle }}% réglé</span>
+        <span class="text-[11px] text-amber-700 font-medium tabular-nums truncate">Reste {{ formatMontant(bcsuTotalReste) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- File d'actions rapides -->
+  <div *ngIf="!loading && (nbNouvellesFactures > 0 || nbFacturesEnAttente > 0 || nbFacturesPretsNC > 0 || nbFacturesRejetees > 0 || nbFacturesNonAssignees > 0)"
+       class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
+    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">À faire</span>
+    <button *ngIf="nbNouvellesFactures > 0" type="button" (click)="naviguerVersStatut('A_TRAITER')"
+            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11.5px] font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer transition">
+      <mat-icon class="!text-[15px] !w-4 !h-4">fiber_new</mat-icon>
+      {{ nbNouvellesFactures }} nouvelle{{ nbNouvellesFactures > 1 ? 's' : '' }}
+    </button>
+    <button *ngIf="nbFacturesEnAttente > 0" type="button" (click)="naviguerVersStatut('A_TRAITER')"
+            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11.5px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer transition">
+      <mat-icon class="!text-[14px] !w-3.5 !h-3.5 text-amber-600">pending_actions</mat-icon>
+      {{ nbFacturesEnAttente }} à traiter
+    </button>
+    <button *ngIf="nbFacturesNonAssignees > 0" type="button" (click)="naviguerVersControle()"
+            class="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11.5px] font-semibold text-blue-800 hover:bg-blue-100 cursor-pointer transition">
+      <mat-icon class="!text-[14px] !w-3.5 !h-3.5">assignment_ind</mat-icon>
+      {{ nbFacturesNonAssignees }} non assignée{{ nbFacturesNonAssignees > 1 ? 's' : '' }}
+    </button>
+    <button *ngIf="nbFacturesPretsNC > 0" type="button" (click)="naviguerVersStatut('VALIDEE_SR')"
+            class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition">
+      <mat-icon class="!text-[14px] !w-3.5 !h-3.5">send</mat-icon>
+      {{ nbFacturesPretsNC }} prête{{ nbFacturesPretsNC > 1 ? 's' : '' }} pour le NC
+    </button>
+    <button *ngIf="nbFacturesRejetees > 0" type="button" (click)="naviguerVersStatut('REJETEE')"
+            class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11.5px] font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer transition">
+      <mat-icon class="!text-[14px] !w-3.5 !h-3.5">error_outline</mat-icon>
+      {{ nbFacturesRejetees }} rejetée{{ nbFacturesRejetees > 1 ? 's' : '' }}
+    </button>
+  </div>
+
+  <!-- =========================================================
        SECTION RÉGIMES DE PRISE EN CHARGE (CSU)
-       Cartes allégées, épurées et cliquables
        ========================================================= -->
   <div class="space-y-2.5">
     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <h2 class="m-0 text-[13.5px] font-bold text-slate-900 tracking-tight">
-          Régimes de couverture CSU
-        </h2>
-        <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] font-semibold text-slate-600">
-          5 régimes
-        </span>
-      </div>
-      <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">
-        Cliquez sur un régime pour afficher ses factures
-      </span>
+      <h2 class="m-0 text-[13.5px] font-bold text-slate-900 tracking-tight">
+        Régimes de couverture CSU
+      </h2>
     </div>
 
     <!-- Écrans squelettes pendant le chargement des régimes -->
@@ -305,16 +378,47 @@
   </div>
 
   <!-- =========================================================
-       PARTICIPATION PAR TYPE + RESTE EN ATTENTE PAR NIVEAU
+       CONTRÔLEURS SR (GRAPHIQUE) + PARTICIPATION PRESTATAIRES
        ========================================================= -->
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
 
-    <!-- Participation par type de structure — cliquable vers prestataires (Tab 1) -->
-    <div class="dashboard-card">
+    <!-- Graphique charge & avancement des contrôleurs SR (3/5) -->
+    <div class="dashboard-card lg:col-span-3">
       <div class="dashboard-card__head">
         <div>
-          <h2 class="dashboard-card__title">Participation des structures</h2>
-          <p class="dashboard-card__subtitle">Taux de saisie par catégorie d'établissement</p>
+          <h2 class="dashboard-card__title">Contrôleurs SR</h2>
+          <p class="dashboard-card__subtitle">Répartition des factures assignées par statut</p>
+        </div>
+        <button type="button" (click)="naviguerVersControle()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Suivi traitement
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+      <div class="h-60 relative">
+        <div *ngIf="loading" class="absolute inset-0 flex items-center justify-center">
+          <div class="h-full w-full animate-pulse rounded-lg bg-slate-50"></div>
+        </div>
+        <canvas *ngIf="!loading && (controleursChartData?.labels?.length || 0) > 0"
+                baseChart
+                [data]="controleursChartData"
+                [options]="controleursChartOptions"
+                type="bar"
+                class="w-full h-full">
+        </canvas>
+        <div *ngIf="!loading && !(controleursChartData?.labels?.length || 0)"
+             class="flex h-full items-center justify-center text-[13px] text-slate-400">
+          Aucun contrôleur enregistré
+        </div>
+      </div>
+    </div>
+
+    <!-- Participation par type de prestataire (Structures + Pharmacies) (2/5) -->
+    <div class="dashboard-card lg:col-span-2">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Participation des prestataires</h2>
+          <p class="dashboard-card__subtitle">Taux de saisie par catégorie</p>
         </div>
         <button type="button" (click)="naviguerVersPrestataires()"
                 class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
@@ -324,14 +428,14 @@
       </div>
 
       <div *ngIf="loading" class="space-y-3">
-        <div *ngFor="let i of [1,2,3]" class="h-10 animate-pulse rounded-lg bg-slate-50"></div>
+        <div *ngFor="let i of [1,2,3,4]" class="h-10 animate-pulse rounded-lg bg-slate-50"></div>
       </div>
 
       <div *ngIf="!loading" class="space-y-2.5">
         <div *ngFor="let ligne of saisiesParTypeStructure; trackBy: trackByTypeStructure"
              (click)="naviguerVersPrestataires(ligne.type)"
              class="group flex items-center gap-3 rounded-lg p-2.5 hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
-             [title]="'Voir les prestataires de type ' + ligne.libelle">
+             [title]="'Voir ' + ligne.libelle">
           <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
             <mat-icon class="!text-[16px] !w-4 !h-4">{{ ligne.icone }}</mat-icon>
           </span>
@@ -358,19 +462,72 @@
 
         <div *ngIf="saisiesParTypeStructure.length === 0"
              class="py-6 text-center text-[13px] text-slate-400">
-          Aucune structure suivie
+          Aucun prestataire suivi
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Reste en attente par niveau — cliquable vers factures (Tab 2) -->
+  <!-- =========================================================
+       DISTRICTS SANITAIRES + RESTE EN ATTENTE PAR NIVEAU
+       ========================================================= -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+    <!-- Activité par district sanitaire -->
+    <div class="dashboard-card">
+      <div class="dashboard-card__head">
+        <div>
+          <h2 class="dashboard-card__title">Activité par district sanitaire</h2>
+          <p class="dashboard-card__subtitle">Postes ayant saisi sur la période</p>
+        </div>
+        <button type="button" (click)="naviguerVersPrestataires()"
+                class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
+          Détail
+          <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="space-y-2.5">
+        <div *ngFor="let i of [1,2,3,4]" class="h-9 animate-pulse rounded-lg bg-slate-50"></div>
+      </div>
+
+      <div *ngIf="!loading && districtsSuivis.length > 0" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+        <div *ngFor="let d of districtsSuivis; trackBy: trackByDistrict"
+             (click)="naviguerVersPrestataires()"
+             class="group flex items-center gap-3 rounded-lg px-2.5 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-[12.5px] font-medium text-slate-700 group-hover:text-emerald-800 truncate">{{ d.nom }}</span>
+              <span class="text-[11px] font-semibold text-slate-500 tabular-nums shrink-0">
+                {{ d.nombrePostesAvecSaisie }}/{{ d.nombrePostes }} postes
+                <span *ngIf="d.nombrePostesSaisisAujourdhui > 0" class="text-emerald-700 ml-1">· {{ d.nombrePostesSaisisAujourdhui }} auj.</span>
+              </span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                   [style.width.%]="d.nombrePostes ? (d.nombrePostesAvecSaisie * 100 / d.nombrePostes) : 0"></div>
+            </div>
+          </div>
+          <span class="text-[11.5px] font-bold text-slate-700 tabular-nums shrink-0 w-9 text-right">
+            {{ d.nombrePostes ? arrondir(d.nombrePostesAvecSaisie * 100 / d.nombrePostes) : 0 }}%
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && districtsSuivis.length === 0"
+           class="py-6 text-center text-[13px] text-slate-400">
+        Aucun district suivi
+      </div>
+    </div>
+
+    <!-- Reste en attente par niveau — cliquable vers factures -->
     <div class="dashboard-card">
       <div class="dashboard-card__head">
         <div>
           <h2 class="dashboard-card__title">Reste à valider</h2>
-          <p class="dashboard-card__subtitle">Répartition cliquable par niveau de soins</p>
+          <p class="dashboard-card__subtitle">Part SEN-CSU en attente par niveau</p>
         </div>
-        <button type="button" (click)="naviguerVersControle()"
+        <button type="button" (click)="naviguerVersFactures()"
                 class="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer border-0 bg-transparent">
           Tout traiter
           <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_forward</mat-icon>
