@@ -174,12 +174,19 @@ export class InstallationService {
       }
     };
 
-    // Vérification au retour sur l'onglet et toutes les 5 minutes
+    // Vérification immédiate dès que le service worker est prêt, au retour sur l'onglet et toutes les 2 minutes
+    navigator.serviceWorker?.ready.then(() => verifier()).catch(() => {});
+    navigator.serviceWorker?.addEventListener('controllerchange', () => {
+      if (!this.rechargementEnCours) {
+        this.rechargementEnCours = true;
+        document.location.reload();
+      }
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') verifier();
     });
     this.zone.runOutsideAngular(() => {
-      setInterval(verifier, 5 * 60 * 1000);
+      setInterval(verifier, 2 * 60 * 1000);
     });
   }
 }

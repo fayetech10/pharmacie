@@ -4,6 +4,14 @@
   "buildCommand": "npm run build:netlify",
   "installCommand": "npm install",
   "outputDirectory": "dist/pharmacie-csu-frontend/browser",
+  "headers": [
+    {
+      "source": "/(index\\.html|ngsw\\.json|ngsw-worker\\.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
