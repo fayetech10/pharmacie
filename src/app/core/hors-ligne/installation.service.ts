@@ -1,6 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { filter } from 'rxjs';
 
 /** Événement non standard de Chrome/Edge/Samsung : proposition d'installation de l'application. */
@@ -52,8 +51,9 @@ export class InstallationService {
   private delaiEcoule = false;
   /** Proposition écartée (« Plus tard ») — relue du stockage, remise à zéro par le menu du compte. */
   private ecarteeLe = 0;
+  private rechargementEnCours = false;
 
-  constructor(private zone: NgZone, private swUpdate: SwUpdate, private snackBar: MatSnackBar) {
+  constructor(private zone: NgZone, private swUpdate: SwUpdate) {
     try { this.ecarteeLe = Number(localStorage.getItem(CLE_PLUS_TARD)) || 0; } catch { /* stockage indisponible */ }
     setTimeout(() => this.zone.run(() => this.delaiEcoule = true), DELAI_PROPOSITION_MS);
     window.addEventListener('beforeinstallprompt', evenement => {
@@ -142,14 +142,44 @@ export class InstallationService {
     try { localStorage.setItem(CLE_PLUS_TARD, String(this.ecarteeLe)); } catch { /* stockage indisponible */ }
   }
 
-  /** Nouvelle version déployée et téléchargée : on propose de recharger. */
+  /** Nouvelle version déployée et téléchargée : activation et mise à jour automatiques sans demander à l'utilisateur. */
   private surveillerMisesAJour() {
     if (!this.swUpdate.isEnabled) return;
+
+    const appliquerMiseAJour = async () => {
+      if (this.rechargementEnCours) return;
+      this.rechargementEnCours = true;
+      try {
+        await this.swUpdate.activateUpdate();
+      } catch {
+        // On recharge quand même pour basculer sur les nouveaux fichiers
+      }
+      document.location.reload();
+    };
+
     this.swUpdate.versionUpdates
       .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
-      .subscribe(() => {
-        this.snackBar.open('Une nouvelle version de l\'application est prête.', 'Recharger', { duration: 15_000 })
-          .onAction().subscribe(() => document.location.reload());
-      });
+      .subscribe(() => void appliquerMiseAJour());
+
+    this.swUpdate.unrecoverable.subscribe(() => {
+      if (!this.rechargementEnCours) {
+        this.rechargementEnCours = true;
+        document.location.reload();
+      }
+    });
+
+    const verifier = () => {
+      if (navigator.onLine) {
+        this.swUpdate.checkForUpdate().catch(() => { /* hors ligne ou réseau indisponible */ });
+      }
+    };
+
+    // Vérification au retour sur l'onglet et toutes les 5 minutes
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') verifier();
+    });
+    this.zone.runOutsideAngular(() => {
+      setInterval(verifier, 5 * 60 * 1000);
+    });
   }
 }

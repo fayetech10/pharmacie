@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     // Exige HTTPS (ou localhost), comme toute application web hors ligne.
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000'
+      registrationStrategy: 'registerWhenStable:5000'
     }),
 
     // Calendriers en français, saisie et affichage en jj/mm/aaaa (cf. AdaptateurDateFr).
