@@ -1,4 +1,5 @@
 import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -144,8 +145,8 @@ export class SuiviEnregistrementComponent implements OnInit {
   // 'POSTES' = liste des postes polarisés du district sanitaire sélectionné
   // 'FACTURES' = liste des factures d'un prestataire / poste sélectionné
   // 'PATIENTS' = liste des bénéficiaires/patients de la facture (Nom, Matricule & CNI, Date)
-  // 'PRESTATIONS' = page dédiée au patient sélectionné (Dossier dessus, Prestations en dessous)
-  vueMode: 'LISTE' | 'POSTES' | 'FACTURES' | 'PATIENTS' | 'PRESTATIONS' = 'LISTE';
+  // 'DETAIL_PATIENT' = page dédiée au patient sélectionné (Informations dessus, Prestations en dessous)
+  vueMode: 'LISTE' | 'POSTES' | 'FACTURES' | 'PATIENTS' = 'LISTE';
 
   // District sélectionné et ses postes polarisés
   districtSelectionne: DistrictEnregistrementRow | null = null;
@@ -176,6 +177,11 @@ export class SuiviEnregistrementComponent implements OnInit {
   private requeteFacturesPrestataire = 0;
   private cibleFacturesPrestataire = '';
   private requeteDetailFacture = 0;
+  private routeDistrictId: string | null = null;
+  private routePosteId: string | null = null;
+  private routePrestataireId: string | null = null;
+  private routeFactureId: string | null = null;
+  private donneesInitialesChargees = false;
 
   // Facture sélectionnée pour affichage des bénéficiaires
   factureSelectionnee: FactureAssigneeResume | null = null;
@@ -192,7 +198,6 @@ export class SuiviEnregistrementComponent implements OnInit {
   dossierActif: DossierPatient | null = null;
   documentsDossier: DocumentComplementaire[] = [];
   feuilleSoinsDossier?: { id: string; numero: string };
-  afficherIdentitePatient = false;
   ongletDossierActif: 'TOUT' | 'CARTE' | 'TICKET' | 'FEUILLE' = 'TOUT';
 
   // ===================== MODAL : MODIFIER PRESTATION =====================
@@ -218,6 +223,8 @@ export class SuiviEnregistrementComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   constructor(
+    private route: ActivatedRoute,
+    private router: Router,
     private srService: SrGestionService,
     private factureEvents: FactureEventsService,
     private snackBar: MatSnackBar
@@ -231,6 +238,32 @@ export class SuiviEnregistrementComponent implements OnInit {
         this.recalculerFiltres();
       });
 
+    const ctx = this.srService.suiviNavContext;
+    if (ctx) {
+      this.annee = ctx.annee;
+      this.moisSuivi = ctx.moisSuivi;
+      this.districtSelectionne = ctx.districtSelectionne;
+      this.postesDuDistrict = ctx.postesDuDistrict;
+      this.posteSelectionne = ctx.posteSelectionne;
+      this.prestataireSelectionne = ctx.prestataireSelectionne;
+      this.facturesDuPrestataire = ctx.facturesDuPrestataire;
+      this.factureSelectionnee = ctx.factureSelectionnee;
+      this.patientsDeLaFacture = ctx.factureSelectionnee
+        ? this.srService.getPatientsPourFacture(ctx.factureSelectionnee)
+        : ctx.patientsDeLaFacture;
+      this.vueMode = ctx.vueMode;
+      this.srService.suiviNavContext = null;
+      this.recalculerFiltres();
+    }
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.routeDistrictId = params.get('districtId');
+        this.routePosteId = params.get('posteId');
+        this.routePrestataireId = params.get('prestataireId');
+        this.routeFactureId = params.get('factureId');
+        this.appliquerRouteParams();
+      });
     this.chargerDonnees();
 
     // Réactivité en temps réel : si une facture ou prestation est modifiée n'importe où, recharger
@@ -268,6 +301,8 @@ export class SuiviEnregistrementComponent implements OnInit {
         this.actualisationEnCours = false;
         this.loading = false;
         this.recalculerDistrictsEtStructures();
+        this.donneesInitialesChargees = true;
+        this.appliquerRouteParams();
       },
       error: () => {
         this.erreurChargement = true;
@@ -297,18 +332,167 @@ export class SuiviEnregistrementComponent implements OnInit {
     }
   }
 
+
+  private appliquerRouteParams(): void {
+    // 1. Vue facture -> patients
+    if (this.routeFactureId) {
+      const fid = this.routeFactureId;
+      if (this.factureSelectionnee?.id === fid) {
+        this.vueMode = 'PATIENTS';
+        return;
+      }
+      const locale = this.facturesDuPrestataire.find(f => f.id === fid);
+      if (locale) {
+        this.chargerDetailFacture(locale);
+        return;
+      }
+      this.chargerFactureParRoute(fid);
+      return;
+    }
+
+    // 2. Vue district + poste polarisé -> factures
+    if (this.routeDistrictId && this.routePosteId) {
+      const did = this.routeDistrictId;
+      const pid = this.routePosteId;
+      if (this.districtSelectionne?.id === did && this.posteSelectionne?.id === pid && this.vueMode === 'FACTURES') {
+        return;
+      }
+      const district = this.districts.find(d => d.id === did);
+      if (district) {
+        this.districtSelectionne = district;
+      }
+      const posteExistant = this.postesDuDistrict.find(p => p.id === pid);
+      if (posteExistant) {
+        this.appliquerPosteSelectionne(posteExistant);
+      } else {
+        this.srService.getPostesPolarises(did, this.annee, this.moisSuivi).subscribe(list => {
+          this.postesDuDistrict = list;
+          this.recalculerPostes();
+          const poste = list.find(p => p.id === pid);
+          if (poste) this.appliquerPosteSelectionne(poste);
+        });
+      }
+      return;
+    }
+
+    // 3. Vue district -> postes polarisés
+    if (this.routeDistrictId) {
+      const did = this.routeDistrictId;
+      if (this.districtSelectionne?.id === did && this.vueMode === 'POSTES') return;
+      const district = this.districts.find(d => d.id === did);
+      if (district) {
+        this.districtSelectionne = district;
+      } else if (!this.donneesInitialesChargees) {
+        return;
+      } else {
+        this.districtSelectionne = {
+          id: did, code: '', nom: 'District',
+          nombrePostes: 0, nombrePostesAvecSaisie: 0, nombrePostesSaisisAujourdhui: 0,
+          statutSuiviPeriode: 'A_SAISIR',
+          nombreFactures: 0, montantTotal: 0, nombreBeneficiaires: 0
+        };
+      }
+      this.posteSelectionne = null;
+      this.prestataireSelectionne = null;
+      this.factureSelectionnee = null;
+      this.vueMode = 'POSTES';
+      this.chargerPostesDuDistrict(did);
+      return;
+    }
+
+    // 4. Vue prestataire (hôpital / pharmacie) -> factures
+    if (this.routePrestataireId) {
+      const pid = this.routePrestataireId;
+      if (this.prestataireSelectionne?.id === pid && !this.districtSelectionne && this.vueMode === 'FACTURES') return;
+      const prestataire = this.structures.find(s => s.id === pid) || this.pharmacies.find(p => p.id === pid);
+      if (prestataire) {
+        this.prestataireSelectionne = prestataire;
+        this.districtSelectionne = null;
+        this.posteSelectionne = null;
+        this.factureSelectionnee = null;
+        this.vueMode = 'FACTURES';
+        this.rafraichirFacturesPrestataire(pid);
+      }
+      return;
+    }
+
+    // 5. Liste générale
+    this.vueMode = 'LISTE';
+    this.districtSelectionne = null;
+    this.posteSelectionne = null;
+    this.prestataireSelectionne = null;
+    this.factureSelectionnee = null;
+  }
+
+  private appliquerPosteSelectionne(poste: PostePolariseRow): void {
+    this.posteSelectionne = poste;
+    this.prestataireSelectionne = poste;
+    this.factureSelectionnee = null;
+    this.vueMode = 'FACTURES';
+    this.rafraichirFacturesPrestataire(poste.id);
+  }
+
+  private chargerFactureParRoute(factureId: string): void {
+    this.chargementDetailFacture = true;
+    this.vueMode = 'PATIENTS';
+    this.patientsDeLaFacture = [];
+    this.srService.getToutesFacturesResumes(true, true).subscribe({
+      next: factures => {
+        const found = factures.find(f => f.id === factureId);
+        if (found) {
+          if (!this.prestataireSelectionne) {
+            const struct = this.structures.find(s => s.id === found.etablissementId);
+            const pharm = this.pharmacies.find(p => p.id === found.etablissementId);
+            if (struct) this.prestataireSelectionne = struct;
+            else if (pharm) this.prestataireSelectionne = pharm;
+          }
+          if (!this.districtSelectionne && found.districtId) {
+            const dist = this.districts.find(d => d.id === found.districtId);
+            if (dist) this.districtSelectionne = dist;
+          }
+          this.chargerDetailFacture(found);
+        } else {
+          this.srService.getFactureStructure(factureId).subscribe({
+            next: fs => {
+              const resume: FactureAssigneeResume = {
+                id: fs.id,
+                numero: fs.numero || factureId,
+                typeEtablissement: 'STRUCTURE',
+                etablissementId: fs.structureSanitaireId,
+                etablissementNom: this.structures.find(s => s.id === fs.structureSanitaireId)?.nom || 'Structure',
+                regime: fs.regime,
+                mois: fs.mois,
+                annee: fs.annee,
+                montantTotal: fs.montantTotal || 0,
+                montantSencsu: fs.montantTotalSencsu || 0,
+                nombreBeneficiaires: fs.nombreBeneficiaires || 0,
+                statut: fs.statut,
+                factureOrigine: fs
+              };
+              this.chargerDetailFacture(resume);
+            },
+            error: () => {
+              this.chargementDetailFacture = false;
+              this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
+            }
+          });
+        }
+      },
+      error: () => {
+        this.chargementDetailFacture = false;
+      }
+    });
+  }
   // ===================== NAVIGATION PRESTATAIRE, DISTRICTS & POSTES =====================
 
   ouvrirFacturesPrestataire(p: StructureEnregistrementRow | PharmacieEnregistrementRow): void {
-    // Hôpital ou pharmacie : accès direct aux factures. Les districts ont leur propre ligne.
     this.prestataireSelectionne = p;
     this.districtSelectionne = null;
     this.posteSelectionne = null;
-    this.vueMode = 'FACTURES';
     this.factureSelectionnee = null;
     this.searchFacture = '';
     this.filtreRegime = '';
-    this.rafraichirFacturesPrestataire(p.id);
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/prestataire', p.id]);
   }
 
   chargerPostesDuDistrict(districtId: string): void {
@@ -321,35 +505,40 @@ export class SuiviEnregistrementComponent implements OnInit {
   ouvrirFacturesPoste(poste: PostePolariseRow): void {
     this.posteSelectionne = poste;
     this.prestataireSelectionne = poste;
-    this.vueMode = 'FACTURES';
     this.factureSelectionnee = null;
     this.searchFacture = '';
     this.filtreRegime = '';
-    this.rafraichirFacturesPrestataire(poste.id);
+    const districtId = this.districtSelectionne?.id || this.routeDistrictId;
+    if (districtId) {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/district', districtId, 'poste', poste.id]);
+    }
   }
 
   fermerVuePostes(): void {
-    this.vueMode = 'LISTE';
     this.districtSelectionne = null;
     this.postesDuDistrict = [];
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
   }
 
   retourAuxPostes(): void {
-    this.vueMode = 'POSTES';
     this.posteSelectionne = null;
     this.prestataireSelectionne = null;
     this.factureSelectionnee = null;
-    // Les postes restent en mémoire pendant la navigation interne.
+    const districtId = this.districtSelectionne?.id || this.routeDistrictId;
+    if (districtId) {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/district', districtId]);
+    } else {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
+    }
   }
 
   fermerVueFactures(): void {
-    if (this.districtSelectionne) {
+    if (this.districtSelectionne || this.routeDistrictId) {
       this.retourAuxPostes();
     } else {
-      this.vueMode = 'LISTE';
       this.prestataireSelectionne = null;
       this.factureSelectionnee = null;
-      // La liste générale reste en mémoire et est actualisée en arrière-plan.
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
     }
   }
 
@@ -495,8 +684,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.searchPoste = '';
     this.filtreStatutSuivi = '';
     this.inclurePostesSansSaisie = false;
-    this.vueMode = 'POSTES';
-    this.chargerPostesDuDistrict(district.id);
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/district', district.id]);
   }
 
   compterStatut(lignes: Array<{ statutSuiviPeriode: string; actif?: boolean }>, statut: string): number {
@@ -528,6 +716,11 @@ export class SuiviEnregistrementComponent implements OnInit {
   // ===================== DÉTAIL FACTURE & BÉNÉFICIAIRES =====================
 
   ouvrirDetailFacture(f: FactureAssigneeResume): void {
+    this.chargerDetailFacture(f);
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/facture', f.id]);
+  }
+
+  private chargerDetailFacture(f: FactureAssigneeResume): void {
     this.chargementDetailFacture = false;
     this.factureSelectionnee = f;
     this.vueMode = 'PATIENTS';
@@ -567,21 +760,42 @@ export class SuiviEnregistrementComponent implements OnInit {
   fermerDetailFacture(): void {
     this.requeteDetailFacture++;
     this.chargementDetailFacture = false;
-    this.vueMode = 'FACTURES';
     this.factureSelectionnee = null;
     this.patientSelectionne = null;
-    if (this.prestataireSelectionne) {
-      this.rafraichirFacturesPrestataire(this.prestataireSelectionne.id);
+    const districtId = this.districtSelectionne?.id || this.routeDistrictId;
+    const posteId = this.posteSelectionne?.id || this.routePosteId;
+    if (districtId && posteId) {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/district', districtId, 'poste', posteId]);
+    } else if (this.prestataireSelectionne) {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/prestataire', this.prestataireSelectionne.id]);
+    } else if (districtId) {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/district', districtId]);
+    } else {
+      this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires']);
     }
   }
 
   // ===================== NAVIGATION PATIENT & PRESTATIONS =====================
 
+  ouvrirDetailPatient(patient: PatientLigne): void {
+    this.srService.suiviNavContext = {
+      vueMode: 'PATIENTS',
+      annee: this.annee,
+      moisSuivi: this.moisSuivi,
+      districtSelectionne: this.districtSelectionne,
+      postesDuDistrict: this.postesDuDistrict,
+      posteSelectionne: this.posteSelectionne,
+      prestataireSelectionne: this.prestataireSelectionne,
+      facturesDuPrestataire: this.facturesDuPrestataire,
+      factureSelectionnee: this.factureSelectionnee,
+      patientsDeLaFacture: this.patientsDeLaFacture
+    };
+    this.router.navigate(['/dashboard/espace-region/enregistrement-prestataires/patient', patient.id]);
+  }
+
+  /** @deprecated — redirige vers ouvrirDetailPatient */
   ouvrirPrestationsPatient(patient: PatientLigne): void {
-    this.patientSelectionne = patient;
-    this.actualiserIdentiteCartePatient();
-    this.afficherIdentitePatient = false;
-    this.vueMode = 'PRESTATIONS';
+    this.ouvrirDetailPatient(patient);
   }
 
   retourAuxPatients(): void {
@@ -620,9 +834,10 @@ export class SuiviEnregistrementComponent implements OnInit {
         );
         const lignes: any[] = facture.lignes || [];
         const lignesPatient = dossier
-          ? lignes.filter((l: any) => l.dossierId === dossier.id ||
-              (!!dossier.matricule && l.patientMatricule === dossier.matricule) ||
-              (!!dossier.lettreGarantieNumero && l.lettreGarantieNumero === dossier.lettreGarantieNumero))
+          ? lignes.filter((l: any) => l.dossierId
+              ? l.dossierId === dossier.id
+              : (!!dossier.matricule && l.patientMatricule === dossier.matricule) ||
+                (!!dossier.lettreGarantieNumero && l.lettreGarantieNumero === dossier.lettreGarantieNumero))
           : lignes.filter((l: any) =>
               (!!patient.matricule && l.patientMatricule === patient.matricule) ||
               (!!patient.lettreNumero && l.lettreGarantieNumero === patient.lettreNumero) ||

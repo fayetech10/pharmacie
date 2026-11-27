@@ -30,6 +30,26 @@ export interface ControleurSR {
   motDePasseTemp?: string;
 }
 
+
+export interface SuiviNavContext {
+  vueMode: 'LISTE' | 'POSTES' | 'FACTURES' | 'PATIENTS';
+  annee: number;
+  moisSuivi: number;
+  districtSelectionne: DistrictEnregistrementRow | null;
+  postesDuDistrict: PostePolariseRow[];
+  posteSelectionne: PostePolariseRow | null;
+  prestataireSelectionne: (StructureEnregistrementRow | PharmacieEnregistrementRow | PostePolariseRow) | null;
+  facturesDuPrestataire: FactureAssigneeResume[];
+  factureSelectionnee: FactureAssigneeResume | null;
+  patientsDeLaFacture: any[];
+}
+
+export interface PatientDetailSuiviResult {
+  patient: any | null;
+  facture: FactureAssigneeResume | null;
+  districtNom: string;
+  posteNom: string;
+}
 export interface FactureAssigneeResume {
   id: string;
   numero: string;
@@ -953,12 +973,31 @@ export class SrGestionService {
 
       // Cas A : dossiers patients existants dans la facture backend
       if (fs.dossiers && fs.dossiers.length > 0) {
+        const usedLineIndexes = new Set<number>();
         const patients = fs.dossiers.map(d => {
-          const matchingLines = (fs.lignes || []).filter(l =>
-            (l.dossierId && l.dossierId === d.id) ||
-            (l.patientMatricule && d.matricule && l.patientMatricule === d.matricule) ||
-            (l.patientNom && d.nom && l.patientNom.toLowerCase() === d.nom.toLowerCase())
-          );
+          const matchingLines = (fs.lignes || []).filter((l, idx) => {
+            if (l.dossierId) {
+              if (l.dossierId === d.id) {
+                usedLineIndexes.add(idx);
+                return true;
+              }
+              return false;
+            }
+            if (usedLineIndexes.has(idx)) return false;
+            const matchMatricule = !!(l.patientMatricule && d.matricule && l.patientMatricule === d.matricule);
+            const matchIdentite = !!(
+              l.patientNom && d.nom &&
+              l.patientPrenom && d.prenom &&
+              l.patientNom.trim().toLowerCase() === d.nom.trim().toLowerCase() &&
+              l.patientPrenom.trim().toLowerCase() === d.prenom.trim().toLowerCase() &&
+              (!l.patientDateNaissance || !d.dateNaissance || l.patientDateNaissance === d.dateNaissance)
+            );
+            if (matchMatricule || matchIdentite) {
+              usedLineIndexes.add(idx);
+              return true;
+            }
+            return false;
+          });
 
           const prestations = matchingLines.map((l, lIdx) => ({
             id: l.prestationId || `${d.id}-l${lIdx}`,
@@ -1024,7 +1063,10 @@ export class SrGestionService {
       if (fs.lignes && fs.lignes.length > 0) {
         const groups: Record<string, LigneFactureStructure[]> = {};
         fs.lignes.forEach((l, idx) => {
-          const key = l.patientMatricule || l.patientNom || l.lettreGarantieNumero || `p-${idx}`;
+          const key = l.dossierId || l.patientMatricule || l.lettreGarantieNumero ||
+            (l.patientNom
+              ? `${l.patientNom.trim().toLowerCase()}|${(l.patientPrenom || '').trim().toLowerCase()}|${l.patientDateNaissance || ''}`
+              : `p-${idx}`);
           if (!groups[key]) groups[key] = [];
           groups[key].push(l);
         });
@@ -1226,6 +1268,52 @@ export class SrGestionService {
   /**
    * Supprime définitivement une facture
    */
+  /** Contexte de navigation conservé pour le retour depuis la page détail patient. */
+  suiviNavContext: SuiviNavContext | null = null;
+
+  /**
+   * Charge le détail d'un patient par son ID (depuis le contexte courant ou par recherche dans les factures).
+   */
+  getDetailPatientSuivi(patientId: string): Observable<PatientDetailSuiviResult> {
+    const ctx = this.suiviNavContext;
+    if (ctx?.factureSelectionnee) {
+      const patients = ctx.patientsDeLaFacture?.length
+        ? ctx.patientsDeLaFacture
+        : this.getPatientsPourFacture(ctx.factureSelectionnee);
+      const found = patients.find((p: any) => p.id === patientId);
+      if (found) {
+        return of({
+          patient: found,
+          facture: ctx.factureSelectionnee,
+          districtNom: ctx.districtSelectionne?.nom || ctx.factureSelectionnee.districtNom || '',
+          posteNom: ctx.posteSelectionne?.nom || ctx.prestataireSelectionne?.nom || ctx.factureSelectionnee.etablissementNom || ''
+        });
+      }
+    }
+    return forkJoin({
+      factures: this.getToutesFacturesResumes(true, true).pipe(catchError(() => of([]))),
+      districts: this.districtService.getDistricts().pipe(catchError(() => of([]))),
+      structures: this.structureService.getStructures().pipe(catchError(() => of([])))
+    }).pipe(map(({ factures, districts, structures }) => {
+      for (const fac of factures) {
+        const patients = this.getPatientsPourFacture(fac);
+        const found = patients.find((p: any) => p.id === patientId);
+        if (found) {
+          const structure = structures.find(s => s.id === fac.etablissementId);
+          const districtId = fac.districtId || structure?.districtId;
+          const district = districts.find(d => d.id === districtId);
+          return {
+            patient: found,
+            facture: fac,
+            districtNom: district?.nom || fac.districtNom || '',
+            posteNom: structure?.nom || fac.etablissementNom || ''
+          };
+        }
+      }
+      return { patient: null, facture: null, districtNom: '', posteNom: '' };
+    }));
+  }
+
   supprimerFacture(factureId: string): void {
     const state = this.getFacturesState();
     state[factureId] = {

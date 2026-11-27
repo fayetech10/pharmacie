@@ -1,7 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { ApiService } from './api.service';
 import { LoginRequest, LoginResponse, Role } from '../models/user.model';
-import { BehaviorSubject, Observable, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable, catchError, switchMap, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { memoriserCompte, ouvrirCompte } from '../hors-ligne/comptes-hors-ligne';
 
@@ -21,11 +21,6 @@ export class AuthService {
   private readonly USER_KEY = 'csu_user';
   /** Ancienne clé d'horodatage (sessions historiques) : purgée au nettoyage. */
   private readonly LEGACY_EXPIRY_KEY = 'csu_session_expiry';
-  /** Délai maximal d'un setTimeout (entier 32 bits signé, ~24,8 jours). */
-  private readonly MAX_TIMEOUT_MS = 2_147_483_647;
-  /** Minuteur de déconnexion automatique à l'expiration du token. */
-  private expiryTimer: ReturnType<typeof setTimeout> | null = null;
-
   /**
    * Stockage de la session : `localStorage`, pour qu'elle SURVIVE à la fermeture de l'onglet,
    * au rechargement et surtout au redémarrage de l'appareil (PWA mobile : téléphone éteint puis
@@ -48,22 +43,6 @@ export class AuthService {
   /** Le serveur est joignable mais la session hors ligne a expiré : il faut se reconnecter. */
   readonly reconnexionRequise$ = new BehaviorSubject<boolean>(false);
 
-  // ----- Déconnexion automatique après inactivité -----
-  /**
-   * Durée d'inactivité (écran affiché, sans geste) au-delà de laquelle on déconnecte. Le temps
-   * passé en arrière-plan ne compte pas (cf. surVisibilite).
-   */
-  private readonly IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-  /** Événements considérés comme une activité de l'utilisateur. */
-  private readonly ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-  /** Minuteur d'inactivité. */
-  private idleTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Horodatage de la dernière réinitialisation (anti-rafale sur mousemove). */
-  private lastIdleResetAt = 0;
-  /** Référence stable du gestionnaire (nécessaire pour add/removeEventListener). */
-  private readonly activityHandler = () => this.onUserActivity();
-  private readonly visibiliteHandler = () => this.surVisibilite();
-
   constructor(private api: ApiService, private router: Router, private zone: NgZone) {
     // Purge d'un éventuel horodatage d'expiration historique (plus utilisé : l'expiration
     // est désormais déduite du jeton). La session (USER_KEY) est volontairement conservée.
@@ -72,15 +51,12 @@ export class AuthService {
     // Au démarrage de l'application, on vérifie l'état de la session existante
     // à partir de l'expiration réelle du token JWT.
     if (this.getRawToken()) {
-      if (this.estSessionHorsLigne()) {
-        // Session hors ligne (rechargement de la page) : elle survit à l'expiration du jeton.
-        this.startIdleTracking();
-      } else if (this.isSessionExpired()) {
-        // Déjà expirée : on purge. Le guard redirigera vers la connexion.
-        this.clearSession();
-      } else {
-        this.scheduleAutoLogout();
-        this.startIdleTracking();
+      if (!this.estSessionHorsLigne()) {
+        if (this.isSessionExpired()) {
+          this.clearSession();
+        } else {
+          setTimeout(() => this.rafraichirSessionSilencieusement(), 0);
+        }
       }
     }
   }
@@ -92,9 +68,6 @@ export class AuthService {
         this.store.removeItem(this.HORS_LIGNE_KEY);
         this.store.setItem(this.IDENTIFIANT_KEY, request.email || '');
         this.reconnexionRequise$.next(false);
-        // L'expiration est désormais déduite du token : aucun horodatage séparé à poser.
-        this.scheduleAutoLogout();
-        this.startIdleTracking();
       })
     );
   }
@@ -119,7 +92,6 @@ export class AuthService {
       this.store.setItem(this.HORS_LIGNE_KEY, '1');
       this.store.setItem(this.IDENTIFIANT_KEY, identifiant);
       this.reconnexionRequise$.next(false);
-      this.startIdleTracking();
     });
     return session;
   }
@@ -158,7 +130,6 @@ export class AuthService {
       switchMap(() => this.api.get<LoginResponse>('/auth/moi')),
       tap(res => {
         this.store.setItem(this.USER_KEY, JSON.stringify(res));
-        this.scheduleAutoLogout();
       })
     );
   }
@@ -324,97 +295,23 @@ export class AuthService {
   }
 
   /**
-   * Programme la redirection automatique vers la page de connexion
-   * à l'instant exact de l'expiration du token (même si l'utilisateur reste inactif).
+   * Renouvelle silencieusement le jeton et le contexte utilisateur auprès du serveur.
+   * Permet de prolonger la session sans déconnecter l'utilisateur.
    */
-  private scheduleAutoLogout(): void {
-    if (this.expiryTimer) {
-      clearTimeout(this.expiryTimer);
-      this.expiryTimer = null;
-    }
-    // Hors ligne, l'expiration du jeton ne ferme pas la session (seule l'inactivité la ferme).
-    if (this.estSessionHorsLigne()) return;
-    const remaining = this.getExpiry() - Date.now();
-    if (remaining <= 0) {
-      this.logout();
+  private rafraichirSessionSilencieusement(): void {
+    if (!this.getRawToken() || this.estSessionHorsLigne() || this.isSessionExpired()) {
       return;
     }
-    // setTimeout est borné à ~24,8 jours : au-delà, on reprogramme par paliers.
-    const delay = Math.min(remaining, this.MAX_TIMEOUT_MS);
-    this.expiryTimer = setTimeout(
-      () => (delay < remaining ? this.scheduleAutoLogout() : this.logout()),
-      delay
-    );
+    this.api.get<LoginResponse>('/auth/moi', { skipLoading: true, arrierePlan: true, fresh: true })
+      .pipe(catchError(() => EMPTY))
+      .subscribe(res => {
+        if (res?.token && this.getRawToken()) {
+          this.store.setItem(this.USER_KEY, JSON.stringify(res));
+        }
+      });
   }
 
-  // ----- Inactivité -----
-
-  /**
-   * Démarre le suivi d'inactivité : écoute l'activité de l'utilisateur et arme
-   * le minuteur de déconnexion. Les écouteurs sont posés hors zone Angular pour
-   * ne pas déclencher de détection de changement à chaque mouvement de souris.
-   */
-  private startIdleTracking(): void {
-    this.zone.runOutsideAngular(() => {
-      this.ACTIVITY_EVENTS.forEach(evt =>
-        document.addEventListener(evt, this.activityHandler, { passive: true })
-      );
-      document.addEventListener('visibilitychange', this.visibiliteHandler);
-    });
-    if (!document.hidden) this.armIdleTimer();
-  }
-
-  /** Arrête le suivi d'inactivité et annule le minuteur. */
-  private stopIdleTracking(): void {
-    this.ACTIVITY_EVENTS.forEach(evt =>
-      document.removeEventListener(evt, this.activityHandler)
-    );
-    document.removeEventListener('visibilitychange', this.visibiliteHandler);
-    if (this.idleTimer) {
-      clearTimeout(this.idleTimer);
-      this.idleTimer = null;
-    }
-  }
-
-  /**
-   * Application en arrière-plan (autre application, téléphone verrouillé, autre onglet) : le
-   * minuteur d'inactivité est suspendu, puis réarmé au retour. Sans cela, l'application
-   * installée sur un téléphone déconnectait l'agent à chaque retour après une pause de plus
-   * de 30 min (le minuteur échu se déclenchait à la reprise). Seule l'expiration du jeton
-   * (24 h) ferme alors la session.
-   */
-  private surVisibilite(): void {
-    if (document.hidden) {
-      if (this.idleTimer) {
-        clearTimeout(this.idleTimer);
-        this.idleTimer = null;
-      }
-    } else {
-      this.armIdleTimer();
-    }
-  }
-
-  /** (Ré)arme le minuteur d'inactivité pour IDLE_TIMEOUT_MS à partir de maintenant. */
-  private armIdleTimer(): void {
-    this.lastIdleResetAt = Date.now();
-    if (this.idleTimer) clearTimeout(this.idleTimer);
-    // Au bout du délai sans activité : déconnexion (retour dans la zone Angular
-    // pour que la navigation/le rendu se mettent à jour).
-    this.idleTimer = setTimeout(
-      () => this.zone.run(() => this.logout()),
-      this.IDLE_TIMEOUT_MS
-    );
-  }
-
-  /** Activité détectée : réarme le minuteur (au plus une fois par seconde). */
-  private onUserActivity(): void {
-    const now = Date.now();
-    // Les événements « mousemove » sont très fréquents : on limite la cadence.
-    if (now - this.lastIdleResetAt < 1000) return;
-    this.armIdleTimer();
-  }
-
-  /** Vide la session locale, annule les minuteurs et coupe le suivi d'inactivité. */
+  /** Vide la session locale. */
   private clearSession(): void {
     this.store.removeItem(this.USER_KEY);
     this.store.removeItem(this.LEGACY_EXPIRY_KEY);
@@ -423,10 +320,5 @@ export class AuthService {
     // Dernière page visitée (RestaurationRouteService) : ne pas la rouvrir pour la session suivante.
     this.store.removeItem('csu_derniere_route');
     if (this.reconnexionRequise$.value) this.reconnexionRequise$.next(false);
-    if (this.expiryTimer) {
-      clearTimeout(this.expiryTimer);
-      this.expiryTimer = null;
-    }
-    this.stopIdleTracking();
   }
 }

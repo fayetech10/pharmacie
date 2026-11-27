@@ -650,14 +650,17 @@
         <div class="overflow-x-auto rounded-lg border border-border">
           <table class="w-full text-[13.5px] border-collapse">
             <tbody>
-              <tr *ngFor="let p of patientsFiltres | paginer: pgPatients.page : pgPatients.taille; trackBy: trackById" (click)="ouvrirPrestationsPatient(p)"
+              <tr *ngFor="let p of patientsFiltres | paginer: pgPatients.page : pgPatients.taille; trackBy: trackById" (click)="ouvrirDetailPatient(p)"
                   class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field bg-white">
                 <td class="py-2.5 px-3 align-middle">
                   <a (click)="$event.preventDefault()" class="font-semibold text-text-primary text-[14px] no-underline hover:underline">
                     {{ p.prenom }} {{ p.nom }}
                   </a>
-                  <span class="inline-flex items-center gap-1 ml-2 align-middle">
-                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">3 pièces</span>
+                  <span class="inline-flex items-center gap-1 ml-2 align-middle" *ngIf="p.pieces?.length || p.statutDossier === 'A_COMPLETER'">
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold"
+                          [ngClass]="p.statutDossier === 'COMPLET' ? 'bg-success-light text-success' : 'bg-amber-100 text-amber-800'">
+                      {{ p.pieces?.length ? (p.pieces!.length + (p.pieces!.length > 1 ? ' pièces' : ' pièce')) : 'À compléter' }}
+                    </span>
                   </span>
                   <!-- Mobile : date, matricule & CNI sous le nom -->
                   <div class="sm:hidden mt-0.5 text-[12.5px] text-text-secondary">
@@ -686,143 +689,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ========================================================================= -->
-  <!-- 4. VUE PRESTATIONS DU PATIENT : DOSSIER DESSUS & PRESTATIONS EN DESSOUS    -->
-  <!-- ========================================================================= -->
-  <div *ngIf="vueMode === 'PRESTATIONS' && factureSelectionnee && patientSelectionne" class="fade-in space-y-4">
-
-    <!-- Retour à la facture -->
-    <div class="flex items-center justify-between gap-2 mb-3 print:hidden">
-      <button type="button" (click)="retourAuxPatients()"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-primary bg-field hover:bg-border-light rounded-lg border-0 cursor-pointer">
-        <mat-icon class="!w-4 !h-4 !text-base">arrow_back</mat-icon> Retour à la facture
-      </button>
-    </div>
-
-    <!-- Identité du patient avec bouton DOSSIER DESSUS (style poste de santé) -->
-    <div class="card mb-4">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>person</mat-icon></div>
-          <div class="min-w-0">
-            <h2 class="flex flex-wrap items-center gap-2">
-              <span>{{ patientSelectionne.prenom }} {{ patientSelectionne.nom }}</span>
-              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-success-light text-success">3 pièces conformes</span>
-            </h2>
-            <p class="text-[12.5px] text-text-secondary mt-0.5">
-              Matricule : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.matricule }}</span>
-              <span *ngIf="patientSelectionne.cni"> · CNI : <span class="font-mono font-medium text-text-primary">{{ patientSelectionne.cni }}</span></span>
-              · Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }}
-            </p>
-          </div>
-        </div>
-        <div class="ml-auto flex gap-2 print:hidden">
-          <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 !px-2"
-                  (click)="afficherIdentitePatient = !afficherIdentitePatient"
-                  [attr.aria-label]="afficherIdentitePatient ? 'Masquer les informations du patient' : 'Afficher les informations du patient'"
-                  [attr.aria-expanded]="afficherIdentitePatient" aria-controls="infos-patient-suivi"
-                  title="Afficher ou masquer les informations du patient">
-            <mat-icon>{{ afficherIdentitePatient ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          <button type="button" class="btn btn-outline btn-sm" (click)="ouvrirModalDossier()"
-                  title="Ouvrir le dossier patient (documents justificatifs)">
-            <mat-icon>folder_shared</mat-icon> Dossier
-          </button>
-        </div>
-      </div>
-      <div *ngIf="afficherIdentitePatient" id="infos-patient-suivi" class="mt-4 border-t border-border-light pt-4">
-        <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-          <div *ngFor="let i of identitePatient" class="min-w-0">
-            <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
-            <dd class="m-0 mt-0.5 break-words text-[14px] text-text-primary" [class.font-mono]="i.mono">{{ i.valeur }}</dd>
-          </div>
-        </dl>
-        <div *ngIf="cartePatient.length" class="mt-4">
-          <h3 class="m-0 mb-2 border-b border-border-light pb-1.5 text-[12px] font-semibold uppercase tracking-wide text-text-muted">Carte CSU</h3>
-          <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-            <div *ngFor="let i of cartePatient" class="min-w-0">
-              <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
-              <dd class="m-0 mt-0.5 break-words text-[14px] text-text-primary">{{ i.valeur }}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-    </div>
-
-    <!-- Prestations Card (style poste de santé) -->
-    <div class="card min-w-0">
-      <div class="section-header">
-        <div class="section-title-group">
-          <div class="section-icon"><mat-icon>medical_services</mat-icon></div>
-          <div>
-            <h2>Prestations</h2>
-            <p>Visite du {{ formatDateHeure(patientSelectionne.datePriseEnCharge, patientSelectionne.heurePriseEnCharge) }} – {{ patientSelectionne.prestations.length }} prestation(s)</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-body">
-        <div class="overflow-x-auto">
-          <table class="w-full text-[13px] border-collapse">
-            <thead>
-              <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
-                <th class="py-1.5 pr-2">Prestation</th>
-                <th class="py-1.5 px-2 text-center">Qté</th>
-                <th class="py-1.5 px-2 text-right">Prix</th>
-                <th class="py-1.5 px-2 text-right">Montant</th>
-                <th class="py-1.5 pl-2 text-right"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let ligne of patientSelectionne.prestations | paginer: pgPrestations.page : pgPrestations.taille" class="border-b border-border-light">
-                <td class="py-2 pr-2">
-                  <span class="font-medium text-text-primary">{{ ligne.designation }}</span>
-                  <span *ngIf="ligne.codeActe" class="block text-[11.5px] text-text-secondary font-mono">{{ ligne.codeActe }}</span>
-                </td>
-                <td class="py-2 px-2 text-center tabular-nums">{{ ligne.quantite }}</td>
-                <td class="py-2 px-2 text-right tabular-nums">{{ formatMontant(ligne.prixUnitaire) }}</td>
-                <td class="py-2 px-2 text-right font-semibold tabular-nums">{{ formatMontant(ligne.montant) }}</td>
-                <td class="py-1 pl-2 text-right whitespace-nowrap">
-                  <button *ngIf="!factureSelectionnee.resumeSeul" type="button" class="btn btn-ghost btn-sm" (click)="ouvrirModalModifierPrestation(patientSelectionne, ligne)"
-                          title="Modifier la prestation">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button *ngIf="!factureSelectionnee.resumeSeul" type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50" (click)="ouvrirModalSupprimerPrestation(patientSelectionne, ligne)"
-                          title="Supprimer la prestation">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="patientSelectionne.prestations.length === 0">
-                <td colspan="5" class="py-4 text-center text-text-muted italic">Aucune prestation enregistrée pour ce patient.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-            <app-pagination #pgPrestations [total]="patientSelectionne.prestations.length" [taille]="15" [tailles]="[15, 30, 50]"></app-pagination>
-
-        <!-- Totaux de la visite -->
-        <div *ngIf="patientSelectionne.prestations.length" class="mt-4 p-4 rounded-lg bg-field">
-          <div class="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Total</div>
-              <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal) }}</div>
-            </div>
-            <div>
-              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">SEN-CSU (80 %)</div>
-              <div class="mt-0.5 text-[16px] font-bold text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal * 0.8) }}</div>
-            </div>
-            <div>
-              <div class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">Patient (20 %)</div>
-              <div class="mt-0.5 text-[16px] font-bold text-text-primary tabular-nums">{{ formatMontant(patientSelectionne.montantTotal * 0.2) }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ========================================================================= -->
   <!-- MODAL DU DOSSIER PATIENT (3 PIÈCES JUSTIFICATIVES)                        -->
   <!-- ========================================================================= -->
