@@ -79,15 +79,26 @@
             </p>
           </div>
         </div>
-        <div class="ml-auto flex gap-2 print:hidden" *ngIf="facture?.typeEtablissement === 'STRUCTURE'">
-          <button type="button" class="btn btn-outline btn-sm" (click)="ouvrirModalDossier()"
+        <div class="ml-auto flex gap-2 print:hidden">
+          <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 !px-2"
+                  (click)="afficherIdentitePatient = !afficherIdentitePatient"
+                  [attr.aria-label]="afficherIdentitePatient ? 'Masquer les informations du patient' : 'Afficher les informations du patient'"
+                  [attr.aria-expanded]="afficherIdentitePatient" aria-controls="infos-patient-detail"
+                  title="Afficher ou masquer les informations du patient">
+            <mat-icon>{{ afficherIdentitePatient ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <button *ngIf="facture?.typeEtablissement === 'STRUCTURE'" type="button" class="btn btn-outline btn-sm" (click)="ouvrirModalDossier()"
                   title="Ouvrir le dossier patient (documents justificatifs)">
             <mat-icon>folder_shared</mat-icon> Dossier
+          </button>
+          <button *ngIf="facture && !facture.resumeSeul" type="button" class="btn btn-outline btn-sm text-red-600 hover:bg-red-50 border-red-200"
+                  (click)="ouvrirModalRetirerPatient()" title="Retirer ce patient de la facture">
+            <mat-icon>person_remove</mat-icon> Retirer de la facture
           </button>
         </div>
       </div>
 
-      <div class="mt-4 border-t border-border-light pt-4">
+      <div *ngIf="afficherIdentitePatient" id="infos-patient-detail" class="mt-4 border-t border-border-light pt-4">
         <dl class="m-0 grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           <div *ngFor="let i of identitePatient" class="min-w-0">
             <dt class="text-[11.5px] font-semibold uppercase tracking-wide text-text-muted">{{ i.libelle }}</dt>
@@ -308,6 +319,41 @@
         </button>
         <button (click)="confirmerSuppressionPrestation()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs">
           Confirmer la suppression
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : CONFIRMER LE RETRAIT DU PATIENT -->
+  <div *ngIf="afficherModalRetirerPatient" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-lg border border-slate-200/80 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <mat-icon class="!text-base !w-4 !h-4 text-rose-600">person_remove</mat-icon> Retirer le patient de la facture
+        </h3>
+        <button (click)="afficherModalRetirerPatient = false" class="text-slate-400 hover:text-slate-600 transition">
+          <mat-icon class="!text-lg !w-5 !h-5">close</mat-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs text-slate-700">
+        <p>Voulez-vous retirer ce patient de la facture ?</p>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
+          <div>Patient : <strong class="text-slate-900">{{ patient?.prenom }} {{ patient?.nom }}</strong></div>
+          <div *ngIf="patient?.matricule">Matricule : <strong class="font-mono text-slate-800">{{ patient?.matricule }}</strong></div>
+          <div>Montant déduit : <strong class="text-rose-700 font-mono font-semibold">{{ formatMontant(patient?.montantTotal || 0) }}</strong></div>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Ses prestations seront retirées et les montants de la facture seront recalculés.
+        </p>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 text-xs">
+        <button (click)="afficherModalRetirerPatient = false" class="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition">
+          Annuler
+        </button>
+        <button (click)="confirmerRetraitPatient()" class="px-4 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700 transition shadow-2xs">
+          Retirer le patient
         </button>
       </div>
     </div>

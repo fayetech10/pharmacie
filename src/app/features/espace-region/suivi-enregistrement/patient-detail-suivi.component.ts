@@ -44,6 +44,7 @@ export class PatientDetailSuiviComponent implements OnInit {
 
   identitePatient: InfoPatient[] = [];
   cartePatient: InfoPatient[] = [];
+  afficherIdentitePatient = false;
 
   // Modal dossier (pièces justificatives)
   afficherModalDossier = false;
@@ -66,6 +67,9 @@ export class PatientDetailSuiviComponent implements OnInit {
   // Modal supprimer prestation
   afficherModalSupprPrestation = false;
   prestationASupprimer: PrestationLigne | null = null;
+
+  // Modal retirer patient
+  afficherModalRetirerPatient = false;
 
   private destroyRef = inject(DestroyRef);
 
@@ -106,6 +110,7 @@ export class PatientDetailSuiviComponent implements OnInit {
         this.facture = res.facture;
         this.districtNom = res.districtNom || '';
         this.posteNom = res.posteNom || '';
+        this.afficherIdentitePatient = false;
         this.actualiserIdentiteCartePatient();
       },
       error: () => {
@@ -300,6 +305,19 @@ export class PatientDetailSuiviComponent implements OnInit {
 
     this.afficherModalSupprPrestation = false;
     this.snackBar.open('Prestation supprimée. Facture et décompte bénéficiaires recalculés en temps réel !', 'OK', { duration: 4000 });
+  }
+
+  ouvrirModalRetirerPatient(): void {
+    this.afficherModalRetirerPatient = true;
+  }
+
+  confirmerRetraitPatient(): void {
+    if (!this.facture || !this.patient) return;
+    const nomComplet = `${this.patient.prenom} ${this.patient.nom}`.trim();
+    this.srService.retirerPatient(this.facture, this.patient);
+    this.afficherModalRetirerPatient = false;
+    this.snackBar.open(`Patient ${nomComplet} retiré de la facture.`, 'OK', { duration: 4000 });
+    this.retourAuxPatients();
   }
 
   formatDate(d?: string): string {

@@ -346,6 +346,10 @@ export class SrGestionService {
     patientsRejetes?: Record<string, string>;
     historique?: any[];
     supprimee?: boolean;
+    numero?: string;
+    mois?: number;
+    annee?: number;
+    regime?: string;
     montantTotal?: number;
     montantSencsu?: number;
     nombreBeneficiaires?: number;
@@ -559,7 +563,24 @@ export class SrGestionService {
           });
         }
 
-        return result;
+        const state = this.getFacturesState();
+        return result
+          .filter(f => !state[f.id]?.supprimee)
+          .map(f => {
+            const s = state[f.id];
+            if (!s) return f;
+            return {
+              ...f,
+              numero: s.numero ?? f.numero,
+              mois: s.mois ?? f.mois,
+              annee: s.annee ?? f.annee,
+              regime: s.regime ?? f.regime,
+              statut: s.statut ?? f.statut,
+              montantTotal: s.montantTotal ?? f.montantTotal,
+              montantSencsu: s.montantSencsu ?? f.montantSencsu,
+              nombreBeneficiaires: s.nombreBeneficiaires ?? f.nombreBeneficiaires
+            };
+          });
       })
     );
   }
@@ -1314,6 +1335,59 @@ export class SrGestionService {
     }));
   }
 
+  /**
+   * Modifie les métadonnées d'une facture depuis l'espace régional
+   */
+  modifierFacture(factureId: string, patch: { numero?: string; mois?: number; annee?: number; regime?: string; statut?: string }): void {
+    const state = this.getFacturesState();
+    state[factureId] = {
+      ...(state[factureId] || {}),
+      ...patch
+    };
+    this.setFacturesState(state);
+    this.structureService.modifierMetadonneesRegion(factureId, patch).pipe(
+      catchError(() => of(null))
+    ).subscribe(() => {
+      this.api.invalidateCache();
+      this.factureEvents.notifyChanged();
+    });
+  }
+
+  /**
+   * Retire un patient d'une facture et recalcule les totaux
+   */
+  retirerPatient(facture: FactureAssigneeResume, patient: { id: string; lettreNumero?: string }): void {
+    const state = this.getFacturesState();
+    const basePatients = state[facture.id]?.customPatients || this.getPatientsPourFacture(facture);
+    const restants = basePatients.filter((p: any) => p.id !== patient.id);
+    const totalFacture = restants.reduce((sum: number, p: any) => sum + (p.montantTotal || 0), 0);
+    const totalSencsu = Math.round(totalFacture * 0.8);
+    const nbBen = restants.filter((p: any) => (p.prestations || []).length > 0).length || restants.length;
+
+    state[facture.id] = {
+      ...(state[facture.id] || {}),
+      customPatients: restants,
+      montantTotal: totalFacture,
+      montantSencsu: totalSencsu,
+      nombreBeneficiaires: nbBen
+    };
+    this.setFacturesState(state);
+
+    if (facture.typeEtablissement === 'STRUCTURE' && (patient.id || patient.lettreNumero)) {
+      this.structureService.supprimerPatient(facture.id, {
+        dossierId: patient.id,
+        lettreNumero: patient.lettreNumero
+      }).pipe(
+        catchError(() => of(null))
+      ).subscribe(() => {
+        this.api.invalidateCache();
+        this.factureEvents.notifyChanged();
+      });
+    } else {
+      this.factureEvents.notifyChanged();
+    }
+  }
+
   supprimerFacture(factureId: string): void {
     const state = this.getFacturesState();
     state[factureId] = {
@@ -1322,14 +1396,12 @@ export class SrGestionService {
     };
     this.setFacturesState(state);
 
-    this.structureService.deleteFacture(factureId).pipe(
-      catchError(() => of(null))
-    ).subscribe();
-
-    this.factureService.delete(factureId).pipe(
-      catchError(() => of(null))
-    ).subscribe();
-
-    this.factureEvents.notifyChanged();
+    forkJoin([
+      this.structureService.deleteFacture(factureId).pipe(catchError(() => of(null))),
+      this.factureService.delete(factureId).pipe(catchError(() => of(null)))
+    ]).subscribe(() => {
+      this.api.invalidateCache();
+      this.factureEvents.notifyChanged();
+    });
   }
 }

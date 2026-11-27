@@ -246,6 +246,15 @@ export class StructureService {
   deleteFacture(id: string): Observable<void> {
     return this.api.delete<void>(`/factures-structure/${id}`);
   }
+  supprimerPatient(factureId: string, options: { lettreNumero?: string; dossierId?: string }): Observable<FactureStructure> {
+    const params: string[] = [];
+    if (options.dossierId) params.push(`dossierId=${encodeURIComponent(options.dossierId)}`);
+    if (options.lettreNumero) params.push(`lettre=${encodeURIComponent(options.lettreNumero)}`);
+    return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/patients?${params.join('&')}`);
+  }
+  modifierMetadonneesRegion(factureId: string, patch: { numero?: string; mois?: number; annee?: number; regime?: string; statut?: string }): Observable<FactureStructure> {
+    return this.api.put<FactureStructure>(`/factures-structure/${factureId}/region`, patch);
+  }
   /** Factures (envoyées et suivantes) des postes de santé rattachés à la structure courante. */
   getFacturesPostes(params?: { mois?: number; annee?: number; regime?: string }): Observable<FactureStructure[]> {
     let queryParams = new HttpParams();

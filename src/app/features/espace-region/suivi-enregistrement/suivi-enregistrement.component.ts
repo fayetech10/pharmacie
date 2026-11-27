@@ -156,6 +156,7 @@ export class SuiviEnregistrementComponent implements OnInit {
   inclurePostesSansSaisie = false;
 
   // Filtre par régime pour la consultation des factures d'un poste / prestataire
+  filtreMoisFacture: number = new Date().getMonth() + 1; // 0 = Tous les mois, 1..12 = mois ciblé
   filtreRegime = ''; // '' = Tous les régimes
 
   regimesDisponibles = [
@@ -215,6 +216,24 @@ export class SuiviEnregistrementComponent implements OnInit {
   afficherModalSupprPrestation = false;
   prestationASupprimer: PrestationLigne | null = null;
   patientDePrestationASupprimer: PatientLigne | null = null;
+
+  // ===================== MODAL : MODIFIER FACTURE =====================
+  afficherModalModifFacture = false;
+  factureAModifier: FactureAssigneeResume | null = null;
+  formModifFacture = {
+    numero: '',
+    regime: '',
+    mois: new Date().getMonth() + 1,
+    annee: new Date().getFullYear(),
+    statut: ''
+  };
+  readonly statutsFactureDisponibles = [
+    'BROUILLON', 'SOUMISE_CS', 'A_TRAITER', 'EN_COURS_SR', 'VALIDEE_SR', 'REJETEE_SR', 'ENVOYEE_NC', 'VALIDEE_NC', 'PAYEE'
+  ];
+
+  // ===================== MODAL : RETIRER PATIENT =====================
+  afficherModalRetirerPatient = false;
+  patientARetirer: PatientLigne | null = null;
 
   // ===================== MODAL : SUPPRIMER FACTURE =====================
   afficherModalSupprFacture = false;
@@ -313,6 +332,7 @@ export class SuiviEnregistrementComponent implements OnInit {
   }
 
   changerPeriode(): void {
+    this.filtreMoisFacture = this.moisSuivi;
     this.chargerDonnees();
     if (this.districtSelectionne) {
       this.chargerPostesDuDistrict(this.districtSelectionne.id);
@@ -329,6 +349,9 @@ export class SuiviEnregistrementComponent implements OnInit {
     }
     if (this.vueMode === 'FACTURES' && this.prestataireSelectionne) {
       this.rafraichirFacturesPrestataire(this.prestataireSelectionne.id);
+    }
+    if (this.vueMode === 'PATIENTS' && this.factureSelectionnee) {
+      this.chargerFactureParRoute(this.factureSelectionnee.id);
     }
   }
 
@@ -548,8 +571,11 @@ export class SuiviEnregistrementComponent implements OnInit {
   }
 
   countFacturesRegime(regimeCode: string): number {
-    if (!regimeCode) return this.facturesDuPrestataire.length;
-    return this.facturesDuPrestataire.filter(f => f.regime === regimeCode).length;
+    const base = this.filtreMoisFacture
+      ? this.facturesDuPrestataire.filter(f => Number(f.mois) === Number(this.filtreMoisFacture))
+      : this.facturesDuPrestataire;
+    if (!regimeCode) return base.length;
+    return base.filter(f => f.regime === regimeCode).length;
   }
 
   private rafraichirFacturesPrestataire(prestataireId: string): void {
@@ -666,6 +692,7 @@ export class SuiviEnregistrementComponent implements OnInit {
     const reg = this.filtreRegime;
 
     this.facturesFiltrees = this.facturesDuPrestataire.filter(f => {
+      if (this.filtreMoisFacture && Number(f.mois) !== Number(this.filtreMoisFacture)) return false;
       if (reg && f.regime !== reg) return false;
       if (qFac) {
         const match = f.numero.toLowerCase().includes(qFac) ||
@@ -1037,6 +1064,67 @@ export class SuiviEnregistrementComponent implements OnInit {
     this.snackBar.open('Prestation supprimée. Facture et décompte bénéficiaires recalculés en temps réel !', 'OK', { duration: 4000 });
   }
 
+  // ===================== MODIFIER UNE FACTURE =====================
+
+  ouvrirModalModifierFacture(fac: FactureAssigneeResume, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.factureAModifier = fac;
+    this.formModifFacture = {
+      numero: fac.numero,
+      regime: fac.regime,
+      mois: fac.mois,
+      annee: fac.annee,
+      statut: fac.statut
+    };
+    this.afficherModalModifFacture = true;
+  }
+
+  sauvegarderFacture(): void {
+    if (!this.factureAModifier) return;
+    if (!this.formModifFacture.numero.trim()) {
+      this.snackBar.open('Le numéro de facture est obligatoire', 'OK', { duration: 3000 });
+      return;
+    }
+    const patch = {
+      numero: this.formModifFacture.numero.trim(),
+      regime: this.formModifFacture.regime,
+      mois: Number(this.formModifFacture.mois),
+      annee: Number(this.formModifFacture.annee),
+      statut: this.formModifFacture.statut
+    };
+    this.srService.modifierFacture(this.factureAModifier.id, patch);
+    Object.assign(this.factureAModifier, patch);
+    if (this.factureSelectionnee?.id === this.factureAModifier.id) {
+      Object.assign(this.factureSelectionnee, patch);
+    }
+    this.recalculerFactures();
+    this.afficherModalModifFacture = false;
+    this.snackBar.open('Facture modifiée avec succès.', 'OK', { duration: 3500 });
+  }
+
+  // ===================== RETIRER UN PATIENT =====================
+
+  ouvrirModalRetirerPatient(patient: PatientLigne, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.patientARetirer = patient;
+    this.afficherModalRetirerPatient = true;
+  }
+
+  confirmerRetraitPatient(): void {
+    if (!this.factureSelectionnee || !this.patientARetirer) return;
+    const nomComplet = `${this.patientARetirer.prenom} ${this.patientARetirer.nom}`.trim();
+    this.srService.retirerPatient(this.factureSelectionnee, this.patientARetirer);
+    this.patientsDeLaFacture = this.srService.getPatientsPourFacture(this.factureSelectionnee);
+    this.recalculerPatients();
+    const totalNouveau = this.patientsDeLaFacture.reduce((sum, p) => sum + p.montantTotal, 0);
+    this.factureSelectionnee.montantTotal = totalNouveau;
+    this.factureSelectionnee.montantSencsu = Math.round(totalNouveau * 0.8);
+    this.factureSelectionnee.nombreBeneficiaires = this.patientsDeLaFacture.length;
+    this.afficherModalRetirerPatient = false;
+    this.patientARetirer = null;
+    this.snackBar.open(`Patient ${nomComplet} retiré de la facture.`, 'OK', { duration: 4000 });
+  }
+
   // ===================== SUPPRIMER UNE FACTURE =====================
 
   ouvrirModalSupprimerFacture(fac: FactureAssigneeResume, event?: Event): void {
@@ -1053,15 +1141,14 @@ export class SuiviEnregistrementComponent implements OnInit {
 
     this.srService.supprimerFacture(facId);
 
-    // Si on était dans le détail de cette facture ou ses prestations, revenir à la liste des factures
-    if (this.factureSelectionnee?.id === facId) {
-      this.vueMode = 'FACTURES';
-      this.factureSelectionnee = null;
-      this.patientSelectionne = null;
-    }
+    // Mise à jour immédiate de la liste affichée
+    this.facturesDuPrestataire = this.facturesDuPrestataire.filter(f => f.id !== facId);
+    this.recalculerFactures();
 
-    // Rafraîchir les factures du prestataire
-    if (this.prestataireSelectionne) {
+    // Si on était dans le détail de cette facture, revenir à la liste des factures avec l'URL à jour
+    if (this.factureSelectionnee?.id === facId) {
+      this.fermerDetailFacture();
+    } else if (this.prestataireSelectionne) {
       this.rafraichirFacturesPrestataire(this.prestataireSelectionne.id);
     }
 
