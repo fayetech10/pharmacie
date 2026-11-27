@@ -672,7 +672,7 @@
 
         <!-- Tableau des bénéficiaires (style poste de santé : nom, date, matricule & CNI, chevron) -->
         <div class="overflow-x-auto rounded-lg border border-border">
-          <table class="w-full text-[13.5px] border-collapse">
+          <table data-mobile-card-skip class="w-full text-[13.5px] border-collapse">
             <tbody>
               <tr *ngFor="let p of patientsFiltres | paginer: pgPatients.page : pgPatients.taille; trackBy: trackById" (click)="ouvrirDetailPatient(p)"
                   class="cursor-pointer border-b border-border-light last:border-b-0 transition-colors hover:bg-field bg-white">

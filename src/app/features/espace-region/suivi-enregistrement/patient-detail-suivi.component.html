@@ -59,7 +59,7 @@
     <!-- Fiche d'identité du patient -->
     <div class="card">
       <div class="section-header">
-        <div class="section-title-group">
+        <div class="section-title-group min-w-0 flex-1">
           <div class="section-icon"><mat-icon>person</mat-icon></div>
           <div class="min-w-0">
             <h2 class="flex flex-wrap items-center gap-2">
@@ -72,14 +72,14 @@
                     : 'Dossier à compléter' }}
               </span>
             </h2>
-            <p class="text-[12.5px] text-text-secondary mt-0.5">
+            <p class="text-[12.5px] text-text-secondary mt-0.5 break-all">
               ID : <span class="font-mono font-medium text-text-primary">{{ patient.id }}</span>
               <span *ngIf="patient.matricule"> · Matricule : <span class="font-mono font-medium text-text-primary">{{ patient.matricule }}</span></span>
               <span *ngIf="patient.cni"> · CNI : <span class="font-mono font-medium text-text-primary">{{ patient.cni }}</span></span>
             </p>
           </div>
         </div>
-        <div class="ml-auto flex gap-2 print:hidden">
+        <div class="ml-auto flex flex-wrap items-center gap-2 print:hidden">
           <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 !px-2"
                   (click)="afficherIdentitePatient = !afficherIdentitePatient"
                   [attr.aria-label]="afficherIdentitePatient ? 'Masquer les informations du patient' : 'Afficher les informations du patient'"
@@ -131,7 +131,7 @@
 
       <div class="section-body">
         <div class="overflow-x-auto">
-          <table class="w-full text-[13px] border-collapse">
+          <table data-mobile-card-skip class="w-full text-[13px] border-collapse">
             <thead>
               <tr class="text-left text-[11px] uppercase tracking-wide text-text-secondary border-b border-border">
                 <th class="py-1.5 pr-2">Prestation</th>
