@@ -988,6 +988,11 @@ export class SrGestionService {
    * Récupère les patients réels et leurs prestations depuis l'objet facture backend
    */
   getPatientsPourFacture(fac: FactureAssigneeResume): any[] {
+    const savedState = this.getFacturesState()[fac.id];
+    if (savedState?.customPatients) {
+      return savedState.customPatients;
+    }
+
     // 1. Extraire les patients réels si factureOrigine est une FactureStructure
     if (fac.factureOrigine && fac.typeEtablissement === 'STRUCTURE') {
       const fs = fac.factureOrigine as FactureStructure;
@@ -1356,7 +1361,7 @@ export class SrGestionService {
   /**
    * Retire un patient d'une facture et recalcule les totaux
    */
-  retirerPatient(facture: FactureAssigneeResume, patient: { id: string; lettreNumero?: string }): void {
+  retirerPatient(facture: FactureAssigneeResume, patient: { id: string; lettreNumero?: string; matricule?: string; nom?: string; prenom?: string }): void {
     const state = this.getFacturesState();
     const basePatients = state[facture.id]?.customPatients || this.getPatientsPourFacture(facture);
     const restants = basePatients.filter((p: any) => p.id !== patient.id);
@@ -1373,13 +1378,19 @@ export class SrGestionService {
     };
     this.setFacturesState(state);
 
-    if (facture.typeEtablissement === 'STRUCTURE' && (patient.id || patient.lettreNumero)) {
+    if (facture.typeEtablissement === 'STRUCTURE' && (patient.id || patient.lettreNumero || patient.matricule || patient.nom)) {
       this.structureService.supprimerPatient(facture.id, {
         dossierId: patient.id,
-        lettreNumero: patient.lettreNumero
+        lettreNumero: patient.lettreNumero,
+        matricule: patient.matricule,
+        nom: patient.nom,
+        prenom: patient.prenom
       }).pipe(
         catchError(() => of(null))
-      ).subscribe(() => {
+      ).subscribe(updatedFs => {
+        if (updatedFs) {
+          facture.factureOrigine = updatedFs;
+        }
         this.api.invalidateCache();
         this.factureEvents.notifyChanged();
       });

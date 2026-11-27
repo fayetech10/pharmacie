@@ -246,10 +246,13 @@ export class StructureService {
   deleteFacture(id: string): Observable<void> {
     return this.api.delete<void>(`/factures-structure/${id}`);
   }
-  supprimerPatient(factureId: string, options: { lettreNumero?: string; dossierId?: string }): Observable<FactureStructure> {
+  supprimerPatient(factureId: string, options: { lettreNumero?: string; dossierId?: string; matricule?: string; nom?: string; prenom?: string }): Observable<FactureStructure> {
     const params: string[] = [];
     if (options.dossierId) params.push(`dossierId=${encodeURIComponent(options.dossierId)}`);
     if (options.lettreNumero) params.push(`lettre=${encodeURIComponent(options.lettreNumero)}`);
+    if (options.matricule) params.push(`matricule=${encodeURIComponent(options.matricule)}`);
+    if (options.nom) params.push(`nom=${encodeURIComponent(options.nom)}`);
+    if (options.prenom) params.push(`prenom=${encodeURIComponent(options.prenom)}`);
     return this.api.delete<FactureStructure>(`/factures-structure/${factureId}/patients?${params.join('&')}`);
   }
   modifierMetadonneesRegion(factureId: string, patch: { numero?: string; mois?: number; annee?: number; regime?: string; statut?: string }): Observable<FactureStructure> {
